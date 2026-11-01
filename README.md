@@ -1,8 +1,10 @@
 # Essay Writer
 
+**Demonstration release.** Maintenance is limited to reported bugs.
+
 Helps you research a university assignment and turn it into a Word essay.
 
-You work in Essay Bot inside Grok Bot. The chat looks up papers, writes a draft from those sources, and checks that the essay answers the assignment. When the work is ready, you get a Word file (`.docx`).
+You work in Essay Bot inside Grok Bot. Drafts are model-assisted: the chat looks up papers, writes a draft from those sources, and checks that the essay answers the assignment. The student owns what they submit and must follow their school's rules. When the work is ready, you get a Word file (`.docx`).
 
 ## What you need
 
@@ -37,7 +39,6 @@ Paste keys only when the chat asks for a secret — not into ordinary messages.
 4. You review each stage in the chat and press Confirm before anything is saved.
 5. The finished essay is a Word file (`.docx`).
 
-Drafts are model-assisted. The student owns what they submit and must follow their school's rules.
 
 ## More detail
 

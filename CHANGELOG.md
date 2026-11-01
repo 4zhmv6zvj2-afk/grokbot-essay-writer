@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 — 2026-11-02
+
+- README: demonstration / limited-maintenance status line; model-assisted purpose moved into the opening.
+- Add GitHub bug-report issue template mirroring CONTRIBUTING.
+
 ## 0.1.0 — 2026-11-01
 
 - First public source release.
