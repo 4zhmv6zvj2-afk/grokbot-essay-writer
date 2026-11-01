@@ -1,6 +1,6 @@
 # Essay Writer
 
-**Demonstration release.** Maintenance is limited to reported bugs.
+**Stable source release.** Maintenance is limited to reported bugs.
 
 Helps you research a university assignment and turn it into a Word essay.
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 — 2026-11-02
+
+- README and release wording: stable source release.
+
 ## 0.1.1 — 2026-11-02
 
 - README: demonstration / limited-maintenance status line; model-assisted purpose moved into the opening.
