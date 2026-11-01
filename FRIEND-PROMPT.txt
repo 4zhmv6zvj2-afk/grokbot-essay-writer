@@ -1,0 +1,15 @@
+Set up essay writer from this zip.
+Use Essay Bot for this chat.
+
+First-time: Mac Essay Bot folder — OK, another folder, later, or skip. Agent login on this computer when needed. Consensus key when needed. Then follow the cards below and FIRST-RUN in the package.
+
+Update: Replace the app from a new zip. Keep the existing Mac folder and login. Do not re-ask the four-way card or sign-in card when those are already set. After upgrade, essay.health should be alive and name the commit this copy was built from (`build_commit`). When the zip includes a CHANGELOG, it repeats that commit. Then follow FIRST-RUN for the rest.
+
+File work defaults to Cursor. Grok Build is fine if you prefer that.
+If the Cursor agent program is missing on this computer, install it, then follow FIRST-RUN.
+When they explicitly choose Grok Build and grok version works, skip Cursor login. If grok is missing, stay on Cursor and use the sign-in card below.
+Before agent login on this computer, show this card: "I'll sign in to Cursor on my computer. Open my computer and take over. On that screen, choose Allow or Continue. If Google appears, pick the Google account for this Cursor account. Tell me when you're signed in." Tell them Open computer → Take over → I'm done. Use the same Cursor account as Essay Bot. Wait for that yes before setup confirm. Skip that card when agent status shows logged in or CURSOR_API_KEY is already on the machine. Do not put a key in chat. Do not put a login URL in chat.
+Word copies go to Documents/Essay Bot — OK, another folder, later, or skip.
+OK runs essay-writer --remember-mac-dir ok (choose_mac_handoff ok) to create Documents/Essay Bot on the Mac. Another needs the folder path before remember-mac-dir. Later or skip without a path stays chat-only; do not say the Mac folder is ready.
+Open Consensus → API keys → New key → paste once on the secret card. Ask Free or Pro.
+Follow FIRST-RUN in the package for the rest.

@@ -1,0 +1,77 @@
+{
+  "fixture": "synth-mark",
+  "label": "fixture-only synthetic",
+  "drafts": {
+    "weak": {
+      "file": "synth-mark-weak-v1.md",
+      "missing_weighted": [
+        "Integration to competitive advantage",
+        "Recession relevance"
+      ],
+      "unweighted_headings": [],
+      "generic_chain": true,
+      "specialist_sources": false
+    },
+    "mid": {
+      "file": "synth-mark-mid-v1.md",
+      "missing_weighted": [],
+      "unweighted_headings": [],
+      "generic_chain": false,
+      "specialist_sources": false
+    },
+    "strong": {
+      "file": "synth-mark-strong-v1.md",
+      "missing_weighted": [],
+      "unweighted_headings": [],
+      "generic_chain": false,
+      "specialist_sources": true
+    },
+    "offbrief": {
+      "file": "synth-mark-offbrief-v1.md",
+      "missing_weighted": [],
+      "unweighted_headings": [
+        "Literature review",
+        "Recommendations"
+      ],
+      "generic_chain": false,
+      "specialist_sources": false
+    },
+    "weak2": {
+      "file": "synth-mark-weak2-v1.md",
+      "missing_weighted": [
+        "Integration to competitive advantage",
+        "Recession relevance"
+      ],
+      "unweighted_headings": [],
+      "generic_chain": false,
+      "specialist_sources": true
+    }
+  },
+  "targets": {
+    "A": {
+      "draft": "weak2",
+      "start_section_notes": [
+        "Integration to competitive advantage",
+        "Recession relevance"
+      ],
+      "after_one_lift_section_notes": []
+    },
+    "B": {
+      "draft": "weak2",
+      "start_mark_fit_notes": 2,
+      "after_one_review_then_lift_mark_fit_notes": 0,
+      "strong_draft": "strong",
+      "strong_false_alarm_notes": 0
+    },
+    "C": {
+      "drafts": [
+        "weak",
+        "weak2",
+        "strong"
+      ],
+      "non_mar_brief": "okavango-brief-v1.md",
+      "non_mar_weak": "okavango-weak-v1.md",
+      "non_mar_strong": "okavango-strong-v1.md"
+    }
+  }
+}

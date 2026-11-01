@@ -1,0 +1,89 @@
+Set up essay writer from this copy. You talk to the user. File work does not own this chat.
+
+This file is operator setup. Do not read these install steps into student chat. The Basics checklist stays internal. A new student starts a new essay. Do not continue a leftover module on this computer unless they name that sequence. Do not delete a leftover module.
+
+First-time install
+When no Mac folder is remembered yet, show the four-way Essay Bot folder card. OK creates Documents/Essay Bot; another needs a path; later or skip without a path stays chat-only — do not say the Mac folder is ready. On this computer, install the Cursor agent when missing, then agent login when agent status is not logged in and CURSOR_API_KEY is not already on the machine. Collect Consensus on the secret card when the key is not already saved. Then unpack, pip install, MCP attach, Mac handoff when chosen, and essay.setup as below.
+
+Update install
+Replace the app from a new friend zip with essay-writer --install-upload /path/to/the.zip, or unpack this copy and pip install -e . as below. Keep the remembered Mac folder and existing Cursor login. Do not re-show the four-way card when ESSAY_WRITER_MAC_DIR is already saved. Do not re-show the sign-in card when agent status shows logged in or CURSOR_API_KEY is already on the machine. After install or upgrade, install_self_check runs essay.health; the report should be alive and name the tool count. `build_commit` names the commit this copy was built from. When the zip includes a CHANGELOG, it repeats that commit. Then re-read this file and docs/templates/bot.md; do not recite install steps in student chat.
+
+When this copy arrived as a friend zip, do not also clone a git URL for the same install. A normal git clone of the public repo is fine for developers.
+
+This zip is the copy. In this same turn, unpack it on this computer and install it. Do not split unpack, install, and Custom MCP attach across turns, and do not ask the user to do those steps.
+
+When /workspace exists, unpack to /workspace/essay-writer-install. Otherwise unpack only to a folder the user names on this computer. Do not fall back to Documents and call it this computer.
+
+From the unpacked folder run:
+
+python first_run.py
+
+That runs:
+
+python -m pip install -e .
+
+and attaches Custom MCP essay-writer and essay-reviewer. The commands are essay-writer with no arguments, and essay-writer with arguments `--reviewer` for the reviewer only.
+
+To attach only the writer, run:
+
+python first_run.py --no-reviewer
+
+The same run writes `.grok/config.toml` in the project with essay-writer and essay-reviewer. With `--no-reviewer`, that file has essay-writer only.
+
+Custom MCP attach stays in this operator chat. Do not narrate MCP attach to the friend.
+
+The same run writes `.grok/essay-bot.share.json`. The package only writes that file. Essay Bot chat setup uses that share file; host publishing stays operator-only.
+
+Essay Bot is the chat. File work stays the pick in this file: Cursor by default, or Grok Build when the person prefers that.
+
+The install folder is `/workspace/essay-writer-install` when `/workspace` exists. `~/.grok` is the grok config home, not a second install folder.
+
+If essay-writer is already installed, one command unpacks the zip and installs it:
+
+essay-writer --install-upload /path/to/the.zip
+
+Add --no-reviewer on that command only when the reviewer should stay off.
+
+On the Mac at first-run, recommend Documents/Essay Bot as the folder for Word and zip copies. The person may confirm that folder, name another path, set this up later, or decline. Later or decline without a path is chat-only: do not invent a Mac copy folder, do not set ESSAY_WRITER_MAC_DIR, and do not say the Mac folder is ready. Cursor and Grok Build both call essay_writer.first_run.choose_mac_handoff. When they confirm Documents/Essay Bot, run essay-writer --remember-mac-dir ok. That creates Documents/Essay Bot on the friend's Mac and remembers the path. Stage 1 Confirm on a sequence creates Documents/Essay Bot/<module>/, Documents/Essay Bot/<module>/shared/, and Documents/Essay Bot/<module>/<essay_id>/ for that run's Word and zip copies. When they name another path, run essay-writer --remember-mac-dir with that folder. That creates the named folder on the Mac and remembers it. Later or skip does not create a folder. Do that before essay-writer --copy-to-mac. essay.setup still refuses unnamed Documents as the essay workspace save folder. Documents is not this computer.
+
+Show this card: "Word copies go to Documents/Essay Bot — OK, another folder, later, or skip."
+
+File work defaults to Cursor. On this computer, when agent is missing, install the Cursor CLI with:
+
+curl https://cursor.com/install -fsS | bash
+
+The Cursor CLI installer is an unsigned remote script. Run it only on a computer you control and only when this setup asks. For a manual install, clone the public repo and run `uv sync --extra dev`; the chat-driven install is optional.
+
+Then run agent --version. Then enable both with agent mcp enable essay-writer and agent mcp enable essay-reviewer. Never install the Cursor CLI on the Mac. Never install grok. If grok is missing, stay on Cursor. The setup check runs agent --version.
+
+On this computer, run agent login while the person holds that desktop, or use a CURSOR_API_KEY already on that machine. Do not put a key in chat. Do not put a login URL in chat. Use the same Cursor account as Essay Bot. Skip the sign-in card when agent status shows logged in or CURSOR_API_KEY is already on the machine. Otherwise, before or while agent login, show this card: "I'll sign in to Cursor on my computer. Open my computer and take over. On that screen, choose Allow or Continue. If Google appears, pick the Google account for this Cursor account. Tell me when you're signed in." Tell them Open computer → Take over → I'm done. After they finish, run agent status before essay.setup confirm. Wait for that yes before essay.setup confirm.
+
+After install, call essay.setup with confirmPhase draft and no path arguments. Show that result. After an explicit yes, and after that sign-in yes when the card was shown, call essay.setup with confirmPhase confirm and the same arguments.
+
+That creates /workspace/Essay-writer/app and the local subject notes folder /workspace/Essay-writer/KB1 when /workspace exists.
+
+To use Grok Build instead, pass mid_office_shell on both setup calls with a Grok Build pick (for example SuperGrok or grok build). That runs grok version instead. When they explicitly choose Grok Build and grok version works, skip Cursor login. If grok is missing, stay on Cursor and use the sign-in card above. Do not infer that choice from what is installed or from a subscription.
+
+Word and zip deliverables copy to the Mac with:
+
+essay-writer --copy-to-mac /path/to/file.docx
+
+A folder path copies each .docx and .zip in that folder and leaves every other file where it is. The copy does not change what the files contain.
+
+Show this card: "Open Consensus → API keys → New key → paste once on the secret card. Ask Free or Pro."
+
+Ordinary setup collects the Consensus key, the Consensus plan, and the Unpaywall email on the setup secret card, then passes them to essay.setup.
+
+The Consensus key is for academic research search: it finds papers for the research step. Consensus's help center says the API is how a tool programmatically searches academic research and retrieves relevant papers: https://help.consensus.app/en/articles/16516328-the-consensus-api
+
+Create that key with Consensus's own steps from that page. Click the profile icon in the bottom-left corner, select API & MCP Dashboard, open the Keys and Clients tab, click New key, give the key a name so you can tell what it is for, then create it and copy it somewhere secure. The full key is shown once. If it is lost, revoke it and create a new one. The same path is on https://docs.consensus.app/api-plans-and-access : profile icon, then API & MCP Dashboard, then Keys and clients, then New key. The dashboard named from get-started is https://consensus.app/api-mcp
+
+Ask which Consensus plan they have. Free stores ESSAY_WRITER_CONSENSUS_PAID as 0. Pro stores it as 1. Teams, Deep, and Enterprise use 1, the same paid flag as Pro. Do not add another flag. The published limits are only those on https://docs.consensus.app/api-plans-and-access : Free includes 30 calls a month and the maximum with additional usage is 30; Pro includes 500 and the maximum with additional usage is 1,000. Max papers per request is 20 on Free and 300 on Pro. Pagination past the first page is no on Free and yes on Pro. Full-text excerpts are no on Free and yes on Pro. The rate limit is 1 request per second on Free and 1 request per second on Pro.
+
+The email is for Unpaywall free-PDF lookup. Unpaywall's API docs say a request must include the email as ?email=YOUR_EMAIL, and they ask for at most 100,000 calls a day: https://unpaywall.org/products/api . OpenAlex, from the same team, asks for an email where they can contact you if a script goes wrong, and says that approach is copied from Crossref: https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md . Crossref's REST API FAQ answers "Will you spam me with marketing bumf once you have our contact info?" with "No. We will only use it to contact you about problems with your scripts." https://github.com/CrossRef/rest-api-doc/blob/master/README.md . Say that limit, attributed to the Crossref FAQ by way of OpenAlex. Do not say that Unpaywall's own page promised never to email.
+
+If the user skips the Consensus key, the Unpaywall email, or both, show the warning before the skip is accepted. Consensus is not used when the key is missing. Unpaywall free PDF lookup will not run when the email is missing. OpenAlex still runs. After an explicit yes to that warning, call essay.setup with confirmPhase draft, acknowledge_skipped_searches true, and the same other arguments. Show that result. After another explicit yes, call essay.setup with confirmPhase confirm and those same arguments. A confirm that skips without acknowledge_skipped_searches writes nothing.
+
+Do not ask the user to edit a .env file. Do not repeat the key or the email.
+
+When the folders exist, reply with the folder paths. Then stop.

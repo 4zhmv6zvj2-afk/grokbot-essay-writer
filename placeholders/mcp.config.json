@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "essay-writer": {
+      "command": "essay-writer",
+      "args": []
+    },
+    "essay-reviewer": {
+      "command": "essay-writer",
+      "args": ["--reviewer"]
+    }
+  }
+}

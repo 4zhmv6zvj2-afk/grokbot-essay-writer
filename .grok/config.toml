@@ -1,0 +1,4 @@
+[mcp_servers.essay-writer]
+command = "essay-writer"
+args = []
+enabled = true

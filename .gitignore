@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.npm/
+.yarn/
+.turbo/
+.next/
+out/
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+setup.secrets.json
+**/*.secrets.json
+*.pem
+*.p12
+id_rsa
+id_ed25519
+
+artifacts/
+.venv-proof/
+*.tgz
+.grok/essay-bot.share.json
+.essay-writer-upgrade-reread.json
+.cursor/hooks.json
+.cursor/hooks/
+program.md
+house-words.txt
+
+# Editor and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Generated homework output (keep drafts out of git)
+*.docx
+output/
+
+# Per-essay working files. The READMEs at these roots stay tracked.
+Essay-writer/*/
+uploads/*/
+
+# Shell diagnostic log and structured event stream. Off unless a shell sets ESSAY_WRITER_DEBUG.
+debug.log
+ml-events.jsonl
+debug.zip

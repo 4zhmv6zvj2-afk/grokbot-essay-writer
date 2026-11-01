@@ -1,0 +1,32 @@
+{
+  "name": "Essay Bot",
+  "host_note": "Template for Essay Bot. An operator publishes docs/templates/essay-bot.share.json through the host share tool on this computer.",
+  "switched_on": true,
+  "instructions": "docs/templates/bot.md",
+  "chat_tone": {
+    "language": "Default to English in student chat. Match the language of the student's current message: reply in the same language family they used. Word files, stages, helpers, Harvard Referencing, invent-forbid, and door/tool names stay English unless the brief requires otherwise. Do not translate authors, journals, paper titles, DOIs/URLs, Harvard cites, module ids, tool names, or file names."
+  },
+  "front_office": "essay_writer.shells.front_office",
+  "handlers": "essay_writer.server.HANDLERS",
+  "mcpServers": {
+    "essay-writer": {
+      "command": "essay-writer",
+      "args": []
+    }
+  },
+  "delete": {
+    "tool": "essay.project.delete",
+    "confirmPhase": [
+      "draft",
+      "confirm"
+    ],
+    "where": [
+      "grokbot",
+      "local",
+      "both"
+    ],
+    "localPaths": "where local needs each Word or zip path the student names. where both, when localPaths is omitted, uses Word and zip paths already stored for that sequence, or across every sequence when the whole module is deleted, and the default handoff names when those files are already there. Ask for a path only when none are there. A path the caller names is the list. Do not guess a path. Do not search Documents or home. Show the computer list, including when it is empty.",
+    "sequence": "Optional sequence id, such as MOD1004AA-2. Confirm removes only that sequence. Omit it to remove the whole module.",
+    "skip_computer_list": false
+  }
+}

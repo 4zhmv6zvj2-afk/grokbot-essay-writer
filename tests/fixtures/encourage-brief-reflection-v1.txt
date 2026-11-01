@@ -1,0 +1,5 @@
+Genre: report
+Question: How do chokepoints constrain the corridor?
+Section: Port delays
+Section: A theme that does not constrain the corridor
+Write a short reflection on what surprised you.
