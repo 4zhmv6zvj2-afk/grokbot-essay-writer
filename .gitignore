@@ -52,8 +52,8 @@ artifacts/
 .essay-writer-upgrade-reread.json
 .cursor/hooks.json
 .cursor/hooks/
-program.md
-house-words.txt
+*.local.md
+NOTES.local
 
 # Editor and OS
 .DS_Store

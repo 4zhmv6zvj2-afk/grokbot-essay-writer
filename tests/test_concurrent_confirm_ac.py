@@ -283,7 +283,7 @@ def test_ac5_commit_is_shared_for_later_stages(workspace, monkeypatch):
     assert "Stage two new." in _note(seq, "2")
     assert "1" in seen
     assert "2" in seen
-    assert "_save_pointer" not in inspect.getsource(stage_track.essay_stage)
-    assert "_commit_pointer" in inspect.getsource(stage_track.essay_stage)
+    assert "_save_pointer" not in inspect.getsource(stage_track._run_stage)
+    assert "_commit_pointer" in inspect.getsource(stage_track._save_confirm)
     assert "_commit_pointer" in inspect.getsource(stage_track._store_stage)
     assert "stage ==" not in inspect.getsource(stage_track._commit_pointer)

@@ -19,7 +19,12 @@ from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.research import essay_research_summary
-from essay_writer.stage_track import _render_stage10_before_close, essay_stage, load_pointer
+from essay_writer.stage_track import (
+    _render_stage10_before_close,
+    _save_confirm,
+    essay_stage,
+    load_pointer,
+)
 from essay_writer.state import load_state, save_state
 
 MODULE = "RPT5001AA"
@@ -270,7 +275,7 @@ def test_ac4_basics_4a_confirm_stage10_word_journey(workspace, monkeypatch, tmp_
         assert cursor["settings"]["fast"] is False
         assert build["settings"]["fast"] is False
         assert cursor["settings"]["model"] == build["settings"]["model"]
-    assert "stage_bibliography" in inspect.getsource(essay_stage)
+    assert "stage_bibliography" in inspect.getsource(_save_confirm)
     assert "write_stage10" in inspect.getsource(_render_stage10_before_close)
 
     _brief()

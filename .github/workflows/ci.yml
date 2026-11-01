@@ -16,12 +16,9 @@ jobs:
       - name: Repository checks
         run: |
           set -euo pipefail
-          if git ls-files --error-unmatch program.md >/dev/null 2>&1; then
+          local_notes=$(git ls-files '*.local.md' 'NOTES.local' 'LOCAL-NOTES.md')
+          if [ -n "$local_notes" ]; then
             echo "local notes must stay untracked"
-            exit 1
-          fi
-          if ! git check-ignore -q program.md; then
-            echo "local notes must be ignored"
             exit 1
           fi
           files=$(git ls-files 'README.md' 'FIRST-RUN.txt' 'FRIEND-PROMPT.txt' 'docs/*.md')

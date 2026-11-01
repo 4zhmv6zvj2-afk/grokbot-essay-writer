@@ -27,6 +27,7 @@ from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office
 from essay_writer.stage_track import (
     _commit_with_next_card,
+    _save_confirm,
     _snapshot_stage_save,
     _store_stage,
     essay_stage,
@@ -343,7 +344,7 @@ def test_ac6_build_covered_one_restore_door():
     assert "def essay_pack_restore" not in build_src
     assert "_snapshot_stage_save" in inspect.getsource(_store_stage)
     assert "_snapshot_stage_save" in inspect.getsource(_commit_with_next_card)
-    assert "_snapshot_stage_save" in inspect.getsource(essay_stage)
+    assert "_snapshot_stage_save" in inspect.getsource(_save_confirm)
     assert "snapshot_after_stage_save" in inspect.getsource(_snapshot_stage_save)
     assert "snapshot_after_pack_validate" in inspect.getsource(essay_pack_validate)
     assert snapshot_after_stage_save.__module__ == "essay_writer.pack_backup"

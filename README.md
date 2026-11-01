@@ -43,13 +43,13 @@ Drafts are model-assisted. The student owns what they submit and must follow the
 
 - Output is Word only (`.docx`).
 - Referencing follows Harvard: [docs/referencing-harvard.md](docs/referencing-harvard.md).
-- Install steps for the person running setup: [FIRST-RUN.txt](FIRST-RUN.txt).
+- Developers: see [ARCHITECTURE.md](ARCHITECTURE.md). Operators attaching Essay Bot: see [FIRST-RUN.txt](FIRST-RUN.txt).
 - Full stage guide: [docs/workflow.md](docs/workflow.md).
 - Distribution is source install for Essay Bot in Grok Bot. There is no PyPI release.
 
 ## For developers
 
-Python 3.10 or newer:
+Python 3.12 or newer:
 
 ```bash
 uv sync --extra dev

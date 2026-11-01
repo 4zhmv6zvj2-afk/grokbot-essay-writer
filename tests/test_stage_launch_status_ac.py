@@ -40,7 +40,13 @@ from essay_writer.specialists import researcher
 from essay_writer.specialists.grok_bot import front_office_call as grok_speak
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import _attach_mid_run, essay_stage, load_pointer
+from essay_writer.stage_track import (
+    _attach_mid_run,
+    _draft_reply,
+    _run_stage,
+    essay_stage,
+    load_pointer,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 QUESTION = "How should Inditex manage its supply chain?"
@@ -150,13 +156,13 @@ def test_ac1_stage_4a_launches_cursor_cli_not_the_front_office(
     assert "shell=True" not in runner
     assert "shell=True" not in inspect.getsource(spawn_agent)
     assert "start_4a_research" in inspect.getsource(_attach_mid_run)
-    assert "_attach_mid_run" in inspect.getsource(essay_stage)
+    assert "_attach_mid_run" in inspect.getsource(_draft_reply)
     spawn_source = inspect.getsource(spawn_agent)
     assert "CloudAgent" not in runner
     assert "CloudAgent" not in spawn_source
     assert spawn_source.index("REMOTE_CLOUD_BANNED") < spawn_source.index("open_mid_child(")
     office_source = Path(cursor_stage_launch.__code__.co_filename).read_text(encoding="utf-8")
-    stage_source = inspect.getsource(essay_stage)
+    stage_source = inspect.getsource(_run_stage)
     assert "CloudAgent" not in office_source
     assert "CloudAgent" not in stage_source
     for command in _REMOTE_COMMANDS:

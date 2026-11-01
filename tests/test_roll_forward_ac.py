@@ -480,12 +480,12 @@ def test_ac9_build_covered_cursor_and_grok_build_share_roll_forward():
     assert cursor_shell()["handlers"]["essay.sequence.new"] is front_office()["handlers"]["essay.sequence.new"]
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     from essay_writer.projects import clone_sequence as clone
-    from essay_writer.stage_track import _attach_mid_run
+    from essay_writer.stage_track import _attach_mid_run, _draft_reply
     from essay_writer.stage_track import essay_stage as stage
 
     assert "shape_cloned_child" in inspect.getsource(clone)
     assert "four_b_action" in inspect.getsource(_attach_mid_run)
-    assert "attach_stage_roll" in inspect.getsource(stage)
+    assert "attach_stage_roll" in inspect.getsource(_draft_reply)
     assert "start_4a_research" in inspect.getsource(_attach_mid_run)
     for source in (inspect.getsource(stage_launch), inspect.getsource(cursor_stage_launch)):
         assert "shape_cloned_child" not in source

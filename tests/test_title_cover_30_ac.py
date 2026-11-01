@@ -25,7 +25,7 @@ from essay_writer.paths import essay_dir, work_dir
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_track import _save_confirm
 from essay_writer.state import load_state, save_state
 from essay_writer.word import cover_lines, write_docx
 
@@ -166,7 +166,7 @@ def test_build_covered_cursor_and_grok_build_share_the_cover(monkeypatch):
     assert "def title_page_spec" not in inspect.getsource(cursor_stage_launch)
     assert "def word_contract_refusal" not in inspect.getsource(stage_launch)
     assert "def cover_lines" not in inspect.getsource(cursor_stage_launch)
-    assert "return _commit_with_next_card(" in inspect.getsource(essay_stage)
+    assert "return _commit_with_next_card(" in inspect.getsource(_save_confirm)
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
     assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_CURSOR)

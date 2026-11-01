@@ -1,3 +1,5 @@
+ESSAY BOT OPERATOR SETUP — not the developer guide. Developers: see README.md and ARCHITECTURE.md.
+
 Set up essay writer from this copy. You talk to the user. File work does not own this chat.
 
 This file is operator setup. Do not read these install steps into student chat. The Basics checklist stays internal. A new student starts a new essay. Do not continue a leftover module on this computer unless they name that sequence. Do not delete a leftover module.

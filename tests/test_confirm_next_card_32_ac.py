@@ -22,7 +22,7 @@ from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH, basics_pass_lines
-from essay_writer.stage_track import TOOL, essay_stage, load_pointer
+from essay_writer.stage_track import TOOL, _save_confirm, essay_stage, load_pointer
 from essay_writer.writing_basics import STAGE_ORDER
 
 REPO = Path(__file__).resolve().parents[1]
@@ -221,7 +221,7 @@ def test_ac4_build_covered_shares_the_confirm_next_card_path(monkeypatch):
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     assert HANDLERS["essay.stage"] is essay_stage
     assert mount_handler("essay.stage").__wrapped__ is essay_stage
-    assert "return _commit_with_next_card(" in inspect.getsource(essay_stage)
+    assert "return _commit_with_next_card(" in inspect.getsource(_save_confirm)
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
     assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_CURSOR)

@@ -22,7 +22,13 @@ from essay_writer.server import HANDLERS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_track import TOOL, _draft_next_card, essay_stage, load_pointer
+from essay_writer.stage_track import (
+    TOOL,
+    _draft_next_card,
+    _save_confirm,
+    essay_stage,
+    load_pointer,
+)
 from essay_writer.writing_basics import STAGE_ORDER
 
 DIARY = """
@@ -254,7 +260,7 @@ def test_ac4_cursor_and_grok_build_share_confirm(monkeypatch):
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     assert HANDLERS["essay.stage"] is essay_stage
     assert mount_handler("essay.stage").__wrapped__ is essay_stage
-    source = inspect.getsource(essay_stage)
+    source = inspect.getsource(_save_confirm)
     assert "return _commit_with_next_card(" in source
     assert "_MINTING.set(True)" in inspect.getsource(_draft_next_card)
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)

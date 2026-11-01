@@ -27,7 +27,7 @@ from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office
 from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH, front_office_call
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import TOOL, essay_stage, load_pointer
+from essay_writer.stage_track import TOOL, _save_confirm, load_pointer
 from essay_writer.state import load_state, save_state
 from essay_writer.word import write_docx
 
@@ -243,7 +243,7 @@ def test_build_covered_cursor_and_grok_build_share_the_kick_and_the_cover(monkey
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     assert cursor_shell()["handlers"]["essay.sequence.new"] is front_office()["handlers"]["essay.sequence.new"]
     assert "write_docx(" in inspect.getsource(write_stage10)
-    assert "return _commit_with_next_card(" in inspect.getsource(essay_stage)
+    assert "return _commit_with_next_card(" in inspect.getsource(_save_confirm)
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
     assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_CURSOR)

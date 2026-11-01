@@ -31,7 +31,7 @@ import json
 import os
 import threading
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, TypedDict, cast
 
 from essay_writer.confirm import (
     CONFIRM,
@@ -95,7 +95,7 @@ def _commit_path(essay_id: str):
     return work_dir(essay_id) / STAGE_COMMIT
 
 
-def _pointer_text(pointer: dict[str, object]) -> str:
+def _pointer_text(pointer: Pointer) -> str:
     return json.dumps(pointer, indent=2, ensure_ascii=False) + "\n"
 
 
@@ -117,7 +117,7 @@ def _apply_commit(root, record: dict[str, object]) -> None:
     pointer = record.get("pointer")
     if not isinstance(pointer, dict):
         raise ValueError("stage commit is missing the pointer")
-    _atomic(root / POINTER_FILE, _pointer_text(pointer))
+    _atomic(root / POINTER_FILE, _pointer_text(cast(Pointer, pointer)))
     journal = root / STAGE_COMMIT
     if journal.is_file():
         journal.unlink()
@@ -147,6 +147,39 @@ def _note_path(essay_id: str, stage: str):
     if name is None:
         raise KeyError(stage)
     return work_dir(essay_id) / name
+
+
+class Pointer(TypedDict, total=False):
+    current: str
+    saved: list[str]
+    files: dict[str, object]
+    closed: bool
+    revisit_open: str | None
+    revisit_after_lock: bool
+    chain_armed: bool
+    room_grant: str | None
+    room_lock: bool
+    waiting_stage: str | None
+    waiting_digest: str | None
+    revision: int
+
+
+class StageResult(TypedDict, total=False):
+    ok: bool
+    essay_id: str
+    stage: str
+    confirmPhase: str | None
+    noop: bool
+    wrote: bool
+    stored: bool
+    advanced: bool
+    closed: bool
+    submitted: bool
+    refused: str
+    reason: str
+    digest: str
+    current: str
+    next: str
 
 
 def blank_pointer() -> dict[str, object]:
@@ -192,7 +225,7 @@ def init_cloned_sequence_pointer(folder) -> None:
     _replay_commit(folder)
     path = folder / POINTER_FILE
     if path.is_file():
-        _atomic(path, _pointer_text(blank_pointer()))
+        _atomic(path, _pointer_text(cast(Pointer, blank_pointer())))
     _clear_copied_writing(folder)
 
 
@@ -260,7 +293,7 @@ def rebind_cloned_confirms(folder, essay_id: str) -> None:
     else:
         data["waiting_stage"] = None
         data["waiting_digest"] = None
-    _atomic(pointer_path, _pointer_text(data))
+    _atomic(pointer_path, _pointer_text(cast(Pointer, data)))
 
 
 def _own_door_card(opened: dict[str, object] | None, essay_id: str, stage: str) -> dict[str, object] | None:
@@ -361,7 +394,7 @@ def _normalize_pointer(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _room_state(pointer: dict[str, object]) -> dict[str, object]:
+def _room_state(pointer: dict[str, Any]) -> dict[str, object]:
     """The room press still on the pointer. A card tap leaves both empty."""
     grant = pointer.get("room_grant")
     if grant not in STAGE_ORDER:
@@ -369,7 +402,7 @@ def _room_state(pointer: dict[str, object]) -> dict[str, object]:
     return {"room_grant": grant, "room_lock": pointer.get("room_lock") is True}
 
 
-def _room_after_card_save(pointer: dict[str, object], stage: str) -> dict[str, object]:
+def _room_after_card_save(pointer: dict[str, Any], stage: str) -> dict[str, object]:
     """A room press saves only the stage it named. The next stage needs its own press."""
     state = _room_state(pointer)
     if state["room_grant"] == stage:
@@ -385,7 +418,7 @@ def _saved_after_confirm(pointer: dict[str, Any], stage: str) -> list[str]:
     return saved
 
 
-def _room_blocks(pointer: dict[str, object], stage: str) -> bool:
+def _room_blocks(pointer: dict[str, Any], stage: str) -> bool:
     """True when a room press for another stage, or a used press, is not this stage's Confirm."""
     state = _room_state(pointer)
     if state["room_lock"] and state["room_grant"] != stage:
@@ -393,7 +426,7 @@ def _room_blocks(pointer: dict[str, object], stage: str) -> bool:
     return state["room_grant"] is not None and state["room_grant"] != stage
 
 
-def _waiting_pair(pointer: dict[str, object]) -> tuple[str | None, str | None]:
+def _waiting_pair(pointer: dict[str, Any]) -> tuple[str | None, str | None]:
     stage = pointer.get("waiting_stage")
     digest = pointer.get("waiting_digest")
     if stage not in STAGE_ORDER or not isinstance(digest, str) or len(digest) != 64:
@@ -401,7 +434,7 @@ def _waiting_pair(pointer: dict[str, object]) -> tuple[str | None, str | None]:
     return stage, digest
 
 
-def _waiting_digest(pointer: dict[str, object], stage: str) -> str | None:
+def _waiting_digest(pointer: dict[str, Any], stage: str) -> str | None:
     """Digest of the draft that wrote the current note for this stage."""
     waiting_stage, digest = _waiting_pair(pointer)
     if waiting_stage != stage:
@@ -426,7 +459,7 @@ def _note_look(essay_id: str, stage: str) -> str | None:
     return None
 
 
-def _revision(pointer: dict[str, object]) -> int:
+def _revision(pointer: dict[str, Any]) -> int:
     value = pointer.get("revision")
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         return 0
@@ -516,7 +549,7 @@ def _commit_pointer(
         if note is not None and note_text is not None:
             record["note"] = _note_rel(note)
             record["note_text"] = note_text
-        _atomic(_commit_path(essay_id), _pointer_text(record))
+        _atomic(_commit_path(essay_id), _pointer_text(cast(Pointer, record)))
         _apply_commit(work_dir(essay_id), record)
         return stored
 
@@ -524,7 +557,7 @@ def _commit_pointer(
 def _pointer_lost(essay_id: str, stage: str, genre: str | None) -> dict[str, object]:
     """The pointer moved after this call read it. The newer pointer stays."""
     fresh = load_pointer(essay_id)
-    blocked = _stage_refusal(fresh, stage, genre)
+    blocked = _stage_refusal(cast(Pointer, fresh), stage, genre)
     if blocked is not None:
         return _confirm_blocked(essay_id, fresh, stage, genre, blocked)
     return refuse(
@@ -719,7 +752,7 @@ def _hold_confirm(
     essay_id: str,
     stage: str,
     genre: str | None,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     card_digest: str | None,
     opened: dict[str, Any] | None,
     following: str,
@@ -786,7 +819,7 @@ def _render_stage10_before_close(
     essay_id: str,
     stage: str,
     genre: str | None,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     card_digest: str | None,
 ) -> dict[str, object] | None:
     """Write the graded sequence file before the pointer can close.
@@ -863,7 +896,7 @@ def _commit_with_next_card(
     essay_id: str,
     stage: str,
     genre: str | None,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     updated: dict[str, object],
     note,
     note_text: str,
@@ -989,7 +1022,7 @@ def _replay_confirm_card(
     essay_id: str,
     stage: str,
     genre: str | None,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     card_digest: str | None,
 ) -> dict[str, object] | None:
     """The waiting Confirm card. Typed Confirm, yes, or ok shows it again."""
@@ -1048,7 +1081,7 @@ def _stage7_skip_reply(
     essay_id: str,
     stage: str,
     genre: str | None,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     confirm_phase: str,
 ) -> dict[str, object]:
     """A skip does not save. The same reply asks the questions again."""
@@ -1082,7 +1115,7 @@ def _reoffer_confirm(
     essay_id: str,
     stage: str,
     genre: str | None,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     card_digest: str | None,
     *,
     reason: str,
@@ -1144,7 +1177,7 @@ def _hydrate_card(
     return text, filled
 
 
-def _grant_room(essay_id: str, pointer: dict[str, object], stage: str) -> dict[str, object] | None:
+def _grant_room(essay_id: str, pointer: dict[str, Any], stage: str) -> dict[str, object] | None:
     """Record this stage's press without rewriting current or saved from a stale read."""
     proposed = dict(pointer)
     proposed["room_grant"] = stage
@@ -1155,7 +1188,7 @@ def _grant_room(essay_id: str, pointer: dict[str, object], stage: str) -> dict[s
 def _superseded_card(
     essay_id: str,
     stage: str,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     card_digest: str | None,
 ) -> bool:
     """True when this card is an older draft of the same stage than the one waiting."""
@@ -1181,7 +1214,7 @@ def _older_card(
     essay_id: str,
     stage: str,
     genre: str | None,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
 ) -> dict[str, object]:
     return _reoffer_confirm(
         essay_id,
@@ -1200,7 +1233,7 @@ def _older_card(
 def _stale_confirm_body(
     essay_id: str,
     stage: str,
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     digest: object,
     look_text: str,
 ) -> bool:
@@ -1236,11 +1269,11 @@ def _revisit_window(pointer: dict[str, Any]) -> bool:
     )
 
 
-def _stage_refusal(pointer: dict[str, Any], stage: str, genre: str | None) -> dict[str, object] | None:
+def _stage_refusal(pointer: Pointer, stage: str, genre: str | None) -> dict[str, object] | None:
     current = pointer["current"]
     if pointer.get("closed"):
         return refuse("stage", "The last stage is already saved. This tool does not submit.")
-    window = _revisit_window(pointer)
+    window = _revisit_window(cast(dict[str, Any], pointer))
     if window and stage in {"2", "3"}:
         if stage == "3" and pointer.get("revisit_open") == "2":
             if genre == "report":
@@ -1277,7 +1310,7 @@ def _stage_refusal(pointer: dict[str, Any], stage: str, genre: str | None) -> di
 
 
 def _stage5_held(
-    pointer: dict[str, object],
+    pointer: dict[str, Any],
     gate: dict[str, Any],
     blockers: list[dict[str, str]],
 ) -> dict[str, object]:
@@ -1319,7 +1352,7 @@ def in_first_draft(essay_id: str) -> bool:
     return pointer.get("current") == "5" and "5" not in pointer.get("saved", [])
 
 
-def _late_armed(pointer: dict[str, object], stage: str, essay_id: str) -> bool:
+def _late_armed(pointer: dict[str, Any], stage: str, essay_id: str) -> bool:
     from essay_writer.stage7 import stage7_edited
 
     armed = pointer.get("chain_armed") is True
@@ -1744,7 +1777,7 @@ def essay_stage(
     pointer = load_pointer(essay_id)
     genre = brief_genre(essay_id)
     pending_lock = inherited_lock_pending(essay_id, stage)
-    blocked = _stage_refusal(pointer, stage, genre)
+    blocked = _stage_refusal(cast(Pointer, pointer), stage, genre)
     if blocked and not (minting and _mint_stage_allowed(pointer, stage)):
         if confirmPhase == CONFIRM:
             return _confirm_blocked(essay_id, pointer, stage, genre, blocked)
@@ -1781,7 +1814,71 @@ def essay_stage(
         and not _INHERITED_KEEP.get()
     ):
         return prior_saved_lock_ask(essay_id, stage, pending_lock)
-    from essay_writer.spine import accept_stage_card, advances_without_confirm
+    return _run_stage(
+        essay_id,
+        stage,
+        confirmPhase,
+        text,
+        look,
+        master=master,
+        namedFolder=namedFolder,
+        answers=answers,
+        edited=edited,
+        webCheck=webCheck,
+        heldFile=heldFile,
+        cardAction=cardAction,
+        cardDigest=cardDigest,
+        card_only=card_only,
+        pointer=pointer,
+        genre=genre,
+        minting=minting,
+    )
+
+
+def _noop_result(
+    essay_id: str,
+    stage: str,
+    confirmPhase: str | None,
+    current: str,
+) -> dict[str, Any]:
+    """A confirm with no waiting card is a quiet no-op."""
+    body: StageResult = {
+        "ok": True,
+        "essay_id": essay_id,
+        "stage": stage,
+        "confirmPhase": confirmPhase,
+        "noop": True,
+        "wrote": False,
+        "stored": False,
+        "advanced": False,
+        "current": current,
+        "closed": False,
+        "submitted": False,
+    }
+    return dict(body)
+
+
+def _run_stage(
+    essay_id: str,
+    stage: str,
+    confirmPhase: str | None,
+    text: str,
+    look: str | None,
+    *,
+    master: str | None,
+    namedFolder: str | None,
+    answers: str | None,
+    edited: str | None,
+    webCheck: dict[str, Any] | None,
+    heldFile: str | None,
+    cardAction: str | None,
+    cardDigest: str | None,
+    card_only: bool,
+    pointer: dict[str, Any],
+    genre: str | None,
+    minting: bool,
+) -> dict[str, Any]:
+    from essay_writer.spine import advances_without_confirm
 
     auto_next = advances_without_confirm(stage)
     if confirmPhase == CONFIRM and auto_next:
@@ -1803,19 +1900,88 @@ def essay_stage(
         and _waiting_digest(pointer, stage) is None
         and latest_draft(essay_id, TOOL, stage=stage) is None
     ):
-        return {
-            "ok": True,
-            "essay_id": essay_id,
-            "stage": stage,
-            "confirmPhase": confirmPhase,
-            "noop": True,
-            "wrote": False,
-            "stored": False,
-            "advanced": False,
-            "current": pointer["current"],
-            "closed": False,
-            "submitted": False,
-        }
+        return _noop_result(essay_id, stage, confirmPhase, pointer["current"])
+    result = _confirm_path(
+        essay_id,
+        stage,
+        genre,
+        pointer,
+        confirmPhase,
+        text,
+        look,
+        master,
+        namedFolder,
+        answers,
+        edited,
+        webCheck,
+        heldFile,
+        cardAction,
+        cardDigest,
+        card_only,
+        minting,
+    )
+    if not result.get("_state"):
+        return result
+    confirmPhase = result["confirmPhase"]
+    text = result["text"]
+    look = result["look"]
+    pointer = result["pointer"]
+    master = result["master"]
+    namedFolder = result["namedFolder"]
+    answers = result["answers"]
+    edited = result["edited"]
+    webCheck = result["webCheck"]
+    heldFile = result["heldFile"]
+    if stage == "7" and confirmPhase == DRAFT:
+        from essay_writer.stage7 import answers_mean_skip as _skip_probe
+
+        if _skip_probe(text) or _skip_probe(answers if isinstance(answers, str) else None):
+            return _stage7_skip_reply(essay_id, stage, genre, pointer, confirmPhase)
+    result = _build_stage_body(
+        essay_id,
+        stage,
+        confirmPhase,
+        text,
+        pointer,
+        genre,
+        minting,
+        answers,
+        edited,
+        webCheck,
+        master,
+        namedFolder,
+        heldFile,
+        card_only,
+        auto_next,
+    )
+    if not result.get("_state"):
+        return result
+    if result["confirmPhase"] == DRAFT:
+        return _draft_reply(result)
+    return _save_confirm(result, cardDigest)
+
+
+def _confirm_path(
+    essay_id: str,
+    stage: str,
+    genre: str | None,
+    pointer: dict[str, Any],
+    confirmPhase: str | None,
+    text: str,
+    look: str | None,
+    master: str | None,
+    namedFolder: str | None,
+    answers: str | None,
+    edited: str | None,
+    webCheck: dict[str, Any] | None,
+    heldFile: str | None,
+    cardAction: str | None,
+    cardDigest: str | None,
+    card_only: bool,
+    minting: bool,
+) -> dict[str, Any]:
+    from essay_writer.spine import accept_stage_card
+
     if confirmPhase == CONFIRM:
         from essay_writer.specialists.grok_bot import (
             CARD_CONFIRM,
@@ -1964,11 +2130,38 @@ def essay_stage(
             edited = filled["edited"]
             webCheck = filled["webCheck"]
             heldFile = filled["heldFile"]
-    if stage == "7" and confirmPhase == DRAFT:
-        from essay_writer.stage7 import answers_mean_skip as _skip_probe
+    return {
+        "_state": True,
+        "confirmPhase": confirmPhase,
+        "text": text,
+        "look": look,
+        "pointer": pointer,
+        "master": master,
+        "namedFolder": namedFolder,
+        "answers": answers,
+        "edited": edited,
+        "webCheck": webCheck,
+        "heldFile": heldFile,
+    }
 
-        if _skip_probe(text) or _skip_probe(answers if isinstance(answers, str) else None):
-            return _stage7_skip_reply(essay_id, stage, genre, pointer, confirmPhase)
+
+def _build_stage_body(
+    essay_id: str,
+    stage: str,
+    confirmPhase: str | None,
+    text: str,
+    pointer: dict[str, Any],
+    genre: str | None,
+    minting: bool,
+    answers: str | None,
+    edited: str | None,
+    webCheck: dict[str, Any] | None,
+    master: str | None,
+    namedFolder: str | None,
+    heldFile: str | None,
+    card_only: bool,
+    auto_next: str | None,
+) -> dict[str, Any]:
     from essay_writer.specialists.grok_bot import maybe_seed_basics_on_draft
 
     text, basics_seeded = maybe_seed_basics_on_draft(
@@ -2033,8 +2226,6 @@ def essay_stage(
         if basics_seeded:
             blocked_save["basics_seeded"] = True
         return blocked_save
-    if basics_seeded:
-        look = text
     revisit = _revisit_window(pointer) and stage in {"2", "3"}
     if revisit and not text:
         return refuse(
@@ -2110,8 +2301,6 @@ def essay_stage(
 
         remember_databases(essay_id, heldFile)
         body["databases"] = database_view(essay_id)
-    from essay_writer.spine import stage_confirm_card
-
     if stage == "6":
         from essay_writer.late_chain import stage6_fields
         body.update(stage6_fields(essay_id, master=master, named_folder=namedFolder))
@@ -2216,6 +2405,55 @@ def essay_stage(
 
         real_bib, check = stage_reconcile(essay_id)
         body["download_check"] = check
+    return {
+        "_state": True,
+        "confirmPhase": confirmPhase,
+        "text": text,
+        "answers": answers,
+        "edited": edited,
+        "webCheck": webCheck,
+        "payload": payload,
+        "fingerprint": fingerprint,
+        "body": body,
+        "item": item,
+        "note": note,
+        "revisit": revisit,
+        "real_bib": real_bib,
+        "short_report": short_report,
+        "cite_report": cite_report,
+        "pointer": pointer,
+        "auto_next": auto_next,
+        "minting": minting,
+        "card_only": card_only,
+        "master": master,
+        "namedFolder": namedFolder,
+        "heldFile": heldFile,
+        "essay_id": essay_id,
+        "stage": stage,
+        "genre": genre,
+    }
+
+
+def _draft_reply(state: dict[str, Any]) -> dict[str, Any]:
+    from essay_writer.spine import stage_confirm_card
+
+    confirmPhase = state["confirmPhase"]
+    essay_id = state["essay_id"]
+    stage = state["stage"]
+    genre = state["genre"]
+    pointer = state["pointer"]
+    body = state["body"]
+    payload = state["payload"]
+    fingerprint = state["fingerprint"]
+    text = state["text"]
+    note = state["note"]
+    revisit = state["revisit"]
+    real_bib = state["real_bib"]
+    auto_next = state["auto_next"]
+    minting = state["minting"]
+    master = state["master"]
+    namedFolder = state["namedFolder"]
+    card_only = state["card_only"]
     if confirmPhase == DRAFT:
         from essay_writer.canon import digest as payload_digest
 
@@ -2328,6 +2566,21 @@ def essay_stage(
             stage,
             armed=pointer.get("chain_armed") is True,
         )
+    raise AssertionError("draft path returned nothing")
+
+
+def _save_confirm(state: dict[str, Any], cardDigest: str | None) -> dict[str, Any]:
+    essay_id = state["essay_id"]
+    stage = state["stage"]
+    genre = state["genre"]
+    pointer = state["pointer"]
+    body = state["body"]
+    payload = state["payload"]
+    fingerprint = state["fingerprint"]
+    text = state["text"]
+    note = state["note"]
+    revisit = state["revisit"]
+    real_bib = state["real_bib"]
     ready = confirm_ready(essay_id, TOOL, payload, fingerprint)
     if ready.get("ok") is False:
         return _reoffer_confirm(
