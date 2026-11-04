@@ -31,3 +31,5 @@ tokens, or exploit details in a public issue.
   `Essay-writer/*/`, `uploads/*/`); never commit them.
 - Assigned file paths are validated before the tool reads or writes, and the
   confirm gate must pass before any file is changed.
+
+_This policy covers the software as distributed from this repository._
