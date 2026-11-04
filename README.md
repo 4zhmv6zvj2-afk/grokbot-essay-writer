@@ -1,6 +1,7 @@
 # Essay Writer
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/4zhmv6zvj2-afk/grokbot-essay-writer/badge)](https://securityscorecards.dev/viewer/?uri=github.com/4zhmv6zvj2-afk/grokbot-essay-writer)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16338/badge)](https://www.bestpractices.dev/projects/16338)
 
 Helps you research a university assignment and turn it into a Word essay.
 
@@ -75,3 +76,4 @@ This is a stable source release. Maintenance is limited to reported bugs. To rep
 ## License
 
 [MIT](LICENSE) © 2026 `4zhmv6zvj2-afk`
+
