@@ -69,6 +69,23 @@ uv run pytest
 
 Setup, the `first_run.py` bootstrap, and bug reports: [CONTRIBUTING.md](CONTRIBUTING.md). Stage flow and module layout: [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## Verify a download
+
+GitHub releases include the wheel, the sdist, `SHA256SUMS`, a Sigstore signature bundle (`*.sigstore.json`) for each file, and `provenance.intoto.jsonl`.
+
+Download the files into one folder, then check them:
+
+```bash
+# The checksums and filenames come from the release:
+sha256sum -c SHA256SUMS
+
+# Check the wheel was built by this repository's release workflow:
+gh attestation verify essay_writer-0.2.1-py3-none-any.whl \
+  --repo 4zhmv6zvj2-afk/grokbot-essay-writer
+```
+
+The `.sigstore.json` files are keyless Sigstore signature bundles for the file with the same name before the suffix. `provenance.intoto.jsonl` is the in-toto build provenance attestation. This project is distributed as source; the release files exist so a download can be checked, not as a package on a registry.
+
 ## Status and help
 
 This is a stable source release. Maintenance is limited to reported bugs. To report one, open an issue with the details listed in [CONTRIBUTING.md](CONTRIBUTING.md).

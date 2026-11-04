@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag of a published release to build and attach assets to (for example v0.2.1)"
+        required: true
+        type: string
+
+# Read-only by default (Token-Permissions). The release job below opts in to
+# the three write permissions it needs, and only for release published /
+# workflow_dispatch events, never for pull requests.
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ inputs.tag || github.event.release.tag_name }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  release:
+    name: Build, sign, and attest release assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Check out the tagged tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Set up Python 3.15.2
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.15.2"
+
+      - name: Install build tooling
+        run: python -m pip install --require-hashes -r requirements-build.txt
+
+      - name: Verify the tag exists and was checked out
+        run: |
+          set -euo pipefail
+          if [ -z "${TAG}" ]; then
+            echo "::error::No tag supplied; set the workflow_dispatch 'tag' input or publish a release."
+            exit 1
+          fi
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" >/dev/null 2>&1; then
+            echo "::error::Tag ${TAG} does not exist in ${GITHUB_REPOSITORY}. Not creating or moving tags."
+            exit 1
+          fi
+          tag_commit="$(git rev-list -n 1 "refs/tags/${TAG}")"
+          head_commit="$(git rev-parse HEAD)"
+          if [ "${tag_commit}" != "${head_commit}" ]; then
+            echo "::error::Checked-out commit ${head_commit} is not tag ${TAG} (${tag_commit})."
+            exit 1
+          fi
+
+      - name: Verify the tag matches the package version
+        run: |
+          set -euo pipefail
+          tag_version="${TAG#v}"
+          pyproject_version="$(python -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
+          if [ "${tag_version}" != "${pyproject_version}" ]; then
+            echo "::error::Tag ${TAG} does not match pyproject.toml version ${pyproject_version}."
+            exit 1
+          fi
+          echo "Tag ${TAG} matches pyproject.toml version ${pyproject_version}."
+
+      - name: Build the sdist and wheel
+        run: python -m build
+
+      - name: Generate SHA256SUMS
+        working-directory: dist
+        run: sha256sum *.whl *.tar.gz > SHA256SUMS
+
+      - name: Verify the GitHub release exists
+        run: |
+          set -euo pipefail
+          if ! gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "::error::No GitHub release exists for tag ${TAG}. Publish the release before uploading assets."
+            exit 1
+          fi
+
+      - name: Upload the build artifacts to the release
+        run: gh release upload "${TAG}" dist/* --clobber
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+
+      - name: Sign the build artifacts with Sigstore
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for file in dist/*; do
+            case "${file}" in
+              *.sigstore.json|dist/provenance.intoto.jsonl) continue ;;
+            esac
+            echo "Signing ${file}"
+            cosign sign-blob --yes --bundle "${file}.sigstore.json" "${file}"
+          done
+
+      - name: Upload the signature bundles to the release
+        run: gh release upload "${TAG}" dist/*.sigstore.json --clobber
+
+      - name: Attest build provenance
+        id: provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
+        with:
+          subject-path: "dist/*"
+
+      - name: Upload the provenance bundle to the release
+        run: |
+          set -euo pipefail
+          cp "${{ steps.provenance.outputs.bundle-path }}" dist/provenance.intoto.jsonl
+          gh release upload "${TAG}" dist/provenance.intoto.jsonl --clobber
