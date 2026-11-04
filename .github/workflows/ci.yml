@@ -10,11 +10,12 @@ permissions:
 
 jobs:
   test:
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.14.10", "3.15.2"]
+        python-version: ["3.12.13", "3.14.10", "3.15.2"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
@@ -23,19 +24,12 @@ jobs:
       - name: Repository checks
         run: |
           set -euo pipefail
-          local_notes=$(git ls-files '*.local.md' 'NOTES.local' 'LOCAL-NOTES.md')
+          local_notes=$(git ls-files '*.local.md' 'NOTES.local' 'LOCAL-NOTES.md' || true)
           if [ -n "$local_notes" ]; then
             echo "local notes must stay untracked"
             exit 1
           fi
-          files=$(git ls-files 'README.md' 'FIRST-RUN.txt' 'FRIEND-PROMPT.txt' 'docs/*.md')
-          hits=$(grep -nE '(^|[^A-Za-z0-9_.])(dig|ship|land|seat)([^A-Za-z0-9_-]|$)' $files || true)
-          if [ -n "$hits" ]; then
-            echo "$hits"
-            echo "private label in a tracked doc"
-            exit 1
-          fi
-          tracked=$(git ls-files | grep -v '^\.github/')
+          tracked=$(git ls-files | grep -v '^\.github/' || true)
           # Only documented placeholder home/volume paths are allowed. Any other
           # real path is machine-specific and must not be published.
           path_hits=$(grep -noE '/(Users|Volumes|home)/[A-Za-z0-9][A-Za-z0-9._-]*' $tracked \
@@ -45,15 +39,106 @@ jobs:
             echo "real home or volume path in a tracked file"
             exit 1
           fi
+          # Generic credential material only: private key blocks and well-known
+          # token prefixes. This repository is a source-available distribution,
+          # so the check polices secrets, not anyone's domain vocabulary.
+          secret_hits=$(grep -nE 'BEGIN ([A-Z]+ )?PRIVATE KEY|(^|[^A-Za-z0-9])(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,})' $tracked || true)
+          if [ -n "$secret_hits" ]; then
+            echo "$secret_hits"
+            echo "secret material in a tracked file"
+            exit 1
+          fi
       - name: Install package and dev tools
         run: |
-          python -m pip install --require-hashes -r requirements-ci.txt
+          # requirements-build.txt carries the hash-pinned setuptools/wheel the
+          # editable install below needs with --no-build-isolation.
+          python -m pip install --require-hashes -r requirements-build.txt -r requirements-ci.txt
           python -m pip install --no-build-isolation --no-deps -e .
-      - name: Prompt docs
-        run: python tools/generate_docs.py --check
+      - name: Prompt docs and snapshot
+        run: |
+          python tools/generate_docs.py --check
+          python tools/update_prompt_snapshot.py --check
       - name: Ruff
         run: python -m ruff check src tests tools
       - name: Mypy
         run: python -m mypy src
       - name: Pytest
         run: python -m pytest -q
+
+  test-macos:
+    name: Test (macOS, Python 3.14.10)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.14.10"
+      - name: Install package and dev tools
+        run: |
+          # requirements-build.txt carries the hash-pinned setuptools/wheel the
+          # editable install below needs with --no-build-isolation.
+          python -m pip install --require-hashes -r requirements-build.txt -r requirements-ci.txt
+          python -m pip install --no-build-isolation --no-deps -e .
+      - name: Pytest
+        run: python -m pytest -q
+
+  artifacts:
+    name: Build and test the shipped artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          # Build and test on the lowest supported interpreter: shipped
+          # artifacts must install and pass on every Python in the matrix.
+          python-version: "3.12.13"
+      - name: Install build and test tooling
+        run: python -m pip install --require-hashes -r requirements-build.txt -r requirements-ci.txt
+      - name: Build twice and require identical hashes
+        run: |
+          set -euo pipefail
+          # Reproducible releases: artifact timestamps come from the commit.
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          python tools/reproducible_build.py --outdir dist
+          cd dist
+          sha256sum *.whl *.tar.gz | tee SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - name: Install the wheel into a clean virtualenv
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/wheel-venv"
+          "$RUNNER_TEMP/wheel-venv/bin/python" -m pip install --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/wheel-venv/bin/python" - <<'PY'
+          import pathlib
+
+          import essay_writer
+
+          package = pathlib.Path(essay_writer.__file__).parent
+          for name in (
+              "FIRST-RUN.txt",
+              "FRIEND-PROMPT.txt",
+              "_vendor/VENDOR.json",
+              "prompts/front_office/tools.json",
+          ):
+              assert (package / name).is_file(), f"wheel is missing {name}"
+          print("wheel import ok:", essay_writer.__version__, package)
+          PY
+      - name: Run the full suite from the extracted sdist
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sdist"
+          tar xzf dist/*.tar.gz -C "$RUNNER_TEMP/sdist" --strip-components=1
+          cd "$RUNNER_TEMP/sdist"
+          for required in tests/conftest.py tests/helpers.py tests/pty_support.py tests/fixtures tests/snapshots/prompts.json .gitignore; do
+            test -e "$required" || { echo "the sdist is missing $required"; exit 1; }
+          done
+          # The suite asks git for HEAD and for the tracked file list, and an
+          # sdist is not a checkout. Give the extracted tree a throwaway repo so
+          # the same tests run against the shipped source.
+          git init -q .
+          git add -A
+          git -c user.name=ci -c user.email=ci@example.invalid commit -qm "extracted sdist"
+          python -m pytest -q

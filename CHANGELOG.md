@@ -1,9 +1,53 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-11-05
 
-- README rewritten for the reader: who it is for, what setup does to the computer, a session before the setup prompt, and status and help at the foot.
-- Developer setup, first-run bootstrap, and vendoring notes move to CONTRIBUTING.md and ARCHITECTURE.md.
+Distribution and release engineering:
+
+- The source distribution is complete and self-testable: it carries the full
+  test suite, `conftest.py`, `helpers.py`, `pty_support.py`, fixtures, the prompt
+  snapshot, docs, and tools. `pytest` works from the extracted sdist.
+- Builds are reproducible. `SOURCE_DATE_EPOCH` comes from the tagged commit;
+  `tools/reproducible_build.py` builds twice, normalizes the sdist, and fails on
+  any hash drift. The release workflow runs the same check before signing.
+- New CI `artifacts` job: build the wheel and sdist, install the wheel into a
+  clean environment, extract the sdist, and run the full suite from it. The
+  release workflow runs that artifact test before uploading or signing.
+- macOS CI job added, matching the Mac-centric product.
+- The CI "Repository checks" step no longer greps for a private domain-word
+  denylist. It checks generic things a public repository should check: machine
+  paths and secret material.
+
+Install path:
+
+- Runtime dependencies are exact-pinned (`mcp==2.3.0`, `python-docx==1.2.0`) and
+  `requirements-runtime.txt` is hash-pinned for a verifiable manual install.
+- Setup no longer pipes `curl … | bash` into a shell. It downloads the Cursor
+  installer to a file, records the file's SHA-256, and runs it only after
+  explicit consent (`--install-cursor` or `ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1`).
+  Without consent it changes nothing and prints the manual command.
+
+Python floor:
+
+- The package floor is 3.12, verified with the full suite on CPython 3.12.13
+  (1006 passed, 8 skipped — the same as the 3.15 baseline). `pyproject.toml`,
+  ruff, mypy, `uv.lock`, and the CI matrix move together.
+- The first-run bootstrap still provisions a private CPython 3.15.2 when it has
+  to; the floor only says what the package itself runs on.
+
+Documentation:
+
+- README rewritten around what the project is, why it is public, what it is not,
+  and what setup does to a computer. Academic-integrity position stated plainly.
+- `HISTORY.md` records that `v0.2.1` is an import snapshot and that `0.3.0` is
+  the first normal release.
+- New `docs/GLOSSARY.md` maps the private vocabulary (doors, seats, spine,
+  shelf, dig, canon, mid-office) to plain terms.
+- New `docs/testing.md` explains the `_ac` naming, the contract pins, and the
+  prompt snapshot; `tools/update_prompt_snapshot.py` regenerates the snapshot
+  and supports `--check`.
+- The version is checked against `pyproject.toml` instead of a hard-coded string,
+  so the package and the metadata cannot drift.
 
 ## 0.2.1 — 2026-11-04
 

@@ -1,0 +1,7 @@
+# Runtime dependencies for the student install path.
+# Exact versions verified against the full test suite (see README "Developers").
+# Recompile with:
+#   uv pip compile --universal --generate-hashes --python-version 3.12 \
+#       requirements-runtime.in -o requirements-runtime.txt
+mcp==2.3.0
+python-docx==1.2.0

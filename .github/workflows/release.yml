@@ -22,9 +22,9 @@ env:
 
 jobs:
   release:
-    name: Build, sign, and attest release assets
+    name: Test, build, sign, and attest release assets
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: write
       id-token: write
@@ -38,29 +38,41 @@ jobs:
           fetch-tags: true
           persist-credentials: false
 
-      - name: Prepare build requirements for tags cut before this workflow
+      - name: Prepare packaging files for tags cut before this workflow
         run: |
           set -euo pipefail
-          if [ -f requirements-build.txt ]; then
-            echo "Using requirements-build.txt from the tagged tree."
-            exit 0
-          fi
-          # Legacy tags (for example v0.2.1) predate this workflow and do not
-          # contain the hash-pinned build tooling file. Artifacts are still
-          # built from the tagged tree; only the build tool comes from the
-          # default-branch commit this workflow was dispatched from.
           default_branch="${{ github.event.repository.default_branch }}"
-          echo "Tag ${TAG} has no requirements-build.txt; reading it from ${default_branch}."
-          gh api "repos/${GITHUB_REPOSITORY}/contents/requirements-build.txt?ref=${default_branch}" \
-            --jq '.content' | base64 -d > requirements-build.txt
+          fetch_from_default() {
+            name="$1"
+            if [ -f "${name}" ]; then
+              echo "Using ${name} from the tagged tree."
+              return 0
+            fi
+            # Legacy tags (for example v0.2.1) predate the reproducible
+            # packaging files. Artifacts are still built from the tagged
+            # source; only the packaging scaffolding comes from the
+            # default-branch commit this workflow was dispatched from.
+            echo "Tag ${TAG} has no ${name}; reading it from ${default_branch}."
+            mkdir -p "$(dirname "${name}")"
+            gh api "repos/${GITHUB_REPOSITORY}/contents/${name}?ref=${default_branch}" \
+              --jq '.content' | base64 -d > "${name}"
+          }
+          fetch_from_default requirements-build.txt
+          fetch_from_default requirements-ci.txt
+          fetch_from_default MANIFEST.in
+          fetch_from_default tools/normalize_sdist.py
+          fetch_from_default tools/reproducible_build.py
 
-      - name: Set up Python 3.15.2
+      - name: Set up Python 3.12.13
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
-          python-version: "3.15.2"
+          python-version: "3.12.13"
 
       - name: Install build tooling
         run: python -m pip install --require-hashes -r requirements-build.txt
+
+      - name: Set SOURCE_DATE_EPOCH from the tagged commit
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
 
       - name: Verify the tag exists and was checked out
         run: |
@@ -91,12 +103,45 @@ jobs:
           fi
           echo "Tag ${TAG} matches pyproject.toml version ${pyproject_version}."
 
-      - name: Build the sdist and wheel
-        run: python -m build
+      - name: Build twice and require identical hashes
+        run: python tools/reproducible_build.py --outdir dist
 
       - name: Generate SHA256SUMS
         working-directory: dist
-        run: sha256sum *.whl *.tar.gz > SHA256SUMS
+        run: |
+          sha256sum *.whl *.tar.gz > SHA256SUMS
+          sha256sum -c SHA256SUMS
+
+      - name: Install test tooling
+        run: python -m pip install --require-hashes -r requirements-ci.txt
+
+      - name: Test the wheel and run the full suite from the sdist
+        run: |
+          set -euo pipefail
+          python -m pip install --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          python - <<'PY'
+          import pathlib
+
+          import essay_writer
+
+          package = pathlib.Path(essay_writer.__file__).parent
+          for name in ("FIRST-RUN.txt", "FRIEND-PROMPT.txt", "_vendor/VENDOR.json"):
+              assert (package / name).is_file(), f"wheel is missing {name}"
+          print("wheel import ok:", essay_writer.__version__, package)
+          PY
+          mkdir -p "$RUNNER_TEMP/sdist"
+          tar xzf "$GITHUB_WORKSPACE"/dist/*.tar.gz -C "$RUNNER_TEMP/sdist" --strip-components=1
+          cd "$RUNNER_TEMP/sdist"
+          for required in tests/conftest.py tests/helpers.py tests/pty_support.py tests/fixtures tests/snapshots/prompts.json .gitignore; do
+            test -e "$required" || { echo "the sdist is missing $required"; exit 1; }
+          done
+          # The suite asks git for HEAD and for the tracked file list, and an
+          # sdist is not a checkout. Give the extracted tree a throwaway repo.
+          git init -q .
+          git add -A
+          git -c user.name=ci -c user.email=ci@example.invalid commit -qm "extracted sdist"
+          python -m pytest -q
 
       - name: Verify the GitHub release exists
         run: |

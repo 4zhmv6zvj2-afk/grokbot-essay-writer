@@ -149,7 +149,7 @@ def essay_health() -> dict[str, Any]:
         "build_commit": build_commit(),
         "python_version": platform.python_version(),
         "python_executable": sys.executable,
-        "python_ok": sys.version_info >= (3, 14),
+        "python_ok": sys.version_info >= (3, 12),
         "read_only": True,
         "confirm": "draft-then-confirm",
         "doors": [

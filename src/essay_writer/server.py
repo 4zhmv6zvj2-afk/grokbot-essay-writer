@@ -258,7 +258,16 @@ def build_review_server() -> MCPServer:
 
 
 _FIRST_RUN_FLAGS = frozenset(
-    {"--install-upload", "--attach-mcp", "--copy-to-mac", "--remember-mac-dir", "--upload", "--dest"}
+    {
+        "--install-upload",
+        "--attach-mcp",
+        "--copy-to-mac",
+        "--remember-mac-dir",
+        "--upload",
+        "--dest",
+        "--install-cursor",
+        "--no-install-cursor",
+    }
 )
 
 
@@ -329,7 +338,8 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(
             "usage: essay-writer [--health | --debug-export | --reviewer | --stage-launch STAGE | "
             "--cursor-stage-launch STAGE | "
-            "--read-photo PATH | --install-upload ZIP [--no-reviewer] | --attach-mcp [--no-reviewer] | "
+            "--read-photo PATH | --install-upload ZIP [--no-reviewer] [--install-cursor] | "
+            "--attach-mcp [--no-reviewer] [--install-cursor] | "
             "--copy-to-mac PATH | --remember-mac-dir FOLDER]"
         )
     build_server().run(transport="stdio")

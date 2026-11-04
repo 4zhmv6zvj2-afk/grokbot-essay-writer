@@ -4,7 +4,8 @@ import ast
 
 from essay_writer.doors import DOORS
 from essay_writer.first_run import (
-    CURSOR_AGENT_INSTALL,
+    CURSOR_AGENT_MANUAL_INSTALL,
+    CURSOR_INSTALL_NEEDS_CONSENT,
     _parse,
     enable_mcp_server,
     ensure_cursor_agent,
@@ -44,10 +45,14 @@ def _both(name: str) -> tuple[str, str]:
 
 
 def test_ac1_first_run_installs_agent_on_grok_bot_computer_only():
-    """AC1. Both FIRST-RUN copies install agent when missing. Mac and grok stay uninstalled."""
+    """AC1. Both FIRST-RUN copies gate agent install on consent. Mac and grok stay uninstalled."""
     text, _copy = _both("FIRST-RUN.txt")
     assert text == first_run_prompt()
-    assert CURSOR_AGENT_INSTALL in text
+    assert CURSOR_AGENT_MANUAL_INSTALL in text
+    assert "| bash" not in text
+    assert CURSOR_INSTALL_NEEDS_CONSENT in text
+    assert "--install-cursor" in text
+    assert "ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1" in text
     assert "agent --version" in text
     assert "agent mcp enable essay-writer" in text
     assert "agent mcp enable essay-reviewer" in text
@@ -75,8 +80,9 @@ def test_ac2_friend_prompt_stays_short_and_names_the_chat():
 
 
 def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
-    """AC3. Fake installer only when agent is absent. Version is required before enable. Never grok. Setup does not install."""
+    """AC3. Consent gates a fake installer. Version is required before enable. Never grok."""
     monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: False)
+    monkeypatch.delenv("ESSAY_WRITER_ALLOW_CURSOR_INSTALL", raising=False)
     calls: list[str] = []
     state = {"binary": None, "version": None}
 
@@ -87,7 +93,7 @@ def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
         return state["version"]
 
     def fake():
-        calls.append(CURSOR_AGENT_INSTALL)
+        calls.append("installer")
         state["binary"] = "/opt/agent"
         state["version"] = "agent 1.2.3"
         return {"returncode": 0, "stdout": "", "stderr": ""}
@@ -99,22 +105,28 @@ def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("grok or curl must not run here")),
     )
 
-    missing = ensure_cursor_agent(installer=fake)
-    assert calls == [CURSOR_AGENT_INSTALL]
+    needs_consent = ensure_cursor_agent(installer=fake)
+    assert calls == []
+    assert needs_consent["ran_install"] is False
+    assert needs_consent["reason"] == CURSOR_INSTALL_NEEDS_CONSENT
+    assert needs_consent["consent_required"] is True
+    assert needs_consent["manual_install"] == CURSOR_AGENT_MANUAL_INSTALL
+
+    missing = ensure_cursor_agent(installer=fake, allow_install=True)
+    assert calls == ["installer"]
     assert missing["ran_install"] is True
     assert missing["ok"] is True
     assert missing["version"] == "agent 1.2.3"
-    assert "grok" not in CURSOR_AGENT_INSTALL
 
     calls.clear()
-    present = ensure_cursor_agent(installer=fake)
+    present = ensure_cursor_agent(installer=fake, allow_install=True)
     assert calls == []
     assert present["ran_install"] is False
 
     state["binary"] = None
     state["version"] = None
     monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: True)
-    mac = ensure_cursor_agent(installer=fake)
+    mac = ensure_cursor_agent(installer=fake, allow_install=True)
     assert calls == []
     assert mac["ran_install"] is False
     assert mac["reason"] == "mac-no-install"
@@ -143,7 +155,7 @@ def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
 
 
 def test_ac3_install_uploaded_copy_uses_the_same_installer(tmp_path, monkeypatch):
-    """The first-run install path calls the installer only when agent is absent."""
+    """The first-run install path calls the installer only when agent is absent and consent is given."""
     monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: False)
     calls: list[int] = []
     state = {"binary": None}
@@ -170,6 +182,7 @@ def test_ac3_install_uploaded_copy_uses_the_same_installer(tmp_path, monkeypatch
         pip_runner=runner,
         attach=False,
         cursor_installer=fake,
+        allow_cursor_install=True,
     )
     assert installed["ok"] is True
     assert calls == [1]
@@ -181,6 +194,7 @@ def test_ac3_install_uploaded_copy_uses_the_same_installer(tmp_path, monkeypatch
         pip_runner=runner,
         attach=False,
         cursor_installer=fake,
+        allow_cursor_install=True,
     )
     assert calls == []
     assert again["cursor_cli"]["ran_install"] is False

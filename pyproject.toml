@@ -1,13 +1,13 @@
 [project]
 name = "essay-writer"
-version = "0.2.1"
+version = "0.3.0"
 description = "Confirm-gated MCP server for university essays. Word only."
 readme = "README.md"
-requires-python = ">=3.14"
-license = { text = "MIT" }
+requires-python = ">=3.12"
+license = "MIT"
 dependencies = [
-  "mcp>=2.3,<3",
-  "python-docx>=1.2.0,<2",
+  "mcp==2.3.0",
+  "python-docx==1.2.0",
 ]
 
 [project.optional-dependencies]
@@ -46,7 +46,7 @@ pythonpath = ["src", "tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py314"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S"]
@@ -75,6 +75,6 @@ ignore = ["E501", "S603", "S606", "S607"]
 "src/essay_writer/student_voice.py" = ["S105"]
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.12"
 packages = ["essay_writer"]
 ignore_missing_imports = true

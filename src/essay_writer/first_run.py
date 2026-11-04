@@ -3,8 +3,11 @@
 Unpack a zip onto the cloud computer, pip install -e ., and write the Cursor
 Custom MCP entries for essay-writer and essay-reviewer. Pass --no-reviewer to
 attach only the writer. When the Cursor agent CLI is missing on the Grok Bot
-computer, install it, then enable those servers. Never install that CLI on the
-Mac, and never install grok.
+computer, setup reports cursor-install-needs-consent; with --install-cursor (or
+ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1) it downloads the installer to a file,
+records that file's SHA-256, and runs that file with a fixed argv. Never pipe a
+remote script into a shell. Then enable those servers. Never install that CLI on
+the Mac, and never install grok.
 Word and zip files already on disk can be copied to the Mac. This module does
 not write those files. A successful copy remembers that Mac path on the sequence.
 OK on the Mac handoff card creates Documents/Essay Bot on the friend's Mac
@@ -20,6 +23,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
@@ -47,7 +51,19 @@ KNOWN_MAC_DELIVERABLE_NAMES = (
     "critical-reviews.zip",
 )
 DELIVERABLE_SUFFIXES = frozenset({".docx", ".zip"})
-CURSOR_AGENT_INSTALL = "curl https://cursor.com/install -fsS | bash"
+# Cursor CLI install. The URL is downloaded to a file, hashed, and only then
+# run with a fixed argv. It is never piped into a shell and never runs unless
+# the operator opts in with --install-cursor or the env var below.
+CURSOR_AGENT_INSTALL_URL = "https://cursor.com/install"
+CURSOR_INSTALL_CONSENT_ENV = "ESSAY_WRITER_ALLOW_CURSOR_INSTALL"
+CURSOR_INSTALL_SHA256_ENV = "ESSAY_WRITER_CURSOR_INSTALL_SHA256"
+CURSOR_INSTALL_NEEDS_CONSENT = "cursor-install-needs-consent"
+CURSOR_AGENT_MANUAL_INSTALL = (
+    f"curl -fsS {CURSOR_AGENT_INSTALL_URL} -o cursor-agent-install.sh\n"
+    "shasum -a 256 cursor-agent-install.sh  # Linux: sha256sum cursor-agent-install.sh\n"
+    "bash cursor-agent-install.sh"
+)
+
 MCP_RESIDUAL = (
     "Wrote the Cursor Custom MCP entry in mcp.json and enabled it with "
     "`agent mcp enable` when the Cursor CLI is installed. "
@@ -358,37 +374,167 @@ def _on_mac() -> bool:
     return sys.platform == "darwin"
 
 
-def _run_cursor_installer() -> dict[str, Any]:
-    """Run the Cursor agent installer. Tests pass their own installer instead."""
-    if os.environ.get("PYTEST_CURRENT_TEST"):
+def cursor_install_consent(allow: bool | None = None) -> bool:
+    """Explicit consent for the Cursor CLI installer. The env value is an opt-in."""
+    if allow is not None:
+        return allow is True
+    value = os.environ.get(CURSOR_INSTALL_CONSENT_ENV, "")
+    return value.strip().casefold() in {"1", "true", "yes", "on"}
+
+
+def _download_cursor_installer() -> dict[str, Any]:
+    """Download the installer to a temp file with a fixed argv. No shell, no execution."""
+    curl = shutil.which("curl")
+    if not curl:
         return {
             "returncode": 1,
             "stdout": "",
-            "stderr": "skipped-under-test",
-            "command": CURSOR_AGENT_INSTALL,
+            "stderr": "curl is not on PATH, so the installer was not downloaded",
+            "reason": "cursor-install-curl-missing",
+            "url": CURSOR_AGENT_INSTALL_URL,
+            "sha256": None,
         }
+    folder = Path(tempfile.mkdtemp(prefix="essay-writer-cursor-"))
+    target = folder / "cursor-agent-install.sh"
     try:
         completed = subprocess.run(
-            ["bash", "-lc", CURSOR_AGENT_INSTALL],
+            [
+                curl,
+                "-fsS",
+                "--proto",
+                "=https",
+                "--max-time",
+                "60",
+                CURSOR_AGENT_INSTALL_URL,
+                "-o",
+                str(target),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            shell=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": f"download-failed: {exc}",
+            "reason": "cursor-install-download-failed",
+            "url": CURSOR_AGENT_INSTALL_URL,
+            "sha256": None,
+        }
+    if completed.returncode != 0 or not target.is_file():
+        return {
+            "returncode": 1,
+            "stdout": (completed.stdout or "")[-500:],
+            "stderr": (completed.stderr or "")[-500:] or "download-failed",
+            "reason": "cursor-install-download-failed",
+            "url": CURSOR_AGENT_INSTALL_URL,
+            "sha256": None,
+        }
+    try:
+        payload = target.read_bytes()
+        target.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    except OSError as exc:
+        return {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": f"download-failed: {exc}",
+            "reason": "cursor-install-download-failed",
+            "url": CURSOR_AGENT_INSTALL_URL,
+            "sha256": None,
+        }
+    return {
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "",
+        "url": CURSOR_AGENT_INSTALL_URL,
+        "path": str(target),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "bytes": len(payload),
+    }
+
+
+def _run_cursor_installer() -> dict[str, Any]:
+    """Download the installer to a file, record its SHA-256, then run that file.
+
+    Never pipes the remote payload into a shell and never uses bash -lc.
+    Callers establish consent before this function is reached.
+    """
+    download = _download_cursor_installer()
+    if download.get("returncode") != 0:
+        return download
+    script = Path(str(download["path"]))
+    digest = str(download["sha256"])
+    pinned = os.environ.get(CURSOR_INSTALL_SHA256_ENV, "").strip().casefold()
+    if pinned and pinned != digest:
+        return {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "downloaded installer did not match the pinned SHA-256",
+            "reason": "cursor-install-hash-mismatch",
+            "url": CURSOR_AGENT_INSTALL_URL,
+            "path": str(script),
+            "sha256": digest,
+            "expected_sha256": pinned,
+        }
+    shell = shutil.which("bash") or "/bin/bash"
+    try:
+        completed = subprocess.run(
+            [shell, str(script)],
             check=False,
             capture_output=True,
             text=True,
             timeout=180,
+            shell=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return {"returncode": 1, "stdout": "", "stderr": str(exc), "command": CURSOR_AGENT_INSTALL}
+        return {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": str(exc),
+            "reason": "cursor-install-failed",
+            "url": CURSOR_AGENT_INSTALL_URL,
+            "path": str(script),
+            "sha256": digest,
+        }
     return {
         "returncode": completed.returncode,
         "stdout": (completed.stdout or "")[-500:],
         "stderr": (completed.stderr or "")[-500:],
-        "command": CURSOR_AGENT_INSTALL,
+        "url": CURSOR_AGENT_INSTALL_URL,
+        "path": str(script),
+        "sha256": digest,
+        "command": f"{shell} {script}",
+    }
+
+
+def _install_report(report: dict[str, Any]) -> dict[str, Any]:
+    """Installer facts copied into the setup report. The hash is always kept."""
+    return {
+        "returncode": report.get("returncode"),
+        "command": report.get("command"),
+        "url": report.get("url"),
+        "path": report.get("path"),
+        "sha256": report.get("sha256"),
+        "expected_sha256": report.get("expected_sha256"),
+        "reason": report.get("reason"),
+        "stdout": report.get("stdout"),
+        "stderr": report.get("stderr"),
     }
 
 
 def ensure_cursor_agent(
     installer: Callable[[], dict[str, Any]] | None = None,
+    *,
+    allow_install: bool | None = None,
 ) -> dict[str, Any]:
-    """Install the Cursor agent CLI when it is missing. Never on the Mac. Never grok."""
+    """Install the Cursor agent CLI when it is missing. Never on the Mac. Never grok.
+
+    Nothing is downloaded or run without explicit consent. Without consent the
+    report says cursor-install-needs-consent and gives the manual install steps.
+    """
     from essay_writer.setup import cursor_cli_binary, cursor_cli_version
 
     binary = cursor_cli_binary()
@@ -410,6 +556,23 @@ def ensure_cursor_agent(
             "path": None,
             "version": None,
             "reason": "mac-no-install",
+        }
+    if not cursor_install_consent(allow_install):
+        return {
+            "ok": False,
+            "installed": False,
+            "ran_install": False,
+            "path": None,
+            "version": None,
+            "reason": CURSOR_INSTALL_NEEDS_CONSENT,
+            "consent_required": True,
+            "downloaded": False,
+            "manual_install": CURSOR_AGENT_MANUAL_INSTALL,
+            "residual": (
+                "No Cursor CLI install was attempted and nothing was downloaded. "
+                "Ask before installing it, then rerun setup with --install-cursor "
+                f"or set {CURSOR_INSTALL_CONSENT_ENV}=1."
+            ),
         }
     if installer is None and os.environ.get("PYTEST_CURRENT_TEST"):
         return {
@@ -441,7 +604,7 @@ def ensure_cursor_agent(
         "path": binary,
         "version": version,
         "reason": reason,
-        "installer": {"returncode": report.get("returncode"), "command": CURSOR_AGENT_INSTALL},
+        "installer": _install_report(report),
     }
 
 
@@ -730,11 +893,14 @@ def install_uploaded_copy(
     attach: bool = True,
     enable: Enable | None = None,
     cursor_installer: Callable[[], dict[str, Any]] | None = None,
+    allow_cursor_install: bool | None = None,
 ) -> dict[str, Any]:
     """Unpack a zip when given one, then pip install -e . in that same call.
 
     A directory upload is already unpacked. No upload installs the tree that
-    contains this file.
+    contains this file. The Cursor CLI installer runs only with consent
+    (allow_cursor_install or ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1); without it
+    the report says cursor-install-needs-consent and changes nothing.
     """
     if isinstance(upload, str) and _clone_url(upload):
         return _fail("Nothing is cloned. Pass the uploaded zip, not a git URL.")
@@ -798,7 +964,10 @@ def install_uploaded_copy(
     expose_writer_on_path()
     cursor_cli = None
     if cursor_installer is not None or not os.environ.get("PYTEST_CURRENT_TEST"):
-        cursor_cli = ensure_cursor_agent(installer=cursor_installer)
+        cursor_cli = ensure_cursor_agent(
+            installer=cursor_installer,
+            allow_install=allow_cursor_install,
+        )
     launch = mcp_launch_command()
     mcp = attach_custom_mcp(root, reviewer=reviewer, enable=enable) if attach else None
     build_mcp = attach_build_mcp(root, reviewer=reviewer) if attach else None
@@ -1443,6 +1612,7 @@ def _parse(args: list[str]) -> dict[str, Any]:
     action = "install"
     copy_path: str | None = None
     mac_handoff: str | None = None
+    allow_cursor_install: bool | None = None
     index = 0
     while index < len(args):
         token = args[index]
@@ -1450,6 +1620,10 @@ def _parse(args: list[str]) -> dict[str, Any]:
             reviewer = True
         elif token == "--no-reviewer":
             reviewer = False
+        elif token == "--install-cursor":
+            allow_cursor_install = True
+        elif token == "--no-install-cursor":
+            allow_cursor_install = False
         elif token == "--remember-mac-dir":
             action = "remember_mac"
             index += 1
@@ -1484,6 +1658,8 @@ def _parse(args: list[str]) -> dict[str, Any]:
         raise ValueError("--attach-mcp does not take a zip")
     if action == "remember_mac" and (upload or dest or copy_path):
         raise ValueError("--remember-mac-dir does not unpack, install, or copy")
+    if action in {"copy", "remember_mac"} and allow_cursor_install is not None:
+        raise ValueError("--install-cursor does not copy or remember")
     return {
         "action": action,
         "reviewer": reviewer,
@@ -1491,6 +1667,7 @@ def _parse(args: list[str]) -> dict[str, Any]:
         "dest": dest,
         "copy_path": copy_path,
         "mac_handoff": mac_handoff,
+        "allow_cursor_install": allow_cursor_install,
     }
 
 
@@ -1520,8 +1697,9 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         sys.stderr.write(
             "usage: first_run.py [--upload ZIP] [--dest FOLDER] [--no-reviewer]\n"
+            "       [--install-cursor | --no-install-cursor]\n"
             "       essay-writer [--install-upload ZIP] [--attach-mcp] [--copy-to-mac PATH]\n"
-            "       [--remember-mac-dir FOLDER] [--no-reviewer]\n"
+            "       [--remember-mac-dir FOLDER] [--no-reviewer] [--install-cursor]\n"
             f"{exc}\n"
         )
         return 2
@@ -1534,7 +1712,7 @@ def main(argv: list[str] | None = None) -> int:
         _record_copy_handoff(parsed["copy_path"], result)
     elif parsed["action"] == "attach":
         root = package_root()
-        cursor_cli = ensure_cursor_agent()
+        cursor_cli = ensure_cursor_agent(allow_install=parsed["allow_cursor_install"])
         cursor = attach_custom_mcp(root, reviewer=parsed["reviewer"])
         build = attach_build_mcp(root, reviewer=parsed["reviewer"])
         result = dict(cursor)
@@ -1554,7 +1732,12 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(parsed["upload"], str) and _clone_url(parsed["upload"]):
             result = _fail("Nothing is cloned. Pass the uploaded zip, not a git URL.")
         else:
-            result = install_uploaded_copy(upload, dest=dest, reviewer=parsed["reviewer"])
+            result = install_uploaded_copy(
+                upload,
+                dest=dest,
+                reviewer=parsed["reviewer"],
+                allow_cursor_install=parsed["allow_cursor_install"],
+            )
     json.dump(result, sys.stdout, indent=2)
     sys.stdout.write("\n")
     return 0 if result.get("ok") else 1

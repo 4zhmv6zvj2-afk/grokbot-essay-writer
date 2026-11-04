@@ -18,6 +18,29 @@ validation, and Word output.
 - `docs/` — operator and writing helpers.
 - `src/essay_writer/_vendor/` — vendored bootstrap core, pinned by `VENDOR.json`.
 
+## Words used here
+
+The module names use a small private vocabulary — doors, seats, spine, shelf,
+dig, canon, mid-office. The names are stable and are not being renamed; the
+mapping to plain terms is in [docs/GLOSSARY.md](GLOSSARY.md). Start there before
+reading the modules.
+
+## Entry points and lockfiles
+
+- `first_run.py` at the repository root is the pre-install bootstrap. It chooses
+  a Python before the package can be imported and then hands off to
+  `essay_writer.first_run`. The package also has a `first_run.py`; that one is
+  the installed setup logic that runs after the package is importable. Two
+  files, two jobs, by design.
+- `uv.lock` is the developer lockfile used by `uv sync`.
+  `requirements-ci.txt` is the hash-pinned environment CI installs.
+  `requirements-build.txt` pins the build tooling.
+  `requirements-runtime.txt` is the hash-pinned runtime set for a manual,
+  verifiable install.
+- Release artifacts are reproducible: `SOURCE_DATE_EPOCH` is derived from the
+  tagged commit and the build is run twice, with identical SHA-256 required,
+  before anything is signed or uploaded.
+
 ## Vendored bootstrap
 
 The bootstrap core is vendored from the private `python-mcp-bootstrap` repository;
@@ -25,6 +48,11 @@ The bootstrap core is vendored from the private `python-mcp-bootstrap` repositor
 disappears later, rerun `python first_run.py`; it re-enters the same bootstrap. A
 Python download still requires `--install-python`, and the system Python is never
 changed.
+
+The vendored file is kept byte-identical to its upstream release, so its default
+floor stays 3.14. This package supports 3.12 and passes its own floor through
+`python_bootstrap.py` (`REQUIRED = (3, 12, 0)`); the vendored file's hash and
+`VENDOR.json` stay untouched.
 
 ## Stage flow
 
@@ -59,3 +87,5 @@ state boundaries.
 - Install and run: `README.md`.
 - Operator setup for Essay Bot: `FIRST-RUN.txt`.
 - Tool contracts: `doors.py` and `docs/workflow.md`.
+- Vocabulary: `docs/GLOSSARY.md`.
+- How the public history came to be: `HISTORY.md`.

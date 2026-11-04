@@ -46,13 +46,13 @@ def test_old_python_without_consent_stops_before_any_install(tmp_path, capsys):
         [],
         tmp_path,
         exec_fn=_exec_calls(calls),
-        current=(3, 12, 13),
+        current=(3, 11, 13),
         probe=lambda _exe: None,
     )
     report = json.loads(capsys.readouterr().out)
     assert code == 3
     assert report["reason"] == "python_too_old"
-    assert report["found"] == "3.12.13"
+    assert report["found"] == "3.11.13"
     assert report["needs_consent"] is True
     assert report["card"] == boot.CARD
     assert calls == []
@@ -69,7 +69,7 @@ def test_existing_good_venv_is_used_without_a_card(tmp_path):
         tmp_path,
         exec_fn=_exec_calls(calls),
         run=_ok_runner(commands),
-        current=(3, 12, 13),
+        current=(3, 11, 13),
         probe=lambda _exe: (3, 15, 2),
     )
     assert code == 0
@@ -91,7 +91,7 @@ def test_consent_provisions_project_local_python(tmp_path):
         exec_fn=_exec_calls(calls),
         run=_ok_runner(commands),
         uv="/fake/uv",
-        current=(3, 12, 13),
+        current=(3, 11, 13),
         probe=lambda _exe: (3, 15, 2),
     )
     assert code == 0

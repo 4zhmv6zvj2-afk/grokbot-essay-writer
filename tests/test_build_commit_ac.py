@@ -6,6 +6,7 @@ install can be matched to the CHANGELOG when the zip includes one. A copy with n
 reports an empty string and still works.
 """
 
+import tomllib
 from pathlib import Path
 
 from essay_writer import BUILD_ENV, BUILD_MARKER, __version__, build_commit
@@ -59,7 +60,9 @@ def test_ac4_health_reports_the_build_commit(monkeypatch, workspace):
     assert report["build_commit"] == build_commit()
     monkeypatch.setenv(BUILD_ENV, SHA)
     assert essay_health()["build_commit"] == SHA
-    assert report["version"] == __version__ == "0.2.1"
+    assert report["version"] == __version__
+    project = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
+    assert project["project"]["version"] == __version__
 
 
 def test_ac5_the_friend_docs_point_at_build_commit():

@@ -20,11 +20,11 @@ From the unpacked folder run:
 
 python first_run.py
 
-It uses a Python 3.14+ already on this computer, or a good .venv from an earlier run, with no card. If neither is there, it prints `python_too_old` and installs nothing. Then ask, before any download: "Set up needs a private Python 3.15.2 on this computer (one-time download). Nothing already installed is changed. Continue?" On yes, run:
+It uses a Python 3.12+ already on this computer, or a good .venv from an earlier run, with no card. If neither is there, it prints `python_too_old` and installs nothing. Then ask, before any download: "Set up needs a private Python 3.15.2 on this computer (one-time download). Nothing already installed is changed. Continue?" On yes, run:
 
 python first_run.py --install-python
 
-That installs one under this project folder with uv and continues. On no, stop and change nothing. If the person says 3.14+ is already here, name it with `--python /path/to/python` and let the report check it. Never install Python any other way.
+That installs one under this project folder with uv and continues. On no, stop and change nothing. If the person says 3.12+ is already here, name it with `--python /path/to/python` and let the report check it. Never install Python any other way.
 
 That runs:
 
@@ -56,11 +56,15 @@ On the Mac at first-run, recommend Documents/Essay Bot as the folder for Word an
 
 Show this card: "Word copies go to Documents/Essay Bot — OK, another folder, later, or skip."
 
-File work defaults to Cursor. On this computer, when agent is missing, install the Cursor CLI with:
+File work defaults to Cursor. On this computer, when agent is missing, setup downloads nothing and reports reason cursor-install-needs-consent. Ask the person before installing the Cursor CLI. With their yes, rerun setup with --install-cursor (or ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1): setup downloads the installer to a file, records that file's SHA-256 in the report, and runs that file with a fixed argv. It never pipes a remote script into a shell.
 
-curl https://cursor.com/install -fsS | bash
+The Cursor CLI installer is an unsigned remote script. Run it only on a computer you control and only when this setup asks. To install it yourself, run:
 
-The Cursor CLI installer is an unsigned remote script. Run it only on a computer you control and only when this setup asks. For a manual install, clone the public repo and run `uv sync --extra dev`; the chat-driven install is optional.
+curl -fsS https://cursor.com/install -o cursor-agent-install.sh
+shasum -a 256 cursor-agent-install.sh  # Linux: sha256sum cursor-agent-install.sh
+bash cursor-agent-install.sh
+
+For a manual install of the app itself, clone the public repo and run `uv sync --extra dev`; the chat-driven install is optional.
 
 Then run agent --version. Then enable both with agent mcp enable essay-writer and agent mcp enable essay-reviewer. Never install the Cursor CLI on the Mac. Never install grok. If grok is missing, stay on Cursor. The setup check runs agent --version.
 

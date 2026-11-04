@@ -1,0 +1,50 @@
+# Source distribution manifest: a complete, self-testable source tree.
+#
+# The sdist is the build source of record: it carries the full test suite and
+# every repo-root file the suite reads, so `python -m pytest -q` works after
+# untarring it with no checkout and no network. Default setuptools sdist rules
+# only pick up tests/test*.py, which is why this file is explicit about the
+# support modules, fixtures, snapshots and root files.
+
+# Project metadata and documentation.
+include LICENSE
+include README.md
+include ARCHITECTURE.md
+include CHANGELOG.md
+include CONTRIBUTING.md
+include SECURITY.md
+include pyproject.toml
+include uv.lock
+include requirements-*.txt
+
+# First-run bootstrap and the prompts the suite reads from the repo root.
+include FIRST-RUN.txt
+include FRIEND-PROMPT.txt
+include first_run.py
+include .env.example
+include .gitignore
+include .cursor/mcp.json
+include .grok/config.toml
+include placeholders/mcp.config.json
+include Essay-writer/README.md
+include uploads/README.md
+
+# Tests: the suite and everything it imports or reads.
+graft tests
+graft docs
+graft tools
+
+# Local build and cache byproducts must never reach the distribution.
+# setuptools appends <egg_info>/SOURCES.txt after MANIFEST.in is processed, so
+# prune alone cannot remove it; tools/normalize_sdist.py strips any remaining
+# *.egg-info (plus VCS/cache dirs) when it normalizes the released sdist.
+prune src/essay_writer.egg-info
+prune tests/__pycache__
+prune docs/__pycache__
+prune tools/__pycache__
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude .pytest_cache
+global-exclude .mypy_cache
+global-exclude .ruff_cache
+global-exclude .DS_Store

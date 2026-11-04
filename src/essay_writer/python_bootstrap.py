@@ -13,7 +13,10 @@ from typing import Any
 
 from essay_writer._vendor import python_mcp_bootstrap as _core
 
-REQUIRED = _core.REQUIRED
+# The package floor is 3.12. The vendored core defaults to its own floor
+# (3.14); keep the vendored file byte-identical to its upstream release and
+# pass the project floor in here instead.
+REQUIRED = (3, 12, 0)
 PIN = _core.PIN
 VENV_DIR = _core.VENV_DIR
 PYTHON_DIR = _core.PYTHON_DIR
