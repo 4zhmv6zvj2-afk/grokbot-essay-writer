@@ -1,4 +1,4 @@
-"""Bug #30. The shared Word cover prints a required registration number.
+"""The shared Word cover prints a required registration number.
 
 AC1: the stage 10 Word title page includes the registration number when the brief asks.
 AC2: that title page omits the student name.

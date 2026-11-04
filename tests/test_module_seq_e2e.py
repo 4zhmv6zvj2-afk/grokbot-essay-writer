@@ -1,4 +1,4 @@
-"""Module-seq E2E #2. Stage 10 Word cover and References on a report sequence.
+"""Module sequence end-to-end. Stage 10 Word cover and References on a report sequence.
 
 AC1: report Word cover carries module or sequence id, assignment title, and counted words
 when the brief stayed silent on the title page.

@@ -7,7 +7,7 @@ AC2: a body that still carries a withheld cite (an earlier note, or a restored
 AC3: the Word door drops a rejected paper from the body and the reference list
      even when the exact token was never recorded as withheld.
 
-These extend ``tests/test_cite_fit_ac.py`` AC1–AC5, which stay green.
+These extend ``tests/test_cite_fit.py`` AC1–AC5, which stay green.
 """
 
 from __future__ import annotations

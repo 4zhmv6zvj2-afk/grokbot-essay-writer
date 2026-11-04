@@ -1,4 +1,4 @@
-"""E2E #6 — download list membership, Word shape, and the chat links card."""
+"""download list membership, Word shape, and the chat links card."""
 
 import json
 import zipfile

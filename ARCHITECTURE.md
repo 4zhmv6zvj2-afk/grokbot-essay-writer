@@ -9,7 +9,11 @@ validation, and Word output.
 - `src/essay_writer/` — the package.
   - `server.py` — MCP entry and tool registration.
   - `doors.py` — tool catalogue and descriptions.
-  - `stage_track.py` — stage pointer, cards, and confirm state.
+  - `stage_track.py` — the orchestrator: `essay_stage`, the stage run branches, and
+    the draft/confirm replies.
+  - `stage_state.py` — the state layer: pointer and its commit journal, stage lock,
+    tracking-note renderer, and the held/refused reply bodies. Re-exported by
+    `stage_track.py`.
   - `spine.py`, `stage_llm.py` — stage definitions and prompts.
   - `validate.py`, `gates.py`, `invent.py` — pack checks, citation integrity, and invent-forbid.
   - `word.py`, `word_references.py` — Word output and Harvard reference lines.
@@ -67,7 +71,9 @@ The stage runner is a thin dispatcher (`essay_stage` → `_run_stage`). The
 run branches are named helpers: `_confirm_path` (card confirm),
 `_build_stage_body` (shared stage body), `_draft_reply` (draft card), and
 `_save_confirm` (saved stage). The pointer boundary uses `Pointer`; stage
-replies use `StageResult`.
+replies use `StageResult`. Those two boundaries and the reply bodies live in
+`stage_state.py`; the orchestrator re-exports them, so imports of
+`essay_writer.stage_track` keep working.
 
 The stages are 1–10: assignment, thesis or purpose, plan, 4a annotated bibliography,
 4b critical review, first draft, feedback, edit, references, and final Word.

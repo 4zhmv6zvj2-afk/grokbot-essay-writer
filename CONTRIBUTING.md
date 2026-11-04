@@ -42,8 +42,8 @@ add or extend the automated suite, and a bug fix should include a regression
 test. Some tests pin source-level contract points with `inspect.getsource`; if a
 helper moves, update the pin to the new helper and keep the behaviour assert.
 The prompt snapshot is regenerated with `tools/update_prompt_snapshot.py`, never
-by hand. [docs/testing.md](docs/testing.md) explains the `_ac` naming and the
-contract pins.
+by hand. [docs/testing.md](docs/testing.md) explains the test layout, the
+contract pins, and the snapshot.
 
 ## Sending a change
 

@@ -130,7 +130,9 @@ uv run python tools/update_prompt_snapshot.py --check
 
 - `src/essay_writer/server.py` — MCP entry and tool registration.
 - `src/essay_writer/doors.py` — the tool catalogue (one "door" per tool).
-- `src/essay_writer/stage_track.py` — the stage runner, cards, and confirm state.
+- `src/essay_writer/stage_track.py` — the stage runner, cards, and confirm flow.
+- `src/essay_writer/stage_state.py` — the state layer (pointer, commit journal,
+  stage lock, tracking note, held/refused replies) re-exported by stage_track.
 - `src/essay_writer/prompts/` — the stage, genre, craft, and review text that is
   the actual product.
 - `tests/` — behaviour and acceptance tests; `tests/fixtures/` is synthetic, no
@@ -139,7 +141,7 @@ uv run python tools/update_prompt_snapshot.py --check
 Start with [ARCHITECTURE.md](ARCHITECTURE.md), then
 [docs/GLOSSARY.md](docs/GLOSSARY.md) for the private vocabulary (doors, seats,
 spine, shelf, dig, canon, mid-office) and [docs/testing.md](docs/testing.md) for
-what `_ac` means and how the prompt snapshot is regenerated.
+how the suite is organised and how the prompt snapshot is regenerated.
 
 `uv.lock` is the developer lockfile. `requirements-ci.txt` is the hash-pinned CI
 environment; `requirements-build.txt` pins the build tooling; and

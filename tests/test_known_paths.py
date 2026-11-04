@@ -1,4 +1,4 @@
-"""#1 known paths — ResearchDrive research stays on the allowlist."""
+"""Known paths — ResearchDrive research stays on the allowlist."""
 
 import json
 from pathlib import Path

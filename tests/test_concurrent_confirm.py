@@ -9,7 +9,7 @@ import threading
 
 from helpers import open_sequence
 
-from essay_writer import stage_track
+from essay_writer import stage_state, stage_track
 from essay_writer.paths import work_dir
 from essay_writer.shells import front_office_call
 from essay_writer.stage_track import essay_stage, load_pointer
@@ -44,7 +44,7 @@ def test_ac1_concurrent_confirm_cannot_roll_pointer_back(workspace, monkeypatch)
     digest = draft["digest"]
     entered = threading.Event()
     release = threading.Event()
-    real = stage_track._commit_pointer
+    real = stage_state._commit_pointer
     state = {"used": False}
 
     def pausing(essay_id, base, proposed, **kwargs):
@@ -54,7 +54,7 @@ def test_ac1_concurrent_confirm_cannot_roll_pointer_back(workspace, monkeypatch)
             assert release.wait(10), "the overlapping confirm did not release the first writer"
         return real(essay_id, base, proposed, **kwargs)
 
-    monkeypatch.setattr(stage_track, "_commit_pointer", pausing)
+    monkeypatch.setattr(stage_state, "_commit_pointer", pausing)
     box: dict = {}
 
     def runner():
@@ -245,7 +245,7 @@ def test_ac4_double_confirm_and_moved_stage_still_refuse(workspace):
 def test_ac5_commit_is_shared_for_later_stages(workspace, monkeypatch):
     """AC5: stages 1 and 2 Confirm through the same pointer commit, not a stage-1 branch."""
     seen: list[str] = []
-    real = stage_track._commit_pointer
+    real = stage_state._commit_pointer
 
     def spy(essay_id, base, proposed, **kwargs):
         current = base.get("current")
@@ -253,7 +253,7 @@ def test_ac5_commit_is_shared_for_later_stages(workspace, monkeypatch):
             seen.append(current)
         return real(essay_id, base, proposed, **kwargs)
 
-    monkeypatch.setattr(stage_track, "_commit_pointer", spy)
+    monkeypatch.setattr(stage_state, "_commit_pointer", spy)
     seq = open_sequence()
     first = essay_stage(seq, "1", "draft", "Stage one.")
     saved = _confirm(seq, "1", first)

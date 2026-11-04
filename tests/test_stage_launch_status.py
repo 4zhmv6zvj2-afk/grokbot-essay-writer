@@ -101,7 +101,7 @@ _REMOTE_COMMANDS = (
 def test_ac1_stage_4a_launches_cursor_cli_not_the_front_office(
     requires_pty, workspace, monkeypatch
 ):
-    """E2E #7. Local agent only. Remote and cloud agents are refused."""
+    """Local agent only. Remote and cloud agents are refused."""
     seen: list[list[str]] = []
 
     def fake_spawn(command):
@@ -268,7 +268,7 @@ def test_ac2_essay_dig_stays_the_shared_handler(workspace, monkeypatch):
 
 
 def test_ac3_same_run_posts_start_milestone_and_heartbeat(workspace, monkeypatch):
-    """E2E #11. Start, a real milestone, and the five-minute line. No watch card."""
+    """Start, a real milestone, and the five-minute line. No watch card."""
     def _started(command):
         return {"started": True, "reason": "", "pid": 11, "command": list(command)}
 

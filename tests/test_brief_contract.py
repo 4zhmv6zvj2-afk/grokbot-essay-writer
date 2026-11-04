@@ -1,6 +1,6 @@
-"""Batch 2 brief contract. Stable ids: AC-NT1, AC-NT2, AC-NT4.
+"""Brief contract: unnamed parts, list entries, and registration.
 
-#22 named parts and #27 title page share one assignment record.
+Named-parts and title-page rules share one assignment record.
 A writing type with no mapping does not ride the essay or report contract.
 """
 
@@ -190,7 +190,7 @@ def _map_fieldnote(text: str, *, has_scheme: bool) -> dict:
 
 
 def test_ac_nt1_brief_record_stages_and_unnamed(workspace, monkeypatch):
-    """AC-NT1. One record. Unnamed parts say so. Essay and report stay their locks.
+    """One record. Unnamed parts say so. Essay and report stay their locks.
 
     A third type with no mapping fails closed. A thin mapping fails closed.
     A complete mapping fills the record and is not an essay thesis.
@@ -316,7 +316,7 @@ def test_ac_nt1_brief_record_stages_and_unnamed(workspace, monkeypatch):
 
 
 def test_ac_nt2_named_entries_shapes(workspace, monkeypatch):
-    """AC-NT2 and #22. Colon, bullets, and numbered lists. Entry N is refused."""
+    """Colon, bullets, and numbered lists. Entry N is refused."""
     monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _quiet_spawn)
     monkeypatch.setattr("essay_writer.build_office.spawn_grok", _quiet_spawn)
     assert CONTRACT_STAGES == frozenset({"2", "3", "5"})
@@ -430,7 +430,7 @@ def test_ac_nt2_named_entries_shapes(workspace, monkeypatch):
 
 
 def test_ac_nt4_title_page_identity(workspace, monkeypatch):
-    """AC-NT4 and #27. Missing registration is refused. One cover for 6, 7, and final."""
+    """Missing registration is refused. One cover for 6, 7, and final."""
     monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _quiet_spawn)
     monkeypatch.setattr("essay_writer.build_office.spawn_grok", _quiet_spawn)
     assert "102938" not in (REPO / "src" / "essay_writer" / "brief_contract.py").read_text(encoding="utf-8")

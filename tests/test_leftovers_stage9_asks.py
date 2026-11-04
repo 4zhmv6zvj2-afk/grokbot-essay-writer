@@ -1,4 +1,4 @@
-"""Cut 2 leftovers. Opened Word requirement list for stage 9; stage 6 answers-only.
+"""Leftovers: opened-Word requirement list for stage 9; stage 6 answers-only.
 
 AC1: Stage 9 pass only when the opened Word shows the asks; no file = no pass.
 AC2: Top-band rows still mark; format and citation skip; no invent.

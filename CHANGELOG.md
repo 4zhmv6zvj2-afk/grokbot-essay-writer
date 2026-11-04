@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.1 — 2026-11-05
+
+Structural clean-up; no intended behaviour change.
+
+- `src/essay_writer/stage_track.py` is split: the pointer and its commit journal,
+  the stage lock, the tracking-note renderer, and the held/refused reply bodies
+  move to the new `stage_state.py` (1,334 lines). `stage_track.py` keeps the
+  orchestrator and the run branches, and re-exports the state layer so existing
+  imports keep working. The kept code is unchanged.
+- Test files are renamed from `test_*_ac.py` to behaviour names, and private
+  ticket/PR references are removed from test docstrings. `AC1`, `AC2`, … labels
+  are now documented as stable local acceptance-criterion ids, not tracker
+  references.
+- README, CONTRIBUTING, ARCHITECTURE, `docs/testing.md`, and `docs/GLOSSARY.md`
+  are updated for the new suite layout and the module split.
+- Tests: 1006 passed, 8 skipped.
+
 ## 0.3.0 — 2026-11-05
 
 Distribution and release engineering:

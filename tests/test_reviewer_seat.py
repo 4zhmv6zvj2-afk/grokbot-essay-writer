@@ -98,7 +98,7 @@ def _student_word(seq: str, paragraphs: list[str]) -> Path:
 
 
 def test_ac1_findings_docx_under_project_folder_not_stage10(workspace, monkeypatch, tmp_path):
-    """E2E #15. Findings Word is Documents/<project>/, not Documents/<project>-10/."""
+    """Findings Word is Documents/<project>/, not Documents/<project>-10/."""
     documents = tmp_path / "Documents"
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(documents))
     _brief()
@@ -132,7 +132,7 @@ def test_ac1_findings_docx_under_project_folder_not_stage10(workspace, monkeypat
 
 
 def test_ac2_review_opens_student_word_documents_copy_and_pdfs(workspace, monkeypatch, tmp_path):
-    """E2E #16. Review opens both Word files, claim-checks opened PDFs, and writes the note."""
+    """Review opens both Word files, claim-checks opened PDFs, and writes the note."""
     documents = tmp_path / "Documents"
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(documents))
     _brief()

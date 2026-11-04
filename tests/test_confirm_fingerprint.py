@@ -291,7 +291,7 @@ def test_research_second_unpaywall_keeps_draft_fields(workspace, monkeypatch):
 
 
 def test_ac_nt5_fingerprint_is_type_agnostic(workspace, monkeypatch):
-    """AC-NT5. Same write gate for essay, diary, and a future writing type."""
+    """Same write gate for essay, diary, and a future writing type."""
     assert genre_from_brief_text(ESSAY_BRIEF) == "essay"
     assert genre_from_brief_text(DIARY_BRIEF) == "diary"
     assert genre_from_brief_text(TYPE_X_BRIEF) is None

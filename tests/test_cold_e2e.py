@@ -1,4 +1,4 @@
-"""Cold E2E #2. Stable ids: AC1, AC2, AC3, AC4.
+"""Cold end-to-end. Stable ids: AC1, AC2, AC3, AC4.
 
 Typed Confirm re-shows the card and does not write. The Stage 1 question
 gate reads Title and assignment ask. Plan revisit cites the opened year only.

@@ -1,7 +1,7 @@
 """Download and citation locks. Stable ids: AC1, AC2, AC3.
 
-Confirm card behaviour is the shipped door (PR #58, hydration PR #63).
-The short Basics pass is Batch 0 (PR #64). This file locks the rest of that
+The confirm card is the shipped door. The short Basics pass is the base
+contract. This file locks the rest of that
 """
 
 from helpers import ESSAY, open_sequence, picked, plant_gathered_source
@@ -56,7 +56,7 @@ def _tracking(seq: str, stage: str) -> str:
 
 
 def test_ac1_confirm_is_a_clickable_card_and_typed_yes_does_not_save(workspace):
-    """E2E #10. A typed yes or ok does not save. The card pick does."""
+    """A typed yes or ok does not save. The card pick does."""
     _brief()
     seq = open_sequence()
     look = _look(seq)
@@ -106,7 +106,7 @@ def test_ac1_confirm_is_a_clickable_card_and_typed_yes_does_not_save(workspace):
 
 
 def test_ac2_rest_of_basics_walk_before_confirm(workspace):
-    """Rest of E2E #8. First lines stay the chat opening. The rest is internal."""
+    """Rest of the end-to-end case. First lines stay the chat opening. The rest is internal."""
     _brief()
     seq = open_sequence()
     look = _look(seq)

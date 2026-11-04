@@ -1,4 +1,4 @@
-"""Easy AC — ruff and mypy dev gate (#bug-reduction lock #1)."""
+"""Ruff and mypy dev gate."""
 
 import re
 import subprocess

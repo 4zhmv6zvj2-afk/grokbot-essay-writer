@@ -144,7 +144,7 @@ def test_ac1_confirm_returns_card_or_does_not_advance(workspace, monkeypatch):
             "reason": "The brief names these parts: North occasion.",
         }
 
-    monkeypatch.setattr("essay_writer.stage_track._draft_next_card", _fail)
+    monkeypatch.setattr("essay_writer.stage_state._draft_next_card", _fail)
     refused = _live(
         essay_id=held_seq,
         stage="1",

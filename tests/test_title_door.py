@@ -1,4 +1,4 @@
-"""Bugs #30 and #35. One title page, one door card for the sequence that opened.
+"""One title page, one door card for the sequence that opened.
 
 AC1: the stage 10 Word title page includes the registration number when the brief asks.
 AC2: that title page omits the student name.

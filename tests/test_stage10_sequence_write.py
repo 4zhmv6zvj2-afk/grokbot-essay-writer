@@ -1,4 +1,4 @@
-"""Bug #30. Stage 10 Confirm writes the sequence Word file, then closes.
+"""Stage 10 Confirm writes the sequence Word file, then closes.
 
 AC1: a cloned diary Word file (page number, no registration) is rewritten on
 the child by essay.stage Confirm, with the stored registration number.

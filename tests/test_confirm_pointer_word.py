@@ -1,4 +1,4 @@
-"""Bugs #28–#31 and the #26 Word gap. One confirm loop, one Word render.
+"""One confirm loop, one Word render.
 
 AC1–AC4 are the door and the pointer. AC5–AC6 are the docx. AC7 is the briefing.
 Essay Bot may only show the Confirm card the door returned.

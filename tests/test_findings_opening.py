@@ -1,4 +1,4 @@
-"""Bug #25 and AC-NT3. One standard opening for the findings note and the mid tip.
+"""One standard opening for the findings note and the mid tip.
 
 The opening is standard_opening. A diary table prints How to score high.
 An essay or a report with a scheme prints what the mark scheme scores.
@@ -246,7 +246,7 @@ def test_ac4_diary_mid_tip_says_how_to_score_high(workspace):
 
 
 def test_ac_nt3_one_opening_for_diary_essay_and_a_later_type(workspace):
-    """AC-NT3. findings_note_clears and basis_for read standard_opening.
+    """findings_note_clears and basis_for read standard_opening.
 
     A later type does not add a branch in the clear. It sets the opening
     label, and the shared sentence follows that label.

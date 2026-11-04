@@ -1,4 +1,4 @@
-"""Bugs #32 and #33. The live Confirm returns the next card for the open sequence.
+"""The live Confirm returns the next card for the open sequence.
 
 AC1: a successful Confirm, except stage 5, returns the next draft card.
 The next waiting digest is stored in that same pointer write.

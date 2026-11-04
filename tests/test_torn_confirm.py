@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from helpers import ESSAY, open_sequence
 
-from essay_writer import stage_track
+from essay_writer import stage_state, stage_track
 from essay_writer.canon import digest
 from essay_writer.confirm import load_draft_by_digest
 from essay_writer.paths import sequence_dir, work_dir
@@ -69,18 +69,18 @@ def _confirm(seq: str, stage: str, digest: str) -> dict:
 @contextmanager
 def _torn_pointer(monkeypatch):
     """Let the note replace finish, then raise before the pointer replace."""
-    real = stage_track._atomic
+    real = stage_state._atomic
 
     def tearing(path, text):
         if Path(path).name == "stage.json":
             raise RuntimeError("torn before pointer")
         real(path, text)
 
-    monkeypatch.setattr(stage_track, "_atomic", tearing)
+    monkeypatch.setattr(stage_state, "_atomic", tearing)
     try:
         yield
     finally:
-        monkeypatch.setattr(stage_track, "_atomic", real)
+        monkeypatch.setattr(stage_state, "_atomic", real)
 
 
 def test_ac1_torn_confirm_keeps_the_newer_look(workspace, monkeypatch):
@@ -251,7 +251,7 @@ def test_ac3_open_clone_cannot_publish_a_torn_pair(workspace, monkeypatch):
     release = threading.Event()
     entered_lock = threading.Event()
     acquired_lock = threading.Event()
-    real_atomic = stage_track._atomic
+    real_atomic = stage_state._atomic
     real_lock = stage_track.stage_lock
 
     def pausing(path, text):
@@ -267,7 +267,7 @@ def test_ac3_open_clone_cannot_publish_a_torn_pair(workspace, monkeypatch):
             acquired_lock.set()
             yield
 
-    monkeypatch.setattr(stage_track, "_atomic", pausing)
+    monkeypatch.setattr(stage_state, "_atomic", pausing)
     monkeypatch.setattr(stage_track, "stage_lock", watching)
     box: dict = {}
 

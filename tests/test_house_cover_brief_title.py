@@ -1,7 +1,7 @@
 """House cover title fallback when the saved pack is body-only.
 
 AC1: brief Title line prints on the house cover when pack title is Draft and assessment is empty.
-AC2: sequence id and Counted words still print (no regression from module-seq E2E #2).
+AC2: sequence id and Counted words still print (no regression).
 """
 
 from helpers import ESSAY, pack

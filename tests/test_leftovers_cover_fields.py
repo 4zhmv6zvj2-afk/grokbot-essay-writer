@@ -1,4 +1,4 @@
-"""Cut 1 leftovers. Shared requirement list, cover fields, and no study-table fill.
+"""Leftovers: shared requirement list and cover fields, with no study-table fill.
 
 AC1: asked custom title-page field on essay Word cover (Word bytes).
 AC2: empty asked field blocks Word confirm (door).

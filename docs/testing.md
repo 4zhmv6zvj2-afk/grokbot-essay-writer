@@ -25,8 +25,7 @@ the extracted sdist. A release is only signed after that artifact run passes.
 
 | Path | Purpose |
 | --- | --- |
-| `tests/test_*_ac.py` | Acceptance-criteria tests. The module docstring names the internal ticket and the ACs; the test asserts the behaviour, not the ticket. `_ac` is just a suffix. |
-| `tests/test_*.py` | Behaviour and contract tests for one area. |
+| `tests/test_*.py` | One behaviour area per file, named for what it covers. Acceptance-criterion tests label the cases `AC1`, `AC2`, … in the function name and docstring; the label is a stable local id, not a tracker reference. |
 | `tests/helpers.py` | Shared builders (call a tool, read a result). |
 | `tests/pty_support.py` | Terminal-backed tests; skipped when no pty is available. |
 | `tests/fixtures/` | Synthetic assignments, answer keys, and logs. No student work. |
@@ -41,9 +40,10 @@ When a helper moves, update the pin to the new helper and keep the behavioural
 assert. If a rule string changes intentionally, update the snapshot with
 `tools/update_prompt_snapshot.py` and review the snapshot diff like source.
 
-Ticket ids in `_ac` docstrings ("Bug #30") refer to the private tracker that
-predates this repository. The docstring is the public record of what the test
-pins; the number is only a stable label.
+Test files are named for the behaviour they cover. The `AC1`, `AC2`, … labels in
+some function names and docstrings are stable local acceptance-criterion ids;
+they are not tracker references. Private ticket and PR references were removed
+from the test docstrings before the 0.3.1 release.
 
 ## Writing a test
 

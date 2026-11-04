@@ -1,4 +1,4 @@
-"""Batch 4 gathered-set gate. Stable ids: AC1, AC2, AC3, AC-NT6.
+"""Gathered-set gate. Stable ids: AC1, AC2, AC3, AC4.
 
 One gate for every writing type that gathers sources. Same opened text
 collapses to one work. Identical annotation paragraphs are refused.
@@ -340,7 +340,7 @@ def test_ac3_source_untied_to_any_entry_is_refused(workspace):
 
 
 def test_ac_nt6_entry_tie_or_ask_for_a_third_writing_type(workspace):
-    """AC-NT6. Entry names tie the source. No names tie it to the ask.
+    """Entry names tie the source. No names tie it to the ask.
 
     A third writing type uses the same gate. An essay record with no
     entry names does not start requiring those names.

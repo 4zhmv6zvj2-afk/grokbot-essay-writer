@@ -1,4 +1,4 @@
-"""#26 publication year is the opened PDF's own cite line.
+"""Publication year is the opened PDF's own cite line.
 
 The same rule feeds cite looks, 4a and 4b lines, and the reference list.
 It is not a stage rule and it does not read the file's modified time.

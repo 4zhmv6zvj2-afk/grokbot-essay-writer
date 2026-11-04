@@ -1,6 +1,6 @@
 [project]
 name = "essay-writer"
-version = "0.3.0"
+version = "0.3.1"
 description = "Confirm-gated MCP server for university essays. Word only."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -73,6 +73,9 @@ ignore = ["E501", "S603", "S606", "S607"]
 "src/essay_writer/resolvers.py" = ["S310"]
 "src/essay_writer/server.py" = ["S112"]
 "src/essay_writer/student_voice.py" = ["S105"]
+# stage_track.py re-exports the whole stage_state layer with PEP 484 redundant
+# aliases grouped by origin; isort would split the block one alias per import.
+"src/essay_writer/stage_track.py" = ["I001"]
 
 [tool.mypy]
 python_version = "3.12"

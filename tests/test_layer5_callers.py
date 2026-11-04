@@ -22,8 +22,17 @@ def test_stage_save_speech_comes_from_grok_bot():
     )
     assert confirm_line("10", None) == "Confirm to save the final look. The tool does not submit."
     stage = Path(stage_track.__file__).read_text(encoding="utf-8")
+    # The state layer moved to stage_state.py, so the save speech check reads both.
+    state = (
+        Path(stage_track.__file__)
+        .resolve()
+        .parent.joinpath("stage_state.py")
+        .read_text(encoding="utf-8")
+    )
+    stage_pair = stage + state
     spine = Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
-    assert "essay_writer.spine import save_line" in stage
+    assert stage_pair.count("essay_writer.spine import save_line") == 1
+    assert "def save_line" not in stage_pair
     assert "essay_writer.spine import gate_save" in stage
     assert "essay_writer.specialists.grok_bot import confirm_line" in spine
     assert "essay_writer.specialists.grok_bot import confirm_gate" in spine
