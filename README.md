@@ -76,3 +76,4 @@ This is a stable source release. Maintenance is limited to reported bugs. To rep
 ## License
 
 [MIT](LICENSE) © 2026 `4zhmv6zvj2-afk`
+
