@@ -14,7 +14,7 @@ results, files on disk, Word XML) rather than implementation details.
 ./.venv/bin/python tools/update_prompt_snapshot.py --check
 ```
 
-Baseline on macOS / CPython 3.15: **1058 passed, 8 skipped in ~50s**.
+Baseline on macOS / CPython 3.15: **1060 passed, 8 skipped in ~50s**.
 The skipped tests need a real terminal (see `tests/pty_support.py`).
 
 CI runs the suite on Ubuntu and macOS, then builds the sdist and wheel, installs

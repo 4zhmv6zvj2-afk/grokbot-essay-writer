@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.1 — 2026-11-05
+
+Small follow-ups from the third review pass.
+
+- `essay-writer --install-upload` (the update path on an already-installed
+  copy) now uses the same standard as `python first_run.py`: when the zip
+  carries `requirements-runtime.txt`, it installs the hash-pinned runtime
+  requirements with `--require-hashes` first, then the project with
+  `--no-deps`. A hash or network failure stops before the project install.
+  Older zips without that file keep the single upstream install; the report
+  lists the commands and sets `requirements_verified`.
+- Residual report ids are public behaviour names: `install-root`,
+  `deliverable-packing`, `mac-handoff`, and `open-grok-session` replace the
+  internal ticket ids. The residual text is unchanged.
+- Tests: 1060 passed, 8 skipped.
+
 ## 0.4.0 — 2026-11-05
 
 Security and state-model round; no intended workflow change.

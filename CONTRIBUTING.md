@@ -32,7 +32,7 @@ uv run python tools/generate_docs.py --check
 uv run python tools/update_prompt_snapshot.py --check
 ```
 
-The baseline is 1058 passed, 8 skipped in about a minute. The 8 skips need a real
+The baseline is 1060 passed, 8 skipped in about a minute. The 8 skips need a real
 terminal; see [docs/testing.md](docs/testing.md).
 
 ## Tests

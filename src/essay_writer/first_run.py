@@ -59,6 +59,7 @@ KNOWN_MAC_DELIVERABLE_NAMES = (
     "critical-reviews.zip",
 )
 DELIVERABLE_SUFFIXES = frozenset({".docx", ".zip"})
+RUNTIME_REQUIREMENTS = "requirements-runtime.txt"
 # Cursor CLI install. Consent (--install-cursor / env) authorises the download
 # only. The URL is downloaded to a file and hashed; nothing runs until the
 # operator also supplies the expected SHA-256 (--cursor-sha256 / env). A match
@@ -369,6 +370,29 @@ def _run_pip(command: list[str], cwd: Path) -> dict[str, Any]:
         "stdout": (completed.stdout or "")[-2000:],
         "stderr": (completed.stderr or "")[-2000:],
     }
+
+
+def _install_commands(root: Path) -> list[list[str]]:
+    """pip commands for one uploaded copy.
+
+    A copy that carries the hash-pinned runtime requirements installs those
+    first, then the project with --no-deps. An older copy without the file
+    keeps the upstream single install; the report shows which commands ran.
+    """
+    if (root / RUNTIME_REQUIREMENTS).is_file():
+        return [
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--require-hashes",
+                "-r",
+                RUNTIME_REQUIREMENTS,
+            ],
+            [sys.executable, "-m", "pip", "install", "--no-deps", "-e", "."],
+        ]
+    return [[sys.executable, "-m", "pip", "install", "-e", "."]]
 
 
 def _ensure_prompt(root: Path) -> bool:
@@ -949,8 +973,8 @@ def attach_build_mcp(
         "user_config": str(user_file) if user_file is not None else None,
         "wrote": [str(path) for path in written],
         "enabled": enabled,
-        "residual_id": "40a-open-session",
-        "residual": RESIDUALS["40a-open-session"],
+        "residual_id": "open-grok-session",
+        "residual": RESIDUALS["open-grok-session"],
         "bot_share": str(share),
     }
 
@@ -1025,18 +1049,29 @@ def install_uploaded_copy(
             return _fail("That upload is not on disk.", upload=str(source))
 
     prompt_present = _ensure_prompt(root)
-    command = [sys.executable, "-m", "pip", "install", "-e", "."]
     runner = pip_runner or _run_pip
-    report = runner(command, root)
-    pip_body = {"command": command, "cwd": str(root), **report}
-    if report.get("returncode") != 0:
-        return _fail(
-            "pip install -e . did not finish.",
-            unpacked=unpacked,
-            root=str(root),
-            pip=pip_body,
-            prompt_present=prompt_present,
-        )
+    commands = _install_commands(root)
+    pip_steps: list[dict[str, Any]] = []
+    pip_body: dict[str, Any] = {}
+    for index, command in enumerate(commands):
+        report = runner(command, root)
+        pip_body = {"command": command, "cwd": str(root), **report}
+        pip_steps.append(pip_body)
+        if report.get("returncode") != 0:
+            message = (
+                "The hash-pinned runtime install did not finish."
+                if index == 0 and len(commands) > 1
+                else "pip install -e . did not finish."
+            )
+            return _fail(
+                message,
+                unpacked=unpacked,
+                root=str(root),
+                pip=pip_body,
+                pip_steps=pip_steps,
+                requirements_verified=False,
+                prompt_present=prompt_present,
+            )
     expose_writer_on_path()
     cursor_cli = None
     if cursor_installer is not None or not os.environ.get("PYTEST_CURRENT_TEST"):
@@ -1056,6 +1091,7 @@ def install_uploaded_copy(
             unpacked=unpacked,
             root=str(root),
             pip=pip_body,
+            pip_steps=pip_steps,
             prompt_present=prompt_present,
             health_check=health_check,
         )
@@ -1068,14 +1104,18 @@ def install_uploaded_copy(
         "unpack_parent": str(unpack_parent) if unpack_parent is not None else None,
         "grok_config_home": grok_config_home(),
         "pip": pip_body,
+        "pip_steps": pip_steps,
+        "requirements_verified": bool(
+            len(commands) > 1 and pip_steps and pip_steps[0]["returncode"] == 0
+        ),
         "prompt_present": prompt_present,
         "writer_command": launch,
         "cursor_cli": cursor_cli,
         "mcp": mcp,
         "build_mcp": build_mcp,
         "health_check": health_check,
-        "install_residual_id": "40b-install-root",
-        "install_residual": RESIDUALS["40b-install-root"],
+        "install_residual_id": "install-root",
+        "install_residual": RESIDUALS["install-root"],
     }
     return attach_friend_upgrade_fo_card(payload, root=root)
 

@@ -99,7 +99,8 @@ On the Grok Bot computer, setup will:
 
 - Install the runtime dependencies from the hash-pinned `requirements-runtime.txt`
   first, then Essay Writer itself. A hash mismatch stops the install; nothing is
-  left half-installed.
+  left half-installed. The `essay-writer --install-upload` update path uses the
+  same standard when the zip carries that file.
 - Download a private Python 3.15.2 into that folder, only after you agree and only
   if no suitable Python is already there. It never changes the Python already
   installed on the computer.
@@ -126,7 +127,7 @@ Python 3.12 or newer:
 
 ```bash
 uv sync --extra dev
-uv run pytest                      # 1058 passed, 8 skipped
+uv run pytest                      # 1060 passed, 8 skipped
 uv run ruff check src tests tools
 uv run mypy src
 uv run python tools/generate_docs.py --check

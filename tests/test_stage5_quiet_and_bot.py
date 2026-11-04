@@ -260,7 +260,7 @@ def test_handoff_wires_4a_and_4b_deliverables(workspace, tmp_path):
         "papers.zip",
         "critical-reviews.zip",
     ]
-    assert "40d-packing" not in copied["residual_ids"]
+    assert "deliverable-packing" not in copied["residual_ids"]
     for name in copied["deliverables"]:
         assert (folder / name).read_bytes() == before[name]
         assert (mac / name).read_bytes() == before[name]
@@ -270,8 +270,8 @@ def test_handoff_wires_4a_and_4b_deliverables(workspace, tmp_path):
     (ad_hoc / "essay.docx").write_bytes(b"word-bytes")
     loose = build_deliverable_handoff(ad_hoc, mac_dir=mac)
     assert loose["handoff"] == "copy_deliverable_to_mac"
-    assert "40d-packing" in loose["residual_ids"]
-    assert RESIDUALS["40d-packing"] in loose["residual"]
+    assert "deliverable-packing" in loose["residual_ids"]
+    assert RESIDUALS["deliverable-packing"] in loose["residual"]
 
 
 def test_bot_share_json_and_delete_lists(workspace, tmp_path):

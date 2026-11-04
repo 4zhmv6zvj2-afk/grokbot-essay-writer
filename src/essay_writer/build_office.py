@@ -27,24 +27,24 @@ RESIDUALS: dict[str, str] = {
         "The grok CLI sets the model with --model and the reasoning effort with --effort. "
         "It has no separate context-window flag."
     ),
-    "40b-install-root": (
+    "install-root": (
         "Unpack and pip install -e . use /workspace/essay-writer-install when /workspace exists. "
         "GROK_HOME and ~/.grok are the grok config home, not an essay install folder."
     ),
-    "40d-packing": (
+    "deliverable-packing": (
         "Build handoff copies annotation.docx, download-list.docx, papers.zip, and critical-reviews.zip "
         "when those files are already in the sequence output. It does not write them. "
         "A missing file stays missing. "
         "An ad-hoc folder that is not a sequence still copies an existing .docx or .zip only."
     ),
-    "40d-mac": (
+    "mac-handoff": (
         "When this computer is not the Mac, set ESSAY_WRITER_MAC_DIR to the mounted "
         "Documents/Essay Bot folder on the Mac, or use Documents/Essay Bot when that folder "
         "already exists on a visible Mac home. Per-sequence Word and zip copies land under "
         "Essay Bot/<module>/<essay_id>/; module-shared files use Essay Bot/<module>/shared/. "
         "Otherwise the copy returns mac-not-mounted and leaves the file in place."
     ),
-    "40a-open-session": (
+    "open-grok-session": (
         "Build attach writes project .grok/config.toml and, when ~/.grok or GROK_HOME exists outside tests, the user config.toml, "
         "then runs grok mcp enable when the grok binary is on PATH so an open Grok session picks up essay-writer. "
         "A config write alone is not enough when enable does not run."
@@ -274,8 +274,8 @@ def build_deliverable_handoff(source: Path, *, mac_dir: Path | None = None) -> d
         ids: list[str] = []
         notes: list[str] = []
         if _mac_missing(result):
-            ids.append("40d-mac")
-            notes.append(RESIDUALS["40d-mac"])
+            ids.append("mac-handoff")
+            notes.append(RESIDUALS["mac-handoff"])
         result["residual_ids"] = ids
         extra = " ".join(notes)
         prior = result.get("residual")
@@ -284,11 +284,11 @@ def build_deliverable_handoff(source: Path, *, mac_dir: Path | None = None) -> d
 
     result = dict(copy_deliverable_to_mac(source, mac_dir=mac_dir))
     result["handoff"] = "copy_deliverable_to_mac"
-    ids = ["40d-packing"]
-    notes = [RESIDUALS["40d-packing"]]
+    ids = ["deliverable-packing"]
+    notes = [RESIDUALS["deliverable-packing"]]
     if _mac_missing(result):
-        ids.append("40d-mac")
-        notes.append(RESIDUALS["40d-mac"])
+        ids.append("mac-handoff")
+        notes.append(RESIDUALS["mac-handoff"])
     result["residual_ids"] = ids
     extra = " ".join(notes)
     prior = result.get("residual")

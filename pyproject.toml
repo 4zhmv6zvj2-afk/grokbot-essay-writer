@@ -1,6 +1,6 @@
 [project]
 name = "essay-writer"
-version = "0.4.0"
+version = "0.4.1"
 description = "Confirm-gated MCP server for university essays. Word only."
 readme = "README.md"
 requires-python = ">=3.12"

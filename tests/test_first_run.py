@@ -302,3 +302,54 @@ def test_unknown_flag_does_not_install(monkeypatch):
     with pytest.raises(SystemExit) as caught:
         server_main(["--not-a-flag"])
     assert caught.value.code != 0
+
+
+def _upload_with_requirements(tmp_path: Path) -> Path:
+    upload = tmp_path / "essay-writer.zip"
+    _zip(
+        upload,
+        {
+            "essay-writer-main/pyproject.toml": _pyproject().encode(),
+            "essay-writer-main/FIRST-RUN.txt": b"pip install -e .\n",
+            "essay-writer-main/requirements-runtime.txt": b"mcp==2.3.0 --hash=sha256:" + b"0" * 64 + b"\n",
+            "essay-writer-main/src/essay_writer/__init__.py": b"",
+        },
+    )
+    return upload
+
+
+def test_upload_with_runtime_requirements_installs_hashes_first(tmp_path, monkeypatch):
+    """A zip carrying requirements-runtime.txt installs hashes, then --no-deps."""
+    cloud = tmp_path / "workspace"
+    cloud.mkdir()
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
+    upload = _upload_with_requirements(tmp_path)
+    calls: list[tuple[list[str], Path]] = []
+    result = install_uploaded_copy(upload, pip_runner=_runner(calls), attach=False)
+    assert result["ok"] is True
+    assert result["requirements_verified"] is True
+    assert [command[1:] for command, _cwd in calls] == [
+        ["-m", "pip", "install", "--require-hashes", "-r", "requirements-runtime.txt"],
+        ["-m", "pip", "install", "--no-deps", "-e", "."],
+    ]
+    assert [step["command"][1:] for step in result["pip_steps"]] == [command[1:] for command, _cwd in calls]
+
+
+def test_upload_stops_when_the_hash_pinned_install_fails(tmp_path, monkeypatch):
+    """A failed hash install stops before the project install and says so."""
+    cloud = tmp_path / "workspace"
+    cloud.mkdir()
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
+    upload = _upload_with_requirements(tmp_path)
+    calls: list[tuple[list[str], Path]] = []
+
+    def failing_runner(command: list[str], cwd: Path) -> dict:
+        calls.append((command, Path(cwd)))
+        return {"returncode": 1, "stdout": "", "stderr": "hash mismatch"}
+
+    result = install_uploaded_copy(upload, pip_runner=failing_runner, attach=False)
+    assert result["ok"] is False
+    assert "hash-pinned" in result["reason"]
+    assert len(calls) == 1
+    assert result["pip_steps"][0]["returncode"] == 1
+    assert result["requirements_verified"] is False

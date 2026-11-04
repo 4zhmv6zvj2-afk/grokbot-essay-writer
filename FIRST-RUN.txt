@@ -46,7 +46,7 @@ If essay-writer is already installed, one command unpacks the zip and installs i
 
 essay-writer --install-upload /path/to/the.zip
 
-Add --no-reviewer on that command only when the reviewer should stay off.
+When the zip carries requirements-runtime.txt, that command installs the hash-pinned runtime dependencies first and the project with --no-deps; a hash or network failure stops before the project install. Add --no-reviewer on that command only when the reviewer should stay off.
 
 On the Mac at first-run, recommend Documents/Essay Bot as the folder for Word and zip copies. The person may confirm that folder, name another path, set this up later, or decline. Later or decline without a path is chat-only: do not invent a Mac copy folder, do not set ESSAY_WRITER_MAC_DIR, and do not say the Mac folder is ready. Cursor and Grok Build both call essay_writer.first_run.choose_mac_handoff. When they confirm Documents/Essay Bot, run essay-writer --remember-mac-dir ok. That creates Documents/Essay Bot on the friend's Mac and remembers the path. Stage 1 Confirm on a sequence creates Documents/Essay Bot/<module>/, Documents/Essay Bot/<module>/shared/, and Documents/Essay Bot/<module>/<essay_id>/ for that run's Word and zip copies. When they name another path, run essay-writer --remember-mac-dir with that folder. That creates the named folder on the Mac and remembers it. Later or skip does not create a folder. Do that before essay-writer --copy-to-mac. essay.setup still refuses unnamed Documents as the essay workspace save folder. Documents is not this computer.
 

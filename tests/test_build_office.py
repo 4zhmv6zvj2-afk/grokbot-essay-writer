@@ -106,7 +106,7 @@ def test_committed_grok_config_matches_the_writer(tmp_path):
     assert 'command = "essay-writer"' in committed
     assert "args = []" in committed
     assert "essay-reviewer" not in committed
-    assert attached["residual_id"] == "40a-open-session"
+    assert attached["residual_id"] == "open-grok-session"
 
 
 def test_build_attach_keeps_other_tables_and_adds_the_reviewer(tmp_path):
@@ -167,8 +167,8 @@ def test_install_uses_the_cloud_folder_and_names_the_install_residual(tmp_path, 
 
     result = install_uploaded_copy(upload, pip_runner=run)
     assert result["ok"] is True
-    assert result["install_residual_id"] == "40b-install-root"
-    assert result["install_residual"] == RESIDUALS["40b-install-root"]
+    assert result["install_residual_id"] == "install-root"
+    assert result["install_residual"] == RESIDUALS["install-root"]
     root = Path(result["root"])
     assert root == cloud / "essay-writer-install" / "essay-writer-main"
     assert ".grok" not in root.parts[:-2]
@@ -197,8 +197,8 @@ def test_build_handoff_copies_word_and_zip_and_names_packing(tmp_path, monkeypat
     copied = build_deliverable_handoff(folder, mac_dir=mac)
     assert copied["handoff"] == "copy_deliverable_to_mac"
     assert copied["copied"] is True
-    assert "40d-packing" in copied["residual_ids"]
-    assert RESIDUALS["40d-packing"] in copied["residual"]
+    assert "deliverable-packing" in copied["residual_ids"]
+    assert RESIDUALS["deliverable-packing"] in copied["residual"]
     assert (mac / "essay.docx").read_bytes() == b"word-bytes"
     assert (mac / "papers.zip").read_bytes() == b"zip-bytes"
     assert not (mac / "notes.pdf").exists()
@@ -206,8 +206,8 @@ def test_build_handoff_copies_word_and_zip_and_names_packing(tmp_path, monkeypat
     missing = build_deliverable_handoff(folder / "essay.docx")
     assert missing["copied"] is False
     assert missing["reason"] == "mac-not-mounted"
-    assert missing["residual_ids"] == ["40d-packing", "40d-mac"]
-    assert RESIDUALS["40d-mac"] in missing["residual"]
+    assert missing["residual_ids"] == ["deliverable-packing", "mac-handoff"]
+    assert RESIDUALS["mac-handoff"] in missing["residual"]
 
 
 def test_workflow_names_the_build_office():
