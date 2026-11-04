@@ -1,0 +1,80 @@
+[project]
+name = "essay-writer"
+version = "0.2.1"
+description = "Confirm-gated MCP server for university essays. Word only."
+readme = "README.md"
+requires-python = ">=3.14"
+license = { text = "MIT" }
+dependencies = [
+  "mcp>=2.3,<3",
+  "python-docx>=1.2.0,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.2.0", "ruff>=0.17.3", "mypy>=2.4.1"]
+
+[project.scripts]
+essay-writer = "essay_writer.server:main"
+
+[build-system]
+requires = ["setuptools>=84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+essay_writer = [
+  "FIRST-RUN.txt",
+  "FRIEND-PROMPT.txt",
+  "_vendor/*.json",
+  "prompts/*.toml",
+  "prompts/stages/*.md",
+  "prompts/genres/*.md",
+  "prompts/craft/*.md",
+  "prompts/front_office/*.md",
+  "prompts/front_office/*.json",
+  "prompts/review/*.md",
+  "prompts/status/*.md",
+  "prompts/install/*.md",
+  "prompts/seats/*.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+# S603/S606/S607: subprocess calls use fixed argv with shell=False.
+ignore = ["E501", "S603", "S606", "S607"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/essay_writer/writing_basics.py" = ["E402"]
+# pytest asserts are the test mechanism; fixture tokens, temp paths and
+# shell calls exist only in tests.
+"tests/**" = ["S101", "S105", "S108", "S604"]
+# The vendored bootstrap is kept byte-identical to its upstream release.
+"src/essay_writer/_vendor/**" = ["S105"]
+# Grandfathered: deliberate best-effort handlers and audited URL opens.
+"src/essay_writer/build_status.py" = ["S110", "S112"]
+"src/essay_writer/debug_log.py" = ["S110"]
+"src/essay_writer/dig.py" = ["S310"]
+"src/essay_writer/downloads.py" = ["S310"]
+"src/essay_writer/first_run.py" = ["S105"]
+"src/essay_writer/intake.py" = ["S101"]
+"src/essay_writer/invent.py" = ["S101"]
+"src/essay_writer/projects.py" = ["S101"]
+"src/essay_writer/research.py" = ["S101"]
+"src/essay_writer/resolvers.py" = ["S310"]
+"src/essay_writer/server.py" = ["S112"]
+"src/essay_writer/student_voice.py" = ["S105"]
+
+[tool.mypy]
+python_version = "3.14"
+packages = ["essay_writer"]
+ignore_missing_imports = true

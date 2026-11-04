@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.14.10", "3.15.2"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Repository checks
+        run: |
+          set -euo pipefail
+          local_notes=$(git ls-files '*.local.md' 'NOTES.local' 'LOCAL-NOTES.md')
+          if [ -n "$local_notes" ]; then
+            echo "local notes must stay untracked"
+            exit 1
+          fi
+          files=$(git ls-files 'README.md' 'FIRST-RUN.txt' 'FRIEND-PROMPT.txt' 'docs/*.md')
+          hits=$(grep -nE '(^|[^A-Za-z0-9_.])(dig|ship|land|seat)([^A-Za-z0-9_-]|$)' $files || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "private label in a tracked doc"
+            exit 1
+          fi
+          tracked=$(git ls-files | grep -v '^\.github/')
+          # Only documented placeholder home/volume paths are allowed. Any other
+          # real path is machine-specific and must not be published.
+          path_hits=$(grep -noE '/(Users|Volumes|home)/[A-Za-z0-9][A-Za-z0-9._-]*' $tracked \
+            | grep -vE '/(Users|Volumes|home)/(student|ResearchDrive|ArchiveDrive|workspace)$' || true)
+          if [ -n "$path_hits" ]; then
+            echo "$path_hits"
+            echo "real home or volume path in a tracked file"
+            exit 1
+          fi
+      - name: Install package and dev tools
+        run: python -m pip install -e ".[dev]"
+      - name: Prompt docs
+        run: python tools/generate_docs.py --check
+      - name: Ruff
+        run: python -m ruff check src tests tools
+      - name: Mypy
+        run: python -m mypy src
+      - name: Pytest
+        run: python -m pytest -q

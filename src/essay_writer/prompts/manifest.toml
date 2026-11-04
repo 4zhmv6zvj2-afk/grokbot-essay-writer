@@ -1,0 +1,17 @@
+[stages]
+"1" = "stages/01.md"
+"2" = "stages/02.md"
+"3" = "stages/03.md"
+"4a" = "stages/04a.md"
+"4b" = "stages/04b.md"
+"5" = "stages/05.md"
+"6" = "stages/06.md"
+"7" = "stages/07.md"
+"8" = "stages/08.md"
+"9" = "stages/09.md"
+"10" = "stages/10.md"
+
+[genres]
+essay = "genres/essay.md"
+report = "genres/report.md"
+diary = "genres/diary.md"

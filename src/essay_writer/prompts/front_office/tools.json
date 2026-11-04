@@ -1,0 +1,296 @@
+[
+  {
+    "id": "health",
+    "tool": "essay.health",
+    "confirm": null,
+    "read_only": true,
+    "requires": [],
+    "writes": null,
+    "description": "Essay: essay.health (read-only). The door is alive, and the essay doors and packs on disk are listed. No student names and no essay body."
+  },
+  {
+    "id": "debug.wipe",
+    "tool": "essay.debug.wipe",
+    "confirm": null,
+    "read_only": false,
+    "requires": [
+      "speech"
+    ],
+    "writes": "clears operator run logs in the app folder",
+    "description": "Essay: essay.debug.wipe (operator speech only). When the operator asks to delete the logs, clear the run log, or clearly means wipe the shell logs in the app folder, call with speech set to what they said. One call clears the prose run log and the structured ML JSONL together. Draft-then-confirm does not apply. No chat card. Student chat does not name those files."
+  },
+  {
+    "id": "debug.export",
+    "tool": "essay.debug.export",
+    "confirm": null,
+    "read_only": false,
+    "requires": [],
+    "writes": "one zip of operator run logs already on disk",
+    "description": "Essay: essay.debug.export (operator). When the operator asks for the run logs in one file, call this. One call packs the logs that are already on disk. A missing log stays missing. An empty pack is refused. Draft-then-confirm does not apply. No chat card. Student chat does not name those files. Use zip-for-ferry. Do not paste a truncated run log into chat."
+  },
+  {
+    "id": "originals",
+    "tool": "essay.originals",
+    "confirm": null,
+    "read_only": true,
+    "requires": [
+      "essay_id"
+    ],
+    "writes": null,
+    "description": "Essay: essay.originals (read-only). List or read uploads and the brief for one module, or for a sequence id such as MOD1011AA-5. Uploads and the brief are shared by every sequence of that module. A path that leaves that module is refused. Follow the server instructions for the Basics checklist. Stage 1 limiting conditions. The chat outcome is the short Basics pass, then a clean Confirm. Stage LLM (no-fast): Basics 1: model grok-4.7, reasoning high, fast off, context 256000. Apply the Basics checklist already on this tool as rules. Follow every line. Apply stage 1 — Analyse the task guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/1.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 2 — Essay: Establish a thesis. Report: Establish purpose and scope. When the brief is a report, stage 2 locks purpose and scope and stage 3 holds the central theme. A report has no thesis. An essay keeps the thesis. Before the save, the chat opens with a short Basics pass. The first three lines are what the mark scheme scores, the format the brief names, and the assignment question in the student's words. Later bullets stay short. Delivering annotation.docx alone is not this pass. Do not paste the rest of the Basics checklist into the chat. Stage 5 stays quiet and does not paste the whole checklist. Record the answers in the tracking note. The rest of the Basics checklist stays in the stage prompt and in the tracking note. Student chat is warm, helpful, encouraging, and concise: only what the person must know. A bullet list or a table is fine when the content is long. Always surface limits the person must know, such as Stage 1 limiting conditions. The chat outcome is the short Basics pass, then a clean Confirm."
+  },
+  {
+    "id": "research.summary",
+    "tool": "essay.research.summary",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "topic",
+      "confirmPhase"
+    ],
+    "writes": "confirmed research summary",
+    "description": "Essay: essay.research.summary (Confirm two-step — draft, show the human, then the same arguments with confirmPhase confirm; never silent). essay_id is a sequence id such as MOD1011AA-5. A bare module code is refused and nothing is written beside sequences/. Say that reply to the user. File work does not own the chat. Choices are stored on that sequence. Uploads stay on the module. Summarises only gathered sources for this essay id. invent-forbid: do not invent authors, titles, years, quotations, pages, DOIs, or journals. Does not call a resolver. Confirm delivers annotation.docx in the chat, download-list.docx as Word (leftovers only — not citation lines already on annotation.docx or PDFs already in the zip), and a zip of real PDFs only. The reply includes a links card with a title and a URL for each source that still needs a PDF. A saved PDF is not on that card. Draft writes none of those files. The files are the same for either mid-office pick. Basics checklist (Basics 4a): Gathered sources only (do not invent sources). Choose sources that answer the question, cover more than one view, and include the key works.; Each annotation is a few full sentences after the citation, written so a student can read them aloud: what the paper did, what it found, and how it helps this assignment. Keep mark-scheme words the brief uses, and gloss each one in plain English the first time. Do not delete those words.; Evidence vs claim: what the source shows versus what you will argue.; Harvard Referencing 4a format: the citation line stays exact, then a few full sentences a student can read aloud. Those sentences say what the paper did, what it found, and how it helps this assignment. Keep mark-scheme words the brief uses, and gloss each one in plain English the first time. Do not delete those words. Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences. Journal: Surname, Initial. (Year) 'Article title', Journal Title, volume(issue), pp. start-end. Available at: doi:10.xxxx/xxxxx. Book: Surname, Initial. (Year) Title. Place: Publisher. Web page: Organisation (Year) Title. Available at: URL (Accessed: date). A missing page, DOI, volume, journal, place, publisher, or access date stays blank. Do not invent it. The full reference pass is stage 9.; download-list.docx is leftovers only: gathered sources not already in the papers zip, plus failed look-up addresses that are not saved PDFs. Do not repeat citation lines from annotation.docx.; When you name other gathered sources or free alternatives already found after this save, speech only. Do not open a new look-up or free-alt download in this step.; After this save is approved, a later download step can fetch leftover free alternatives already found. That step does not open a new look-up and does not invent an address.; The citation year is the year in the PDF page title or header. Do not use the file's modified time as the year.; An abstract-only source stays on download-list.docx until a PDF of that source is opened. It is not an annotated-bibliography entry before that PDF is opened.; A PDF larger than 20MB is read in parts on this machine. Each part stays readable. A part that cannot be read is recorded for the later citation pass. The PDF bytes stay on this machine.; Before a Word file or a zip is handed across, clear the Mac quarantine mark and the provenance mark on the Documents copy. If those marks are absent, leave the file unchanged.; A database the brief names is not a look-up. The file the student holds fills that slot. Do not store a folder path.; Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout. Before the save, the chat opens with a short Basics pass. The first three lines are what the mark scheme scores, the format the brief names, and the assignment question in the student's words. Later bullets stay short. Delivering annotation.docx alone is not this pass. Do not paste the rest of the Basics checklist into the chat. Stage 5 stays quiet and does not paste the whole checklist. Record the answers in the tracking note. The rest of the Basics checklist stays in the stage prompt and in the tracking note. Student chat is warm, helpful, encouraging, and concise: only what the person must know. A bullet list or a table is fine when the content is long. Always surface limits the person must know, such as Stage 1 limiting conditions. The chat outcome is the short Basics pass, then a clean Confirm. After 4a and 4b Confirm, revisit the stage 3 plan before stage 5. Revisit stage 2 only if research breaks that lock: the essay thesis, or the report purpose and scope. The report central theme is the one-sentence answer. A thin edit is allowed. A break is not a thin edit. Check that section arguments still hold, that word weights still match the brief, and that source types are real titles with gaps named. invent-forbid: nothing in the plan that the research never showed. Use only the year printed in the opened source. Do not add a second year. If anything changes, show the delta and why it comes from the gathered sources, update the tracking note, and Confirm again before stage 5. If the theme or the purpose breaks, Confirm stage 2 and then Confirm stage 3. An essay keeps the thesis. A report has no thesis. Do not silently rewrite the plan into the draft. Stage LLM (no-fast): Basics 4a: model grok-4.7, reasoning high, fast off, context 256000. Apply the Basics checklist already on this tool as rules. Follow every line. Apply stage 4a — Annotated bibliography guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/4a.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 4b — Critical review. When the brief is a report, stage 2 locks purpose and scope and stage 3 holds the central theme. A report has no thesis. An essay keeps the thesis. The research seat reads the writing helpers in the server instructions. That note is not a source list."
+  },
+  {
+    "id": "research.full",
+    "tool": "essay.research.full",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "topic",
+      "confirmPhase",
+      "clarify_context"
+    ],
+    "writes": "confirmed full research",
+    "description": "Essay: essay.research.full (Confirm two-step — draft then confirm; never silent). confirmPhase and topic are required. clarify_context needs objective, background, issues, and guidance, each an answer or leave_open true. leave_open is the human's choice, never the model's default. packs is optional, at most two names from essay.health local_packs; never invent one. exclude_section_ids, industry, and host_voice are optional. Clarify answers, industry, host_voice, and a named pack are not evidence. Confirm writes one Word file per paper in critical-reviews.zip. Draft writes neither. The files are the same for either mid-office pick. Basics checklist (Basics 4a): Gathered sources only (do not invent sources). Choose sources that answer the question, cover more than one view, and include the key works.; Each annotation is a few full sentences after the citation, written so a student can read them aloud: what the paper did, what it found, and how it helps this assignment. Keep mark-scheme words the brief uses, and gloss each one in plain English the first time. Do not delete those words.; Evidence vs claim: what the source shows versus what you will argue.; Harvard Referencing 4a format: the citation line stays exact, then a few full sentences a student can read aloud. Those sentences say what the paper did, what it found, and how it helps this assignment. Keep mark-scheme words the brief uses, and gloss each one in plain English the first time. Do not delete those words. Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences. Journal: Surname, Initial. (Year) 'Article title', Journal Title, volume(issue), pp. start-end. Available at: doi:10.xxxx/xxxxx. Book: Surname, Initial. (Year) Title. Place: Publisher. Web page: Organisation (Year) Title. Available at: URL (Accessed: date). A missing page, DOI, volume, journal, place, publisher, or access date stays blank. Do not invent it. The full reference pass is stage 9.; download-list.docx is leftovers only: gathered sources not already in the papers zip, plus failed look-up addresses that are not saved PDFs. Do not repeat citation lines from annotation.docx.; When you name other gathered sources or free alternatives already found after this save, speech only. Do not open a new look-up or free-alt download in this step.; After this save is approved, a later download step can fetch leftover free alternatives already found. That step does not open a new look-up and does not invent an address.; The citation year is the year in the PDF page title or header. Do not use the file's modified time as the year.; An abstract-only source stays on download-list.docx until a PDF of that source is opened. It is not an annotated-bibliography entry before that PDF is opened.; A PDF larger than 20MB is read in parts on this machine. Each part stays readable. A part that cannot be read is recorded for the later citation pass. The PDF bytes stay on this machine.; Before a Word file or a zip is handed across, clear the Mac quarantine mark and the provenance mark on the Documents copy. If those marks are absent, leave the file unchanged.; A database the brief names is not a look-up. The file the student holds fills that slot. Do not store a folder path.; Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout. Basics checklist (Basics 4b): When you offer the step into critical review after 4a, include option C: Download leftovers first. The library guide is for after the person fetches those files; do not fetch those files for them during file work.; Before the step into the critical review is saved, compare download-list.docx with PDF files already on disk and in Documents only when that path is already named. Do not search the home folder, whole Documents, or whole Volumes. Do not treat the papers zip as the only copy. When a listed source now has a PDF, refresh the annotated bibliography and the papers zip, say what is saved and what is still leftover, then ask to save. Include option C: Download leftovers first.; Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout.; Open each critical-review markdown file on disk before that note is kept, including when a subagent writes the note. The critical note names grok-4.7.; A critical review judges the text. It is not a negative attack. Read the content, the purpose, the audience, and how the text is built.; Record the aim, the methods, the scope, what the text adds, what it leaves out, and whether the conclusions follow from the evidence.; Evidence vs claim. Bias, validity, and reliability only from the gathered text. Opposing views only if a gathered source states them. Do not invent them.; Fit to the argument on the papers you will use.; When the assignment is itself a critical review: introduction with author, title, topic, aim, findings, and your overall judgement; a summary of about a quarter to a third; a critique ordered by importance or by criterion; a conclusion that restates the judgement. The brief wins on structure. Before the save, the chat opens with a short Basics pass. The first three lines are what the mark scheme scores, the format the brief names, and the assignment question in the student's words. Later bullets stay short. Delivering annotation.docx alone is not this pass. Do not paste the rest of the Basics checklist into the chat. Stage 5 stays quiet and does not paste the whole checklist. Record the answers in the tracking note. The rest of the Basics checklist stays in the stage prompt and in the tracking note. Student chat is warm, helpful, encouraging, and concise: only what the person must know. A bullet list or a table is fine when the content is long. Always surface limits the person must know, such as Stage 1 limiting conditions. The chat outcome is the short Basics pass, then a clean Confirm. After 4a and 4b Confirm, revisit the stage 3 plan before stage 5. Revisit stage 2 only if research breaks that lock: the essay thesis, or the report purpose and scope. The report central theme is the one-sentence answer. A thin edit is allowed. A break is not a thin edit. Check that section arguments still hold, that word weights still match the brief, and that source types are real titles with gaps named. invent-forbid: nothing in the plan that the research never showed. Use only the year printed in the opened source. Do not add a second year. If anything changes, show the delta and why it comes from the gathered sources, update the tracking note, and Confirm again before stage 5. If the theme or the purpose breaks, Confirm stage 2 and then Confirm stage 3. An essay keeps the thesis. A report has no thesis. Do not silently rewrite the plan into the draft. Stage LLM (no-fast): Basics 4a: model grok-4.7, reasoning high, fast off, context 256000; Basics 4b: model grok-4.7, reasoning xhigh, fast off, context 256000. Apply the Basics checklist already on this tool as rules. Follow every line. Apply stage 4a — Annotated bibliography guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/4a.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 4b — Critical review. Apply stage 4b — Critical review guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/4b.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 5 — Write your first draft. When the brief is a report, stage 2 locks purpose and scope and stage 3 holds the central theme. A report has no thesis. An essay keeps the thesis. The research seat reads the writing helpers in the server instructions. That note is not a source list."
+  },
+  {
+    "id": "pack.validate",
+    "tool": "essay.pack.validate",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "pack",
+      "confirmPhase",
+      "confirmed research"
+    ],
+    "writes": "validation record for this pack",
+    "description": "Essay: essay.pack.validate (Confirm two-step). Checks one essay pack before Word: one essay id, sources covered by confirmed research, invent-forbid, Harvard Referencing, no student name or number, and a human choice of noted or open conclusion. A noted conclusion needs gathered excerpt support; open is allowed when support is thin. The door does not change open into noted. A changed pack needs a fresh draft. The first draft is authored from the stage 4b critical-review markdowns, one markdown per paper. Pass critical_reviews on the pack. Re-open a source paper only with reopen when that markdown does not cover the gap. Follow the server instructions for the Basics checklist. Stage 1 limiting conditions. The chat outcome is the short Basics pass, then a clean Confirm. After 4a and 4b Confirm, revisit the stage 3 plan before stage 5. Revisit stage 2 only if research breaks that lock: the essay thesis, or the report purpose and scope. The report central theme is the one-sentence answer. A thin edit is allowed. A break is not a thin edit. Check that section arguments still hold, that word weights still match the brief, and that source types are real titles with gaps named. invent-forbid: nothing in the plan that the research never showed. Use only the year printed in the opened source. Do not add a second year. If anything changes, show the delta and why it comes from the gathered sources, update the tracking note, and Confirm again before stage 5. If the theme or the purpose breaks, Confirm stage 2 and then Confirm stage 3. An essay keeps the thesis. A report has no thesis. Do not silently rewrite the plan into the draft. Stage LLM (no-fast): Basics 5: model grok-4.7, reasoning xhigh, fast off, context 256000. Apply the Basics checklist already on this tool as rules. Follow every line. Apply stage 5 — Write your first draft guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/5.md from that guidance. When that draft is stored, essay.stage starts stage 6. There is no Confirm card between stage 5 and stage 6. When the brief is a report, stage 2 locks purpose and scope and stage 3 holds the central theme. A report has no thesis. An essay keeps the thesis. The write seat reads the writing helpers and Harvard Referencing in the server instructions. Those notes are not a source list. Keep the person the brief names. A diary keeps that brief voice and is not forced into third person. An essay or a report is not forced into first person to sound human. Ban AI-glue: do not pad with stock transitions, empty emphasis, or lines that could sit on any assignment. When no lecture, reading, or workplace detail is on the opened files, ask the student once for one real detail and use only that detail. Never invent a lecture, a reading, or a workplace detail. Do not open with a general sentence built only from the topic nouns. Do not close with an automatic In conclusion that only restates the topic. A paragraph closer must not only restate the topic sentence. Make it assignment-specific: a cited finding, a limit, or a figure. Use a connective only when the relation is true. However has to mark a real contrast. More connectives are not more coherence."
+  },
+  {
+    "id": "pack.restore",
+    "tool": "essay.pack.restore",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "snapshot",
+      "confirmPhase"
+    ],
+    "writes": "restores one snapshot of pack JSON, annotation report, and review markdown",
+    "description": "Essay: essay.pack.restore (Confirm two-step). Restores one snapshot already stored under backups/<essay_id>/ so the pack and any critical-review markdowns are usable again. snapshot is the snapshot id. A missing snapshot is refused. A damaged snapshot is refused. Review text is copied from that snapshot only. Draft writes nothing. Confirm writes that snapshot only."
+  },
+  {
+    "id": "pack.render_word",
+    "tool": "essay.pack.render_word",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "pack",
+      "confirmPhase",
+      "confirmed validation"
+    ],
+    "writes": "docx",
+    "description": "Essay: essay.pack.render_word (Confirm two-step). Draft writes nothing. Confirm writes a .docx only for the same pack after validation confirm. The essay id must be a sequence id. A bare module code is refused, so Word is not written at Essay-writer/<module>/output/. Say that reply to the user. File work does not own the chat. A sequence id writes that sequence's Word file, not the module's other sequences. Word only. No student name unless the assignment record requires it. When that record requires a registration number, print the number stored on the sequence. Do not invent it. Put the page number where the record says. Never confirm a changed pack. The first draft is authored from the stage 4b critical-review markdowns, one markdown per paper. Pass critical_reviews on the pack. Re-open a source paper only with reopen when that markdown does not cover the gap. Pass stage 6 for the first Word file or stage 9 for the final Word file. Those paths need an EQR PASS from the reviewer seat. This writer door does not review itself. Follow the server instructions for the Basics checklist. Stage 1 limiting conditions. The chat outcome is the short Basics pass, then a clean Confirm. After 4a and 4b Confirm, revisit the stage 3 plan before stage 5. Revisit stage 2 only if research breaks that lock: the essay thesis, or the report purpose and scope. The report central theme is the one-sentence answer. A thin edit is allowed. A break is not a thin edit. Check that section arguments still hold, that word weights still match the brief, and that source types are real titles with gaps named. invent-forbid: nothing in the plan that the research never showed. Use only the year printed in the opened source. Do not add a second year. If anything changes, show the delta and why it comes from the gathered sources, update the tracking note, and Confirm again before stage 5. If the theme or the purpose breaks, Confirm stage 2 and then Confirm stage 3. An essay keeps the thesis. A report has no thesis. Do not silently rewrite the plan into the draft. Stage LLM (no-fast): Basics 5: model grok-4.7, reasoning xhigh, fast off, context 256000; Basics 7: model grok-4.7, reasoning high, fast off, context 256000; Basics 8: model grok-4.7, reasoning high, fast off, context 256000; Basics 9: model grok-4.7, reasoning high, fast off, context 256000. Apply the Basics checklist already on this tool as rules. Follow every line. Apply stage 5 — Write your first draft guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/5.md from that guidance. When that draft is stored, essay.stage starts stage 6. There is no Confirm card between stage 5 and stage 6. Apply stage 7 — Ask for feedback guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/7.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 8 — Edit and redraft. Apply stage 8 — Edit and redraft guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/8.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 9 — References and citations. Apply stage 9 — References and citations guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/9.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 10 — Submit the final draft. When the brief is a report, stage 2 locks purpose and scope and stage 3 holds the central theme. A report has no thesis. An essay keeps the thesis. The write seat reads the writing helpers and Harvard Referencing in the server instructions. Those notes are not a source list. Keep the person the brief names. A diary keeps that brief voice and is not forced into third person. An essay or a report is not forced into first person to sound human. Ban AI-glue: do not pad with stock transitions, empty emphasis, or lines that could sit on any assignment. When no lecture, reading, or workplace detail is on the opened files, ask the student once for one real detail and use only that detail. Never invent a lecture, a reading, or a workplace detail. Do not open with a general sentence built only from the topic nouns. Do not close with an automatic In conclusion that only restates the topic. A paragraph closer must not only restate the topic sentence. Make it assignment-specific: a cited finding, a limit, or a figure. Use a connective only when the relation is true. However has to mark a real contrast. More connectives are not more coherence."
+  },
+  {
+    "id": "stage",
+    "tool": "essay.stage",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "stage",
+      "confirmPhase"
+    ],
+    "writes": "tracking/<stage>.md and tracking/stage.json on confirm",
+    "description": "When a copied sequence opens on stage 1, stages 1–3 run again. If the parent already saved stage 2 or 3, name the prior lock: stage number, stage title, and the parent sequence id. Ask whether to revise it or keep it. Show the Confirm card only when they revise or explicitly re-lock. Keep continues with the saved lock and does not show Confirm again for that same save. Essay: essay.stage. Draft shows a chat card (kind confirm) with the sequence id, the stage, the save line, and actions Confirm and Not yet. Send confirmPhase confirm only with cardAction confirm and cardDigest from that card, and only after the person picks Confirm on the card. A typed ok, yes, or confirm is not a pick. When a draft card is waiting, show that Confirm card again, with its digest, only while the pointer still has that stage as current and the stage is not saved. If the stage is in saved, or current is a later stage, do not show that card. Say the tool's next and the card the tool returned for current. Essay Bot may only show the Confirm card the door returned. It does not pick the next stage itself. {{confirm:room_confirm_path}} {{confirm:stage_confirm_each}} {{confirm:stage7_after_answers}} While file work is going, {{status:body}} Typed text does not write tracking/stage.json. Not yet leaves the step unsaved. Never silent. After Stage 3 is saved, the reply may include one encourage question. Say that one question and its choices. Do not ask another question in the same turn. When the person answers or skips, call essay.stage with encourageChoice set to that reply. Do not send encourageChoice on the save that locks the plan. Silence does not block the saved stage and does not add a detail the person did not give. On a copied sequence, stage 4a researches first, then each saved paper is kept, dropped, or replaced. Call essay.stage with paperChoice set to the paper and that choice. A dropped paper leaves the list only. The file stays. A kept paper that already has a critical note is not gathered again. essay_id is a sequence id such as MOD1011AA-5. stage is 1, 2, 3, 4a, 4b, 5, 6, 7, 8, 9, or 10. Load stage_settings rules for that stage and apply every line before the stage output. The guidance is rules. Follow every line. Draft writes tracking/<stage>.md on the sequence from that guidance. A card pick saves the final look in that file, then tracking/stage.json moves to the next stage. Stage 5 stores on the draft and starts stage 6. There is no Confirm card between stage 5 and stage 6. The reply started.stage is 6, with master_ask. Stages 7, 8, and 9 keep their own cards. One card does not run the later stages. Stage 10 confirm does not submit. look is an optional plain note of the checklist answers. Omit it and the final look is the stage guidance. A changed look needs a fresh draft. Before the save, the chat opens with a short Basics pass. The first three lines are what the mark scheme scores, the format the brief names, and the assignment question in the student's words. Later bullets stay short. Delivering annotation.docx alone is not this pass. Do not paste the rest of the Basics checklist into the chat. Stage 5 stays quiet and does not paste the whole checklist. Record the answers in the tracking note. The rest of the Basics checklist stays in the stage prompt and in the tracking note. Student chat is warm, helpful, encouraging, and concise: only what the person must know. A bullet list or a table is fine when the content is long. Always surface limits the person must know, such as Stage 1 limiting conditions. The chat outcome is the short Basics pass, then a clean Confirm. When the brief is a report, stage 2 locks purpose and scope and stage 3 holds the central theme. A report has no thesis. An essay keeps the thesis. After 4a and 4b Confirm, revisit the stage 3 plan before stage 5. Revisit stage 2 only if research breaks that lock: the essay thesis, or the report purpose and scope. The report central theme is the one-sentence answer. A thin edit is allowed. A break is not a thin edit. Check that section arguments still hold, that word weights still match the brief, and that source types are real titles with gaps named. invent-forbid: nothing in the plan that the research never showed. Use only the year printed in the opened source. Do not add a second year. If anything changes, show the delta and why it comes from the gathered sources, update the tracking note, and Confirm again before stage 5. If the theme or the purpose breaks, Confirm stage 2 and then Confirm stage 3. An essay keeps the thesis. A report has no thesis. Do not silently rewrite the plan into the draft. Stage 1 — Analyse the task. File: tracking/1.md. Next: 2 — Essay: Establish a thesis. Report: Establish purpose and scope. Stage 2 — Essay: Establish a thesis. Report: Establish purpose and scope. File: tracking/2.md. Next: 3 — Essay: Write an essay plan. Report: Write a report plan. Stage 3 — Essay: Write an essay plan. Report: Write a report plan. File: tracking/3.md. Next: 4a — Annotated bibliography. Stage 4a — Annotated bibliography. File: tracking/4a.md. Next: 4b — Critical review. Stage 4b — Critical review. File: tracking/4b.md. Next: 5 — Write your first draft. Stage 5 — Write your first draft. File: tracking/5.md. Next: 6 — Re-read and make changes. Stage 6 — Re-read and make changes. File: tracking/6.md. Next: 7 — Ask for feedback. Stage 7 — Ask for feedback. File: tracking/7.md. Next: 8 — Edit and redraft. Stage 8 — Edit and redraft. File: tracking/8.md. Next: 9 — References and citations. Stage 9 — References and citations. File: tracking/9.md. Next: 10 — Submit the final draft. Stage 10 — Submit the final draft. File: tracking/10.md. Next: none. The tool does not submit."
+  },
+  {
+    "id": "revise",
+    "tool": "essay.revise",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "message",
+      "confirmPhase",
+      "a confirmed research or Word run"
+    ],
+    "writes": "revision note",
+    "description": "Essay: essay.revise (Confirm two-step). The essay id is a sequence id. Records feedback on this same essay after research or Word confirm. Does not write a new .docx and does not replace the Word confirm. Invented citations in the note are refused. Follow the server instructions for the Basics checklist. Stage 1 limiting conditions. The chat outcome is the short Basics pass, then a clean Confirm. Stage LLM (no-fast): Basics 6: model grok-4.7, reasoning high, fast off, context 256000; Basics 7: model grok-4.7, reasoning high, fast off, context 256000; Basics 8: model grok-4.7, reasoning high, fast off, context 256000. Apply the Basics checklist already on this tool as rules. Follow every line. Apply stage 6 — Re-read and make changes guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/6.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 7 — Ask for feedback. Apply stage 7 — Ask for feedback guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/7.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 8 — Edit and redraft. Apply stage 8 — Edit and redraft guidance as rules (stage_settings rules). Follow every line. essay.stage writes tracking/8.md from that guidance. On confirm, essay.stage saves the final look there and moves to stage 9 — References and citations. When the brief is a report, stage 2 locks purpose and scope and stage 3 holds the central theme. A report has no thesis. An essay keeps the thesis. Keep the person the brief names. A diary keeps that brief voice and is not forced into third person. An essay or a report is not forced into first person to sound human. Ban AI-glue: do not pad with stock transitions, empty emphasis, or lines that could sit on any assignment. When no lecture, reading, or workplace detail is on the opened files, ask the student once for one real detail and use only that detail. Never invent a lecture, a reading, or a workplace detail. Do not open with a general sentence built only from the topic nouns. Do not close with an automatic In conclusion that only restates the topic. A paragraph closer must not only restate the topic sentence. Make it assignment-specific: a cited finding, a limit, or a figure. Use a connective only when the relation is true. However has to mark a real contrast. More connectives are not more coherence. Local Word edit. A changed Word upload leaves the parent sequence in place and rolls forward onto the next sequence."
+  },
+  {
+    "id": "shelf.put",
+    "tool": "essay.shelf.put",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "pack",
+      "confirmPhase",
+      "Word confirm for that pack"
+    ],
+    "writes": "local shelf record",
+    "description": "Essay: essay.shelf.put (Confirm two-step). Stores a Word-confirmed pack on that sequence's shelf (Essay-writer/<module>/sequences/<n>/shelf), not on the module root. The essay id is a sequence id. It is local to that sequence. Say the draft path to the user."
+  },
+  {
+    "id": "shelf.get",
+    "tool": "essay.shelf.get",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "pack_id",
+      "confirmPhase"
+    ],
+    "writes": null,
+    "description": "Essay: essay.shelf.get (Confirm two-step). Draft returns the label for this essay id. Confirm returns the pack. Another essay's shelf is refused."
+  },
+  {
+    "id": "setup",
+    "tool": "essay.setup",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "confirmPhase"
+    ],
+    "writes": "app folder, KB1 vault, door tree, setup record",
+    "description": "Essay: essay.setup (Confirm two-step). Say the reply to the user. File work does not own this chat. Draft writes nothing. Confirm creates the app folder, the KB1 vault, and the door folders later doors read (Essay-writer, uploads, unassigned) on the cloud computer when called with no paths. A named pair of paths saves on this computer. Only a path you name on this computer is accepted. Documents is not a fallback and is not labelled as the cloud. A Consensus key and an Unpaywall email are collected on the secret card and are not repeated. A Consensus key turns Consensus on for the search. No key leaves Consensus off and the search stays on OpenAlex. The Consensus key is for academic research search: it finds papers for the research step. Consensus's help center says the API is how a tool programmatically searches academic research and retrieves relevant papers: https://help.consensus.app/en/articles/16516328-the-consensus-api\n\nCreate that key with Consensus's own steps from that page. Click the profile icon in the bottom-left corner, select API & MCP Dashboard, open the Keys and Clients tab, click New key, give the key a name so you can tell what it is for, then create it and copy it somewhere secure. The full key is shown once. If it is lost, revoke it and create a new one. The same path is on https://docs.consensus.app/api-plans-and-access : profile icon, then API & MCP Dashboard, then Keys and clients, then New key. The dashboard named from get-started is https://consensus.app/api-mcp\n\nAsk which Consensus plan they have. Free stores ESSAY_WRITER_CONSENSUS_PAID as 0. Pro stores it as 1. Teams, Deep, and Enterprise use 1, the same paid flag as Pro. Do not add another flag. The published limits are only those on https://docs.consensus.app/api-plans-and-access : Free includes 30 calls a month and the maximum with additional usage is 30; Pro includes 500 and the maximum with additional usage is 1,000. Max papers per request is 20 on Free and 300 on Pro. Pagination past the first page is no on Free and yes on Pro. Full-text excerpts are no on Free and yes on Pro. The rate limit is 1 request per second on Free and 1 request per second on Pro.\n\nThe email is for Unpaywall free-PDF lookup. Unpaywall's API docs say a request must include the email as ?email=YOUR_EMAIL, and they ask for at most 100,000 calls a day: https://unpaywall.org/products/api . OpenAlex, from the same team, asks for an email where they can contact you if a script goes wrong, and says that approach is copied from Crossref: https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md . Crossref's REST API FAQ answers \"Will you spam me with marketing bumf once you have our contact info?\" with \"No. We will only use it to contact you about problems with your scripts.\" https://github.com/CrossRef/rest-api-doc/blob/master/README.md . Say that limit, attributed to the Crossref FAQ by way of OpenAlex. Do not say that Unpaywall's own page promised never to email.\n\nIf the user skips the Consensus key, the Unpaywall email, or both, show the warning before the skip is accepted. Consensus is not used when the key is missing. Unpaywall free PDF lookup will not run when the email is missing. OpenAlex still runs. After an explicit yes to that warning, call essay.setup with confirmPhase draft, acknowledge_skipped_searches true, and the same other arguments. Show that result. After another explicit yes, call essay.setup with confirmPhase confirm and those same arguments. A confirm that skips without acknowledge_skipped_searches writes nothing.\n\nDo not ask the user to edit a .env file. Do not repeat the key or the email.\n The file-work host is stored once and defaults to agent --version at setup. Pass the alternate only when the user asks for grok version instead. Change it only by running setup again. The version check matches that choice. This door reports that version. It does not install grok and does not install on the Mac. Does not write notes."
+  },
+  {
+    "id": "projects",
+    "tool": "essay.projects",
+    "confirm": null,
+    "read_only": true,
+    "requires": [
+      "view"
+    ],
+    "optional": [
+      "module"
+    ],
+    "writes": null,
+    "description": "Essay: essay.projects (read-only). view continue lists every active module. Each row is the last-saved sequence id, such as MOD1011AA-5, on essay_id and sequence_id. If the last sequential id is a different sequence, both are shown. If they are the same, it is shown once. Rows with sequences offer roll_forward_ask and list sequences to copy. view roll-forward with module names one module and sets sequence_pick true so the user chooses a parent; the next id is last+1 on that module. Then call essay.sequence.new with that parent. A module with no sequence asks whether to start a new one. Say this list to the user. File work does not own the chat. view archive, delete, or unarchive lists module codes only."
+  },
+  {
+    "id": "project.archive",
+    "tool": "essay.project.archive",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "module",
+      "confirmPhase"
+    ],
+    "writes": "archive marker for every sequence of the module",
+    "description": "Essay: essay.project.archive (Confirm two-step). Hides one module and every sequence under it. The list is the module code, not each sequence id."
+  },
+  {
+    "id": "project.unarchive",
+    "tool": "essay.project.unarchive",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "module",
+      "confirmPhase"
+    ],
+    "writes": "removes the archive marker",
+    "description": "Essay: essay.project.unarchive (Confirm two-step). Returns one module to the continue list. Name the module code."
+  },
+  {
+    "id": "project.delete",
+    "tool": "essay.project.delete",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "module",
+      "confirmPhase"
+    ],
+    "writes": "removes the module workspace, named Word and zip copies, or both",
+    "description": "Essay: essay.project.delete (Confirm two-step). Ask which module, then where: grokbot (this essay workspace only), local (named Word and zip copies on the student's computer only), or both. Leaving where off stays workspace-only and does not remove files on the student's computer. Draft lists every sequence id and the upload, brief, and KB1 files when the workspace is in scope, and each localPaths Word or zip path when local is in scope. Draft writes nothing. This tool does not search the computer for copies. When where is both and localPaths is omitted, a Word or zip path already stored for that sequence is used, or the stored paths across the sequences when the whole module is removed, and the default handoff names when this computer can see the files. Ask for the path only when none are there. A path the caller names is the list. where local still needs each path the student names. Do not search the computer. The draft returns a Confirm card. Confirm deletes only after the person picks Confirm on that card, with cardAction confirm and cardDigest from the card. A typed yes does not remove anything. A local or both confirm must say those files on the student's computer will be removed. Never remove a local file unless where is local or both. A local file is removed only when it is a regular .docx or .zip this computer can already see. Pass sequence as one sequence id, such as MOD1004AA-2, to remove only that sequence after the same draft then confirm. Other sequences, the brief, and uploads stay. Omit sequence to remove the whole module."
+  },
+  {
+    "id": "sequence.new",
+    "tool": "essay.sequence.new",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "module",
+      "confirmPhase"
+    ],
+    "writes": "a new sequence cloned from the parent",
+    "description": "Essay: essay.sequence.new (Confirm two-step). Starts the next sequence id on the module (last folder number plus one). The parent is the last-saved sequence unless parent names another existing sequence id on that module. The new id is always last+1, not parent+1. Ask before confirm. The copy is published in one step; a failed copy is not kept. Copies the parent sequence's own files and updates them, including the sequence id on the Word cover. Uploads, the brief, and KB1 paper notes stay shared on the module. When a sequence opens, post only the Confirm card in that door result. That card's sequence id is the sequence that opened. Do not post a Confirm from another sequence. Ask the user before confirm. File work does not own the chat."
+  },
+  {
+    "id": "unassigned.collect",
+    "tool": "essay.unassigned.collect",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "confirmPhase"
+    ],
+    "writes": "moves loose files into unassigned/",
+    "description": "Essay: essay.unassigned.collect (Confirm two-step). Draft lists loose files and writes nothing. Confirm moves files that are not inside a module folder into unassigned/. READMEs stay. Does not choose a module."
+  },
+  {
+    "id": "dig",
+    "tool": "essay.dig",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "query",
+      "confirmPhase"
+    ],
+    "writes": "dig-card.json and dig-card.md; real PDFs; download-list.docx for failed downloads; annotation.docx when the download path stops; papers.zip of real PDFs only",
+    "description": "Essay: essay.dig (Confirm two-step). Draft writes nothing. Confirm writes a local dig-card.json and dig-card.md on the sequence. OpenAlex runs without a key. Unpaywall runs only when an email is already stored; skipping the email is fine. A Consensus key turns Consensus on for the search. No key leaves Consensus off and the search stays on OpenAlex. ESSAY_WRITER_CONSENSUS=0 turns Consensus off. ESSAY_WRITER_CONSENSUS=1 turns it on when a key is present. Consensus Free or Pro is the tier the look-up returns. Confirm downloads an open copy only when the response is a real PDF (content-type and %PDF- magic). An HTML abstract page, a 404, a paywall, or an empty file is not a paper and is written to download-list.docx. Valid PDFs are kept. The same failed address stops after 3 tries. The path also stops when more than 10 minutes pass with no new PDF. Confirm then writes annotation.docx and the download list from the files already saved, and names what is still missing. The annotation Word file is for the chat. download-list.docx is Word. The reply includes a links card with a title and a URL for each file that was not saved. A saved PDF is not on that card. The papers zip contains real PDFs only. Do not retry a stopped address. invent-forbid: hits are look-up records only. Do not invent a paper."
+  },
+  {
+    "id": "download.leftovers",
+    "tool": "essay.download.leftovers",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "essay_id",
+      "confirmPhase"
+    ],
+    "writes": "real PDFs and the download list for leftover addresses already stored",
+    "description": "Essay: essay.download.leftovers (Confirm two-step). After the annotated bibliography is confirmed, draft lists leftover free-alternative addresses already stored and writes nothing. Confirm fetches those stored addresses only. It does not open a new look-up. It does not call Consensus or Unpaywall. It does not invent an address. A real PDF is the only file kept."
+  },
+  {
+    "id": "gates",
+    "tool": "essay.gates",
+    "confirm": null,
+    "read_only": true,
+    "requires": [
+      "essay_id"
+    ],
+    "writes": null,
+    "description": "Essay: essay.gates (read-only). Mechanical gates 1–11 and the unquoted-exact plagiarism blocker. This is not a review. The writer seat does not pass EQR here."
+  },
+  {
+    "id": "intake",
+    "tool": "essay.intake",
+    "confirm": "draft-then-confirm",
+    "read_only": false,
+    "requires": [
+      "name",
+      "confirmPhase"
+    ],
+    "writes": "shared upload, a rolled-forward sequence, or a new module from Word",
+    "description": "Essay: essay.intake (Confirm two-step). Say the reply to the user. File work does not own the chat. Call with the file name. A Word draft is matched to one module; say which module and ask the user to say yes, then roll forward onto that module's next sequence. The choice is the module. Do not ask for a sequence. If the file cannot be matched, the reply is the module list with no sequence id. The user picks a module and the upload rolls forward (rollForward true). If the user cannot identify a module, call with create true and the new module code. Say there is no saved research trail, next steps use an upload, a look-up, or a source card from here, research starts only if the user asks, the first draft is done, and the stage is their feedback. A supporting document is filed on the module for every sequence. A changed Word upload leaves the parent sequence in place. An unchanged Word file stays in unassigned/ and nothing is written. A PNG, JPEG, GIF, or WEBP photo is not a Word draft. When the result says needs_reading, look at the image in the tool result and call again with the same file name, the same module, confirmPhase draft, and reading set to only the words visible in the photo, including handwriting. Do not ask the student to copy those words from another program. Show that reading to the student. After an explicit yes, confirm files the photo and those words on the module for every sequence. An empty or unreadable photo is refused and nothing is filed."
+  }
+]

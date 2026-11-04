@@ -1,0 +1,13 @@
+# MOD2004AA-3 Stage 10 FAIL — greppable debug.log facts (one key per line).
+# Scenario: saved_pack=null, pack_path=pack_from_docx, thin cover, refs_n=0.
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 stage=10
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 pack_path=pack_from_docx
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 saved_pack=null
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 title=empty
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 assessment=empty
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 cover_n=5
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 cover_sequence_id=0
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 cover_title_line=0
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 cover_counted_words=0
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 sources_n=0
+event=essay.product.write_stage10 essay_id=MOD2004AA-3 refs_n=0

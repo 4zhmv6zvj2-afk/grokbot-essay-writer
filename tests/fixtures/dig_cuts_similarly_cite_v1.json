@@ -1,0 +1,29 @@
+{
+  "description": "Leading-transition cite parse regression (#151). Lone Similarly stays a surname.",
+  "samples": [
+    {
+      "text": "Similarly, Yulius (2024) maps the choice.",
+      "tokens": ["yulius, 2024"]
+    },
+    {
+      "text": "Similarly, Shiu (2023) maps the choice.",
+      "tokens": ["shiu, 2023"]
+    },
+    {
+      "text": "However, Shiu (2023) maps the choice.",
+      "tokens": ["shiu, 2023"]
+    },
+    {
+      "text": "Similarly, A, B and C (2024) agree.",
+      "tokens": ["a, b and c, 2024"]
+    },
+    {
+      "text": "Similarly (2024) is the author.",
+      "tokens": ["similarly, 2024"]
+    },
+    {
+      "text": "(Similarly, Yulius, 2024)",
+      "tokens": ["yulius, 2024"]
+    }
+  ]
+}

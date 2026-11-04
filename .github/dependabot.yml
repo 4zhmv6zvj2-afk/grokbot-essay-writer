@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+  # Keep the pinned Actions (checkout, setup-python) on supported releases.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Lift the floors declared in pyproject.toml (mcp, python-docx, and the dev extra).
+  # Grouped so one PR carries the bump instead of one PR per package.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      python:
+        patterns: ["*"]
