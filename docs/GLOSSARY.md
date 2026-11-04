@@ -17,6 +17,8 @@ are unchanged.
 | **mid-office** | The child process that serves the MCP tools over stdio. The "mid-office shell" is whichever host runs it (Cursor by default, or Grok Build). | `src/essay_writer/mid_spawn.py` |
 | **Grok Build** | An alternative agent host to Cursor, selected by the operator. | `FIRST-RUN.txt` |
 | **front office** | The chat-facing operator instructions, as opposed to file work. | `src/essay_writer/prompts/front_office/` |
+| **stage context** | The typed values between the tool signature and the reply writers: `StageArgs` is the public `essay.stage` tool call; `StageContext` is one resolved stage call. | `src/essay_writer/stage_context.py` |
+| **confirm state** | The resolved fields a confirm returns before the body is built (phase, text, pointer, and the draft fields). A refusal stays a plain dict. | `src/essay_writer/stage_context.py` |
 | **stage_state** | The state layer behind the stage runner: pointer and commit journal, stage lock, tracking-note renderer, and held/refused reply bodies. `stage_track.py` re-exports it. | `src/essay_writer/stage_state.py` |
 | **stage 1–10** | The workflow steps: assignment, thesis/purpose, plan, annotated bibliography, critical review, first draft, feedback, edit, references, final Word. | `src/essay_writer/stage_track.py` |
 | **AC1, AC2** | Stable local labels for acceptance criteria in test names and docstrings. They are not tracker ids. See `docs/testing.md`. | `tests/test_*.py` |

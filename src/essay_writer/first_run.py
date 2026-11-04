@@ -1,13 +1,20 @@
 """First-run glue for an uploaded copy.
 
-Unpack a zip onto the cloud computer, pip install -e ., and write the Cursor
-Custom MCP entries for essay-writer and essay-reviewer. Pass --no-reviewer to
-attach only the writer. When the Cursor agent CLI is missing on the Grok Bot
-computer, setup reports cursor-install-needs-consent; with --install-cursor (or
-ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1) it downloads the installer to a file,
-records that file's SHA-256, and runs that file with a fixed argv. Never pipe a
-remote script into a shell. Then enable those servers. Never install that CLI on
-the Mac, and never install grok.
+Unpack a zip onto the cloud computer, install the hash-pinned runtime
+requirements and then the project, and write the Cursor Custom MCP entries for
+essay-writer and essay-reviewer. The `python first_run.py` entry point runs
+the bootstrap: it installs requirements-runtime.txt with --require-hashes
+before `uv pip install -e . --no-deps`, and a hash mismatch or network
+failure stops the install. Pass --no-reviewer to attach only the writer.
+When the Cursor agent CLI is missing on the Grok Bot computer, setup reports
+cursor-install-needs-consent. Consent (--install-cursor or
+ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1) authorises the download only: setup
+downloads the installer to a file and reports its SHA-256, then stops with
+cursor-install-needs-hash. Execution needs the expected hash too
+(--cursor-sha256 or ESSAY_WRITER_CURSOR_INSTALL_SHA256); a mismatch stops
+without running anything. A matching file runs with a fixed argv. Never pipe
+a remote script into a shell. Then enable those servers. Never install that
+CLI on the Mac, and never install grok.
 Word and zip files already on disk can be copied to the Mac. This module does
 not write those files. A successful copy remembers that Mac path on the sequence.
 OK on the Mac handoff card creates Documents/Essay Bot on the friend's Mac
@@ -19,6 +26,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -51,13 +59,17 @@ KNOWN_MAC_DELIVERABLE_NAMES = (
     "critical-reviews.zip",
 )
 DELIVERABLE_SUFFIXES = frozenset({".docx", ".zip"})
-# Cursor CLI install. The URL is downloaded to a file, hashed, and only then
-# run with a fixed argv. It is never piped into a shell and never runs unless
-# the operator opts in with --install-cursor or the env var below.
+# Cursor CLI install. Consent (--install-cursor / env) authorises the download
+# only. The URL is downloaded to a file and hashed; nothing runs until the
+# operator also supplies the expected SHA-256 (--cursor-sha256 / env). A match
+# runs that file with a fixed argv. It is never piped into a shell.
 CURSOR_AGENT_INSTALL_URL = "https://cursor.com/install"
 CURSOR_INSTALL_CONSENT_ENV = "ESSAY_WRITER_ALLOW_CURSOR_INSTALL"
 CURSOR_INSTALL_SHA256_ENV = "ESSAY_WRITER_CURSOR_INSTALL_SHA256"
 CURSOR_INSTALL_NEEDS_CONSENT = "cursor-install-needs-consent"
+CURSOR_INSTALL_NEEDS_HASH = "cursor-install-needs-hash"
+CURSOR_INSTALL_HASH_MISMATCH = "cursor-install-hash-mismatch"
+_CURSOR_SHA256 = re.compile(r"[0-9a-f]{64}")
 CURSOR_AGENT_MANUAL_INSTALL = (
     f"curl -fsS {CURSOR_AGENT_INSTALL_URL} -o cursor-agent-install.sh\n"
     "shasum -a 256 cursor-agent-install.sh  # Linux: sha256sum cursor-agent-install.sh\n"
@@ -456,28 +468,67 @@ def _download_cursor_installer() -> dict[str, Any]:
     }
 
 
-def _run_cursor_installer() -> dict[str, Any]:
-    """Download the installer to a file, record its SHA-256, then run that file.
+def _expected_cursor_sha256(value: str | None = None) -> str | None:
+    """A 64-character hex pin, or None. An invalid pin is not a pin.
 
-    Never pipes the remote payload into a shell and never uses bash -lc.
-    Callers establish consent before this function is reached.
+    The explicit value (--cursor-sha256) wins over the env fallback. A value
+    that is not 64 hex characters is treated as no pin, so execution still
+    waits for an explicit hash instead of trusting the download.
+    """
+    candidate = value if value is not None else os.environ.get(CURSOR_INSTALL_SHA256_ENV)
+    if not isinstance(candidate, str):
+        return None
+    normalized = candidate.strip().casefold()
+    return normalized if _CURSOR_SHA256.fullmatch(normalized) else None
+
+
+def _run_cursor_installer(expected_sha256: str | None = None) -> dict[str, Any]:
+    """Download the installer to a file, report its SHA-256, run it only on a match.
+
+    Consent authorises the download; execution also needs an expected SHA-256
+    (--cursor-sha256 or ESSAY_WRITER_CURSOR_INSTALL_SHA256). Without a pin the
+    file is left on disk and nothing runs. Never pipes the remote payload into
+    a shell and never uses bash -lc.
     """
     download = _download_cursor_installer()
     if download.get("returncode") != 0:
         return download
     script = Path(str(download["path"]))
     digest = str(download["sha256"])
-    pinned = os.environ.get(CURSOR_INSTALL_SHA256_ENV, "").strip().casefold()
-    if pinned and pinned != digest:
+    pinned = _expected_cursor_sha256(expected_sha256)
+    if pinned is None:
         return {
             "returncode": 1,
             "stdout": "",
-            "stderr": "downloaded installer did not match the pinned SHA-256",
-            "reason": "cursor-install-hash-mismatch",
+            "stderr": "nothing was executed: execution needs an expected SHA-256",
+            "reason": CURSOR_INSTALL_NEEDS_HASH,
             "url": CURSOR_AGENT_INSTALL_URL,
             "path": str(script),
             "sha256": digest,
+            "bytes": download.get("bytes"),
+            "executed": False,
+            "instruction": (
+                "The installer was downloaded and hashed but not run. Check that hash, "
+                f"then rerun setup with --cursor-sha256 {digest} "
+                f"(or set {CURSOR_INSTALL_SHA256_ENV}={digest}) to run this exact file."
+            ),
+        }
+    if pinned != digest:
+        return {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "downloaded installer did not match the expected SHA-256",
+            "reason": CURSOR_INSTALL_HASH_MISMATCH,
+            "url": CURSOR_AGENT_INSTALL_URL,
+            "path": str(script),
+            "sha256": digest,
+            "bytes": download.get("bytes"),
             "expected_sha256": pinned,
+            "executed": False,
+            "instruction": (
+                "The downloaded file did not match the expected SHA-256, so nothing ran. "
+                "Rerun the download later or install manually; do not run this file."
+            ),
         }
     shell = shutil.which("bash") or "/bin/bash"
     try:
@@ -498,6 +549,9 @@ def _run_cursor_installer() -> dict[str, Any]:
             "url": CURSOR_AGENT_INSTALL_URL,
             "path": str(script),
             "sha256": digest,
+            "bytes": download.get("bytes"),
+            "expected_sha256": pinned,
+            "executed": False,
         }
     return {
         "returncode": completed.returncode,
@@ -506,6 +560,9 @@ def _run_cursor_installer() -> dict[str, Any]:
         "url": CURSOR_AGENT_INSTALL_URL,
         "path": str(script),
         "sha256": digest,
+        "bytes": download.get("bytes"),
+        "expected_sha256": pinned,
+        "executed": True,
         "command": f"{shell} {script}",
     }
 
@@ -518,7 +575,10 @@ def _install_report(report: dict[str, Any]) -> dict[str, Any]:
         "url": report.get("url"),
         "path": report.get("path"),
         "sha256": report.get("sha256"),
+        "bytes": report.get("bytes"),
         "expected_sha256": report.get("expected_sha256"),
+        "executed": report.get("executed"),
+        "instruction": report.get("instruction"),
         "reason": report.get("reason"),
         "stdout": report.get("stdout"),
         "stderr": report.get("stderr"),
@@ -529,11 +589,14 @@ def ensure_cursor_agent(
     installer: Callable[[], dict[str, Any]] | None = None,
     *,
     allow_install: bool | None = None,
+    expected_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Install the Cursor agent CLI when it is missing. Never on the Mac. Never grok.
 
-    Nothing is downloaded or run without explicit consent. Without consent the
-    report says cursor-install-needs-consent and gives the manual install steps.
+    Nothing is downloaded without explicit consent. Consent authorises the
+    download only; execution also needs an expected SHA-256. Without consent
+    the report says cursor-install-needs-consent. With consent and no pin it
+    says cursor-install-needs-hash and reports the downloaded file's hash.
     """
     from essay_writer.setup import cursor_cli_binary, cursor_cli_version
 
@@ -571,7 +634,9 @@ def ensure_cursor_agent(
             "residual": (
                 "No Cursor CLI install was attempted and nothing was downloaded. "
                 "Ask before installing it, then rerun setup with --install-cursor "
-                f"or set {CURSOR_INSTALL_CONSENT_ENV}=1."
+                f"or set {CURSOR_INSTALL_CONSENT_ENV}=1. Consent only authorises the "
+                "download; that rerun also reports the file's SHA-256, and a second "
+                "rerun with --cursor-sha256 is what runs it."
             ),
         }
     if installer is None and os.environ.get("PYTEST_CURRENT_TEST"):
@@ -583,14 +648,20 @@ def ensure_cursor_agent(
             "version": None,
             "reason": "skipped-under-test",
         }
-    runner = installer or _run_cursor_installer
-    report = runner()
+    if installer is not None:
+        report = installer()
+    else:
+        report = _run_cursor_installer(expected_sha256)
     if not isinstance(report, dict):
         report = {"returncode": 1}
     binary = cursor_cli_binary()
     version = cursor_cli_version(binary) if binary else None
+    installer_reason = report.get("reason")
     if not binary:
-        reason = "agent-cli-missing"
+        if installer_reason in {CURSOR_INSTALL_NEEDS_HASH, CURSOR_INSTALL_HASH_MISMATCH}:
+            reason = str(installer_reason)
+        else:
+            reason = "agent-cli-missing"
     elif not version:
         reason = "agent-version-missing"
     elif report.get("returncode") != 0:
@@ -894,13 +965,18 @@ def install_uploaded_copy(
     enable: Enable | None = None,
     cursor_installer: Callable[[], dict[str, Any]] | None = None,
     allow_cursor_install: bool | None = None,
+    cursor_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Unpack a zip when given one, then pip install -e . in that same call.
 
-    A directory upload is already unpacked. No upload installs the tree that
-    contains this file. The Cursor CLI installer runs only with consent
-    (allow_cursor_install or ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1); without it
-    the report says cursor-install-needs-consent and changes nothing.
+    The `python first_run.py` entry point installs requirements-runtime.txt
+    with --require-hashes before the project and stops on a hash mismatch.
+    This function is the already-installed console-script path: it re-installs
+    the project itself, then the Cursor CLI install runs only with consent
+    (allow_cursor_install or ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1). Consent
+    downloads the installer and reports its hash; execution also needs
+    cursor_sha256 (or ESSAY_WRITER_CURSOR_INSTALL_SHA256). Without consent the
+    report says cursor-install-needs-consent and changes nothing.
     """
     if isinstance(upload, str) and _clone_url(upload):
         return _fail("Nothing is cloned. Pass the uploaded zip, not a git URL.")
@@ -967,6 +1043,7 @@ def install_uploaded_copy(
         cursor_cli = ensure_cursor_agent(
             installer=cursor_installer,
             allow_install=allow_cursor_install,
+            expected_sha256=cursor_sha256,
         )
     launch = mcp_launch_command()
     mcp = attach_custom_mcp(root, reviewer=reviewer, enable=enable) if attach else None
@@ -1298,10 +1375,11 @@ def remember_mac_handoff_dir(path: Path | str) -> dict[str, Any]:
                     if isinstance(key, str) and isinstance(value, str) and value.strip()
                 }
         existing[MAC_HANDOFF_SECRET] = resolved
+        from essay_writer.setup import _write_secret_text
+
         try:
             store.parent.mkdir(parents=True, exist_ok=True)
-            store.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
-            os.chmod(store, 0o600)
+            _write_secret_text(store, json.dumps(existing, indent=2) + "\n")
         except OSError as exc:
             return {"ok": False, "reason": str(exc), "path": resolved}
     return {"ok": True, "path": resolved}
@@ -1613,6 +1691,7 @@ def _parse(args: list[str]) -> dict[str, Any]:
     copy_path: str | None = None
     mac_handoff: str | None = None
     allow_cursor_install: bool | None = None
+    cursor_sha256: str | None = None
     index = 0
     while index < len(args):
         token = args[index]
@@ -1624,6 +1703,14 @@ def _parse(args: list[str]) -> dict[str, Any]:
             allow_cursor_install = True
         elif token == "--no-install-cursor":
             allow_cursor_install = False
+        elif token == "--cursor-sha256":
+            index += 1
+            if index >= len(args):
+                raise ValueError("--cursor-sha256 needs a 64-character hex SHA-256")
+            value = args[index].strip().casefold()
+            if _CURSOR_SHA256.fullmatch(value) is None:
+                raise ValueError("--cursor-sha256 needs a 64-character hex SHA-256")
+            cursor_sha256 = value
         elif token == "--remember-mac-dir":
             action = "remember_mac"
             index += 1
@@ -1660,6 +1747,8 @@ def _parse(args: list[str]) -> dict[str, Any]:
         raise ValueError("--remember-mac-dir does not unpack, install, or copy")
     if action in {"copy", "remember_mac"} and allow_cursor_install is not None:
         raise ValueError("--install-cursor does not copy or remember")
+    if action in {"copy", "remember_mac"} and cursor_sha256 is not None:
+        raise ValueError("--cursor-sha256 does not copy or remember")
     return {
         "action": action,
         "reviewer": reviewer,
@@ -1668,6 +1757,7 @@ def _parse(args: list[str]) -> dict[str, Any]:
         "copy_path": copy_path,
         "mac_handoff": mac_handoff,
         "allow_cursor_install": allow_cursor_install,
+        "cursor_sha256": cursor_sha256,
     }
 
 
@@ -1697,9 +1787,10 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         sys.stderr.write(
             "usage: first_run.py [--upload ZIP] [--dest FOLDER] [--no-reviewer]\n"
-            "       [--install-cursor | --no-install-cursor]\n"
+            "       [--install-cursor | --no-install-cursor] [--cursor-sha256 SHA256]\n"
             "       essay-writer [--install-upload ZIP] [--attach-mcp] [--copy-to-mac PATH]\n"
             "       [--remember-mac-dir FOLDER] [--no-reviewer] [--install-cursor]\n"
+            "       [--cursor-sha256 SHA256]\n"
             f"{exc}\n"
         )
         return 2
@@ -1712,7 +1803,10 @@ def main(argv: list[str] | None = None) -> int:
         _record_copy_handoff(parsed["copy_path"], result)
     elif parsed["action"] == "attach":
         root = package_root()
-        cursor_cli = ensure_cursor_agent(allow_install=parsed["allow_cursor_install"])
+        cursor_cli = ensure_cursor_agent(
+            allow_install=parsed["allow_cursor_install"],
+            expected_sha256=parsed["cursor_sha256"],
+        )
         cursor = attach_custom_mcp(root, reviewer=parsed["reviewer"])
         build = attach_build_mcp(root, reviewer=parsed["reviewer"])
         result = dict(cursor)
@@ -1737,6 +1831,7 @@ def main(argv: list[str] | None = None) -> int:
                 dest=dest,
                 reviewer=parsed["reviewer"],
                 allow_cursor_install=parsed["allow_cursor_install"],
+                cursor_sha256=parsed["cursor_sha256"],
             )
     json.dump(result, sys.stdout, indent=2)
     sys.stdout.write("\n")

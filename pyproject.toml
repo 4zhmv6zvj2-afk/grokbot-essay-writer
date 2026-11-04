@@ -1,6 +1,6 @@
 [project]
 name = "essay-writer"
-version = "0.3.1"
+version = "0.4.0"
 description = "Confirm-gated MCP server for university essays. Word only."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -58,7 +58,7 @@ ignore = ["E501", "S603", "S606", "S607"]
 # pytest asserts are the test mechanism; fixture tokens, temp paths and
 # shell calls exist only in tests.
 "tests/**" = ["S101", "S105", "S108", "S604"]
-# The vendored bootstrap is kept byte-identical to its upstream release.
+# The vendored bootstrap carries one documented local patch; see VENDOR.json.
 "src/essay_writer/_vendor/**" = ["S105"]
 # Grandfathered: deliberate best-effort handlers and audited URL opens.
 "src/essay_writer/build_status.py" = ["S110", "S112"]

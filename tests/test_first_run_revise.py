@@ -5,7 +5,10 @@ import ast
 from essay_writer.doors import DOORS
 from essay_writer.first_run import (
     CURSOR_AGENT_MANUAL_INSTALL,
+    CURSOR_INSTALL_HASH_MISMATCH,
     CURSOR_INSTALL_NEEDS_CONSENT,
+    CURSOR_INSTALL_NEEDS_HASH,
+    CURSOR_INSTALL_SHA256_ENV,
     _parse,
     enable_mcp_server,
     ensure_cursor_agent,
@@ -51,8 +54,13 @@ def test_ac1_first_run_installs_agent_on_grok_bot_computer_only():
     assert CURSOR_AGENT_MANUAL_INSTALL in text
     assert "| bash" not in text
     assert CURSOR_INSTALL_NEEDS_CONSENT in text
+    assert CURSOR_INSTALL_NEEDS_HASH in text
+    assert CURSOR_INSTALL_HASH_MISMATCH in text
+    assert CURSOR_INSTALL_SHA256_ENV in text
     assert "--install-cursor" in text
+    assert "--cursor-sha256" in text
     assert "ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1" in text
+    assert "authorises the download only" in text
     assert "agent --version" in text
     assert "agent mcp enable essay-writer" in text
     assert "agent mcp enable essay-reviewer" in text
@@ -61,6 +69,9 @@ def test_ac1_first_run_installs_agent_on_grok_bot_computer_only():
     assert "If grok is missing, stay on Cursor." in text
     assert "Do not install the Cursor CLI" not in text
     assert "On this computer" in text
+    assert "require-hashes" in text
+    assert "pip install -e ." in text
+    assert "hash mismatch or a network failure stops the install" in text
 
 
 def test_ac2_friend_prompt_stays_short_and_names_the_chat():

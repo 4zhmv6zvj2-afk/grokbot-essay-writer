@@ -31,9 +31,12 @@ jobs:
           fi
           tracked=$(git ls-files | grep -v '^\.github/' || true)
           # Only documented placeholder home/volume paths are allowed. Any other
-          # real path is machine-specific and must not be published.
+          # real path is machine-specific and must not be published. The allowed
+          # owners are the canonical doc/test placeholders: student, example,
+          # alice, bob, user, you; the allowed volumes: ResearchDrive,
+          # ArchiveDrive, workspace, Data.
           path_hits=$(grep -noE '/(Users|Volumes|home)/[A-Za-z0-9][A-Za-z0-9._-]*' $tracked \
-            | grep -vE '/(Users|Volumes|home)/(student|ResearchDrive|ArchiveDrive|workspace)$' || true)
+            | grep -vE '/(Users|Volumes|home)/(student|example|alice|bob|user|you|ResearchDrive|ArchiveDrive|workspace|Data)$' || true)
           if [ -n "$path_hits" ]; then
             echo "$path_hits"
             echo "real home or volume path in a tracked file"

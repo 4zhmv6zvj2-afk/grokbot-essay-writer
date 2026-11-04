@@ -795,7 +795,8 @@ def follow_mid_process(
                     stderr_line=" ".join(stderr_chunks),
                 )
             except Exception:
-                return
+                # Best effort: the thread ends here either way.
+                pass
 
     thread = threading.Thread(target=_run, name="essay-writer-mid", daemon=True)
     with _lock:

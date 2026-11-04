@@ -14,9 +14,9 @@ import json
 import os
 import urllib.error
 import urllib.parse
-import urllib.request
 from typing import Any
 
+from essay_writer import safe_url
 from essay_writer.confirm import (
     CONFIRM,
     DRAFT,
@@ -35,6 +35,8 @@ TOOL = "essay.dig"
 OPENALEX_URL = "https://api.openalex.org/works"
 CONSENSUS_URL = "https://api.consensus.app/v1/search"
 UNPAYWALL_URL = "https://api.unpaywall.org/v2/"
+MAX_API_BYTES = 2 * 1024 * 1024
+API_TIMEOUT = 20.0
 
 
 def consensus_api_key() -> str | None:
@@ -102,11 +104,16 @@ def consensus_status() -> dict[str, Any]:
 
 
 def _get_json(url: str, headers: dict[str, str] | None = None) -> dict[str, Any] | None:
-    request = urllib.request.Request(url, headers=headers or {})
+    """GET one look-up URL through safe_url. A refusal or miss is None."""
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with safe_url.open_url(
+            url,
+            timeout=API_TIMEOUT,
+            max_bytes=MAX_API_BYTES,
+            headers=headers or {},
+        ) as response:
             payload = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+    except (safe_url.Refused, urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
         return None
     if not isinstance(payload, dict):
         return None

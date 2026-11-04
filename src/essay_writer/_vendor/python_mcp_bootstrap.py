@@ -1,8 +1,13 @@
 """Core contract for the pre-install Python bootstrap.
 
-This module is deliberately stdlib-only and importable on Python 3.12.  The
-package metadata requires 3.14, but consumers copy this file into a first-run
-entry point that may execute before the application's dependencies exist.
+This module is deliberately stdlib-only and importable on Python 3.12.  Consumers
+copy this file into a first-run entry point that may execute before the
+application's dependencies exist.
+
+Local patch (recorded in VENDOR.json): BootstrapSpec.requirements installs one
+or more hash-pinned requirement files with ``--require-hashes`` before the
+project install, and the project install then runs with ``--no-deps``. This is
+the only difference from upstream v0.1.0.
 """
 
 from __future__ import annotations
@@ -57,6 +62,7 @@ class BootstrapSpec:
     required: Version = REQUIRED
     pin: str = PIN
     install_args: tuple[str, ...] = ("-e", ".")
+    requirements: tuple[str, ...] = ()
     verify_import: str | None = None
     card: str = CARD
     venv_dir: str = VENV_DIR
@@ -95,6 +101,10 @@ class BootstrapSpec:
         if self.verify_import is not None and not _valid_module(self.verify_import):
             raise ValueError(f"verify_import is not a module: {self.verify_import!r}")
         _require_project_install_args(self.install_args)
+        for requirement in self.requirements:
+            if not isinstance(requirement, str) or not requirement.strip():
+                raise ValueError(f"requirements must be non-empty paths: {self.requirements!r}")
+            _require_project_path("requirements", requirement)
         if not self.repair_card.strip():
             raise ValueError("repair_card must not be empty")
         if self.card == CARD and self.pin != PIN:
@@ -475,11 +485,27 @@ def provision(
             if result.get("returncode") != 0:
                 return _failed("provision_failed", spec, steps=steps)
 
+    if spec.requirements:
+        requirements_command = [
+            uv,
+            "pip",
+            "install",
+            "--require-hashes",
+            *[part for requirement in spec.requirements for part in ("-r", requirement)],
+            "--python",
+            str(python),
+        ]
+        result = run(requirements_command, root, env, 600)
+        steps.append(_step(requirements_command, result))
+        if result.get("returncode") != 0:
+            return _failed("runtime_requirements_failed", spec, steps=steps)
+
     install_command = [
         uv,
         "pip",
         "install",
         *spec.install_args,
+        *(["--no-deps"] if spec.requirements else []),
         "--python",
         str(python),
     ]

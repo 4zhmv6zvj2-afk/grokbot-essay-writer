@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from docx import Document
 from helpers import ESSAY, open_sequence, write_upload
 
+from essay_writer import safe_url
 from essay_writer.cite_fit import (
     apply_body_cites,
     same_idea,
@@ -62,17 +63,21 @@ def _plant(seq: str, name: str, **source: object) -> None:
 
 
 class _Handle:
+    status = 200
+    headers = {"Content-Type": "application/json"}
+
     def __init__(self, payload: bytes) -> None:
         self._payload = payload
 
-    def read(self) -> bytes:
-        return self._payload
+    def read(self, size: int = -1) -> bytes:
+        if size is None or size < 0:
+            data, self._payload = self._payload, b""
+            return data
+        data, self._payload = self._payload[:size], self._payload[size:]
+        return data
 
-    def __enter__(self) -> _Handle:
-        return self
-
-    def __exit__(self, *args: object) -> bool:
-        return False
+    def close(self) -> None:
+        return None
 
 
 def test_check_claims_rejects_a_source_that_was_not_gathered(workspace):
@@ -310,10 +315,11 @@ def test_doi_org_miss_does_not_invent_a_url(monkeypatch):
         ).encode(),
     ]
 
-    def fake_urlopen(url: str, timeout: int = 15) -> _Handle:
+    def fake_open(request, timeout: int = 15) -> _Handle:
         return _Handle(payloads.pop(0))
 
-    monkeypatch.setattr("essay_writer.resolvers.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["93.184.216.34"])
+    monkeypatch.setattr(safe_url, "_open", fake_open)
     assert doi_org_lookup("10.1000/not-a-match") is None
     found = doi_org_lookup("10.1000/not-a-match")
     assert found == {"doi": "10.1000/not-a-match", "url": "https://publisher.example/paper"}

@@ -13,7 +13,9 @@ download-list.docx from the PDFs already saved and names what is still missing.
 A later confirm does not fetch those same addresses again.
 
 A PDF body is stored whole on this machine. The 20MB figure is the read chop
-in essay_writer.pdf_read, not a cut that drops the tail of the file.
+in essay_writer.pdf_read, not a cut that drops the tail of the file. The fetch
+itself goes through safe_url with a 25MiB cap; an over-cap body, a private
+host, or a bad redirect is an empty download, never a truncated paper.
 """
 
 from __future__ import annotations
@@ -23,12 +25,12 @@ import os
 import re
 import urllib.error
 import urllib.parse
-import urllib.request
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from essay_writer import safe_url
 from essay_writer.confirm import refuse
 from essay_writer.known_paths import guard_write_door, research_file
 from essay_writer.paths import (
@@ -48,6 +50,8 @@ DOWNLOAD_LIST_NAME = "download-list.docx"
 ANNOTATION_NAME = "annotation.docx"
 STUCK_AFTER = timedelta(minutes=10)
 MAX_ATTEMPTS = 3
+MAX_PAPER_BYTES = 25 * 1024 * 1024
+PAPER_TIMEOUT = 20.0
 
 _HTML_TYPES = frozenset({"text/html", "application/xhtml+xml", "application/xhtml"})
 _PDF_TYPES = frozenset({"application/pdf", "application/x-pdf", "application/octet-stream"})
@@ -132,22 +136,23 @@ def classify_download(status: int, content_type: str | None, body: bytes) -> str
 
 
 def fetch_url(url: str) -> tuple[int, str | None, bytes]:
-    """GET one address. Network failure is an empty download, not a paper."""
-    request = urllib.request.Request(url, headers={"User-Agent": "essay-writer"})
+    """GET one address. Network failure or a blocked URL is an empty download.
+
+    The address goes through safe_url, so a private host, a bad redirect, or a
+    body over the paper cap is an empty download rather than an exception.
+    """
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            status = int(getattr(response, "status", 200) or 200)
-            header = response.headers.get("Content-Type")
-            return status, header, response.read()
-    except urllib.error.HTTPError as exc:
-        header = exc.headers.get("Content-Type") if exc.headers else None
-        try:
-            payload = exc.read()
-        except OSError:
-            payload = b""
-        return int(exc.code), header, payload or b""
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+        with safe_url.open_url(
+            url,
+            timeout=PAPER_TIMEOUT,
+            max_bytes=MAX_PAPER_BYTES,
+            headers={"User-Agent": "essay-writer"},
+        ) as response:
+            header = response.headers.get("Content-Type") if response.headers is not None else None
+            return int(response.status or 200), header, response.read()
+    except (safe_url.Refused, urllib.error.URLError, TimeoutError, OSError, ValueError):
         return 0, None, b""
+    return 0, None, b""
 
 
 def _empty_state() -> dict[str, Any]:

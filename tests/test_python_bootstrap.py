@@ -205,3 +205,81 @@ def test_vendored_core_matches_its_manifest() -> None:
     assert manifest["version"] == "0.1.0"
     assert manifest["tag"] == "v0.1.0"
     assert manifest["sha256"] == digest
+
+
+def test_hash_pinned_requirements_install_runs_before_the_project(tmp_path):
+    """A copy with requirements-runtime.txt installs hashes first, then --no-deps."""
+    (tmp_path / "requirements-runtime.txt").write_text(
+        "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
+    )
+    calls = []
+    commands = []
+    code = boot.bootstrap(
+        ["--install-python", "--no-reviewer"],
+        tmp_path,
+        exec_fn=_exec_calls(calls),
+        run=_ok_runner(commands),
+        uv="/fake/uv",
+        current=(3, 11, 13),
+        probe=lambda _exe: (3, 15, 2),
+    )
+    assert code == 0
+    joined = [" ".join(command) for command in commands]
+    requirements = [line for line in joined if "--require-hashes" in line]
+    project = [line for line in joined if "pip install -e ." in line]
+    assert len(requirements) == 1
+    assert "requirements-runtime.txt" in requirements[0]
+    assert "--no-deps" in project[0]
+    assert joined.index(requirements[0]) < joined.index(project[0])
+
+
+def test_missing_requirements_file_keeps_the_single_upstream_install(tmp_path):
+    """Legacy copies without the requirements file keep the upstream command."""
+    commands = []
+    code = boot.bootstrap(
+        ["--install-python", "--no-reviewer"],
+        tmp_path,
+        exec_fn=_exec_calls([]),
+        run=_ok_runner(commands),
+        uv="/fake/uv",
+        current=(3, 11, 13),
+        probe=lambda _exe: (3, 15, 2),
+    )
+    assert code == 0
+    joined = [" ".join(command) for command in commands]
+    assert not any("--require-hashes" in line for line in joined)
+    assert any("pip install -e ." in line for line in joined)
+
+
+def test_failed_requirement_hash_install_stops_before_the_project(tmp_path, capsys):
+    """A failed hash check is a named failure; the project install does not run."""
+    (tmp_path / "requirements-runtime.txt").write_text("mcp==2.3.0\n", encoding="utf-8")
+    commands = []
+
+    def _runner(command, cwd, env, timeout):
+        commands.append(list(command))
+        if "--require-hashes" in command:
+            return {"returncode": 1, "stdout": "", "stderr": "hash mismatch"}
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    code = boot.bootstrap(
+        ["--install-python", "--no-reviewer"],
+        tmp_path,
+        exec_fn=_exec_calls([]),
+        run=_runner,
+        uv="/fake/uv",
+        current=(3, 11, 13),
+        probe=lambda _exe: (3, 15, 2),
+    )
+    report = json.loads(capsys.readouterr().out)
+    assert code != 0
+    assert report["reason"] == "runtime_requirements_failed"
+    assert not any("pip install -e ." in " ".join(command) for command in commands)
+
+
+def test_bootstrap_spec_rejects_requirements_outside_the_project():
+    """The new field uses the same project-path guard as the other paths."""
+    from essay_writer._vendor import python_mcp_bootstrap as core
+
+    with pytest.raises(ValueError, match="requirements must stay inside the project"):
+        core.BootstrapSpec(app="essay-writer", requirements=("/etc/passwd",))

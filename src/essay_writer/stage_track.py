@@ -26,7 +26,8 @@ The state layer — the pointer and its commit journal, the stage lock, the
 tracking-note renderer, and the reply bodies a held save returns — lives in
 essay_writer/stage_state.py. This module keeps the orchestrator and public
 entry points, and re-exports every moved name below so existing imports of
-essay_writer.stage_track keep working.
+essay_writer.stage_track keep working. The typed stage values (StageArgs and
+StageContext) live in essay_writer/stage_context.py.
 """
 
 # The state layer moved to stage_state.py. Every moved name is re-exported here
@@ -35,6 +36,7 @@ essay_writer.stage_track keep working.
 # alphabetically, so isort is disabled for this file in pyproject.toml.
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, cast
 
 from essay_writer.confirm import (
@@ -56,6 +58,7 @@ from essay_writer.stage_llm import (
     stage_settings,
     stage_title,
 )
+from essay_writer.stage_context import ConfirmState, StageArgs, StageContext
 from essay_writer.student_voice import student_surface_hits
 
 from essay_writer.stage_state import (
@@ -520,25 +523,81 @@ def essay_stage(
     lockChoice: str | None = None,
 ) -> dict[str, Any]:
     """A card saves the final look. Stage 5 starts stage 6."""
+    return _run_stage(
+        StageArgs(
+            essay_id=essay_id,
+            stage=stage,
+            confirmPhase=confirmPhase,
+            look=look,
+            master=master,
+            namedFolder=namedFolder,
+            answers=answers,
+            edited=edited,
+            webCheck=webCheck,
+            heldFile=heldFile,
+            cardAction=cardAction,
+            cardDigest=cardDigest,
+            card_only=card_only,
+            encourageChoice=encourageChoice,
+            paperChoice=paperChoice,
+            lockChoice=lockChoice,
+        )
+    )
+
+
+def _noop_result(
+    essay_id: str,
+    stage: str,
+    confirmPhase: str | None,
+    current: str,
+) -> dict[str, Any]:
+    """A confirm with no waiting card is a quiet no-op."""
+    body: StageResult = {
+        "ok": True,
+        "essay_id": essay_id,
+        "stage": stage,
+        "confirmPhase": confirmPhase,
+        "noop": True,
+        "wrote": False,
+        "stored": False,
+        "advanced": False,
+        "current": current,
+        "closed": False,
+        "submitted": False,
+    }
+    return dict(body)
+
+
+def _run_stage(args: StageArgs) -> dict[str, Any]:
+    """Resolve one stage call, then draft it or save it.
+
+    The tool call arrives as StageArgs. The runner validates it, resolves the
+    waiting card, and builds a StageContext for the reply writers. A refusal
+    stops at the step that raised it and is returned unchanged.
+    """
     minting = _MINTING.get()
+    essay_id = args.essay_id
+    stage = args.stage
+    confirmPhase = args.confirmPhase
+    look = args.look
     id_error = sequence_write_error(essay_id)
     if id_error:
         return refuse("essay-id", id_error)
-    if encourageChoice is not None:
+    if args.encourageChoice is not None:
         from essay_writer.encourage import answer_encourage
 
-        return answer_encourage(essay_id, encourageChoice)
-    if paperChoice is not None:
+        return answer_encourage(essay_id, args.encourageChoice)
+    if args.paperChoice is not None:
         from essay_writer.roll_forward import choose_paper
 
-        return choose_paper(essay_id, paperChoice)
+        return choose_paper(essay_id, args.paperChoice)
     from essay_writer.fo_chat_locks import (
         inherited_lock_pending,
         lock_choice_refusal,
         prior_saved_lock_ask,
     )
 
-    refused_choice = lock_choice_refusal(lockChoice)
+    refused_choice = lock_choice_refusal(args.lockChoice)
     if refused_choice is not None:
         return refused_choice
     phase = phase_refusal(confirmPhase)
@@ -567,9 +626,11 @@ def essay_stage(
         if confirmPhase == CONFIRM:
             return _confirm_blocked(essay_id, pointer, stage, genre, blocked)
         return blocked
-    if lockChoice == "keep" and pending_lock is not None:
+    cardAction = args.cardAction
+    cardDigest = args.cardDigest
+    if args.lockChoice == "keep" and pending_lock is not None:
         return _inherited_lock_keep(essay_id, stage, genre, pointer, pending_lock)
-    if lockChoice in {"revise", "relock"} and pending_lock is not None:
+    if args.lockChoice in {"revise", "relock"} and pending_lock is not None:
         from essay_writer.fo_chat_locks import _mark_lock_resolved
 
         inherited = str(pending_lock.get("look") or "").strip()
@@ -588,81 +649,19 @@ def essay_stage(
                 confirmPhase = DRAFT
                 cardAction = None
                 cardDigest = None
-                look = text
+        # The resolved note is the look from here on. The raw look no longer
+        # carries anything the save needs once the inherited lock is kept.
+        look = text
         _mark_lock_resolved(essay_id, stage)
     elif (
         pending_lock is not None
         and confirmPhase in {DRAFT, CONFIRM}
         and not minting
-        and lockChoice is None
-        and not card_only
+        and args.lockChoice is None
+        and not args.card_only
         and not _INHERITED_KEEP.get()
     ):
         return prior_saved_lock_ask(essay_id, stage, pending_lock)
-    return _run_stage(
-        essay_id,
-        stage,
-        confirmPhase,
-        text,
-        look,
-        master=master,
-        namedFolder=namedFolder,
-        answers=answers,
-        edited=edited,
-        webCheck=webCheck,
-        heldFile=heldFile,
-        cardAction=cardAction,
-        cardDigest=cardDigest,
-        card_only=card_only,
-        pointer=pointer,
-        genre=genre,
-        minting=minting,
-    )
-
-
-def _noop_result(
-    essay_id: str,
-    stage: str,
-    confirmPhase: str | None,
-    current: str,
-) -> dict[str, Any]:
-    """A confirm with no waiting card is a quiet no-op."""
-    body: StageResult = {
-        "ok": True,
-        "essay_id": essay_id,
-        "stage": stage,
-        "confirmPhase": confirmPhase,
-        "noop": True,
-        "wrote": False,
-        "stored": False,
-        "advanced": False,
-        "current": current,
-        "closed": False,
-        "submitted": False,
-    }
-    return dict(body)
-
-
-def _run_stage(
-    essay_id: str,
-    stage: str,
-    confirmPhase: str | None,
-    text: str,
-    look: str | None,
-    *,
-    master: str | None,
-    namedFolder: str | None,
-    answers: str | None,
-    edited: str | None,
-    webCheck: dict[str, Any] | None,
-    heldFile: str | None,
-    cardAction: str | None,
-    cardDigest: str | None,
-    card_only: bool,
-    pointer: dict[str, Any],
-    genre: str | None,
-    minting: bool,
-) -> dict[str, Any]:
     from essay_writer.spine import advances_without_confirm
 
     auto_next = advances_without_confirm(stage)
@@ -686,87 +685,75 @@ def _run_stage(
         and latest_draft(essay_id, TOOL, stage=stage) is None
     ):
         return _noop_result(essay_id, stage, confirmPhase, pointer["current"])
-    result = _confirm_path(
-        essay_id,
-        stage,
-        genre,
-        pointer,
-        confirmPhase,
-        text,
-        look,
-        master,
-        namedFolder,
-        answers,
-        edited,
-        webCheck,
-        heldFile,
-        cardAction,
-        cardDigest,
-        card_only,
-        minting,
+    resolved = replace(
+        args,
+        confirmPhase=confirmPhase,
+        look=look,
+        cardAction=cardAction,
+        cardDigest=cardDigest,
     )
-    if not result.get("_state"):
-        return result
-    confirmPhase = result["confirmPhase"]
-    text = result["text"]
-    look = result["look"]
-    pointer = result["pointer"]
-    master = result["master"]
-    namedFolder = result["namedFolder"]
-    answers = result["answers"]
-    edited = result["edited"]
-    webCheck = result["webCheck"]
-    heldFile = result["heldFile"]
+    state = _confirm_path(resolved, pointer, genre, minting)
+    if not isinstance(state, ConfirmState):
+        return state
+    confirmPhase = state.confirmPhase
+    text = state.text
+    pointer = state.pointer
+    answers = state.answers
+    edited = state.edited
+    webCheck = state.webCheck
+    master = state.master
+    namedFolder = state.namedFolder
+    heldFile = state.heldFile
     if stage == "7" and confirmPhase == DRAFT:
         from essay_writer.stage7 import answers_mean_skip as _skip_probe
 
         if _skip_probe(text) or _skip_probe(answers if isinstance(answers, str) else None):
             return _stage7_skip_reply(essay_id, stage, genre, pointer, confirmPhase)
-    result = _build_stage_body(
-        essay_id,
-        stage,
-        confirmPhase,
-        text,
-        pointer,
-        genre,
-        minting,
-        answers,
-        edited,
-        webCheck,
-        master,
-        namedFolder,
-        heldFile,
-        card_only,
-        auto_next,
+    filled = replace(
+        resolved,
+        confirmPhase=confirmPhase,
+        look=text,
+        master=master,
+        namedFolder=namedFolder,
+        answers=answers,
+        edited=edited,
+        webCheck=webCheck,
+        heldFile=heldFile,
     )
-    if not result.get("_state"):
-        return result
-    if result["confirmPhase"] == DRAFT:
-        return _draft_reply(result)
-    return _save_confirm(result, cardDigest)
+    body = _build_stage_body(filled, pointer, genre, minting, auto_next)
+    if not isinstance(body, StageContext):
+        return body
+    if body.confirmPhase == DRAFT:
+        return _draft_reply(body)
+    return _save_confirm(body, cardDigest)
 
 
 def _confirm_path(
-    essay_id: str,
-    stage: str,
-    genre: str | None,
+    args: StageArgs,
     pointer: dict[str, Any],
-    confirmPhase: str | None,
-    text: str,
-    look: str | None,
-    master: str | None,
-    namedFolder: str | None,
-    answers: str | None,
-    edited: str | None,
-    webCheck: dict[str, Any] | None,
-    heldFile: str | None,
-    cardAction: str | None,
-    cardDigest: str | None,
-    card_only: bool,
+    genre: str | None,
     minting: bool,
-) -> dict[str, Any]:
+) -> ConfirmState | dict[str, Any]:
+    """Resolve the confirm phase against the waiting card.
+
+    A refusal is returned unchanged as a dict. The resolved fields come back
+    as a ConfirmState and are fed to the body builder.
+    """
     from essay_writer.spine import accept_stage_card
 
+    essay_id = args.essay_id
+    stage = args.stage
+    confirmPhase = args.confirmPhase
+    look = args.look
+    text = look.strip() if isinstance(look, str) else ""
+    cardAction = args.cardAction
+    cardDigest = args.cardDigest
+    master = args.master
+    namedFolder = args.namedFolder
+    answers = args.answers
+    edited = args.edited
+    webCheck = args.webCheck
+    heldFile = args.heldFile
     if confirmPhase == CONFIRM:
         from essay_writer.specialists.grok_bot import (
             CARD_CONFIRM,
@@ -915,40 +902,46 @@ def _confirm_path(
             edited = filled["edited"]
             webCheck = filled["webCheck"]
             heldFile = filled["heldFile"]
-    return {
-        "_state": True,
-        "confirmPhase": confirmPhase,
-        "text": text,
-        "look": look,
-        "pointer": pointer,
-        "master": master,
-        "namedFolder": namedFolder,
-        "answers": answers,
-        "edited": edited,
-        "webCheck": webCheck,
-        "heldFile": heldFile,
-    }
+    return ConfirmState(
+        confirmPhase=confirmPhase,
+        text=text,
+        pointer=pointer,
+        master=master,
+        namedFolder=namedFolder,
+        answers=answers,
+        edited=edited,
+        webCheck=webCheck,
+        heldFile=heldFile,
+    )
 
 
 def _build_stage_body(
-    essay_id: str,
-    stage: str,
-    confirmPhase: str | None,
-    text: str,
+    args: StageArgs,
     pointer: dict[str, Any],
     genre: str | None,
     minting: bool,
-    answers: str | None,
-    edited: str | None,
-    webCheck: dict[str, Any] | None,
-    master: str | None,
-    namedFolder: str | None,
-    heldFile: str | None,
-    card_only: bool,
     auto_next: str | None,
-) -> dict[str, Any]:
+) -> StageContext | dict[str, Any]:
+    """Apply the gates and build the reply body for one resolved stage call.
+
+    ``args`` is the resolved call: its look is already the normalised note.
+    A refusal is returned unchanged as a dict; a buildable reply is returned
+    as a StageContext for the draft or save writer.
+    """
     from essay_writer.specialists.grok_bot import maybe_seed_basics_on_draft
 
+    essay_id = args.essay_id
+    stage = args.stage
+    confirmPhase = args.confirmPhase
+    look = args.look
+    text = look.strip() if isinstance(look, str) else ""
+    answers = args.answers
+    edited = args.edited
+    webCheck = args.webCheck
+    master = args.master
+    namedFolder = args.namedFolder
+    heldFile = args.heldFile
+    card_only = args.card_only
     text, basics_seeded = maybe_seed_basics_on_draft(
         essay_id,
         stage,
@@ -1029,7 +1022,7 @@ def _build_stage_body(
     ):
         if value is not None:
             payload[key] = value
-    fingerprint = (
+    fingerprint: dict[str, object] = (
         {"stage": stage, "inherited_keep": True}
         if _INHERITED_KEEP.get()
         else {"stage": stage}
@@ -1190,56 +1183,53 @@ def _build_stage_body(
 
         real_bib, check = stage_reconcile(essay_id)
         body["download_check"] = check
-    return {
-        "_state": True,
-        "confirmPhase": confirmPhase,
-        "text": text,
-        "answers": answers,
-        "edited": edited,
-        "webCheck": webCheck,
-        "payload": payload,
-        "fingerprint": fingerprint,
-        "body": body,
-        "item": item,
-        "note": note,
-        "revisit": revisit,
-        "real_bib": real_bib,
-        "short_report": short_report,
-        "cite_report": cite_report,
-        "pointer": pointer,
-        "auto_next": auto_next,
-        "minting": minting,
-        "card_only": card_only,
-        "master": master,
-        "namedFolder": namedFolder,
-        "heldFile": heldFile,
-        "essay_id": essay_id,
-        "stage": stage,
-        "genre": genre,
-    }
+    return StageContext(
+        args=args,
+        essay_id=essay_id,
+        stage=stage,
+        genre=genre,
+        pointer=pointer,
+        confirmPhase=confirmPhase,
+        text=text,
+        look=look,
+        master=master,
+        namedFolder=namedFolder,
+        answers=answers,
+        edited=edited,
+        webCheck=webCheck,
+        heldFile=heldFile,
+        card_only=card_only,
+        minting=minting,
+        auto_next=auto_next,
+        revisit=revisit,
+        real_bib=real_bib,
+        payload=payload,
+        fingerprint=fingerprint,
+        body=body,
+        note=note,
+    )
 
 
-def _draft_reply(state: dict[str, Any]) -> dict[str, Any]:
+def _draft_reply(context: StageContext) -> dict[str, Any]:
     from essay_writer.spine import stage_confirm_card
 
-    confirmPhase = state["confirmPhase"]
-    essay_id = state["essay_id"]
-    stage = state["stage"]
-    genre = state["genre"]
-    pointer = state["pointer"]
-    body = state["body"]
-    payload = state["payload"]
-    fingerprint = state["fingerprint"]
-    text = state["text"]
-    note = state["note"]
-    revisit = state["revisit"]
-    real_bib = state["real_bib"]
-    auto_next = state["auto_next"]
-    minting = state["minting"]
-    master = state["master"]
-    namedFolder = state["namedFolder"]
-    card_only = state["card_only"]
-    if confirmPhase == DRAFT:
+    essay_id = context.essay_id
+    stage = context.stage
+    genre = context.genre
+    pointer = context.pointer
+    body = context.body
+    payload = context.payload
+    fingerprint = context.fingerprint
+    text = context.text
+    note = context.note
+    revisit = context.revisit
+    real_bib = context.real_bib
+    auto_next = context.auto_next
+    minting = context.minting
+    master = context.master
+    namedFolder = context.namedFolder
+    card_only = context.card_only
+    if context.confirmPhase == DRAFT:
         from essay_writer.canon import digest as payload_digest
 
         waiting_same = None if minting or auto_next else _waiting_digest(pointer, stage)
@@ -1354,18 +1344,18 @@ def _draft_reply(state: dict[str, Any]) -> dict[str, Any]:
     raise AssertionError("draft path returned nothing")
 
 
-def _save_confirm(state: dict[str, Any], cardDigest: str | None) -> dict[str, Any]:
-    essay_id = state["essay_id"]
-    stage = state["stage"]
-    genre = state["genre"]
-    pointer = state["pointer"]
-    body = state["body"]
-    payload = state["payload"]
-    fingerprint = state["fingerprint"]
-    text = state["text"]
-    note = state["note"]
-    revisit = state["revisit"]
-    real_bib = state["real_bib"]
+def _save_confirm(context: StageContext, cardDigest: str | None) -> dict[str, Any]:
+    essay_id = context.essay_id
+    stage = context.stage
+    genre = context.genre
+    pointer = context.pointer
+    body = context.body
+    payload = context.payload
+    fingerprint = context.fingerprint
+    text = context.text
+    note = context.note
+    revisit = context.revisit
+    real_bib = context.real_bib
     ready = confirm_ready(essay_id, TOOL, payload, fingerprint)
     if ready.get("ok") is False:
         return _reoffer_confirm(

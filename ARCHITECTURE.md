@@ -14,6 +14,11 @@ validation, and Word output.
   - `stage_state.py` — the state layer: pointer and its commit journal, stage lock,
     tracking-note renderer, and the held/refused reply bodies. Re-exported by
     `stage_track.py`.
+  - `stage_context.py` — the typed pipeline values: `StageArgs` (the public
+    `essay.stage` tool arguments) and `StageContext` (one resolved stage call).
+    The old sentinel dict is gone.
+  - `safe_url.py` — the one network opener: public http(s) only, every resolved
+    address checked, redirects re-validated, and a hard byte cap per caller.
   - `spine.py`, `stage_llm.py` — stage definitions and prompts.
   - `validate.py`, `gates.py`, `invent.py` — pack checks, citation integrity, and invent-forbid.
   - `word.py`, `word_references.py` — Word output and Harvard reference lines.
@@ -47,16 +52,19 @@ reading the modules.
 
 ## Vendored bootstrap
 
-The bootstrap core is vendored from the private `python-mcp-bootstrap` repository;
-`VENDOR.json` pins the release. If the project `.venv` or the MCP dependency
+The bootstrap core is vendored from the public `python-mcp-bootstrap` repository;
+`VENDOR.json` pins the release and records the one local patch below. If the project `.venv` or the MCP dependency
 disappears later, rerun `python first_run.py`; it re-enters the same bootstrap. A
 Python download still requires `--install-python`, and the system Python is never
 changed.
 
-The vendored file is kept byte-identical to its upstream release, so its default
-floor stays 3.14. This package supports 3.12 and passes its own floor through
-`python_bootstrap.py` (`REQUIRED = (3, 12, 0)`); the vendored file's hash and
-`VENDOR.json` stay untouched.
+The vendored file carries one documented local patch: `BootstrapSpec.requirements`
+installs the hash-pinned `requirements-runtime.txt` with `--require-hashes`
+before the project install, which then runs with `--no-deps`. Everything else is
+upstream v0.1.0. `VENDOR.json` records the patch and the new file hash, so the
+vendored file is still verifiable — it is just no longer byte-identical to
+upstream. The core's default floor stays 3.14; this package supports 3.12 and
+passes its own floor through `python_bootstrap.py` (`REQUIRED = (3, 12, 0)`).
 
 ## Stage flow
 
@@ -81,12 +89,15 @@ The stages are 1–10: assignment, thesis or purpose, plan, 4a annotated bibliog
 ## Design notes
 
 Stage behaviour is intentionally prompt-driven: the stage prompts and checklists
-are the product, so they live in Python rather than in a separate prompt store.
+are the product, so they live in the packaged `src/essay_writer/prompts/` bundle
+and are rendered from there rather than being fetched at runtime.
 Intent tests assert observable outcomes (refusals, stored state, and Word
 output); a thin set of contract tests pins the exact rule strings the chat
 contract depends on. The dispatcher and its branch helpers keep that
 prompt-heavy path readable, while `Pointer` and `StageResult` mark the main
-state boundaries.
+state boundaries. `StageArgs` and `StageContext` type the pipeline between the
+tool signature and the reply writers; no stage body travels as a string-keyed
+dict with a sentinel any more.
 
 ## Where to start
 

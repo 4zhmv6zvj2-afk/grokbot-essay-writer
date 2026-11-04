@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.4.0 — 2026-11-05
+
+Security and state-model round; no intended workflow change.
+
+Install integrity:
+- The first-run install now runs `uv pip install --require-hashes -r
+  requirements-runtime.txt` before the project install, which then runs with
+  `--no-deps`. A hash mismatch or network failure stops the install. The
+  vendored bootstrap carries this one documented local patch; `VENDOR.json`
+  records it and the new file hash.
+- Cursor CLI install is no longer TOFU. Consent (`--install-cursor`) authorises
+  the download only; setup reports the file's SHA-256 and stops with
+  `cursor-install-needs-hash`. Execution requires that expected hash
+  (`--cursor-sha256` or `ESSAY_WRITER_CURSOR_INSTALL_SHA256`); a mismatch stops
+  with `cursor-install-hash-mismatch` and runs nothing.
+
+Network and data:
+- Every remote fetch goes through the new `safe_url` opener: public http(s)
+  only, every resolved address checked (no loopback, private, link-local,
+  reserved, multicast, or ULA), redirects re-validated and capped at three
+  same-scheme hops, and hard byte caps (25 MiB paper, 2 MiB research API, 1 MiB
+  look-up). Over-cap bodies are refused, not truncated.
+- `essay.debug.export` redacts each member before zipping: absolute home/volume
+  paths, emails, `Bearer`/`x-api-key` values, and common token shapes. Key names
+  stay; values go.
+- Secret files are created with mode 0600 before any content is written (setup
+  secrets and the remembered Mac folder), instead of write-then-chmod.
+
+Trust model:
+- `SECURITY.md` now has a plain threat-model section: the Confirm gate binds
+  arguments and file fingerprints, not human identity; the host model is
+  trusted to relay the person's yes; the server cannot prove a human clicked.
+  Attended sessions, the reviewer server, and read-only where possible are the
+  recommendations.
+
+State model:
+- The stage pipeline is typed: new `StageArgs`, `StageContext`, and
+  `ConfirmState` dataclasses replace the 15–17 argument helpers and the
+  `"_state": True` sentinel dict. Internal helper parameters go from 52 to 13 and
+  the untyped state-key reads from 39 to 0. `essay_stage` keeps its MCP tool
+  signature.
+- `stage_track.py` stays the orchestrator and keeps its reply-dict contract.
+
+Fixes:
+- A fresh clone no longer emits `SyntaxWarning: 'return' in a 'finally' block`
+  from `build_status.py`.
+- `ARCHITECTURE.md` fixed two stale claims: the prompts live in the packaged
+  `prompts/` bundle, and the vendored bootstrap source repository is public.
+
+Tests: 1058 passed, 8 skipped.
+
 ## 0.3.1 — 2026-11-05
 
 Structural clean-up; no intended behaviour change.

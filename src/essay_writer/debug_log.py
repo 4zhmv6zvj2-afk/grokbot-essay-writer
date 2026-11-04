@@ -66,6 +66,21 @@ _ENV_SECRETS = ("CONSENSUS_API_KEY", "ESSAY_WRITER_UNPAYWALL_EMAIL")
 _EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 _BEARER = re.compile(r"Bearer\s+\S+", re.IGNORECASE)
 _TOKEN = re.compile(r"\b(?:sk|pk)[_-][A-Za-z0-9_\-]{8,}\b")
+# Redaction before a zip is written. The key names stay; the values go.
+REDACTED = "[redacted]"
+_HOME_PATH = re.compile(r"(?<![A-Za-z0-9._-])/(?:Users|home)/[^/\n]+")
+_VOLUME_PATH = re.compile(r"(?<![A-Za-z0-9._-])/Volumes/[^/\n]+")
+_GITHUB_PAT = re.compile(r"\bgithub_pat_[A-Za-z0-9_]{16,}\b")
+_GITHUB_TOKEN = re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{16,}\b")
+_AWS_KEY = re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")
+_SLACK_TOKEN = re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b")
+_SECRET_KV = re.compile(
+    r"(?im)^(\s*(?:export\s+)?(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL)\s*[:=]\s*).+$"
+)
+_SECRET_JSON = re.compile(
+    r'("(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL)"\s*:\s*")[^"]*(")'
+)
+_X_API_KEY = re.compile(r"(?i)(x-api-key\s*[:=]\s*)\S+")
 _DEBUG_WIPE_SPEECH = re.compile(
     r"^(?:please\s+)?(?:"
     r"delete\s+(?:the\s+)?(?:debug\s+)?logs?"
@@ -375,13 +390,46 @@ def _zip_matches(path: Path, members: list[tuple[str, bytes]]) -> bool:
     return True
 
 
+def redact_text(text: str) -> str:
+    """Redact absolute home/volume paths, emails, and common secret tokens.
+
+    The zip export writes only this redacted text. Local paths lose their root
+    but keep the rest of the path: a home path under Documents/x becomes
+    <home>/Documents/x. Key names stay in a key: value line; the value goes.
+    """
+    if not isinstance(text, str) or not text:
+        return ""
+    cleaned = text
+    cleaned = _SECRET_KV.sub(lambda match: match.group(1) + REDACTED, cleaned)
+    cleaned = _SECRET_JSON.sub(lambda match: match.group(1) + REDACTED + match.group(2), cleaned)
+    cleaned = _X_API_KEY.sub(lambda match: match.group(1) + REDACTED, cleaned)
+    cleaned = _BEARER.sub("Bearer " + REDACTED, cleaned)
+    cleaned = _GITHUB_PAT.sub(REDACTED, cleaned)
+    cleaned = _GITHUB_TOKEN.sub(REDACTED, cleaned)
+    cleaned = _AWS_KEY.sub(REDACTED, cleaned)
+    cleaned = _SLACK_TOKEN.sub(REDACTED, cleaned)
+    cleaned = _TOKEN.sub(REDACTED, cleaned)
+    cleaned = _EMAIL.sub(REDACTED, cleaned)
+    cleaned = _HOME_PATH.sub("<home>", cleaned)
+    cleaned = _VOLUME_PATH.sub("<volume>", cleaned)
+    return cleaned
+
+
+def redact_bytes(payload: bytes) -> bytes:
+    """Redact one zip member payload. Undecodable bytes become U+FFFD."""
+    return redact_text(payload.decode("utf-8", errors="replace")).encode("utf-8")
+
+
 def essay_debug_export() -> dict[str, Any]:
     """Pack operator logs that are already on disk into one debug.zip.
 
-    A missing log stays missing. The zip is refused when it would be empty.
-    Members are deflated whole. They are not sliced to the chat paste ceiling.
-    A zip that does not match those bytes is deleted and refused.
-    Cursor, Grok Build, and the essay-writer CLI call this function.
+    Every member is redacted before it is zipped: absolute home and volume
+    paths, email addresses, and common secret tokens are replaced. The key
+    names stay so a diagnosis still reads. A missing log stays missing. The
+    zip is refused when it would be empty. Members are deflated whole. They
+    are not sliced to the chat paste ceiling. A zip that does not match those
+    bytes is deleted and refused. Cursor, Grok Build, and the essay-writer
+    CLI call this function.
     """
 
     members: list[tuple[str, bytes]] = []
@@ -394,7 +442,7 @@ def essay_debug_export() -> dict[str, Any]:
             return refuse("debug-export", COLLIDING_EXPORT_REASON)
         seen.add(name)
         try:
-            payload = path.read_bytes()
+            payload = redact_bytes(path.read_bytes())
         except OSError:
             return refuse("debug-export", "The export could not be written.")
         members.append((name, payload))
@@ -402,13 +450,13 @@ def essay_debug_export() -> dict[str, Any]:
     if snapshot:
         if SNAPSHOT_FILENAME in seen:
             return refuse("debug-export", COLLIDING_EXPORT_REASON)
-        members.append((SNAPSHOT_FILENAME, snapshot))
+        members.append((SNAPSHOT_FILENAME, redact_bytes(snapshot)))
     if not members:
         return refuse("debug-export", EMPTY_EXPORT_REASON)
     ferry, essay_ids, pack_paths = _ferry_manifest(members)
     if FERRY_FILENAME in {name for name, _payload in members}:
         return refuse("debug-export", COLLIDING_EXPORT_REASON)
-    members.append((FERRY_FILENAME, ferry))
+    members.append((FERRY_FILENAME, redact_bytes(ferry)))
     dest = debug_log_path().parent / EXPORT_FILENAME
     try:
         _write_debug_zip(dest, members)

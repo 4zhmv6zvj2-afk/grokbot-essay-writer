@@ -97,17 +97,22 @@ Paste keys only when the chat asks for a secret — not into ordinary messages.
 
 On the Grok Bot computer, setup will:
 
-- Install Essay Writer and its dependencies into a project folder.
+- Install the runtime dependencies from the hash-pinned `requirements-runtime.txt`
+  first, then Essay Writer itself. A hash mismatch stops the install; nothing is
+  left half-installed.
 - Download a private Python 3.15.2 into that folder, only after you agree and only
   if no suitable Python is already there. It never changes the Python already
   installed on the computer.
 - Save Word files to `Documents/Essay Bot`, or to a folder you name. If you
   choose neither, the essay stays in the chat.
-- Install the Cursor CLI only if you say yes and it is missing. Setup downloads
-  the installer to a file, records the file's SHA-256 in its report, and then
-  runs that file. It never pipes a remote script into a shell. Without your yes
-  it downloads nothing and reports `cursor-install-needs-consent`. To install it
-  yourself:
+- Install the Cursor CLI only if you say yes and it is missing, in two steps.
+  Consent (`--install-cursor`) authorises the download only: setup fetches the
+  installer to a file and reports its SHA-256, byte count, and path, then stops
+  (`cursor-install-needs-hash`). Running it needs that expected hash
+  (`--cursor-sha256 <hash>` or `ESSAY_WRITER_CURSOR_INSTALL_SHA256`); a mismatch
+  stops with `cursor-install-hash-mismatch` and runs nothing. Setup never pipes
+  a remote script into a shell. Without your yes it downloads nothing. To
+  install it yourself:
 
   ```bash
   curl -fsS https://cursor.com/install -o cursor-agent-install.sh
@@ -121,7 +126,7 @@ Python 3.12 or newer:
 
 ```bash
 uv sync --extra dev
-uv run pytest                      # 1006 passed, 8 skipped
+uv run pytest                      # 1058 passed, 8 skipped
 uv run ruff check src tests tools
 uv run mypy src
 uv run python tools/generate_docs.py --check
@@ -133,6 +138,10 @@ uv run python tools/update_prompt_snapshot.py --check
 - `src/essay_writer/stage_track.py` — the stage runner, cards, and confirm flow.
 - `src/essay_writer/stage_state.py` — the state layer (pointer, commit journal,
   stage lock, tracking note, held/refused replies) re-exported by stage_track.
+- `src/essay_writer/stage_context.py` — the typed pipeline values (`StageArgs`,
+  `StageContext`, `ConfirmState`).
+- `src/essay_writer/safe_url.py` — the single network opener (public http(s),
+  redirect re-validation, byte caps).
 - `src/essay_writer/prompts/` — the stage, genre, craft, and review text that is
   the actual product.
 - `tests/` — behaviour and acceptance tests; `tests/fixtures/` is synthetic, no
@@ -189,7 +198,9 @@ predate this and are not reproducible; see [HISTORY.md](HISTORY.md).
 Stable source release, maintained for reported bugs. The public history starts
 with a 0.2.1 import snapshot; 0.3.0 is the first normal release, built and
 tagged from commits in this repository. [HISTORY.md](HISTORY.md) explains that
-plainly. Security reports: [SECURITY.md](SECURITY.md).
+plainly. The trust model, including what the Confirm gate does and does not
+prove, is in [SECURITY.md](SECURITY.md#threat-model). Security reports:
+[SECURITY.md](SECURITY.md).
 
 ## License
 

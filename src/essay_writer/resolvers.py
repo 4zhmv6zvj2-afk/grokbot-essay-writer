@@ -7,12 +7,15 @@ import os
 import re
 import urllib.error
 import urllib.parse
-import urllib.request
 from collections.abc import Callable
 from typing import Any
 
+from essay_writer import safe_url
 from essay_writer.cite_open import page_value_kind
 from essay_writer.programme import FREE_RESOLVERS, PAID_RESOLVERS
+
+MAX_LOOKUP_BYTES = 1024 * 1024
+LOOKUP_TIMEOUT = 15.0
 
 RESOLVER_FILLABLE = (
     "doi",
@@ -55,6 +58,18 @@ OPPOSING_MARKERS = (
 
 def resolver_mode() -> str:
     return os.environ.get("ESSAY_WRITER_RESOLVERS", "live").strip().casefold() or "live"
+
+
+def _lookup_json(url: str) -> dict[str, Any] | None:
+    """GET one look-up URL through safe_url. A refusal or miss is None."""
+    try:
+        with safe_url.open_url(url, timeout=LOOKUP_TIMEOUT, max_bytes=MAX_LOOKUP_BYTES) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (safe_url.Refused, urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
 
 
 def unpaywall_email() -> str | None:
@@ -130,10 +145,8 @@ def _record_from_crossref_message(message: dict[str, Any]) -> LookupRecord:
 def crossref_lookup(query: str, *, fetch: Callable[[str], dict[str, Any]] | None = None) -> LookupRecord | None:
     if fetch is None:
         url = "https://api.crossref.org/works?" + urllib.parse.urlencode({"query.bibliographic": query, "rows": 3})
-        try:
-            with urllib.request.urlopen(url, timeout=15) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+        payload = _lookup_json(url)
+        if payload is None:
             return None
     else:
         payload = fetch(query)
@@ -176,10 +189,8 @@ def openalex_lookup(query: str) -> LookupRecord | None:
     if resolver_mode() == "fixture":
         return None
     url = "https://api.openalex.org/works?" + urllib.parse.urlencode({"search": query, "per_page": 3})
-    try:
-        with urllib.request.urlopen(url, timeout=15) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+    payload = _lookup_json(url)
+    if payload is None:
         return None
     results = payload.get("results") or []
     if not results:
@@ -213,10 +224,8 @@ def doi_org_lookup(doi: str) -> LookupRecord | None:
             return dict(FIXTURE_SAMPLE)
         return None
     url = f"https://doi.org/api/handles/{urllib.parse.quote(doi)}"
-    try:
-        with urllib.request.urlopen(url, timeout=15) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+    payload = _lookup_json(url)
+    if payload is None:
         return None
     values = payload.get("values") or []
     for item in values:
@@ -263,10 +272,8 @@ def unpaywall_lookup(doi: str, email: str) -> LookupRecord | None:
             return {"url": "https://example.org/fixture-open-access.pdf"}
         return None
     url = unpaywall_doi_url(doi, email)
-    try:
-        with urllib.request.urlopen(url, timeout=15) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+    payload = _lookup_json(url)
+    if payload is None:
         return None
     best = payload.get("best_oa_location") or {}
     if isinstance(best, dict):

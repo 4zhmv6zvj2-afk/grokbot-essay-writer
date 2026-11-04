@@ -204,6 +204,35 @@ def _secrets_path(record_path: Path) -> Path:
     return record_path.parent / "setup.secrets.json"
 
 
+def _write_secret_text(path: Path, text: str) -> None:
+    """Create a secret file with mode 0600 before any content exists.
+
+    os.open takes the mode at creation, so the content is never inside a
+    0644 file. An existing file is tightened with fchmod before the write.
+    The bytes are fsynced before the handle closes. The caller owns mkdir and
+    maps OSError onto its existing failure message.
+    """
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    fd = os.open(path, flags, 0o600)
+    try:
+        try:
+            os.fchmod(fd, 0o600)
+        except (AttributeError, OSError):
+            pass
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except OSError:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+
+
 def read_setup_secret(name: str) -> str | None:
     """Local setup secret. Never returned from a door reply."""
     if os.environ.get("ESSAY_WRITER_ROOT"):
@@ -542,8 +571,7 @@ def essay_setup(
             secrets["ESSAY_WRITER_UNPAYWALL_EMAIL"] = email
         secret_path = _secrets_path(record_path)
         try:
-            secret_path.write_text(json.dumps(secrets, indent=2) + "\n", encoding="utf-8")
-            os.chmod(secret_path, 0o600)
+            _write_secret_text(secret_path, json.dumps(secrets, indent=2) + "\n")
         except OSError as exc:
             return refuse(
                 "setup",

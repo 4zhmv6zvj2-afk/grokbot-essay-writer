@@ -89,6 +89,7 @@ def _log_members(archive: zipfile.ZipFile) -> list[str]:
 
 
 def _assert_log_members_match_disk(archive: zipfile.ZipFile, workspace: Path) -> None:
+    """The member is the whole on-disk log, redacted from session text."""
     names = _log_members(archive)
     assert any(name.endswith(LOG_FILENAME) for name in names)
     assert any(name.endswith(ML_EVENTS_FILENAME) for name in names)
@@ -96,7 +97,8 @@ def _assert_log_members_match_disk(archive: zipfile.ZipFile, workspace: Path) ->
         disk = workspace / name
         payload = archive.read(name)
         assert disk.is_file()
-        assert payload == disk.read_bytes()
+        expected = debug_log.redact_bytes(disk.read_bytes())
+        assert payload == expected
         assert payload
         info = archive.getinfo(name)
         assert info.file_size == len(payload)
@@ -364,3 +366,95 @@ def test_ac5_mid_office_export_zip_opens_both_logs(workspace, monkeypatch):
         assert "def essay_debug_export" not in cursor_src
     finally:
         reset_status()
+
+
+TOKENS = (
+    "sk-" + "a" * 24,
+    "ghp_" + "A" * 24,
+    "github_pat_" + "B" * 30,
+    "AKIA" + "C" * 16,
+    "xoxb-" + "1" * 20,
+)
+
+
+def _sensitive_log_lines() -> str:
+    lines = [
+        "open /Users/alice/Documents/Essay-writer/MOD1004AA/brief.md",
+        "pack /Volumes/Data/work/pack.json",
+        "contact reader@example.com",
+        "CONSENSUS_API_KEY=plain-consensus-value",
+        "x-api-key: raw-header-value",
+        "auth Bearer raw-bearer-value",
+        *[f"token {token}" for token in TOKENS],
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def test_ac6_export_redacts_paths_emails_and_tokens(workspace, monkeypatch):
+    """AC6. Every zip member is redacted: home paths, emails, and secret tokens."""
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    sensitive = _sensitive_log_lines()
+    debug_log_path().write_text(sensitive, encoding="utf-8")
+    ml_events_path().write_text(
+        '{"tool":"essay.dig","note":"mail reader@example.com from /home/bob/paper.md"}\n',
+        encoding="utf-8",
+    )
+
+    exported = essay_debug_export()
+
+    assert exported["ok"] is True
+    archive_path = workspace / EXPORT_FILENAME
+    with zipfile.ZipFile(archive_path) as archive:
+        for name in (LOG_FILENAME, ML_EVENTS_FILENAME):
+            body = archive.read(name).decode("utf-8")
+            for token in TOKENS:
+                assert token not in body
+            assert "reader@example.com" not in body
+            assert "plain-consensus-value" not in body
+            assert "raw-header-value" not in body
+            assert "raw-bearer-value" not in body
+            assert "/Users/alice" not in body
+            assert "/home/bob" not in body
+            assert "/Volumes/Data" not in body
+            assert "<home>" in body
+            assert "[redacted]" in body
+        log_body = archive.read(LOG_FILENAME).decode("utf-8")
+        assert "<volume>" in log_body
+        assert "CONSENSUS_API_KEY" in log_body
+        assert "x-api-key" in log_body
+        assert "<home>/Documents/Essay-writer/MOD1004AA/brief.md" in log_body
+        assert "<volume>/work/pack.json" in log_body
+        manifest = json.loads(archive.read(FERRY_FILENAME))
+        for record in manifest["members"]:
+            payload = archive.read(record["name"])
+            assert record["bytes"] == len(payload)
+            assert record["sha256"] == hashlib.sha256(payload).hexdigest()
+        for payload in (archive.read(name) for name in archive.namelist()):
+            assert b"/Users/alice" not in payload
+            assert b"reader@example.com" not in payload
+
+
+def test_redact_text_handles_each_source_kind():
+    """Source kinds are redacted one by one, and redaction is idempotent."""
+    text = (
+        "open /Users/alice/x and /home/bob/y and /Volumes/Data/z\n"
+        "mail reader@example.com\n"
+        "CONSENSUS_API_KEY=arbitrary-value\n"
+        '  "ESSAY_WRITER_UNPAYWALL_EMAIL": "second@example.com"\n'
+        "Authorization: Bearer opaque-token\n"
+        "x-api-key: header-token\n"
+    )
+    cleaned = debug_log.redact_text(text)
+    assert "/Users/alice" not in cleaned
+    assert "/home/bob" not in cleaned
+    assert "/Volumes/Data" not in cleaned
+    assert "reader@example.com" not in cleaned
+    assert "second@example.com" not in cleaned
+    assert "arbitrary-value" not in cleaned
+    assert "opaque-token" not in cleaned
+    assert "header-token" not in cleaned
+    assert "CONSENSUS_API_KEY=[redacted]" in cleaned
+    assert '"ESSAY_WRITER_UNPAYWALL_EMAIL": "[redacted]"' in cleaned
+    assert "Bearer [redacted]" in cleaned
+    assert "<home>/x" in cleaned
+    assert debug_log.redact_text(cleaned) == cleaned

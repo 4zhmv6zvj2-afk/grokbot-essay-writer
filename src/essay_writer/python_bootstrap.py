@@ -36,6 +36,8 @@ def _package_main(args: list[str]) -> int:
     return main(args)
 
 
+REQUIREMENTS_FILE = "requirements-runtime.txt"
+
 _SPEC = _core.BootstrapSpec(
     app="essay-writer",
     entrypoint="first_run.py",
@@ -47,6 +49,16 @@ _SPEC = _core.BootstrapSpec(
     verify_import="mcp.server.mcpserver",
     card=CARD,
 )
+
+
+def _spec_for(root: Path) -> _core.BootstrapSpec:
+    """Hash-pinned runtime install when the copy carries the requirements file.
+
+    A friend zip made before this file existed falls back to the upstream
+    single-command install; the report shows which commands ran.
+    """
+    requirements = (REQUIREMENTS_FILE,) if (Path(root) / REQUIREMENTS_FILE).is_file() else ()
+    return replace(_SPEC, requirements=requirements)
 
 
 def version_tuple(text: object) -> tuple[int, int, int] | None:
@@ -76,7 +88,7 @@ def provision(
     run: Runner = run_command,
     probe: Probe = interpreter_version,
 ) -> dict[str, Any]:
-    return _core.provision(root, _SPEC, uv=uv, run=run, probe=probe)
+    return _core.provision(root, _spec_for(root), uv=uv, run=run, probe=probe)
 
 
 def bootstrap(
@@ -92,7 +104,7 @@ def bootstrap(
 ) -> int:
     """Choose or provision the essay-writer interpreter, then continue."""
 
-    spec = replace(_SPEC, package_main=main_fn or _package_main)
+    spec = replace(_spec_for(Path(root)), package_main=main_fn or _package_main)
     return _core.bootstrap(
         args,
         root,

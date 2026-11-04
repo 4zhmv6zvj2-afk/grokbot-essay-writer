@@ -8,7 +8,7 @@ First-time install
 When no Mac folder is remembered yet, show the four-way Essay Bot folder card. OK creates Documents/Essay Bot; another needs a path; later or skip without a path stays chat-only — do not say the Mac folder is ready. On this computer, install the Cursor agent when missing, then agent login when agent status is not logged in and CURSOR_API_KEY is not already on the machine. Collect Consensus on the secret card when the key is not already saved. Then unpack, pip install, MCP attach, Mac handoff when chosen, and essay.setup as below.
 
 Update install
-Replace the app from a new friend zip with essay-writer --install-upload /path/to/the.zip, or unpack this copy and pip install -e . as below. Keep the remembered Mac folder and existing Cursor login. Do not re-show the four-way card when ESSAY_WRITER_MAC_DIR is already saved. Do not re-show the sign-in card when agent status shows logged in or CURSOR_API_KEY is already on the machine. After install or upgrade, install_self_check runs essay.health; the report should be alive and name the tool count. `build_commit` names the commit this copy was built from. When the zip includes a CHANGELOG, it repeats that commit. Then re-read this file and docs/templates/bot.md; do not recite install steps in student chat.
+Replace the app from a new friend zip with essay-writer --install-upload /path/to/the.zip, or unpack this copy and run python first_run.py as below, which installs the hash-pinned runtime dependencies before the project. Keep the remembered Mac folder and existing Cursor login. Do not re-show the four-way card when ESSAY_WRITER_MAC_DIR is already saved. Do not re-show the sign-in card when agent status shows logged in or CURSOR_API_KEY is already on the machine. After install or upgrade, install_self_check runs essay.health; the report should be alive and name the tool count. `build_commit` names the commit this copy was built from. When the zip includes a CHANGELOG, it repeats that commit. Then re-read this file and docs/templates/bot.md; do not recite install steps in student chat.
 
 When this copy arrived as a friend zip, do not also clone a git URL for the same install. A normal git clone of the public repo is fine for developers.
 
@@ -26,11 +26,7 @@ python first_run.py --install-python
 
 That installs one under this project folder with uv and continues. On no, stop and change nothing. If the person says 3.12+ is already here, name it with `--python /path/to/python` and let the report check it. Never install Python any other way.
 
-That runs:
-
-python -m pip install -e .
-
-and attaches Custom MCP essay-writer and essay-reviewer. The commands are essay-writer with no arguments, and essay-writer with arguments `--reviewer` for the reviewer only.
+That first installs the hash-pinned runtime dependencies with `uv pip install --require-hashes -r requirements-runtime.txt`, then installs this project itself with `uv pip install -e . --no-deps`. A hash mismatch or a network failure stops the install: nothing after it is installed and the command exits. The same run then attaches Custom MCP essay-writer and essay-reviewer. The commands are essay-writer with no arguments, and essay-writer with arguments `--reviewer` for the reviewer only.
 
 To attach only the writer, run:
 
@@ -56,7 +52,7 @@ On the Mac at first-run, recommend Documents/Essay Bot as the folder for Word an
 
 Show this card: "Word copies go to Documents/Essay Bot — OK, another folder, later, or skip."
 
-File work defaults to Cursor. On this computer, when agent is missing, setup downloads nothing and reports reason cursor-install-needs-consent. Ask the person before installing the Cursor CLI. With their yes, rerun setup with --install-cursor (or ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1): setup downloads the installer to a file, records that file's SHA-256 in the report, and runs that file with a fixed argv. It never pipes a remote script into a shell.
+File work defaults to Cursor. On this computer, when agent is missing, setup downloads nothing and reports reason cursor-install-needs-consent. Ask the person before installing the Cursor CLI. With their yes, rerun setup with --install-cursor (or ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1). That consent authorises the download only: setup downloads the installer to a file, reports its SHA-256, byte count, and path, does not run it, and reports reason cursor-install-needs-hash. Show the SHA-256 and ask. To run that exact file, rerun setup with --cursor-sha256 <the reported SHA-256> (or set ESSAY_WRITER_CURSOR_INSTALL_SHA256=<the reported SHA-256>). A hash that does not match reports cursor-install-hash-mismatch and runs nothing. A match runs the downloaded file with a fixed argv and reports the hash. Setup never pipes a remote script into a shell.
 
 The Cursor CLI installer is an unsigned remote script. Run it only on a computer you control and only when this setup asks. To install it yourself, run:
 

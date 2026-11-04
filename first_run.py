@@ -1,5 +1,7 @@
-"""Unpack an uploaded copy and pip install -e . before the console script exists.
+"""Bootstrap an uploaded copy before the console script exists.
 
+The bootstrap installs the hash-pinned runtime requirements first, then this
+project with --no-deps; a hash mismatch or network failure stops the install.
 The bootstrap module picks the interpreter before the package is imported:
 an existing Python 3.14+, a good project .venv, an explicit --python, or a
 project-local 3.15.2 installed with uv after the operator consents with

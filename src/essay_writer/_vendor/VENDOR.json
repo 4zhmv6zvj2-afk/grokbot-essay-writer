@@ -2,8 +2,9 @@
   "commit": "67a92ae59f6ae1ff5dc1ccde20df4ac56f61a875",
   "file": "python_mcp_bootstrap.py",
   "name": "python-mcp-bootstrap",
-  "sha256": "d872c915acf36e759763ad82dfe24281aff67c516a062caa7193d71c4e3ea944",
+  "sha256": "073f6b2e719ca848a098aecc86726a8943897fed63d18b7b9427b456e36afadc",
   "source": "https://github.com/4zhmv6zvj2-afk/python-mcp-bootstrap",
   "tag": "v0.1.0",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "local_patch": "BootstrapSpec.requirements: hash-pinned runtime requirements install before the project --no-deps install. See ARCHITECTURE.md."
 }
