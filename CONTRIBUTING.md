@@ -20,6 +20,10 @@ is optional.
 
 ## Tests
 
+New functionality lands with tests: every PR that adds behaviour must add or
+extend the automated suite, and bug fixes should include a regression test. The
+suite runs in CI on every push and pull request and must stay green.
+
 ```bash
 uv run pytest
 ```
