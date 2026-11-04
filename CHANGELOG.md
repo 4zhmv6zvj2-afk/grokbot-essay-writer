@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.5.0 — 2026-11-05
+
+Final clean-up round.
+
+- `stage_track.py` is split again: it is now 847 lines with 4 top-level
+  functions. `stage_landing.py` (396 lines) owns saved-stage storage, report
+  attaching, mid-run and missed-stage records, inherited-lock bookkeeping, and
+  the stage 6 opener; `stage_replies.py` (382 lines) owns the draft and save
+  reply writers and the no-op result. The orchestrator re-exports every layer,
+  so existing imports and contract pins are unchanged. Function bodies are
+  byte-identical apart from one call-time import that closes the only cycle
+  edge.
+- Coverage is measured: `pytest-cov` is a dev dependency, coverage config sets
+  an 85% floor (current baseline ~87%), CI runs coverage on the Ubuntu 3.12.13
+  cell, and `docs/testing.md` documents the command and the floor.
+- CI housekeeping: Python 3.13 joins the Ubuntu matrix (3.12–3.15); workflow
+  concurrency cancels superseded runs; the test job carries a timeout.
+  `requirements-ci.txt` is regenerated with the new dev dependency.
+- Cursor installer guidance: the hash binds the bytes, not the vendor's
+  identity. README, FIRST-RUN, and SECURITY recommend the manual install for a
+  trust-sensitive setup.
+- README badges for CI, the Python floor, and the license; `pyproject.toml`
+  gains keywords, classifiers, and project URLs.
+- Tests: 1060 passed, 8 skipped; ~87% coverage.
+
 ## 0.4.1 — 2026-11-05
 
 Small follow-ups from the third review pass.

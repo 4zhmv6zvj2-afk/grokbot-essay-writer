@@ -14,6 +14,11 @@ validation, and Word output.
   - `stage_state.py` — the state layer: pointer and its commit journal, stage lock,
     tracking-note renderer, and the held/refused reply bodies. Re-exported by
     `stage_track.py`.
+  - `stage_landing.py` — landing and report helpers: storing a saved stage,
+    attaching report bodies, mid-run and missed-stage records, inherited-lock
+    bookkeeping, and the stage 6 opener. Re-exported by `stage_track.py`.
+  - `stage_replies.py` — the draft and save reply writers (`_draft_reply`,
+    `_save_confirm`) and the no-op result. Re-exported by `stage_track.py`.
   - `stage_context.py` — the typed pipeline values: `StageArgs` (the public
     `essay.stage` tool arguments) and `StageContext` (one resolved stage call).
     The old sentinel dict is gone.
@@ -80,8 +85,9 @@ run branches are named helpers: `_confirm_path` (card confirm),
 `_build_stage_body` (shared stage body), `_draft_reply` (draft card), and
 `_save_confirm` (saved stage). The pointer boundary uses `Pointer`; stage
 replies use `StageResult`. Those two boundaries and the reply bodies live in
-`stage_state.py`; the orchestrator re-exports them, so imports of
-`essay_writer.stage_track` keep working.
+`stage_state.py`; the landing and reply writers live in `stage_landing.py`
+and `stage_replies.py`. The orchestrator re-exports all three layers, so
+imports of `essay_writer.stage_track` keep working.
 
 The stages are 1–10: assignment, thesis or purpose, plan, 4a annotated bibliography,
 4b critical review, first draft, feedback, edit, references, and final Word.

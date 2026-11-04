@@ -8,14 +8,21 @@ on:
 permissions:
   contents: read
 
+# A newer push or PR update supersedes the run in flight; only the latest
+# commit needs green checks.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12.13", "3.14.10", "3.15.2"]
+        python-version: ["3.12.13", "3.13", "3.14.10", "3.15.2"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
@@ -65,8 +72,16 @@ jobs:
         run: python -m ruff check src tests tools
       - name: Mypy
         run: python -m mypy src
+      # Coverage is measured once, on the lowest supported interpreter and one
+      # platform, so the number is comparable between runs. The floor is 85
+      # (see [tool.coverage.report] in pyproject.toml); the current baseline is
+      # ~87%.
       - name: Pytest
+        if: matrix.python-version != '3.12.13'
         run: python -m pytest -q
+      - name: Pytest with coverage
+        if: matrix.python-version == '3.12.13'
+        run: python -m pytest -q --cov=essay_writer --cov-report=term --cov-fail-under=85
 
   test-macos:
     name: Test (macOS, Python 3.14.10)

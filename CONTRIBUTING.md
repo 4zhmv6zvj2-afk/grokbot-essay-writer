@@ -30,9 +30,10 @@ uv run ruff check src tests tools
 uv run mypy src
 uv run python tools/generate_docs.py --check
 uv run python tools/update_prompt_snapshot.py --check
+uv run pytest --cov=essay_writer --cov-report=term
 ```
 
-The baseline is 1060 passed, 8 skipped in about a minute. The 8 skips need a real
+The baseline is 1060 passed, 8 skipped in about a minute, at ~87% coverage (CI enforces an 85% floor on one Ubuntu cell). The 8 skips need a real
 terminal; see [docs/testing.md](docs/testing.md).
 
 ## Tests

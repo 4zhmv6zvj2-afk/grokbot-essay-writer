@@ -17,6 +17,20 @@ results, files on disk, Word XML) rather than implementation details.
 Baseline on macOS / CPython 3.15: **1060 passed, 8 skipped in ~50s**.
 The skipped tests need a real terminal (see `tests/pty_support.py`).
 
+## Coverage
+
+```bash
+./.venv/bin/python -m pytest -q --cov=essay_writer --cov-report=term --cov-fail-under=85
+```
+
+Current baseline: **~87% total** (22,220 statements, 2,917 missed on the CI
+3.12.13 cell). CI measures coverage on exactly one matrix cell — Ubuntu with
+CPython 3.12.13 — and enforces a floor of **85%**; the other cells run the plain
+suite. Configuration lives in `pyproject.toml`: `[tool.coverage.run]` measures
+only `essay_writer` (tests are omitted), and `[tool.coverage.report]` sets
+`show_missing`, `skip_covered`, and `fail_under = 85`. Use
+`--cov-report=term-missing` locally to see the uncovered lines.
+
 CI runs the suite on Ubuntu and macOS, then builds the sdist and wheel, installs
 the wheel into a clean environment, extracts the sdist, and runs the suite from
 the extracted sdist. A release is only signed after that artifact run passes.

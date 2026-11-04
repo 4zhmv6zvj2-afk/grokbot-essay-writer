@@ -1,7 +1,10 @@
 # Essay Writer
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/4zhmv6zvj2-afk/grokbot-essay-writer/badge)](https://securityscorecards.dev/viewer/?uri=github.com/4zhmv6zvj2-afk/grokbot-essay-writer)
+[![CI](https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/actions/workflows/ci.yml)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16338/badge)](https://www.bestpractices.dev/projects/16338)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 A confirm-gated MCP server that helps a student research a university assignment
 and turn it into a Word essay. It is the backend of the Essay Bot agent product;
@@ -112,8 +115,10 @@ On the Grok Bot computer, setup will:
   (`cursor-install-needs-hash`). Running it needs that expected hash
   (`--cursor-sha256 <hash>` or `ESSAY_WRITER_CURSOR_INSTALL_SHA256`); a mismatch
   stops with `cursor-install-hash-mismatch` and runs nothing. Setup never pipes
-  a remote script into a shell. Without your yes it downloads nothing. To
-  install it yourself:
+  a remote script into a shell. Without your yes it downloads nothing. The hash
+  binds the bytes, not the vendor's identity: if vendor trust matters to you,
+  install the CLI yourself with the command below and skip setup's automated
+  path. To install it yourself:
 
   ```bash
   curl -fsS https://cursor.com/install -o cursor-agent-install.sh
@@ -132,6 +137,7 @@ uv run ruff check src tests tools
 uv run mypy src
 uv run python tools/generate_docs.py --check
 uv run python tools/update_prompt_snapshot.py --check
+uv run pytest --cov=essay_writer --cov-report=term   # ~87%, CI floor 85%
 ```
 
 - `src/essay_writer/server.py` — MCP entry and tool registration.
@@ -143,6 +149,8 @@ uv run python tools/update_prompt_snapshot.py --check
   `StageContext`, `ConfirmState`).
 - `src/essay_writer/safe_url.py` — the single network opener (public http(s),
   redirect re-validation, byte caps).
+- `src/essay_writer/stage_landing.py`, `stage_replies.py` — the landing/report
+  helpers and the draft/save reply writers, re-exported by `stage_track.py`.
 - `src/essay_writer/prompts/` — the stage, genre, craft, and review text that is
   the actual product.
 - `tests/` — behaviour and acceptance tests; `tests/fixtures/` is synthetic, no

@@ -4,7 +4,7 @@
 
 | Version | Supported |
 | --- | --- |
-| 0.4.x | yes |
+| 0.5.x | yes |
 
 ## Reporting
 
@@ -94,8 +94,9 @@ Recommendations, in order of value:
   `cursor-install-hash-mismatch` and runs nothing; a match runs the downloaded
   file with a fixed argv and no shell. The installer is an unsigned remote
   script from the vendor, and the hash confirms which bytes were downloaded,
-  not that the vendor is trustworthy; the manual command is in
-  [FIRST-RUN.txt](FIRST-RUN.txt).
+  not that the vendor is trustworthy. For a trust-sensitive install, skip the
+  automated path and run the vendor's manual install command yourself; the
+  command is in [FIRST-RUN.txt](FIRST-RUN.txt).
 - Runtime dependencies are pinned: `pyproject.toml` carries exact versions and
   `requirements-runtime.txt` is hash-pinned for a verifiable manual install.
 
