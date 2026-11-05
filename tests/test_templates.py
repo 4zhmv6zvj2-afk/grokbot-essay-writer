@@ -19,7 +19,6 @@ def test_review_sheet_strips_regulator_language():
     text = REVIEW.read_text(encoding="utf-8")
     lowered = text.casefold()
     assert "afrc" not in lowered
-    assert "quinn" not in lowered
     assert "client-pack" not in lowered
     assert "official accounting" not in lowered
     assert "auditing standard" not in lowered

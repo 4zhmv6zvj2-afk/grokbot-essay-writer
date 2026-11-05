@@ -36,7 +36,7 @@ HELPERS = REPO / "docs" / "academic-writing-helpers.md"
 STAGES = ("5", "6", "7", "8")
 GENRES = (None, "diary", "essay", "report")
 
-# Rules 1–8, in Iris's order. Rules 3–5 are the shared glue and voice lines.
+# Rules 1–8, in listed order. Rules 3–5 are the shared glue and voice lines.
 EIGHT = (
     "Keep the commitment the writer means.",
     "Tie each claim to one thing the writer can point at",
