@@ -4,7 +4,7 @@ AC1: export zip holds the full debug.log and ml-events.jsonl for a fixture run.
 AC2: those members are the whole files, not a 32KB stub, and a clipped write is refused.
 AC3: default debug stays off unless setup or ESSAY_WRITER_DEBUG turns it on.
 AC4: FO, docs, and health name zip-for-ferry and say not to paste.
-AC5: a mid-office run with debug on exports a zip Cursor can open. No Remy paste.
+AC5: a mid-office run with debug on exports a zip Cursor can open.
 """
 
 from __future__ import annotations

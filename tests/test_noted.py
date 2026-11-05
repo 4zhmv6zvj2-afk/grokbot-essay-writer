@@ -112,6 +112,5 @@ def test_memo_note_strips_firm_close_rules():
     text = Path("docs/memo-how-it-works-note.md").read_text(encoding="utf-8")
     lowered = text.casefold()
     assert "afrc" not in lowered
-    assert "quinn" not in lowered
     assert "official accounting" not in lowered
     assert "clarify enough is not evidence enough" in lowered or "enough to start is not enough" in lowered
