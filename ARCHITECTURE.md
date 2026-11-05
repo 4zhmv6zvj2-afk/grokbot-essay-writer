@@ -57,19 +57,18 @@ reading the modules.
 
 ## Vendored bootstrap
 
-The bootstrap core is vendored from the public `python-mcp-bootstrap` repository;
-`VENDOR.json` pins the release and records the one local patch below. If the project `.venv` or the MCP dependency
-disappears later, rerun `python first_run.py`; it re-enters the same bootstrap. A
-Python download still requires `--install-python`, and the system Python is never
+The bootstrap core is vendored from the public `python-mcp-bootstrap`
+repository; `VENDOR.json` pins the release (`v0.2.0`, commit `fd8e0b9`) and the
+file SHA-256. The vendored file is byte-identical to the upstream release: there
+is no local patch. If the project `.venv` or the MCP dependency disappears
+later, rerun `python first_run.py`; it re-enters the same bootstrap. A Python
+download still requires `--install-python`, and the system Python is never
 changed.
 
-The vendored file carries one documented local patch: `BootstrapSpec.requirements`
-installs the hash-pinned `requirements-runtime.txt` with `--require-hashes`
-before the project install, which then runs with `--no-deps`. Everything else is
-upstream v0.1.0. `VENDOR.json` records the patch and the new file hash, so the
-vendored file is still verifiable — it is just no longer byte-identical to
-upstream. The core's default floor stays 3.14; this package supports 3.12 and
-passes its own floor through `python_bootstrap.py` (`REQUIRED = (3, 12, 0)`).
+Upstream v0.2.0 installs the hash-pinned `requirements-runtime.txt` with
+`--require-hashes` before the project install, which then runs with
+`--no-deps`. The core's floor is 3.12; this package supports 3.12 and passes
+its own floor through `python_bootstrap.py` (`REQUIRED = (3, 12, 0)`).
 
 ## Stage flow
 

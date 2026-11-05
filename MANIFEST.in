@@ -29,6 +29,11 @@ include placeholders/mcp.config.json
 include Essay-writer/README.md
 include uploads/README.md
 
+# Version policy files the suite reads (tests/test_version_policy.py).
+include .python-version
+include .github/workflows/ci.yml
+include .github/workflows/release.yml
+
 # Tests: the suite and everything it imports or reads.
 graft tests
 graft docs

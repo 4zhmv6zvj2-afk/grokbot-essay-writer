@@ -95,10 +95,14 @@ def test_consent_provisions_project_local_python(tmp_path):
         probe=lambda _exe: (3, 15, 2),
     )
     assert code == 0
+    python = str(boot.venv_python(tmp_path))
     joined = [" ".join(command) for command in commands]
     assert any("python install 3.15.2" in line for line in joined)
     assert any("venv .venv --python 3.15.2 --seed" in line for line in joined)
-    assert any("pip install -e ." in line for line in joined)
+    # Upstream v0.2.0 names the venv interpreter; --no-deps is added only when a
+    # requirements file is configured, and this copy has none.
+    assert any(f"pip install --python {python} -e ." in line for line in joined)
+    assert not any("--no-deps" in line for line in joined)
     assert any("mcp.server.mcpserver" in line for line in joined)
     assert (tmp_path / ".python-version").read_text(encoding="utf-8") == "3.15.2\n"
     assert calls[0][0] == str(boot.venv_python(tmp_path))
@@ -139,11 +143,34 @@ def test_python_override_is_checked_before_use(tmp_path, capsys):
         ["--python", "/fake/python3.16"],
         tmp_path,
         exec_fn=_exec_calls(calls),
+        run=_ok_runner([]),
         current=(3, 12, 13),
         probe=lambda _exe: (3, 16, 0),
     )
     assert code == 0
     assert calls[0][0] == "/fake/python3.16"
+
+
+def test_python_override_with_a_broken_import_is_refused(tmp_path, capsys):
+    """An explicit interpreter is verified: a broken import is exit 5, not a re-exec."""
+    calls = []
+
+    def _failed_runner(command, cwd, env, timeout):
+        return {"returncode": 1, "stdout": "", "stderr": "ModuleNotFoundError"}
+
+    code = boot.bootstrap(
+        ["--python", "/fake/python3.16"],
+        tmp_path,
+        exec_fn=_exec_calls(calls),
+        run=_failed_runner,
+        current=(3, 12, 13),
+        probe=lambda _exe: (3, 16, 0),
+    )
+    report = json.loads(capsys.readouterr().out)
+    assert code == 5
+    assert report["reason"] == "verify_import_failed"
+    assert report["override"] is True
+    assert calls == []
 
 
 def test_a_good_running_python_goes_straight_to_the_installer(tmp_path):
@@ -154,6 +181,19 @@ def test_a_good_running_python_goes_straight_to_the_installer(tmp_path):
         return 0
 
     code = boot.bootstrap(["--no-reviewer"], tmp_path, current=(3, 14, 10), main_fn=_main)
+    assert code == 0
+    assert seen == [["--no-reviewer"]]
+
+
+def test_running_python_3_12_13_meets_the_floor(tmp_path):
+    """The floor is 3.12.0: a running 3.12.13 is accepted without consent."""
+    seen = []
+
+    def _main(args):
+        seen.append(args)
+        return 0
+
+    code = boot.bootstrap(["--no-reviewer"], tmp_path, current=(3, 12, 13), main_fn=_main)
     assert code == 0
     assert seen == [["--no-reviewer"]]
 
@@ -202,9 +242,11 @@ def test_vendored_core_matches_its_manifest() -> None:
     manifest = json.loads((vendor / "VENDOR.json").read_text(encoding="utf-8"))
     digest = hashlib.sha256((vendor / "python_mcp_bootstrap.py").read_bytes()).hexdigest()
     assert manifest["name"] == "python-mcp-bootstrap"
-    assert manifest["version"] == "0.1.0"
-    assert manifest["tag"] == "v0.1.0"
+    assert manifest["version"] == "0.2.0"
+    assert manifest["tag"] == "v0.2.0"
+    assert manifest["commit"].startswith("fd8e0b9")
     assert manifest["sha256"] == digest
+    assert "local_patch" not in manifest
 
 
 def test_hash_pinned_requirements_install_runs_before_the_project(tmp_path):
@@ -224,12 +266,14 @@ def test_hash_pinned_requirements_install_runs_before_the_project(tmp_path):
         probe=lambda _exe: (3, 15, 2),
     )
     assert code == 0
+    python = str(boot.venv_python(tmp_path))
     joined = [" ".join(command) for command in commands]
     requirements = [line for line in joined if "--require-hashes" in line]
-    project = [line for line in joined if "pip install -e ." in line]
+    project = [line for line in joined if f"pip install --python {python} --no-deps -e ." in line]
     assert len(requirements) == 1
     assert "requirements-runtime.txt" in requirements[0]
-    assert "--no-deps" in project[0]
+    assert requirements[0].endswith(f"--python {python}")
+    assert len(project) == 1
     assert joined.index(requirements[0]) < joined.index(project[0])
 
 
@@ -247,8 +291,10 @@ def test_missing_requirements_file_keeps_the_single_upstream_install(tmp_path):
     )
     assert code == 0
     joined = [" ".join(command) for command in commands]
+    python = str(boot.venv_python(tmp_path))
     assert not any("--require-hashes" in line for line in joined)
-    assert any("pip install -e ." in line for line in joined)
+    installs = [line for line in joined if " pip install " in line]
+    assert installs == [f"/fake/uv pip install --python {python} -e ."]
 
 
 def test_failed_requirement_hash_install_stops_before_the_project(tmp_path, capsys):
@@ -274,7 +320,8 @@ def test_failed_requirement_hash_install_stops_before_the_project(tmp_path, caps
     report = json.loads(capsys.readouterr().out)
     assert code != 0
     assert report["reason"] == "runtime_requirements_failed"
-    assert not any("pip install -e ." in " ".join(command) for command in commands)
+    python = str(boot.venv_python(tmp_path))
+    assert not any(f"--python {python} --no-deps -e ." in " ".join(command) for command in commands)
 
 
 def test_bootstrap_spec_rejects_requirements_outside_the_project():

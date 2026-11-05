@@ -3,7 +3,7 @@
 The bootstrap installs the hash-pinned runtime requirements first, then this
 project with --no-deps; a hash mismatch or network failure stops the install.
 The bootstrap module picks the interpreter before the package is imported:
-an existing Python 3.14+, a good project .venv, an explicit --python, or a
+an existing Python 3.12+, a good project .venv, an explicit --python, or a
 project-local 3.15.2 installed with uv after the operator consents with
 --install-python. Without consent and without a usable interpreter it prints a
 typed python_too_old result and exits without installing anything.

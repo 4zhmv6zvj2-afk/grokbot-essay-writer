@@ -1,18 +1,15 @@
 """Core contract for the pre-install Python bootstrap.
 
-This module is deliberately stdlib-only and importable on Python 3.12.  Consumers
-copy this file into a first-run entry point that may execute before the
-application's dependencies exist.
-
-Local patch (recorded in VENDOR.json): BootstrapSpec.requirements installs one
-or more hash-pinned requirement files with ``--require-hashes`` before the
-project install, and the project install then runs with ``--no-deps``. This is
-the only difference from upstream v0.1.0.
+This module is deliberately stdlib-only and importable on Python 3.12.  The
+package metadata requires 3.12, and consumers copy this file into a first-run
+entry point that may execute before the application's dependencies exist.
+A consumer may raise ``BootstrapSpec.required`` to ask for a newer interpreter.
 """
 
 from __future__ import annotations
 
 import json
+import keyword
 import os
 import re
 import shutil
@@ -21,7 +18,7 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
-from typing import Any
+from typing import Any, cast
 
 Version = tuple[int, int, int]
 Main = Callable[[list[str]], int]
@@ -29,8 +26,10 @@ Runner = Callable[[list[str], Path, dict[str, str], int], dict[str, Any]]
 Probe = Callable[[str], Version | None]
 Exec = Callable[[str, list[str], dict[str, str]], int | None]
 
-REQUIRED: Version = (3, 14, 0)
+REQUIRED: Version = (3, 12, 0)
 PIN = "3.15.2"
+# uv releases before this cannot resolve the pinned managed-Python build.
+UV_MIN_FOR_PIN: Version = (0, 13, 0)
 VENV_DIR = ".venv"
 PYTHON_DIR = ".uv-python"
 PIN_FILE = ".python-version"
@@ -89,8 +88,7 @@ class BootstrapSpec:
             _require_project_path(field, value)
         if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", self.env_var) is None:
             raise ValueError(f"env_var is not a valid environment name: {self.env_var!r}")
-        if len(self.required) != 3 or any(not isinstance(part, int) for part in self.required):
-            raise ValueError(f"required is not a version: {self.required!r}")
+        object.__setattr__(self, "required", _spec_required(self.required))
         if re.fullmatch(r"\d+(?:\.\d+){0,2}", self.pin) is None:
             raise ValueError(f"pin must be a plain version: {self.pin!r}")
         pin_version = version_tuple(self.pin)
@@ -100,20 +98,66 @@ class BootstrapSpec:
             raise ValueError(f"pin {self.pin!r} is older than required {self.required!r}")
         if self.verify_import is not None and not _valid_module(self.verify_import):
             raise ValueError(f"verify_import is not a module: {self.verify_import!r}")
-        _require_project_install_args(self.install_args)
-        for requirement in self.requirements:
-            if not isinstance(requirement, str) or not requirement.strip():
-                raise ValueError(f"requirements must be non-empty paths: {self.requirements!r}")
-            _require_project_path("requirements", requirement)
+        object.__setattr__(self, "install_args", _spec_install_args(self.install_args))
+        object.__setattr__(self, "requirements", _spec_requirements(self.requirements))
+        if not self.card.strip():
+            raise ValueError("card must not be empty")
         if not self.repair_card.strip():
             raise ValueError("repair_card must not be empty")
         if self.card == CARD and self.pin != PIN:
             object.__setattr__(self, "card", CARD_TEMPLATE.format(pin=self.pin))
 
 
+def _spec_required(values: object) -> Version:
+    """Return ``values`` as a validated version tuple.
+
+    Accepting a list keeps the constructor friendly; storing a tuple keeps the
+    frozen dataclass actually immutable after validation.
+    """
+
+    if isinstance(values, str) or not isinstance(values, (tuple, list)):
+        raise ValueError(f"required is not a version: {values!r}")
+    parts = tuple(values)
+    if len(parts) != 3 or any(
+        not isinstance(part, int) or isinstance(part, bool) for part in parts
+    ):
+        raise ValueError(f"required is not a version: {values!r}")
+    return cast("Version", parts)
+
+
+def _spec_install_args(values: object) -> tuple[str, ...]:
+    """Return ``values`` as a validated, immutable install-argument tuple."""
+
+    if isinstance(values, str) or not isinstance(values, (tuple, list)):
+        raise ValueError(f"install_args must be a sequence of strings: {values!r}")
+    items = tuple(values)
+    _require_project_install_args(items)
+    return cast("tuple[str, ...]", items)
+
+
+def _spec_requirements(values: object) -> tuple[str, ...]:
+    """Return hash-pinned requirement-file paths as an immutable tuple.
+
+    Each entry is a project-relative path to a ``uv pip install
+    --require-hashes -r`` input.  The project-path guard keeps the
+    provisioning command inside the consumer's checkout.
+    """
+
+    if isinstance(values, str) or not isinstance(values, (tuple, list)):
+        raise ValueError(f"requirements must be a sequence of paths: {values!r}")
+    items = tuple(values)
+    for item in items:
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(f"requirements must be non-empty paths: {values!r}")
+        _require_project_path("requirements", item)
+    return cast("tuple[str, ...]", items)
+
+
 def _valid_module(value: str) -> bool:
     parts = value.split(".")
-    return bool(parts) and all(part.isidentifier() for part in parts)
+    return bool(parts) and all(
+        part.isidentifier() and not keyword.iskeyword(part) for part in parts
+    )
 
 
 def _escapes_project(value: str) -> bool:
@@ -129,6 +173,7 @@ def _escapes_project(value: str) -> bool:
     return (
         posix.is_absolute()
         or windows.is_absolute()
+        or bool(windows.drive)
         or bool(windows.root)
         or ".." in posix.parts
         or ".." in windows.parts
@@ -140,7 +185,30 @@ def _require_project_path(field: str, value: str) -> None:
         raise ValueError(f"{field} must stay inside the project: {value!r}")
 
 
-_RESERVED_LONG_FLAGS = frozenset({"--target", "--prefix", "--root", "--python"})
+_RESERVED_LONG_FLAGS = frozenset(
+    {
+        "--target",
+        "--prefix",
+        "--root",
+        "--python",
+        "--system",
+        "--break-system-packages",
+    }
+)
+_VALUE_LONG_FLAGS = frozenset(
+    {
+        "--find-links",
+        "--index-url",
+        "--extra-index-url",
+        "--requirement",
+        "--constraint",
+        "--config-settings",
+        "--only-binary",
+        "--no-binary",
+        "--upgrade-strategy",
+    }
+)
+_FILE_URL = re.compile(r"(?i)^file(?:\+[a-z0-9.]+)?:")
 _RESERVED_SHORT_FLAGS = frozenset({"t", "p"})
 _VALUE_SHORT_FLAGS = frozenset({"e", "r", "c", "f", "i", "C"})
 
@@ -180,11 +248,15 @@ def _require_project_install_args(values: object) -> None:
     for value in values:
         if not isinstance(value, str):
             raise ValueError(f"install_args must be strings: {value!r}")
+        if _FILE_URL.match(value):
+            raise ValueError(f"install_args must not use a local file: URL: {value!r}")
         if value.startswith("-"):
             if value.startswith("--"):
                 name = value.split("=", 1)[0]
                 if name in _RESERVED_LONG_FLAGS:
                     raise ValueError(f"install_args must not redirect the install: {value!r}")
+                if name in _VALUE_LONG_FLAGS and "=" not in value:
+                    raise ValueError(f"install_args must pass {name} as {name}=VALUE: {value!r}")
                 embedded = value.split("=")[1:]
             else:
                 if _short_flag_problem(value):
@@ -192,7 +264,7 @@ def _require_project_install_args(values: object) -> None:
                         f"install_args must not redirect or escape the project: {value!r}"
                     )
                 embedded = []
-            if any(_escapes_project(part) for part in embedded):
+            if any(_FILE_URL.match(part) or _escapes_project(part) for part in embedded):
                 raise ValueError(f"install_args must stay inside the project: {value!r}")
             continue
         if _escapes_project(value):
@@ -281,12 +353,16 @@ def find_uv() -> str | None:
     return None
 
 
-_CREDENTIAL_URL = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*://)[^/\s:@]+(?::[^/\s@]*)?@", re.IGNORECASE)
+_CREDENTIAL_URL = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*://)\S*@")
 _SECRET_FIELD = re.compile(
-    r"(?i)([\"']?\b(?:[A-Za-z0-9]+[_-])?"
-    r"(?:token|api[_-]?key|password|passwd|secret|private[_-]?key)\b[\"']?)"
+    r"(?i)([\"']?\b(?:[A-Za-z0-9]+[_-])*"
+    r"(?:token|api[_-]?key|password|passwd|secret|private[_-]?key|access[_-]?key)"
+    r"(?:[_-][A-Za-z0-9]+)*\b[\"']?)"
     r"(\s*[=:]\s*)"
     r"(\"[^\"]*\"|'[^']*'|\S+)"
+)
+_AUTH_HEADER = re.compile(
+    r"(?i)\b((?:proxy-)?authorization\s*:\s*(?:basic|bearer|token|digest)\s+)[^\s\"']+"
 )
 _BEARER_TOKEN = re.compile(r"(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]{8,}")
 
@@ -294,11 +370,15 @@ _BEARER_TOKEN = re.compile(r"(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]{8,}")
 def _redact(text: str) -> str:
     """Mask credentials that a tool may echo into diagnostics.
 
-    Covers URL userinfo, ``key=value`` / ``"key": "value"`` pairs, and
-    ``Authorization: Bearer`` headers.  Over-redacting is preferred to leaking.
+    Covers URL userinfo (including passwords containing ``/`` or ``@``),
+    ``key=value`` / ``"key": "value"`` pairs for credential-shaped names
+    (``AWS_SECRET_ACCESS_KEY``, ``MY_API_KEY``, ...), and
+    ``Authorization``/``Proxy-Authorization`` headers (Basic, Bearer, Token,
+    Digest) plus bare bearer tokens.  Over-redacting is preferred to leaking.
     """
 
-    text = _CREDENTIAL_URL.sub(r"\1***:***@", text)
+    text = _CREDENTIAL_URL.sub(r"\1***@", text)
+    text = _AUTH_HEADER.sub(r"\1***", text)
     text = _BEARER_TOKEN.sub(r"\1***", text)
     return _SECRET_FIELD.sub(r"\1\2***", text)
 
@@ -404,6 +484,40 @@ def _failed(reason: str, spec: BootstrapSpec, **extra: object) -> dict[str, Any]
     return payload
 
 
+def _uv_version(run: Runner, uv: str | None, root: Path, env: dict[str, str]) -> Version | None:
+    """Return the installed uv version, or None when it cannot be determined."""
+
+    if uv is None:
+        return None
+    result = run([uv, "--version"], root, env, 10)
+    match = re.search(
+        r"(\d+)\.(\d+)\.(\d+)",
+        str(result.get("stdout", "")) + str(result.get("stderr", "")),
+    )
+    if match is None:
+        return None
+    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+
+
+def _verification_failure(
+    python: Path, spec: BootstrapSpec, found: Version, *, override: bool
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "ok": False,
+        "installed": False,
+        "app": spec.app,
+        "reason": "verify_import_failed",
+        "interpreter": str(python),
+        "python_version": format_version(found),
+        "required": f">={floor_text(spec.required)}",
+        "pin": spec.pin,
+        "detail": f"cannot import {spec.verify_import!r} from this interpreter",
+    }
+    if override:
+        payload["override"] = True
+    return payload
+
+
 def _needs_install(python: Path, spec: BootstrapSpec, found: Version) -> dict[str, Any]:
     return {
         "ok": False,
@@ -504,10 +618,10 @@ def provision(
         uv,
         "pip",
         "install",
-        *spec.install_args,
-        *(["--no-deps"] if spec.requirements else []),
         "--python",
         str(python),
+        *(["--no-deps"] if spec.requirements else []),
+        *spec.install_args,
     ]
     result = run(install_command, root, env, 600)
     steps.append(_step(install_command, result))
@@ -577,7 +691,20 @@ def _exec(
     env = dict(os.environ)
     env[spec.env_var] = str(python)
     argv = [str(python), str(Path(root) / spec.entrypoint), *args]
-    result = exec_fn(str(python), argv, env)
+    try:
+        result = exec_fn(str(python), argv, env)
+    except OSError as exc:
+        return _report(
+            {
+                "ok": False,
+                "installed": False,
+                "app": spec.app,
+                "reason": "exec_failed",
+                "interpreter": str(python),
+                "detail": _redact(str(exc)),
+            },
+            8,
+        )
     return int(result or 0)
 
 
@@ -665,7 +792,7 @@ def bootstrap(
             cleaned.extend(args[index + 1 :])
             break
         if token == "--python":
-            if index + 1 >= len(args) or args[index + 1].startswith("--"):
+            if index + 1 >= len(args) or args[index + 1].startswith("-"):
                 return _report(
                     {
                         "ok": False,
@@ -680,7 +807,7 @@ def bootstrap(
             continue
         if token.startswith("--python="):
             value = token.split("=", 1)[1]
-            if not value:
+            if not value or value.startswith("-"):
                 return _report(
                     {
                         "ok": False,
@@ -711,9 +838,18 @@ def bootstrap(
             return _report(
                 _too_old(format_version(found) if found else None, spec, override=True), 3
             )
-        return _exec(exec_fn, Path(override), root, spec, cleaned)
+        override_path = Path(override)
+        if spec.verify_import is not None and not _installed(
+            override_path, spec, root, dict(os.environ), run
+        ):
+            return _report(_verification_failure(override_path, spec, found, override=True), 5)
+        return _exec(exec_fn, override_path, root, spec, cleaned)
 
-    if running >= spec.required:
+    running_has_app = True
+    if running >= spec.required and spec.verify_import is not None:
+        running_has_app = _installed(Path(sys.executable), spec, root, dict(os.environ), run)
+
+    if running >= spec.required and running_has_app:
         if continuation is not None:
             os.environ[spec.env_var] = sys.executable
             return continuation(cleaned)
@@ -735,6 +871,8 @@ def bootstrap(
     if not consent:
         if broken_venv is not None:
             return _report(_needs_install(broken_venv[0], spec, broken_venv[1]), 6)
+        if running >= spec.required and spec.verify_import is not None:
+            return _report(_needs_install(Path(sys.executable), spec, running), 6)
         return _report(
             _too_old(
                 format_version(running),
@@ -751,5 +889,14 @@ def bootstrap(
         payload = dict(provisioned)
         payload["installed"] = False
         code = 4 if provisioned.get("reason") == "needs_uv" else 5
+        if provisioned.get("reason") == "provision_failed":
+            found_uv = uv or find_uv()
+            version = _uv_version(run, found_uv, root, dict(os.environ))
+            if version is not None and version < UV_MIN_FOR_PIN:
+                payload["tip"] = (
+                    f"installed uv reports {format_version(version)}, which may not resolve "
+                    "the pinned Python build. Run `uv self update`, or pass --python with an "
+                    "interpreter that is already installed."
+                )
         return _report(payload, code)
     return _exec(exec_fn, Path(str(provisioned["interpreter"])), root, spec, cleaned)

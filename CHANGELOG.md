@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.6.0 — 2026-11-05
+
+Bootstrap v0.2.0 and the Python version policy.
+
+- The vendored bootstrap core is upstream `python-mcp-bootstrap` v0.2.0 (tag
+  `v0.2.0`, commit `fd8e0b9`), byte-identical to the release: the local
+  requirements patch is gone because the hash-pinned install is upstream now.
+  `VENDOR.json` records the source, the release, and the file SHA-256.
+- Install command order is upstream's: `requirements-runtime.txt` installs with
+  `uv pip install --require-hashes -r ... --python <venv python>` first, then
+  the project with `uv pip install --python <venv python> --no-deps -e .`. A
+  copy without the requirements file keeps the single upstream install.
+- The Python floor is 3.12 for the package and for the vendored core; the
+  adapter keeps `REQUIRED = (3, 12, 0)` explicit. `first_run.py` now says 3.12+;
+  the product provisioning pin stays 3.15.2.
+- Version policy: CI runs the 3.12, 3.13, 3.14, and 3.15 lines with
+  `check-latest: true` and prints the resolved patch (`python -VV`). Coverage
+  stays on the 3.12 cell, the macOS job runs 3.15, the artifact job builds on
+  3.12, and `release.yml` keeps the exact 3.12.13 build pin. A committed root
+  `.python-version` names the 3.15 line.
+- `tests/test_version_policy.py` guards the floor, the CI lines, the committed
+  `.python-version`, and the `VENDOR.json` release and hash.
+- `ARCHITECTURE.md` and `docs/testing.md` describe the v0.2.0 vendoring and the
+  3.12 coverage cell.
+- Tests: 1078 passed (8 terminal-backed cases skip on a host without a pty);
+  ~87% coverage.
+
 ## 0.5.0 — 2026-11-05
 
 Final clean-up round.
