@@ -3,7 +3,7 @@
 Build covered: Cursor cursor_stage_launch and Grok Build stage_launch both
 read essay_writer.stage_llm.stage_settings. The anti-glue line is that shared
 row. Grok Build puts it on grok --rules. Cursor puts the same rules on the
-launch settings row. No new residual. Pax: skipped (this checkout has no Pax tests).
+launch settings row. No new residual.
 """
 
 from pathlib import Path

@@ -4,7 +4,7 @@ Fixture: tests/fixtures/encourage-plan-v1.txt (encourage-plan-v1).
 Brief fixture: tests/fixtures/encourage-brief-reflection-v1.txt.
 Build covered: Cursor cursor_stage_launch and Grok Build stage_launch both
 read essay_writer.stage_llm.stage_settings, including the voice limit on
-stages 5–8 and the reviewer limit on eqr. Pax: skipped (prompt / FO copy only).
+stages 5–8 and the reviewer limit on eqr.
 """
 
 import json
