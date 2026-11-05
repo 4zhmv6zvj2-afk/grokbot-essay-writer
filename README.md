@@ -132,7 +132,7 @@ Python 3.12 or newer:
 
 ```bash
 uv sync --extra dev
-uv run pytest                      # 1060 passed, 8 skipped
+uv run pytest                      # 1078 passed
 uv run ruff check src tests tools
 uv run mypy src
 uv run python tools/generate_docs.py --check

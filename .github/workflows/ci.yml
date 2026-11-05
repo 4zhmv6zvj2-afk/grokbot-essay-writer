@@ -22,12 +22,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12.13", "3.13", "3.14.10", "3.15.2"]
+        # Version-policy lines, not patch pins: check-latest resolves the latest
+        # patch in each line and the job prints it. The floor is 3.12.
+        python-version: ["3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
+          check-latest: true
+      - name: Show interpreter
+        run: python -VV
       - name: Repository checks
         run: |
           set -euo pipefail
@@ -77,21 +82,22 @@ jobs:
       # (see [tool.coverage.report] in pyproject.toml); the current baseline is
       # ~87%.
       - name: Pytest
-        if: matrix.python-version != '3.12.13'
+        if: matrix.python-version != '3.12'
         run: python -m pytest -q
       - name: Pytest with coverage
-        if: matrix.python-version == '3.12.13'
+        if: matrix.python-version == '3.12'
         run: python -m pytest -q --cov=essay_writer --cov-report=term --cov-fail-under=85
 
   test-macos:
-    name: Test (macOS, Python 3.14.10)
+    name: Test (macOS, Python 3.15)
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
-          python-version: "3.14.10"
+          python-version: "3.15"
+          check-latest: true
       - name: Install package and dev tools
         run: |
           # requirements-build.txt carries the hash-pinned setuptools/wheel the
@@ -109,9 +115,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
-          # Build and test on the lowest supported interpreter: shipped
-          # artifacts must install and pass on every Python in the matrix.
-          python-version: "3.12.13"
+          # Build and test on the lowest supported line: shipped artifacts must
+          # install and pass on every Python in the matrix.
+          python-version: "3.12"
+          check-latest: true
       - name: Install build and test tooling
         run: python -m pip install --require-hashes -r requirements-build.txt -r requirements-ci.txt
       - name: Build twice and require identical hashes

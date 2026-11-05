@@ -1,8 +1,10 @@
 """Adapter to the shared python-mcp-bootstrap core.
 
-The core lives in ``essay_writer._vendor`` and is copied from the private
-python-mcp-bootstrap repository. Keep this module importable before the rest of
-the package is installed: it uses only the vendored, stdlib-only core.
+The core lives in ``essay_writer._vendor`` and is vendored byte-for-byte from
+the public python-mcp-bootstrap repository at release v0.2.0 (tag ``v0.2.0``,
+commit ``fd8e0b9``). ``VENDOR.json`` records the source, the release, and the
+file SHA-256; the copy is unpatched. Keep this module importable before the
+rest of the package is installed: it uses only the vendored, stdlib-only core.
 """
 
 from __future__ import annotations
@@ -13,9 +15,9 @@ from typing import Any
 
 from essay_writer._vendor import python_mcp_bootstrap as _core
 
-# The package floor is 3.12. The vendored core defaults to its own floor
-# (3.14); keep the vendored file byte-identical to its upstream release and
-# pass the project floor in here instead.
+# The package floor is 3.12, matching the vendored v0.2.0 core floor. Keep the
+# floor explicit here so a future bootstrap vendoring cannot silently move this
+# package's supported minimum.
 REQUIRED = (3, 12, 0)
 PIN = _core.PIN
 VENV_DIR = _core.VENV_DIR
@@ -54,7 +56,9 @@ _SPEC = _core.BootstrapSpec(
 def _spec_for(root: Path) -> _core.BootstrapSpec:
     """Hash-pinned runtime install when the copy carries the requirements file.
 
-    A friend zip made before this file existed falls back to the upstream
+    Upstream v0.2.0 installs each ``requirements`` file with ``--require-hashes``
+    before the project install, which then runs with ``--no-deps``. A friend
+    zip made before requirements-runtime.txt existed falls back to the upstream
     single-command install; the report shows which commands ran.
     """
     requirements = (REQUIREMENTS_FILE,) if (Path(root) / REQUIREMENTS_FILE).is_file() else ()
