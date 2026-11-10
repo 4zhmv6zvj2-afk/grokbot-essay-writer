@@ -112,6 +112,22 @@ def test_label_spans_are_not_citations(workspace):
         assert report["questionable_citations"] == []
 
 
+def test_multi_word_labels_outside_the_list_stay_hard_failures(workspace):
+    """Known shape limit. Changing the label list later has to do this on purpose."""
+    seq = open_sequence()
+    cases = {
+        "New York (2020) set one rate.": "new york, 2020",
+        "Supreme Court (2020) set one rate.": "supreme court, 2020",
+        "United States (2020) set one rate.": "united states, 2020",
+    }
+    for body, token in cases.items():
+        report = _citations(seq, body)
+        gate = _gate(report, "citations")
+        assert gate["passed"] is False, body
+        assert token in gate["reason"]
+        assert gate["questionable"] == []
+
+
 def test_page_and_theresa_may_stay_silent_label_collisions():
     """page and May are already label words, so these narrative spans are not citations."""
     assert citation_records("Page (2020) names a leaf.") == []

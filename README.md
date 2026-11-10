@@ -74,14 +74,28 @@ Output is Word only (`.docx`); referencing follows Harvard
 ([docs/referencing-harvard.md](docs/referencing-harvard.md)). The full stage
 guide is [docs/workflow.md](docs/workflow.md).
 
-A parenthetical citation, or a narrative citation with a clear person cue
-(`et al.`, a title, an initial, a joint list, a multi-word personal name, or a
-shouted surname of five or more letters), must match a gathered source or the
-Word file is not written. A lone ordinary name plus a year is a possible
-citation: it is named on the result and does not block Word. A label on the
-non-person list, such as a month, a place, or `Smith Report`, is not a citation.
-`Page (2020)` and `Theresa May (2019)` stay in that silent list because `page`
-and `May` are already label words.
+## Citation policy
+
+A parenthetical citation, or a narrative citation with a person cue (`et al.`,
+a title, an initial, a joint list, a multi-word personal name, or a shouted
+surname of five or more letters), must match a gathered source or Word is not
+written. A lone ordinary name plus a year is a possible citation: gate 7
+passes, the token is named, and Word is still written. An invented lone name
+is flagged, not blocked.
+
+Accepted limits of that rule:
+
+- A multi-word label with no word on the non-person list can still be treated
+  as a personal name and hard-fail, including `New York (2020)`, `Supreme Court
+  (2020)`, and `United States (2020)`. Adding words to the label list is a
+  separate change.
+- `Page`, `May`, and `June` stay silent label matches. A parenthetical
+  `(Page, 2020)` is still a hard failure.
+- All-caps labels of two to four letters stay acronyms (`GDP`, `OECD`, `BUSH`,
+  `KIM`).
+- The author/year metadata check looks at sources already on the pack. With no
+  pack sources, that check has nothing to reject.
+- Cite-fit still reports an ungathered lone name as a gap.
 
 ## Setting it up (operators)
 
