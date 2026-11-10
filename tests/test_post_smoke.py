@@ -55,6 +55,18 @@ def test_narrative_three_author_cite_is_one_citation():
     pair = citation_tokens("Smith and Jones (2020) argue.")
     assert pair == ["smith and jones, 2020"]
     assert "jones, 2020" not in pair
+    assert citation_tokens("Smith & Jones (2020) argue.") == ["smith & jones, 2020"]
+    assert citation_tokens("Smith et al. (2020) argue.") == ["smith et al., 2020"]
+    assert citation_tokens("Smith et al., (2020) argue.") == ["smith et al., 2020"]
+    assert citation_tokens("Smith, Jones, and Brown (2020) argue.") == ["smith, jones, and brown, 2020"]
+    assert citation_tokens("John Smith (2019) writes.") == ["john smith, 2019"]
+    assert citation_tokens("Dr Smith (2020) writes.") == ["dr smith, 2020"]
+    assert citation_tokens("SMITH (2020) writes.") == ["smith, 2020"]
+    assert citation_tokens("Pérez (2019) writes.") == ["pérez, 2019"]
+    assert citation_tokens("World War II (1939) changed trade.") == []
+    assert citation_tokens("GDP (2020) fell.") == []
+    assert citation_tokens("Renaissance (1400) changed Europe.") == []
+    assert citation_tokens("Brexit (2016) followed.") == []
 
 
 def test_later_tools_load_app_path_not_recommended_base(tmp_path, monkeypatch):
@@ -92,6 +104,7 @@ def test_later_tools_load_app_path_not_recommended_base(tmp_path, monkeypatch):
 
 def test_setup_does_not_clone_or_store_open(tmp_path, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     assert "git clone" not in SETUP_PROMPT.casefold()
     assert "nothing is cloned" in SETUP_PROMPT.casefold()
     assert "Grok Build" not in SETUP_PROMPT
@@ -204,7 +217,13 @@ def test_mid_office_shell_is_persisted_and_not_an_env_flag(tmp_path, monkeypatch
     writer = house_instructions()
     reviewer = house_instructions(REVIEW_INSTRUCTIONS)
     assert "Cursor is the mid office" in writer
-    assert "Grok Build" not in writer
+    assert "Grok Build is an alternate file-work host" in writer
+    assert "only when the user wants Grok Build" in writer
+    assert "Cursor is an alternate" not in writer
+    assert "only when the user wants Cursor" not in writer
+    assert "Cursor CLI or Cursor" not in writer
+    assert "Cursor writes these files for either file-work host" in writer
+    assert "Cursor does the file work and does not own the chat." in writer
     assert "agent --version" in writer
     assert "do not install grok" in writer.casefold()
     assert "Cursor does not own this chat" in reviewer
@@ -217,12 +236,28 @@ def test_mid_office_shell_is_persisted_and_not_an_env_flag(tmp_path, monkeypatch
         encoding="utf-8",
     )
     assert mid_office() == "Grok Build"
+    record.write_text(
+        json.dumps({"app_path": str(tmp_path / "app"), "mid_office_shell": "not-a-shell"}),
+        encoding="utf-8",
+    )
+    assert mid_office() == "Cursor"
+    record.write_text(
+        json.dumps({"app_path": str(tmp_path / "app"), "mid_office_shell": "grokbuild"}),
+        encoding="utf-8",
+    )
+    assert mid_office() == "Grok Build"
+    grok_writer = house_instructions()
+    assert "Grok Build writes these files for either file-work host" in grok_writer
+    assert "Grok Build does the file work and does not own the chat." in grok_writer
+    assert "only when the user wants Grok Build" in grok_writer
+    assert "Cursor writes these files" not in grok_writer
 
 
 def test_setup_pick_persists_and_branches_the_prompt(tmp_path, monkeypatch):
     from essay_writer.student_voice import for_word, say
 
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     assert setup_prompt(None) == CURSOR_SETUP_PROMPT
     assert setup_prompt("Cursor") == CURSOR_SETUP_PROMPT
     assert setup_prompt("SuperGrok") == SETUP_PROMPT

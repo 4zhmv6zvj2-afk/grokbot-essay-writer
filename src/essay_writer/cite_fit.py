@@ -25,13 +25,13 @@ from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import work_dir
 from essay_writer.state import load_state
 from essay_writer.textutil import (
-    NARRATIVE,
     PAREN,
     citation_tokens,
     family_name,
     in_text_forms,
     norm_space,
     token_allowed,
+    without_narrative_citations,
 )
 
 BODY_CITE_STAGES = frozenset({"5", "6", "7", "8"})
@@ -176,8 +176,8 @@ def _content_words(text: str) -> list[str]:
 
 def _bare(text: str) -> str:
 
-    cleaned = PAREN.sub(" ", text)
-    cleaned = NARRATIVE.sub(" ", cleaned)
+    cleaned = without_narrative_citations(text)
+    cleaned = PAREN.sub(" ", cleaned)
     return norm_space(cleaned)
 
 

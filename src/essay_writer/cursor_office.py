@@ -116,16 +116,73 @@ _REMOTE_FLAGS = frozenset(
 )
 
 
+_REMOTE_NAMES = frozenset(
+    {
+        "cloud-agent",
+        "cloud_agent",
+        "cloudagent",
+        "remote-agent",
+        "remote_agent",
+    }
+)
+
+
+_VALUE_FLAGS = frozenset(
+    {
+        "--effort",
+        "--mode",
+        "--model",
+        "--prompt",
+        "--rules",
+    }
+)
+_URL_FLAGS = frozenset(
+    {
+        "--endpoint",
+        "-e",
+    }
+)
+
+
+def _flag_name(token: str) -> str:
+    return token.partition("=")[0]
+
+
+def _url_token(token: str) -> bool:
+    return token.startswith(("http://", "https://", "cursor.com/agents"))
+
+
 def remote_cloud_argv(command: list[str]) -> bool:
-    """True when this argv would start a remote or cloud agent."""
-    blob = " ".join(str(part) for part in command).casefold()
-    if "cursor.com/agents" in blob or "://" in blob:
-        return True
-    if any(token in blob for token in ("cloud-agent", "cloud_agent", "cloudagent", "remote-agent", "remote_agent")):
-        return True
-    for part in command:
-        flag = str(part).casefold()
-        if flag in _REMOTE_FLAGS or flag.startswith("--cloud=") or flag.startswith("--remote="):
+    """True when an argv token would start a remote or cloud agent.
+
+    A URL inside a longer instruction is not a launch target. A remote flag,
+    including an equals form such as --cloud-agent=true, is. So is a URL passed
+    to --endpoint or -e. A model named cloud-agent is not a launch.
+    """
+    parts = [str(part).strip() for part in command]
+    for index, part in enumerate(parts):
+        flag = part.casefold()
+        if not flag:
+            continue
+        name = _flag_name(flag)
+        value = flag.partition("=")[2]
+        previous = _flag_name(parts[index - 1].casefold()) if index else ""
+        if name in _REMOTE_FLAGS or name.startswith(("--cloud", "--remote")):
+            return True
+        if name in _VALUE_FLAGS:
+            continue
+        if name in _URL_FLAGS:
+            target = value
+            if not target and index + 1 < len(parts):
+                target = parts[index + 1].strip().casefold()
+            if _url_token(target) or "://" in target:
+                return True
+            continue
+        if " " in flag or "\n" in flag:
+            continue
+        if previous in _VALUE_FLAGS:
+            continue
+        if flag in _REMOTE_NAMES or _url_token(flag):
             return True
     return False
 

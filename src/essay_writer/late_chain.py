@@ -22,6 +22,7 @@ from essay_writer.diary import (
 )
 from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import module_code, work_dir, workspace_root
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.stage7 import comment_text, load_stage7
 from essay_writer.state import load_state
 from essay_writer.student_voice import say
@@ -83,10 +84,6 @@ def findings_place(essay_id: str) -> str:
     return f"Documents/{project}/{project}-findings.docx"
 
 
-def chain_armed(pointer: dict[str, Any]) -> bool:
-    return pointer.get("chain_armed") is True
-
-
 def next_run(essay_id: str, stage: str, *, armed: bool) -> dict[str, Any] | None:
     """The single following run. Never 8, 9, and 10 together."""
     if not armed or stage == "6":
@@ -118,13 +115,6 @@ def next_run(essay_id: str, stage: str, *, armed: bool) -> dict[str, Any] | None
     return None
 
 
-def review_block(essay_id: str) -> str | None:
-    from essay_writer.spine import final_review
-
-    text, _verdict = final_review(essay_id)
-    return text
-
-
 STAGE10_UNMOUNTED = (
     "The Mac folder is not on this computer. "
     "The final Word stays in this chat and on this sequence. "
@@ -137,6 +127,7 @@ FINDINGS_UNMOUNTED = (
 QUIET_STEP = "Wait while the first draft is written."
 FIRST_DRAFT_READY = "Read the first draft in this chat."
 STAGE6_OPEN = "Your draft is saved. Start the first read in this chat."
+STAGE6_READ_LIST = prompt_text("front_office/chat.md", "stage6_read_list")
 _LEAKS = (
     "Essay-writer/",
     "uploads/",
@@ -227,6 +218,7 @@ def quiet_stage5(body: dict[str, Any], essay_id: str) -> dict[str, Any]:
         line = stage5_chat_line(STAGE6_OPEN, STAGE6_OPEN)
     quiet = mark_quiet(body, line, step="5")
     quiet["checklist_in_chat"] = False
+    quiet["read_list"] = say(STAGE6_READ_LIST)
     from essay_writer.cite_fit import speak_cite_ask
 
     return speak_cite_ask(quiet)
@@ -300,7 +292,7 @@ def log_word_docx_written(
         conclusion=str(pack.get("conclusion") or ""),
         cover=cover,
         sources_count=len(report.get("sources") or []),
-        refs_count=len(report.get("sources") or []),
+        refs_count=len(report.get("references") or []),
         output_path=path,
     )
 
@@ -746,6 +738,64 @@ def _footer_stop(body: dict[str, Any], *, refused: str, reason: str) -> dict[str
     return body
 
 
+def _stage10_mark_path(source: Path) -> Path:
+    return source.with_name(".stage10-copied.json")
+
+
+def _stage10_pack_sha(pack: dict[str, Any]) -> str:
+    import hashlib
+    import json
+
+    raw = json.dumps(pack, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _remember_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) -> None:
+    import json
+
+    record = {
+        "pack_sha256": _stage10_pack_sha(pack),
+        "copied": body.get("copied") is True,
+        "place": body.get("place") or "",
+        "comments_place": body.get("comments_place") or "",
+        "findings_place": body.get("findings_place") or "",
+        "sequence_written": body.get("sequence_written") is True,
+    }
+    path = _stage10_mark_path(source)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+
+def _reuse_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the previous stage 10 result when this pack was already written."""
+    import json
+
+    mark = _stage10_mark_path(source)
+    if not source.is_file() or not mark.is_file():
+        return None
+    try:
+        record = json.loads(mark.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(record, dict) or record.get("pack_sha256") != _stage10_pack_sha(pack):
+        return None
+    if record.get("sequence_written") is not True:
+        return None
+    if record.get("copied") is True:
+        place = record.get("place")
+        if not isinstance(place, str) or not place or not Path(place).is_file():
+            return None
+    body["ok"] = True
+    body["copied"] = record.get("copied") is True
+    body["sequence_written"] = True
+    body["reused"] = True
+    body["reason"] = ""
+    body["place"] = record.get("place") or body.get("place") or ""
+    body["comments_place"] = record.get("comments_place") or ""
+    body["findings_place"] = record.get("findings_place") or ""
+    return body
+
+
 def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, Any]:
     """Write the sequence Word file, then refresh the sequence -10 final from it.
 
@@ -931,6 +981,9 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
             reason=str(blocked_refs.get("reason") or ""),
         )
         return body
+    reused = _reuse_stage10(source, pack, body)
+    if reused is not None:
+        return reused
     pending = source.with_name(f".{source.name}.writing")
     try:
         write_docx(essay_id, pack, report, pending, product_log=False)
@@ -1107,6 +1160,7 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     body["copied"] = True
     body["reason"] = ""
     body["sequence_written"] = True
+    _remember_stage10(source, pack, body)
     from essay_writer.ml_events import note_stage10_rewrite_paths
 
     note_stage10_rewrite_paths(essay_id)

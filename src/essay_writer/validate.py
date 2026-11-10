@@ -33,6 +33,7 @@ from essay_writer.student_voice import speak
 from essay_writer.textutil import (
     align_in_text_cites,
     check_genre,
+    citation_records,
     citation_tokens,
     complete_citation_sources,
     count_words,
@@ -499,19 +500,19 @@ def inspect_pack(essay_id: str, pack: object) -> dict[str, Any]:
             forms |= in_text_forms(str(source["author"]), str(source["year"]))
     used: set[str] = set()
     for section in clean_sections:
-        for token in citation_tokens(section["body"]):
-            if not token_allowed(token, forms):
+        for record in citation_records(section["body"]):
+            if token_allowed(record.token, forms):
+                used.add(record.token)
+            elif record.hard:
                 blockers.append(
                     {
                         "code": "invent-forbid",
                         "reason": (
-                            f"In-text citation {token!r} is not one of the gathered sources. "
+                            f"In-text citation {record.token!r} is not one of the gathered sources. "
                             "Omit it, or gather the source first."
                         ),
                     }
                 )
-            else:
-                used.add(token)
     blockers.extend(in_text_page_issues(clean_sections, sources))
     for source in sources:
         if source.get("author") and source.get("year"):

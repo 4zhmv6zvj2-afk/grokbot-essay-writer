@@ -371,6 +371,7 @@ def workflow_text() -> str:
 
 def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     app = tmp_path / "app"
     kb1 = tmp_path / "KB1"
     bare = essay_setup(app_path=str(app), kb1_path=str(kb1), confirmPhase="draft")

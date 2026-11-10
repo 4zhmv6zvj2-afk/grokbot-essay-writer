@@ -262,6 +262,7 @@ def test_confirm_without_draft_writes_nothing_when_consensus_is_on(workspace, mo
 
 def test_a_stored_setup_key_turns_consensus_on_without_echoing_it(tmp_path, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     monkeypatch.delenv("CONSENSUS_API_KEY", raising=False)
     monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
     app = tmp_path / "app"

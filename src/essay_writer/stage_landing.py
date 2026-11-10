@@ -338,7 +338,6 @@ def _inherited_lock_keep(
     row: dict[str, Any],
 ) -> dict[str, Any]:
     """Keep continues the parent save without showing Confirm again."""
-    from essay_writer.fo_chat_locks import _mark_lock_resolved
     from essay_writer.specialists.grok_bot import CARD_CONFIRM
     from essay_writer.stage_track import essay_stage
 
@@ -368,7 +367,6 @@ def _inherited_lock_keep(
     ready = confirm_ready(essay_id, TOOL, payload, fingerprint)
     if ready.get("ok") is False:
         return ready
-    _mark_lock_resolved(essay_id, stage)
     token = _INHERITED_KEEP.set(True)
     try:
         saved = essay_stage(

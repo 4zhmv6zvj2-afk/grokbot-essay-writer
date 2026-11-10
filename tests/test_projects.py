@@ -74,6 +74,7 @@ def test_setup_prompt_does_not_clone_and_names_the_cloud_folders():
 
 def test_setup_creates_folders_without_installing(tmp_path, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     app = tmp_path / "app"
     kb1 = tmp_path / "KB1"
     refused = essay_setup(install_grokbuild=True, app_path=str(app), kb1_path=str(kb1))

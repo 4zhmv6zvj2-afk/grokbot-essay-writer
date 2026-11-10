@@ -325,11 +325,43 @@ def _project_root(dest: Path) -> Path | None:
     return pool[0]
 
 
+def _saved_app_folder() -> Path | None:
+    """App folder named on the setup record later tools read."""
+    saved = essay_paths.load_saved_setup()
+    if not isinstance(saved, dict):
+        return None
+    raw = saved.get("app_path") or saved.get("app")
+    if not isinstance(raw, str):
+        return None
+    text = raw.strip()
+    if not text or text.casefold() == "open":
+        return None
+    return Path(text).expanduser()
+
+
 def _blocked_dest(dest: Path) -> str | None:
     if _internal_volume(dest):
         return "That folder is not an install path on this computer. Name a folder on this computer, or use the cloud computer."
+    save_tree = "That folder is the save tree. Install the copy beside it, not inside it."
     if (dest / "setup.json").is_file() and (dest / "app").is_dir():
-        return "That folder is the save tree. Install the copy beside it, not inside it."
+        return save_tree
+    app = _saved_app_folder()
+    if app is not None:
+        try:
+            dest_resolved = dest.resolve()
+            app_resolved = app.resolve()
+        except OSError:
+            dest_resolved = dest
+            app_resolved = app
+        inside = False
+        try:
+            dest_resolved.relative_to(app_resolved)
+            inside = True
+        except ValueError:
+            inside = False
+        beside = dest_resolved == app_resolved.parent and (app_resolved.parent / "setup.json").is_file()
+        if inside or beside:
+            return save_tree
     if dest.exists() and not dest.is_dir():
         return "That install path is a file."
     return None

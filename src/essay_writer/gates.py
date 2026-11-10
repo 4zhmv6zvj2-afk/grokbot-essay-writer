@@ -7,6 +7,7 @@ The writer seat does not pass itself.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any, cast
 
 from essay_writer.diary import blocked_identity_keys
@@ -19,8 +20,6 @@ from essay_writer.paths import (
     sequence_write_error,
     target_error,
 )
-
-_CITE = re.compile(r"\(([A-Za-z][^,()]{0,40}),\s*((?:19|20)\d{2})\)")
 
 
 def _gate(number: int, name: str, passed: bool, reason: str) -> dict[str, Any]:
@@ -63,13 +62,36 @@ def _sections_text(pack: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def _surname(author: str) -> str:
-    return author.split(",")[0].strip().casefold()
+def _read_utf8(path: Path, blocked: list[str], unreadable: list[str]) -> str | None:
+    """Read one gathered text file. A non-UTF-8 file is named and not replaced.
+
+    UTF-8 and UTF-16 with a byte-order mark are accepted. Other encodings are
+    refused so a copied sentence cannot hide behind replacement characters.
+    A file that cannot be opened is named separately. That is not an encoding miss.
+    """
+    from essay_writer.textutil import decode_stored_text
+
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        unreadable.append(path.name)
+        return None
+    try:
+        return decode_stored_text(raw)
+    except UnicodeDecodeError:
+        blocked.append(path.name)
+        return None
 
 
-def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
+def _gathered_scan(essay_id: str, pack: dict[str, Any] | None) -> tuple[list[str], list[str], list[str]]:
+    """Gathered text, names that are not UTF-8, and names that could not be opened.
 
+    Unreadable names are not scanned. Replacement characters would let a copied
+    sentence through the plagiarism check.
+    """
     texts: list[str] = []
+    blocked: list[str] = []
+    unreadable: list[str] = []
     module = module_code(essay_id)
     brief = _brief_path(module)
     if (
@@ -77,9 +99,11 @@ def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
         and brief.suffix.lower() in {".md", ".txt"}
         and research_file(essay_id, str(brief)) is not None
     ):
-        texts.append(brief.read_text(encoding="utf-8", errors="replace"))
+        brief_text = _read_utf8(brief, blocked, unreadable)
+        if brief_text is not None:
+            texts.append(brief_text)
     if not isinstance(pack, dict):
-        return texts
+        return texts, blocked, unreadable
     for source in pack.get("sources") or []:
         if not isinstance(source, dict):
             continue
@@ -96,7 +120,9 @@ def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
             continue
         suffix = path.suffix.lower()
         if suffix in {".md", ".txt", ".csv", ".html", ".htm"}:
-            texts.append(path.read_text(encoding="utf-8", errors="replace"))
+            source_text = _read_utf8(path, blocked, unreadable)
+            if source_text is not None:
+                texts.append(source_text)
         elif suffix in {".docx", ".pdf"}:
             try:
                 from essay_writer.invent import read_gathered_text
@@ -104,7 +130,34 @@ def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
                 texts.append(read_gathered_text(path, essay_id))
             except (OSError, ValueError):
                 continue
+    return texts, blocked, unreadable
+
+
+def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
+    texts, _blocked, _unreadable = _gathered_scan(essay_id, pack)
     return texts
+
+
+def _exclude_in_text_citations(essay_id: str, rules: dict[str, Any]) -> bool:
+    """Whether in-text citations count. A pack band keeps its own min and max.
+
+    An explicit pack flag wins. Otherwise the mark scheme or brief flag is
+    copied, and only then the studied module default in daily use.
+    """
+    if "exclude_in_text_citations" in rules:
+        return bool(rules.get("exclude_in_text_citations"))
+    from essay_writer.assignment_gate import study_defaults_allowed
+    from essay_writer.specialists.writer import document_word_band
+    from essay_writer.textutil import BRIEF_WORD_RULES
+
+    stated = document_word_band(essay_id)
+    if isinstance(stated, dict) and "exclude_in_text_citations" in stated:
+        return bool(stated["exclude_in_text_citations"])
+    if study_defaults_allowed(essay_id):
+        studied = BRIEF_WORD_RULES.get(module_code(essay_id), {})
+        if isinstance(studied, dict) and "exclude_in_text_citations" in studied:
+            return bool(studied["exclude_in_text_citations"])
+    return False
 
 
 def _sentences(text: str) -> list[str]:
@@ -259,26 +312,25 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
     )
 
     from essay_writer.brief_checks import before_word, decorative_citations
+    from essay_writer.textutil import citation_records, count_words, in_text_forms, token_allowed
 
-    citations = _CITE.findall(text)
+    forms: set[str] = set()
+    for source in sources:
+        year = source.get("year")
+        if year is None or not str(year).strip():
+            continue
+        authors = source.get("authors") or source.get("author")
+        names = authors if isinstance(authors, list) else [authors]
+        for name in names:
+            if isinstance(name, str) and name.strip():
+                forms |= in_text_forms(name, str(year))
+    records = citation_records(text)
     parked = decorative_citations(text)
-    missing: list[str] = []
-    for surname, year in citations:
-        matched = False
-        for source in sources:
-            authors = source.get("authors") or source.get("author")
-            names = authors if isinstance(authors, list) else [authors]
-            years = str(source.get("year") or "")
-            if years != year:
-                continue
-            for name in names:
-                if isinstance(name, str) and _surname(name) == surname.casefold():
-                    matched = True
-        if not matched:
-            missing.append(f"({surname}, {year})")
-    cite_ok = not missing and not parked
-    if missing:
-        cite_reason = "These citations are not in the gathered sources: " + ", ".join(missing)
+    hard_missing = [record.token for record in records if record.hard and not token_allowed(record.token, forms)]
+    questionable = [record.token for record in records if not record.hard and not token_allowed(record.token, forms)]
+    cite_ok = not hard_missing and not parked
+    if hard_missing:
+        cite_reason = "These citations are not in the gathered sources: " + ", ".join(hard_missing)
     elif parked:
         cite_reason = (
             "A citation is parked on a general sentence. "
@@ -287,15 +339,21 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         )
     else:
         cite_reason = "In-text citations match a gathered author and year."
-    gates.append(_gate(7, "citations", cite_ok, cite_reason))
+        if questionable:
+            label = "A possible citation was" if len(questionable) == 1 else "Possible citations were"
+            cite_reason += f" {label} not confirmed: " + ", ".join(questionable) + "."
+    cite_gate = _gate(7, "citations", cite_ok, cite_reason)
+    cite_gate["questionable"] = questionable
+    gates.append(cite_gate)
 
     rules = pack_data.get("word_rules") if isinstance(pack_data.get("word_rules"), dict) else {}
     if not rules and module:
         from essay_writer.textutil import brief_file_word_rules
 
         rules = brief_file_word_rules(essay_id)
-    low, high = _band_edges(rules) if rules else (None, None)
-    count = len(text.split())
+    low, high = _band_edges(rules) if isinstance(rules, dict) and rules else (None, None)
+    exclude_cites = _exclude_in_text_citations(essay_id, rules) if isinstance(rules, dict) else False
+    count = count_words(text, exclude_citations=exclude_cites)
     if pack_data.get("word_count_acknowledged") is True and rules:
         band_ok, band_reason = True, "A person acknowledged the word count."
     elif low is None or high is None:
@@ -314,9 +372,6 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
     safe_default = None
     extra_blockers: list[dict[str, str]] = []
     if pack_sent:
-        from essay_writer.textutil import word_rules_for
-
-        rules_for_sections = word_rules_for(essay_id, pack_data)
         checked = before_word(
             essay_id,
             [
@@ -327,7 +382,7 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
             acknowledged_sections=pack_data.get("section_words_acknowledged") is True,
             acknowledged_contradiction=pack_data.get("contradiction_acknowledged") is True,
             acknowledged_simulation=pack_data.get("simulation_acknowledged") is True,
-            exclude_citations=bool(rules_for_sections.get("exclude_in_text_citations")),
+            exclude_citations=exclude_cites,
             gathered=_gathered_texts(essay_id, pack_data),
         )
         section_rows = checked["section_budgets"]
@@ -356,7 +411,8 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
                 rules,
                 sections=draft_sections,
                 high=high,
-                counter="split",
+                counter="words",
+                exclude_citations=exclude_cites,
             )
             if decision["waive_word"] and not decision["document_still_fails"]:
                 band_ok = True
@@ -366,7 +422,7 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
                 band_reason = decision["document_reason"]
     gates.append(_gate(8, "word-band", band_ok, band_reason))
 
-    if citations:
+    if records:
         refs_ok = all(isinstance(source.get("author") or source.get("authors"), (str, list)) and source.get("year") for source in sources)
         refs_reason = "Cited sources have an author and a year." if refs_ok else "A cited source is missing an author or a year."
     else:
@@ -395,14 +451,40 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         )
     )
 
-    matches = unquoted_exact(text, _gathered_texts(essay_id, pack_data))
+    gathered, blocked, unreadable = _gathered_scan(essay_id, pack_data)
+    matches = unquoted_exact(text, gathered)
+    if blocked or unreadable:
+        reason_parts: list[str] = []
+        if blocked:
+            reason_parts.append(
+                "A gathered file is not valid UTF-8 and was not scanned: "
+                + ", ".join(blocked)
+                + ". Re-save it as UTF-8 and run this check again."
+            )
+        if unreadable:
+            reason_parts.append(
+                "A gathered file could not be read: "
+                + ", ".join(unreadable)
+                + ". Allow file access and run this check again."
+            )
+        reason = " ".join(reason_parts)
+        if matches:
+            reason += " A gathered sentence appears in the body without quotation marks."
+        plagiarism_code = "gathered-encoding" if blocked else "gathered-unreadable"
+        plagiarism_passed = False
+    elif matches:
+        reason = "A gathered sentence appears in the body without quotation marks."
+        plagiarism_code = "unquoted-exact"
+        plagiarism_passed = False
+    else:
+        reason = "No unquoted exact sentence from a gathered file."
+        plagiarism_code = "unquoted-exact"
+        plagiarism_passed = True
     plagiarism = {
-        "code": "unquoted-exact",
-        "passed": not matches,
+        "code": plagiarism_code,
+        "passed": plagiarism_passed,
         "matches": matches,
-        "reason": "No unquoted exact sentence from a gathered file."
-        if not matches
-        else "A gathered sentence appears in the body without quotation marks.",
+        "reason": reason,
     }
     passed = all(item["passed"] for item in gates) and plagiarism["passed"] and not extra_blockers
     return {
@@ -417,6 +499,7 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         "safe_default": safe_default,
         "simulation_events": simulation,
         "before_word": extra_blockers,
+        "questionable_citations": questionable,
     }
 
 

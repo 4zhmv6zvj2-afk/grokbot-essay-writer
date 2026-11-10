@@ -200,6 +200,8 @@ The name is the same for both genres. Essay shape is in `docs/essay-writing-help
 - The draft is model-assisted; the student owns what they submit. Write as the student, not as the tool. Do not add a model self-reference or an apology for a model limit.
 - Do not start more than one paragraph with the same words. An opener such as In today's world, Throughout history, or This essay will discuss could sit on any assignment, so cut it and start on the claim. Repeating a key term is not the same thing.
 - Use a section lean, an example, or a surprise only when the student gave that detail after the plan was saved. A skip or silence leaves that slot empty. Do not invent that detail.
+- Keep the specific finding from the opened source. If that source is mixed, limited, or about one case, the sentence stays at that size. A tidy general claim is a smoothed fact. Drop importance the source does not state, including pivotal, a testament, a broader shift, and a closer that only says the point matters. Name the gathered source for a line such as experts say, observers note, or research shows, and keep that source's claim. A vague authority is not a citation. A source, quotation, page, or finding that the opened file does not support does not stay. Cut an empty not-X-but-Y contrast, a list of three used as decoration, and serves as when the sentence means is. A real contrast stays, including one the question asked for, and three real parts stay. These checks are about the claim and the source. They are not a detector score, and they are not a pass that rewrites the draft to sound like a person.
+- For a cautious claim, a named source, a comparison, or a criticism, the student may adapt a short stem from phrasebank.manchester.ac.uk. Do not copy phrase lists into the draft. Methods and results phrasing from that site is only for a research report when the brief is that genre. A short essay does not take a dissertation claim. A diary keeps the voice the brief names and is not rewritten into a third-person essay.
 
 ### 6. Re-read and make changes
 
@@ -229,6 +231,7 @@ Stage 6 is the person's first read and local edit of the draft. A changed Word u
 - Do not start more than one paragraph with the same words. An opener such as In today's world, Throughout history, or This essay will discuss could sit on any assignment, so cut it and start on the claim. Repeating a key term is not the same thing.
 - Use a section lean, an example, or a surprise only when the student gave that detail after the plan was saved. A skip or silence leaves that slot empty. Do not invent that detail.
 - When the student supplied an outline or base prose, the structure stays theirs. A cited point stays to one or two sentences, and an ask to shorten the cites is answered on this save, not left for the reader to trim.
+- At the start of the first read, show the short read list once, then stop. The student edits. Do not rewrite the draft for them. Do not add a gate, a score, or a blocker.
 
 ### 7. Ask for feedback
 
@@ -281,6 +284,8 @@ Read the helper the brief picked. An essay conclusion adds nothing new, and each
 - The draft is model-assisted; the student owns what they submit. Write as the student, not as the tool. Do not add a model self-reference or an apology for a model limit.
 - Do not start more than one paragraph with the same words. An opener such as In today's world, Throughout history, or This essay will discuss could sit on any assignment, so cut it and start on the claim. Repeating a key term is not the same thing.
 - Use a section lean, an example, or a surprise only when the student gave that detail after the plan was saved. A skip or silence leaves that slot empty. Do not invent that detail.
+- Keep the specific finding from the opened source. If that source is mixed, limited, or about one case, the sentence stays at that size. A tidy general claim is a smoothed fact. Drop importance the source does not state, including pivotal, a testament, a broader shift, and a closer that only says the point matters. Name the gathered source for a line such as experts say, observers note, or research shows, and keep that source's claim. A vague authority is not a citation. A source, quotation, page, or finding that the opened file does not support does not stay. Cut an empty not-X-but-Y contrast, a list of three used as decoration, and serves as when the sentence means is. A real contrast stays, including one the question asked for, and three real parts stay. These checks are about the claim and the source. They are not a detector score, and they are not a pass that rewrites the draft to sound like a person.
+- On the clarity and tone pass, apply the check that keeps the specific finding and drops empty importance, then read each changed sentence against the opened Word file and the opened source. A true sentence must not become a false one. A real contrast stays. A hedge the writer meant stays.
 
 ### 9. Complete your references and citations
 
@@ -377,6 +382,8 @@ The writing shows that you understand the topic, can take a position, can argue 
 - Use a connective only when the relation is true. More connectives are not more coherence.
 - If a chatbot produced a paragraph, rewrite the ideas in the writer's sentences. Do not polish the model's sentences in place. Write for the brief and the handbook. No planted errors, no forced slang, no forced first person, and no synonym spinning.
 - Tie sentences by repeating the key words, or by “this” plus a summary noun. Do not chain “it” and “them” where the reader has to guess the referent.
+
+Keep the specific finding from the opened source, and keep a mixed, limited, or single-case finding at that size. Drop importance the source does not state. Name the gathered source for a line such as experts say, observers note, or research shows. A source, quotation, page, or finding the opened file does not support does not stay. Cut an empty contrast, a decorative list of three, and serves as when the sentence means is. A real contrast stays. These checks are about the claim and the source. They are not a detector score, and they are not a pass that rewrites the draft to sound like a person. For a cautious claim, a named source, a comparison, or a criticism, the student may adapt a short stem from https://www.phrasebank.manchester.ac.uk/. Do not copy phrase lists into this note or into the draft. Methods and results phrasing from that site is only for a research report when the brief is that genre. A short essay does not take a dissertation claim. A diary keeps the voice the brief names.
 
 A report-only voice line is in `docs/report-writing-helpers.md`. That voice is the Business School *Writing a report* PDF: no I, we, or you; an imagined client; clear and direct; respectful and authoritative. It is not taken from the engineering pages.
 

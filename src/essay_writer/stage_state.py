@@ -16,6 +16,8 @@ import json
 import os
 import threading
 from contextlib import contextmanager
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, TypedDict, cast
 
 from essay_writer.confirm import (
@@ -102,15 +104,86 @@ def _apply_commit(root, record: dict[str, object]) -> None:
         journal.unlink()
 
 
-def _read_commit(root) -> dict[str, object] | None:
+def _quarantine_notice(name: str) -> str:
+    return (
+        "The last confirm record was damaged and was not applied. "
+        f"It was set aside as {name}, and this save continued."
+    )
+
+
+_QUARANTINE_NOTICE: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "essay_stage_quarantine_notice",
+    default=None,
+)
+
+
+class DamagedStageCommit(Exception):
+    """A stage journal exists and cannot be applied."""
+
+
+def _commit_record_ok(record: object) -> bool:
+    """True when the journal can be applied without wiping the pointer."""
+    if not isinstance(record, dict):
+        return False
+    pointer = record.get("pointer")
+    if not isinstance(pointer, dict) or pointer.get("current") not in STAGE_ORDER:
+        return False
+    saved = pointer.get("saved", [])
+    if not isinstance(saved, list) or any(item not in STAGE_ORDER for item in saved):
+        return False
+    note_rel = record.get("note")
+    note_text = record.get("note_text")
+    if note_rel is None and note_text is None:
+        return True
+    return isinstance(note_rel, str) and note_rel in _STAGE_NOTE_RELS and isinstance(note_text, str)
+
+
+def _journal_damaged(root) -> bool:
+    """True when the journal is present but is not a commit record.
+
+    A missing file is not damage. Damage is not applied.
+    """
+    journal = root / STAGE_COMMIT
+    if not journal.is_file():
+        return False
+    try:
+        record = json.loads(journal.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return True
+    return not _commit_record_ok(record)
+
+
+def _quarantine_journal(root) -> Path | None:
+    """Rename a damaged journal aside so the next save can proceed.
+
+    A failed rename raises DamagedStageCommit and leaves the file in place.
+    The message names the journal and how to move it.
+    """
     journal = root / STAGE_COMMIT
     if not journal.is_file():
         return None
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    dest = journal.with_name(f".stage.commit.damaged-{stamp}")
+    suffix = 1
+    while dest.exists():
+        dest = journal.with_name(f".stage.commit.damaged-{stamp}-{suffix}")
+        suffix += 1
     try:
-        record = json.loads(journal.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        journal.rename(dest)
+    except OSError as exc:
+        raise DamagedStageCommit(
+            "The last confirm record was damaged and could not be set aside "
+            f"({journal}). Move that file out of the tracking folder, then save again."
+        ) from exc
+    return dest
+
+
+def _read_commit(root) -> dict[str, object] | None:
+    journal = root / STAGE_COMMIT
+    if not journal.is_file() or _journal_damaged(root):
         return None
-    if not isinstance(record, dict) or not isinstance(record.get("pointer"), dict):
+    record = json.loads(journal.read_text(encoding="utf-8"))
+    if not _commit_record_ok(record):
         return None
     return record
 
@@ -201,7 +274,10 @@ def init_cloned_sequence_pointer(folder) -> None:
     again from the first card. A journal copied with the tree is finished
     first, then replaced, so the child is not a torn pair.
     """
-    _replay_commit(folder)
+    if _journal_damaged(folder):
+        _quarantine_journal(folder)
+    else:
+        _replay_commit(folder)
     path = folder / POINTER_FILE
     if path.is_file():
         _atomic(path, _pointer_text(cast(Pointer, blank_pointer())))
@@ -517,6 +593,10 @@ def _commit_pointer(
     between the live files is finished from that journal on the next lock.
     """
     with _pointer_lock(essay_id):
+        if _journal_damaged(work_dir(essay_id)):
+            dest = _quarantine_journal(work_dir(essay_id))
+            if dest is not None:
+                _QUARANTINE_NOTICE.set(_quarantine_notice(dest.name))
         fresh = load_pointer(essay_id)
         if _revision(fresh) != _revision(base):
             return None
@@ -1041,22 +1121,6 @@ def _replay_confirm_card(
         "advanced": False,
         "wrote": False,
     }
-
-
-def _card_records_no_change(record: dict[str, object] | None) -> bool:
-    """True when this waiting card already recorded a no-change answer."""
-    if not isinstance(record, dict):
-        return False
-    payload = record.get("payload")
-    if not isinstance(payload, dict):
-        return False
-    from essay_writer.stage7 import answers_mean_no_change
-
-    for key in ("answers", "look"):
-        value = payload.get(key)
-        if isinstance(value, str) and answers_mean_no_change(value):
-            return True
-    return False
 
 
 def _stage7_skip_reply(

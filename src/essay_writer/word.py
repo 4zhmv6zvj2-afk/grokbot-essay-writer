@@ -543,6 +543,9 @@ def essay_pack_render_word(
         gate_report = evaluate_gates(essay_id, pack)
         body["gates"] = {"passed": gate_report["passed"], "gates": gate_report["gates"]}
         body["plagiarism"] = gate_report["plagiarism"]
+        flagged = gate_report.get("questionable_citations")
+        if isinstance(flagged, list) and flagged:
+            body["questionable_citations"] = flagged
         if stage == "9":
             from essay_writer.specialists.eqr import submit_pass_unlocked
 
@@ -553,7 +556,8 @@ def essay_pack_render_word(
             body["eqr"] = eqr_verdict(essay_id, stage) or "missing"
         if not gate_report["plagiarism"]["passed"]:
             body["ok"] = False
-            body["refused"] = "unquoted-exact"
+            code = gate_report["plagiarism"].get("code")
+            body["refused"] = code if isinstance(code, str) and code.strip() else "unquoted-exact"
             reason = gate_report["plagiarism"]["reason"]
             body["reason"] = say(reason) if isinstance(reason, str) else reason
             return body

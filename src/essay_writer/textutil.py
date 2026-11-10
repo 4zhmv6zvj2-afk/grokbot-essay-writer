@@ -9,6 +9,7 @@ and an italic journal or report title.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from essay_writer.paths import BRIEF_NAMES, essay_dir, module_code
@@ -75,6 +76,18 @@ _CITATIONS_EXCLUDE = re.compile(
 
 def _count_token(token: str) -> int:
     return int(token.replace(",", ""))
+
+
+def decode_stored_text(raw: bytes) -> str:
+    """Decode a text file. UTF-8 and UTF-16 are accepted when a BOM marks them.
+
+    Other encodings raise UnicodeDecodeError. The caller says to re-save as UTF-8.
+    """
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw.decode("utf-8-sig")
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return raw.decode("utf-16")
+    return raw.decode("utf-8")
 
 
 def module_brief_text(essay_id: str) -> str:
@@ -318,10 +331,171 @@ def word_rules_for(essay_id: str, pack: dict[str, Any]) -> dict[str, Any]:
 
 YEAR = r"\d{4}[a-z]?"
 PAREN = re.compile(r"\(([^)]*\d{4}[^)]*)\)")
-# One narrative citation, including "A, B and C (2024)". Leading Both / In are not names.
-# A sentence-initial transition (Similarly, and the same shape) is not an author.
-NARRATIVE = re.compile(
-    rf"\b([A-Z][A-Za-z'’\-]*(?:\s*,\s*[A-Z][A-Za-z'’\-]*)*(?:\s+[A-Z][A-Za-z'’\-]*)*(?:\s+and\s+[A-Z][A-Za-z'’\-]*)?)\s+\(({YEAR})\)"
+# A narrative citation is a person-shaped name, then optional "et al.", then (year).
+# The name may include Unicode letters, initials, a title, a given name, or an Oxford list.
+_NAME_TOKEN = re.compile(r"[^\W\d_]+(?:['’\-][^\W\d_]+)*\.?", re.UNICODE)
+_NARRATIVE_YEAR = re.compile(
+    rf"(?P<lead>\s+)(?P<etal>et\s+al\.?,?\s+)?\((?P<year>{YEAR})\)",
+    re.IGNORECASE,
+)
+# Not personal names. Any one of these words keeps the whole span out of the
+# citation gate. A personal name still matches, including a shouted surname of
+# five or more letters. All-caps labels of two to four letters stay acronyms.
+_NON_PERSON = frozenset(
+    {
+        # Document parts, heading numbers, periods, and public events.
+        "act",
+        "antiquity",
+        "apartheid",
+        "appendix",
+        "article",
+        "baroque",
+        "brexit",
+        "census",
+        "chapter",
+        "covid",
+        "crisis",
+        "depression",
+        "eight",
+        "empire",
+        "enlightenment",
+        "famine",
+        "figure",
+        "first",
+        "five",
+        "four",
+        "fourth",
+        "great",
+        "holocaust",
+        "medieval",
+        "modernism",
+        "nine",
+        "one",
+        "page",
+        "paragraph",
+        "part",
+        "plague",
+        "postmodernism",
+        "reformation",
+        "referendum",
+        "renaissance",
+        "republic",
+        "restoration",
+        "revolution",
+        "romanticism",
+        "second",
+        "section",
+        "seven",
+        "six",
+        "table",
+        "ten",
+        "the",
+        "third",
+        "three",
+        "treaty",
+        "two",
+        "unesco",
+        "unicef",
+        "volume",
+        "war",
+        "watergate",
+        "world",
+        # Head noun of a document, organisation, or event: "Smith Report", "Marshall Plan".
+        "accord",
+        "agency",
+        "agreement",
+        "authority",
+        "bank",
+        "commission",
+        "committee",
+        "conference",
+        "council",
+        "death",
+        "department",
+        "epidemic",
+        "flu",
+        "fund",
+        "institute",
+        "kingdom",
+        "ministry",
+        "nations",
+        "organisation",
+        "organization",
+        "outbreak",
+        "pact",
+        "pandemic",
+        "paper",
+        "plan",
+        "program",
+        "programme",
+        "report",
+        "review",
+        "scheme",
+        "study",
+        "summit",
+        "survey",
+        "union",
+        "university",
+        # Months and weekdays. A surname that is also a month is not a citation.
+        "april",
+        "august",
+        "december",
+        "february",
+        "friday",
+        "january",
+        "july",
+        "june",
+        "march",
+        "may",
+        "monday",
+        "november",
+        "october",
+        "saturday",
+        "september",
+        "sunday",
+        "thursday",
+        "tuesday",
+        "wednesday",
+        # Organisation initials longer than four letters, so they are not shouted surnames.
+        "apec",
+        "asean",
+        "brics",
+        "nafta",
+        # A place essays date. "Woods (2020)" stays a surname; "Bretton Woods" does not.
+        "bretton",
+        "manchester",
+    }
+)
+_TITLES = frozenset(
+    {
+        "dame",
+        "dr",
+        "miss",
+        "mr",
+        "mrs",
+        "ms",
+        "prof",
+        "professor",
+        "sir",
+        "st",
+    }
+)
+_PARTICLES = frozenset(
+    {
+        "bin",
+        "da",
+        "de",
+        "del",
+        "della",
+        "den",
+        "der",
+        "di",
+        "du",
+        "la",
+        "le",
+        "van",
+        "von",
+    }
 )
 _LEADING_NAME = frozenset({"both", "in"})
 # Discourse words that open a sentence before the author. Not surnames.
@@ -379,7 +553,8 @@ _LEADING_TRANSITION = frozenset(
     }
 )
 WORD = re.compile(r"[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*")
-ET_AL = re.compile(r"\s+et al\.", re.IGNORECASE)
+# Drop "et al." and leave the comma that separates the name from the year.
+ET_AL = re.compile(r"\s+et\s+al\.?", re.IGNORECASE)
 
 
 def norm_space(value: str) -> str:
@@ -403,8 +578,158 @@ def _without_leading_transition(label: str) -> str:
     return ", ".join(piece for piece in pieces if piece)
 
 
-def citation_tokens(text: str) -> list[str]:
-    found: list[str] = []
+def _name_gap(gap: str) -> bool:
+    """Whitespace, commas, and & may sit between name words. A line break may not."""
+    return "\n" not in gap and re.fullmatch(r"[\s,&]*", gap) is not None
+
+
+def _name_word(token: str) -> bool:
+    """A capitalised name word, initial, or shouted surname. Digits are not names."""
+    bare = token[:-1] if token.endswith(".") else token
+    if not bare or not bare[0].isupper():
+        return False
+    return all(ch.isalpha() or ch in "'’-" for ch in bare)
+
+
+def _is_initial(token: str) -> bool:
+    bare = token.rstrip(".")
+    return len(bare) == 1 and bare.isalpha() and bare[0].isupper()
+
+
+def _is_acronym(token: str) -> bool:
+    """Short all-caps labels such as GDP. A shouted surname is longer."""
+    bare = token.rstrip(".")
+    return bare.isupper() and bare.isalpha() and 1 < len(bare) <= 4
+
+
+def _is_roman(token: str) -> bool:
+    bare = token.rstrip(".")
+    return len(bare) > 1 and re.fullmatch(r"[IVXLCDM]+", bare) is not None
+
+
+def _split_people(name: str) -> list[list[str]]:
+    chunks = re.split(r"\s*(?:,|&|\band\b)\s*", name.strip(), flags=re.IGNORECASE)
+    people: list[list[str]] = []
+    for chunk in chunks:
+        words = [word for word in chunk.split() if word]
+        if words:
+            people.append(words)
+    return people
+
+
+def _content_words(words: list[str]) -> list[str]:
+    """Drop titles. Keep a capitalised particle when it is the whole name."""
+    kept = [word for word in words if word.rstrip(".").casefold() not in _TITLES]
+    others = [word for word in kept if word.casefold() not in _PARTICLES]
+    return others or kept
+
+
+def _word_is_person(token: str) -> bool:
+    if not _name_word(token):
+        return False
+    bare = token.rstrip(".")
+    if bare.casefold() in _NON_PERSON or _is_roman(bare) or _is_acronym(bare):
+        return False
+    return True
+
+
+def _person_shaped(name: str) -> bool:
+    people = _split_people(name)
+    if not people:
+        return False
+    for words in people:
+        content = _content_words(words)
+        if not content or not all(_word_is_person(word) for word in content):
+            return False
+    return True
+
+
+def _take_trailing_name(text: str, end: int) -> tuple[int, str]:
+    """The name phrase that ends at end, and where it starts. A sentence break stops the walk."""
+    words = list(_NAME_TOKEN.finditer(text[:end]))
+    if not words:
+        return end, ""
+    chosen: list[re.Match[str]] = []
+    for index in range(len(words) - 1, -1, -1):
+        word = words[index]
+        gap_end = chosen[-1].start() if chosen else end
+        if not _name_gap(text[word.end() : gap_end]):
+            break
+        token = word.group(0)
+        if token.casefold() == "and":
+            if not chosen:
+                break
+        elif token.casefold() in _PARTICLES and chosen:
+            pass
+        elif not _name_word(token):
+            break
+        chosen.append(word)
+    chosen.reverse()
+    while chosen and chosen[0].group(0).casefold() == "and":
+        chosen = chosen[1:]
+    if not chosen:
+        return end, ""
+    return chosen[0].start(), text[chosen[0].start() : chosen[-1].end()]
+
+
+def _narrative_spans(text: str) -> list[tuple[int, int, str, str]]:
+    """Person-shaped narrative citations as (start, end, surface name, year)."""
+    spans: list[tuple[int, int, str, str]] = []
+    for match in _NARRATIVE_YEAR.finditer(text):
+        start, raw = _take_trailing_name(text, match.start())
+        name = _narrative_name(raw)
+        if not name or not _person_shaped(name):
+            continue
+        if name != raw:
+            found = raw.casefold().rfind(name.casefold())
+            if found >= 0:
+                start += found
+        if match.group("etal"):
+            name = f"{name} et al."
+        spans.append((start, match.end(), name, match.group("year")))
+    return spans
+
+
+@dataclass(frozen=True)
+class CitationRecord:
+    """One in-text citation. `hard` is an unambiguous shape; a lone name is not."""
+
+    token: str
+    hard: bool
+    kind: str
+
+
+def _narrative_hard_cue(name: str) -> bool:
+    """True for et al., a title, an initial, a joint list, a multi-word name, or a shouted surname.
+
+    A single title-case word is not a hard cue. A non-person label never reaches
+    this check, because that span is not a citation record.
+    """
+    if re.search(r"\bet\s+al\.?", name, flags=re.IGNORECASE):
+        return True
+    people = _split_people(name)
+    if len(people) > 1:
+        return True
+    if not people:
+        return False
+    words = people[0]
+    if any(word.rstrip(".").casefold() in _TITLES for word in words):
+        return True
+    if any(_is_initial(word) for word in words):
+        return True
+    content = _content_words(words)
+    if len(content) >= 2:
+        return True
+    if len(content) == 1:
+        bare = content[0].rstrip(".")
+        if bare.isupper() and bare.isalpha() and len(bare) >= 5:
+            return True
+    return False
+
+
+def citation_records(text: str) -> list[CitationRecord]:
+    """Parenthetical citations are hard. Narrative citations are hard only with a person cue."""
+    found: list[CitationRecord] = []
     for match in PAREN.finditer(text):
         inner = norm_space(match.group(1))
         if re.fullmatch(YEAR, inner):
@@ -412,13 +737,16 @@ def citation_tokens(text: str) -> list[str]:
         for part in match.group(1).split(";"):
             part = norm_space(part)
             if re.fullmatch(rf".+,\s*{YEAR}", part):
-                found.append(_without_leading_transition(part).casefold())
-    for match in NARRATIVE.finditer(text):
-        name = _narrative_name(norm_space(match.group(1)))
-        if not name:
-            continue
-        found.append(norm_space(f"{name}, {match.group(2)}").casefold())
+                token = _without_leading_transition(part).casefold()
+                found.append(CitationRecord(token, True, "parenthetical"))
+    for _start, _end, name, year in _narrative_spans(text):
+        token = norm_space(f"{name}, {year}").casefold()
+        found.append(CitationRecord(token, _narrative_hard_cue(name), "narrative"))
     return found
+
+
+def citation_tokens(text: str) -> list[str]:
+    return [record.token for record in citation_records(text)]
 
 
 def in_text_forms(author: str, year: str) -> set[str]:
@@ -663,16 +991,64 @@ def prepare_word_citations(
     return withhold_body_cites(essay_id, completed, aligned)
 
 
+def _person_form_keys(words: list[str]) -> list[str]:
+    """Forms one person may match: the written name, and the surname when it differs."""
+    kept = _content_words(words)
+    while len(kept) > 1 and _is_initial(kept[0]):
+        kept = kept[1:]
+    if not kept:
+        return []
+    full = " ".join(word.rstrip(".").casefold() for word in kept)
+    last = kept[-1].rstrip(".").casefold()
+    keys = [full]
+    if last != full:
+        keys.append(last)
+    return keys
+
+
 def token_allowed(token: str, forms: set[str]) -> bool:
     if token in forms:
         return True
     stripped = norm_space(ET_AL.sub("", token)).casefold()
-    return stripped in forms
+    if stripped in forms:
+        return True
+    match = re.fullmatch(rf"(.+),\s*({YEAR})", stripped)
+    if match is None:
+        return False
+    people = _split_people(match.group(1))
+    if not people:
+        return False
+    year = match.group(2)
+
+    def person_ok(words: list[str]) -> bool:
+        return any(f"{key}, {year}" in forms for key in _person_form_keys(words))
+
+    return all(person_ok(words) for words in people)
+
+
+def without_narrative_citations(text: str) -> str:
+    """Replace person-shaped narrative citations with a space. Other (year) labels stay."""
+    spans = _narrative_spans(text)
+    if not spans:
+        return text
+    pieces: list[str] = []
+    cursor = 0
+    for start, end, _name, _year in spans:
+        pieces.append(text[cursor:start])
+        pieces.append(" ")
+        cursor = end
+    pieces.append(text[cursor:])
+    return "".join(pieces)
+
+
+def _strip_counted_citations(text: str) -> str:
+    """Drop citation spans so a narrative cite and a parenthetical cite count alike."""
+    return PAREN.sub(" ", without_narrative_citations(text))
 
 
 def count_words(text: str, *, exclude_citations: bool) -> int:
     if exclude_citations:
-        text = PAREN.sub(" ", text)
+        text = _strip_counted_citations(text)
     return len(WORD.findall(text))
 
 
