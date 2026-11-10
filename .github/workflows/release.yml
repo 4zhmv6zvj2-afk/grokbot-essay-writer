@@ -1,18 +1,19 @@
 name: Release
 
+# Immutable releases reject asset uploads after publication. Tag the commit,
+# create a draft release for that tag, dispatch this workflow with the tag
+# input, then publish the draft after the assets are signed and attested.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag of a published release to build and attach assets to (for example v0.2.1)"
+        description: "Existing tag of a draft release to build and attach assets to (for example v0.2.1)"
         required: true
         type: string
 
 # Read-only by default (Token-Permissions). The release job below opts in to
-# the three write permissions it needs, and only for release published /
-# workflow_dispatch events, never for pull requests.
+# the three write permissions it needs, and only for workflow_dispatch, never
+# for pull requests.
 permissions:
   contents: read
 
@@ -103,6 +104,15 @@ jobs:
           fi
           echo "Tag ${TAG} matches pyproject.toml version ${pyproject_version}."
 
+      - name: Verify the release is a draft
+        run: |
+          set -euo pipefail
+          is_draft="$(gh release view "${TAG}" --json isDraft --jq '.isDraft')"
+          if [ "${is_draft}" != "true" ]; then
+            echo "::error::Release ${TAG} must be a draft before assets are built; publish it only after this workflow succeeds."
+            exit 1
+          fi
+
       - name: Build twice and require identical hashes
         run: python tools/reproducible_build.py --outdir dist
 
@@ -183,3 +193,7 @@ jobs:
           set -euo pipefail
           cp "${{ steps.provenance.outputs.bundle-path }}" dist/provenance.intoto.jsonl
           gh release upload "${TAG}" dist/provenance.intoto.jsonl --clobber
+
+      - name: Assets are attached; publish the draft
+        run: |
+          echo "::notice::Assets are uploaded, signed, and attested. Publish draft release ${TAG} to make it immutable."
