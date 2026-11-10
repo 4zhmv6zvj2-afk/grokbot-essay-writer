@@ -74,6 +74,15 @@ Output is Word only (`.docx`); referencing follows Harvard
 ([docs/referencing-harvard.md](docs/referencing-harvard.md)). The full stage
 guide is [docs/workflow.md](docs/workflow.md).
 
+A parenthetical citation, or a narrative citation with a clear person cue
+(`et al.`, a title, an initial, a joint list, a multi-word personal name, or a
+shouted surname of five or more letters), must match a gathered source or the
+Word file is not written. A lone ordinary name plus a year is a possible
+citation: it is named on the result and does not block Word. A label on the
+non-person list, such as a month, a place, or `Smith Report`, is not a citation.
+`Page (2020)` and `Theresa May (2019)` stay in that silent list because `page`
+and `May` are already label words.
+
 ## Setting it up (operators)
 
 Setting up the Grok Bot on a computer is an operator task. The full procedure is

@@ -9,6 +9,7 @@ and an italic journal or report title.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from essay_writer.paths import BRIEF_NAMES, essay_dir, module_code
@@ -689,8 +690,46 @@ def _narrative_spans(text: str) -> list[tuple[int, int, str, str]]:
     return spans
 
 
-def citation_tokens(text: str) -> list[str]:
-    found: list[str] = []
+@dataclass(frozen=True)
+class CitationRecord:
+    """One in-text citation. `hard` is an unambiguous shape; a lone name is not."""
+
+    token: str
+    hard: bool
+    kind: str
+
+
+def _narrative_hard_cue(name: str) -> bool:
+    """True for et al., a title, an initial, a joint list, a multi-word name, or a shouted surname.
+
+    A single title-case word is not a hard cue. A non-person label never reaches
+    this check, because that span is not a citation record.
+    """
+    if re.search(r"\bet\s+al\.?", name, flags=re.IGNORECASE):
+        return True
+    people = _split_people(name)
+    if len(people) > 1:
+        return True
+    if not people:
+        return False
+    words = people[0]
+    if any(word.rstrip(".").casefold() in _TITLES for word in words):
+        return True
+    if any(_is_initial(word) for word in words):
+        return True
+    content = _content_words(words)
+    if len(content) >= 2:
+        return True
+    if len(content) == 1:
+        bare = content[0].rstrip(".")
+        if bare.isupper() and bare.isalpha() and len(bare) >= 5:
+            return True
+    return False
+
+
+def citation_records(text: str) -> list[CitationRecord]:
+    """Parenthetical citations are hard. Narrative citations are hard only with a person cue."""
+    found: list[CitationRecord] = []
     for match in PAREN.finditer(text):
         inner = norm_space(match.group(1))
         if re.fullmatch(YEAR, inner):
@@ -698,10 +737,16 @@ def citation_tokens(text: str) -> list[str]:
         for part in match.group(1).split(";"):
             part = norm_space(part)
             if re.fullmatch(rf".+,\s*{YEAR}", part):
-                found.append(_without_leading_transition(part).casefold())
+                token = _without_leading_transition(part).casefold()
+                found.append(CitationRecord(token, True, "parenthetical"))
     for _start, _end, name, year in _narrative_spans(text):
-        found.append(norm_space(f"{name}, {year}").casefold())
+        token = norm_space(f"{name}, {year}").casefold()
+        found.append(CitationRecord(token, _narrative_hard_cue(name), "narrative"))
     return found
+
+
+def citation_tokens(text: str) -> list[str]:
+    return [record.token for record in citation_records(text)]
 
 
 def in_text_forms(author: str, year: str) -> set[str]:

@@ -150,11 +150,13 @@ def test_narrative_citations_cover_names_and_skip_periods(workspace):
     assert "smith, jones, and brown, 2020" in joint_reason
     for body in (
         "PATEL (2019) names a corridor that was not gathered.",
-        "Pérez (2019) names a corridor that was not gathered.",
         "John Smith (2019) names a corridor that was not gathered.",
     ):
         report = essay_gates(seq, pack, body=body)
         assert _gate(report, "citations")["passed"] is False, body
+    possible = essay_gates(seq, pack, body="Pérez (2019) names a corridor that was not gathered.")
+    assert _gate(possible, "citations")["passed"] is True
+    assert "pérez, 2019" in _gate(possible, "citations")["questionable"]
 
 
 def test_common_labels_with_a_year_are_not_citations(workspace):
@@ -190,7 +192,7 @@ def test_common_labels_with_a_year_are_not_citations(workspace):
 
 
 def test_narrative_and_parenthetical_cites_use_the_gathered_source(workspace):
-    """Smith (2020) is a citation. A name the pack did not gather still fails."""
+    """Smith (2020) is a citation. A lone ungathered name is flagged, not a hard fail."""
     seq = open_sequence()
     pack = {
         "essay_id": seq,
@@ -204,7 +206,8 @@ def test_narrative_and_parenthetical_cites_use_the_gathered_source(workspace):
     parenthetical = essay_gates(seq, pack, body="One corridor is named (Smith, 2020).")
     assert _gate(parenthetical, "citations")["passed"] is True
     missing = essay_gates(seq, pack, body="Patel (2019) reports one corridor.")
-    assert _gate(missing, "citations")["passed"] is False
+    assert _gate(missing, "citations")["passed"] is True
+    assert _gate(missing, "citations")["questionable"] == ["patel, 2019"]
     assert "patel, 2019" in _gate(missing, "citations")["reason"]
     bare = {
         "essay_id": seq,

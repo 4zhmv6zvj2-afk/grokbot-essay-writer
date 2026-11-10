@@ -312,7 +312,7 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
     )
 
     from essay_writer.brief_checks import before_word, decorative_citations
-    from essay_writer.textutil import citation_tokens, count_words, in_text_forms, token_allowed
+    from essay_writer.textutil import citation_records, count_words, in_text_forms, token_allowed
 
     forms: set[str] = set()
     for source in sources:
@@ -324,12 +324,13 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         for name in names:
             if isinstance(name, str) and name.strip():
                 forms |= in_text_forms(name, str(year))
-    citations = citation_tokens(text)
+    records = citation_records(text)
     parked = decorative_citations(text)
-    missing = [token for token in citations if not token_allowed(token, forms)]
-    cite_ok = not missing and not parked
-    if missing:
-        cite_reason = "These citations are not in the gathered sources: " + ", ".join(missing)
+    hard_missing = [record.token for record in records if record.hard and not token_allowed(record.token, forms)]
+    questionable = [record.token for record in records if not record.hard and not token_allowed(record.token, forms)]
+    cite_ok = not hard_missing and not parked
+    if hard_missing:
+        cite_reason = "These citations are not in the gathered sources: " + ", ".join(hard_missing)
     elif parked:
         cite_reason = (
             "A citation is parked on a general sentence. "
@@ -338,7 +339,12 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         )
     else:
         cite_reason = "In-text citations match a gathered author and year."
-    gates.append(_gate(7, "citations", cite_ok, cite_reason))
+        if questionable:
+            label = "A possible citation was" if len(questionable) == 1 else "Possible citations were"
+            cite_reason += f" {label} not confirmed: " + ", ".join(questionable) + "."
+    cite_gate = _gate(7, "citations", cite_ok, cite_reason)
+    cite_gate["questionable"] = questionable
+    gates.append(cite_gate)
 
     rules = pack_data.get("word_rules") if isinstance(pack_data.get("word_rules"), dict) else {}
     if not rules and module:
@@ -416,7 +422,7 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
                 band_reason = decision["document_reason"]
     gates.append(_gate(8, "word-band", band_ok, band_reason))
 
-    if citations:
+    if records:
         refs_ok = all(isinstance(source.get("author") or source.get("authors"), (str, list)) and source.get("year") for source in sources)
         refs_reason = "Cited sources have an author and a year." if refs_ok else "A cited source is missing an author or a year."
     else:
@@ -493,6 +499,7 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         "safe_default": safe_default,
         "simulation_events": simulation,
         "before_word": extra_blockers,
+        "questionable_citations": questionable,
     }
 
 
