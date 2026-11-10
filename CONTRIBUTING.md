@@ -80,12 +80,16 @@ Open an issue with:
 
 ## Releases
 
-Releases are cut by the maintainer. A release is a tag `vX.Y.Z` on a commit in
-this repository, with `pyproject.toml`, `src/essay_writer/__init__.py`, and
-`CHANGELOG.md` carrying the same version. The release workflow rebuilds from the
-tag with pinned build tooling and `SOURCE_DATE_EPOCH`, builds twice and requires
-identical hashes, runs the test suite from the source distribution, then signs
-and attests the artifacts before uploading them.
+Releases are cut by the maintainer in two passes. A release is a tag `vX.Y.Z`
+on a commit in this repository, with `pyproject.toml`,
+`src/essay_writer/__init__.py`, and `CHANGELOG.md` carrying the same version.
+First tag the commit and create a **draft** GitHub release for that tag. Then
+dispatch the Release workflow with the tag input. It rebuilds from the tag with
+pinned build tooling and `SOURCE_DATE_EPOCH`, builds twice and requires
+identical hashes, runs the test suite from the source distribution, and signs
+and attests the artifacts while the release is still a draft. Publish the draft
+only after the workflow succeeds. Never publish first: immutable releases reject
+asset uploads after publication.
 
 This project is distributed as source for Essay Bot in Grok Bot. There is no
 PyPI release; install from a clone with `python -m pip install -e .`.

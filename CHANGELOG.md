@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.1 — 2026-11-11
+## 0.6.2 — 2026-11-11
 
 Writing-quality, citation-policy, and recovery round.
 
@@ -38,6 +38,9 @@ Recovery and setup:
   UTF-8.
 
 Other fixes:
+- The Release workflow is dispatched against a draft release and attaches
+  assets, signatures, and provenance before publication, so the repository's
+  immutable-release setting does not reject them.
 - The word band and section budget share one citation-count flag. An explicit
   pack flag wins, then the mark scheme, the brief, and the studied default; the
   pack minimum and maximum stay as sent.
