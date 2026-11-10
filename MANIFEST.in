@@ -6,16 +6,22 @@
 # only pick up tests/test*.py, which is why this file is explicit about the
 # support modules, fixtures, snapshots and root files.
 
-# Project metadata and documentation.
+# Project metadata and documentation. HISTORY.md is linked from README.md and
+# CONTRIBUTING.md, so it must be inside the sdist or those links break there.
 include LICENSE
 include README.md
 include ARCHITECTURE.md
 include CHANGELOG.md
 include CONTRIBUTING.md
+include HISTORY.md
 include SECURITY.md
 include pyproject.toml
 include uv.lock
 include requirements-*.txt
+# requirements-runtime.txt records the uv command that compiles it from this
+# input file; a source user recompiling the runtime set needs it.
+include requirements-runtime.in
+include .pre-commit-config.yaml
 
 # First-run bootstrap and the prompts the suite reads from the repo root.
 include FIRST-RUN.txt
@@ -33,6 +39,14 @@ include uploads/README.md
 include .python-version
 include .github/workflows/ci.yml
 include .github/workflows/release.yml
+
+# GitHub configuration the checkout carries: dependency updates, the bug report
+# template, and the Scorecard supply-chain workflow. A source distribution is a
+# checkout of the project, so these ship with it rather than being silently
+# dropped.
+include .github/dependabot.yml
+include .github/ISSUE_TEMPLATE/bug_report.md
+include .github/workflows/scorecard.yml
 
 # Tests: the suite and everything it imports or reads.
 graft tests

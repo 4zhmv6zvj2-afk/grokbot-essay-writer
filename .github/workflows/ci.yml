@@ -27,6 +27,9 @@ jobs:
         python-version: ["3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # Read-only job: no step pushes, and the token stays out of .git config.
+          persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
@@ -94,6 +97,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # Read-only job: no step pushes, and the token stays out of .git config.
+          persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.15"
@@ -113,6 +119,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # Read-only job: no step pushes, and the token stays out of .git config.
+          persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           # Build and test on the lowest supported line: shipped artifacts must
@@ -121,11 +130,16 @@ jobs:
           check-latest: true
       - name: Install build and test tooling
         run: python -m pip install --require-hashes -r requirements-build.txt -r requirements-ci.txt
+      - name: Set SOURCE_DATE_EPOCH from the commit
+        # One value for every build below: the double build, the wheel from the
+        # checkout, and the wheel rebuilt from the extracted sdist. Do not let
+        # the build fall back to git inside the extracted tree: CI creates a
+        # fresh commit there, so its commit time would not be the source time.
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
       - name: Build twice and require identical hashes
         run: |
           set -euo pipefail
           # Reproducible releases: artifact timestamps come from the commit.
-          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           python tools/reproducible_build.py --outdir dist
           cd dist
           sha256sum *.whl *.tar.gz | tee SHA256SUMS
@@ -151,11 +165,48 @@ jobs:
               assert (package / name).is_file(), f"wheel is missing {name}"
           print("wheel import ok:", essay_writer.__version__, package)
           PY
-      - name: Run the full suite from the extracted sdist
+      - name: Extract the sdist
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/sdist"
           tar xzf dist/*.tar.gz -C "$RUNNER_TEMP/sdist" --strip-components=1
+      - name: Require the sdist to carry every tracked file
+        run: |
+          set -euo pipefail
+          # "Tracked" is defined by the checkout the artifact was built from.
+          # The sdist is the build source of record, so a tracked file missing
+          # from it means docs or build inputs are missing from what users get.
+          missing=0
+          while IFS= read -r -d '' path; do
+            if [ ! -e "$RUNNER_TEMP/sdist/$path" ]; then
+              echo "::error::the sdist is missing tracked file $path"
+              missing=$((missing + 1))
+            fi
+          done < <(git ls-files -z)
+          if [ "$missing" -ne 0 ]; then
+            echo "the sdist is missing $missing tracked files"
+            exit 1
+          fi
+          echo "the sdist carries all $(git ls-files | wc -l) tracked files"
+      - name: Build a wheel from the extracted sdist and compare hashes
+        run: |
+          set -euo pipefail
+          # `pip install <sdist>` builds exactly this wheel. It must be
+          # byte-identical to the wheel built from the checkout; the
+          # SOURCE_DATE_EPOCH above is inherited from the commit.
+          cd "$RUNNER_TEMP/sdist"
+          python -m build --no-isolation --wheel --outdir "$RUNNER_TEMP/from-sdist"
+          checkout_wheel="$(ls "$GITHUB_WORKSPACE"/dist/*.whl)"
+          sdist_wheel="$(ls "$RUNNER_TEMP"/from-sdist/*.whl)"
+          sha256sum "$checkout_wheel" "$sdist_wheel"
+          if [ "$(sha256sum "$checkout_wheel" | cut -d' ' -f1)" != "$(sha256sum "$sdist_wheel" | cut -d' ' -f1)" ]; then
+            echo "::error::the wheel built from the sdist is not identical to the checkout wheel"
+            exit 1
+          fi
+          echo "the sdist->wheel build is byte-identical to the checkout wheel"
+      - name: Run the full suite from the extracted sdist
+        run: |
+          set -euo pipefail
           cd "$RUNNER_TEMP/sdist"
           for required in tests/conftest.py tests/helpers.py tests/pty_support.py tests/fixtures tests/snapshots/prompts.json .gitignore; do
             test -e "$required" || { echo "the sdist is missing $required"; exit 1; }

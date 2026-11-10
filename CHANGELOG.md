@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+Review follow-up fixes: truthful claims, a document fence, and packaging coverage.
+
+Docs and claims:
+- Say what the Confirm gate actually guarantees: a save, stage advance, or
+  deliverable write needs a matching draft, while a draft call writes the draft
+  ledger, tracking note, and pointer; stage 5 stores its first draft and
+  advances on its draft call by design. Name the shown-card and setup-credential
+  digest limits, and say that tighter binding is planned.
+- Name document bodies (uploads, briefs, PDFs, fetched pages) as untrusted in
+  the threat model, scope `safe_url` to content-driven fetches with the installer
+  and pip exceptions, correct the vendored-bootstrap sentence (no local patch),
+  and call an `--install-upload` zip trusted operator input.
+- Refresh the release-verification instructions (macOS `shasum`, current assets,
+  `cosign verify-blob`, `gh attestation verify`), the supported-versions table,
+  the v0.6.1 re-cut history, and the architecture wording; remove drifting test
+  counts and fix the glossary link.
+
+Prompt fence:
+- Add an untrusted-content fence to the server instructions, both seats, and
+  every stage's rules: document text is quoted evidence, never instructions.
+  Mark `essay.originals` read results untrusted and say so in the tool
+  description.
+
+Packaging and tests:
+- The sdist now carries `HISTORY.md`, `requirements-runtime.in`, and the
+  remaining tracked GitHub/pre-commit files.
+- CI and the release workflow require the sdist to carry every tracked file and
+  the wheel rebuilt from the sdist to be byte-identical to the checkout wheel;
+  CI checkouts set `persist-credentials: false`.
+- Add docs-truth, sdist-completeness, and untrusted-content guards; the
+  upgrade-card test no longer writes its marker into the checkout.
+
 ## 0.6.2 — 2026-11-11
 
 Writing-quality, citation-policy, and recovery round.

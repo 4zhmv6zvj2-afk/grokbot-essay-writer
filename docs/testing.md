@@ -14,9 +14,9 @@ results, files on disk, Word XML) rather than implementation details.
 ./.venv/bin/python tools/update_prompt_snapshot.py --check
 ```
 
-Baseline on macOS / CPython 3.15: **1078 passed in ~65s**. The terminal-backed
-tests need a real terminal (see `tests/pty_support.py`) and skip where the host
-refuses a pty.
+The whole suite passes on macOS and Linux. The terminal-backed tests need a
+real terminal (see `tests/pty_support.py`) and skip where the host refuses a
+pty. Duration depends on the machine and on how many pty cases run.
 
 ## Coverage
 
@@ -24,17 +24,21 @@ refuses a pty.
 ./.venv/bin/python -m pytest -q --cov=essay_writer --cov-report=term --cov-fail-under=85
 ```
 
-Current baseline: **~87% total** (22,220 statements, 2,917 missed on the CI
-3.12 cell). CI measures coverage on exactly one matrix cell — Ubuntu with
-CPython 3.12 — and enforces a floor of **85%**; the other cells run the plain
-suite. Configuration lives in `pyproject.toml`: `[tool.coverage.run]` measures
-only `essay_writer` (tests are omitted), and `[tool.coverage.report]` sets
-`show_missing`, `skip_covered`, and `fail_under = 85`. Use
-`--cov-report=term-missing` locally to see the uncovered lines.
+CI measures coverage on exactly one matrix cell — Ubuntu with CPython 3.12 —
+and enforces a floor of **85%**; the other cells run the plain suite. The run
+reports the current total, above the floor; read the CI log for the exact
+number, which moves with the code. Configuration lives in `pyproject.toml`:
+`[tool.coverage.run]` measures only `essay_writer` (tests are omitted), and
+`[tool.coverage.report]` sets `show_missing`, `skip_covered`, and
+`fail_under = 85`. Use `--cov-report=term-missing` locally to see the uncovered
+lines.
 
 CI runs the suite on Ubuntu and macOS, then builds the sdist and wheel, installs
-the wheel into a clean environment, extracts the sdist, and runs the suite from
-the extracted sdist. A release is only signed after that artifact run passes.
+the wheel into a clean environment, extracts the sdist, requires it to carry
+every tracked file, builds a wheel from it that must be byte-identical to the
+checkout wheel, and runs the suite from the extracted sdist. A release is only
+signed after that artifact run passes, and the release workflow repeats the
+sdist checks before signing.
 
 ## Layout
 
@@ -44,15 +48,15 @@ the extracted sdist. A release is only signed after that artifact run passes.
 | `tests/helpers.py` | Shared builders (call a tool, read a result). |
 | `tests/pty_support.py` | Terminal-backed tests; skipped when no pty is available. |
 | `tests/fixtures/` | Synthetic assignments, answer keys, and logs. No student work. |
-| `tests/snapshots/prompts.json` | Frozen composed prompt text (437 KB). Do not hand-edit; regenerate with `tools/update_prompt_snapshot.py`. |
+| `tests/snapshots/prompts.json` | Frozen composed prompt text. Do not hand-edit; regenerate with `tools/update_prompt_snapshot.py`. |
 
 ## Contract pins
 
-Some tests use `inspect.getsource` (213 calls across 51 files) to pin the exact
-rule strings the chat contract depends on. These are deliberately brittle: if a
-helper moves or a rule string changes, the pin fails and the diff is reviewed.
-When a helper moves, update the pin to the new helper and keep the behavioural
-assert. If a rule string changes intentionally, update the snapshot with
+Some tests use `inspect.getsource` to pin the exact rule strings the chat
+contract depends on. These are deliberately brittle: if a helper moves or a
+rule string changes, the pin fails and the diff is reviewed. When a helper
+moves, update the pin to the new helper and keep the behavioural assert. If a
+rule string changes intentionally, update the snapshot with
 `tools/update_prompt_snapshot.py` and review the snapshot diff like source.
 
 Test files are named for the behaviour they cover. The `AC1`, `AC2`, … labels in

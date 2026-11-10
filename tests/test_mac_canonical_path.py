@@ -133,11 +133,16 @@ def test_ac6_one_shot_fo_card_without_student_install_speech(tmp_path):
     assert "fo_card" not in again
 
 
-def test_ac7_attach_mcp_upgrade_path_self_checks_and_fo_card(monkeypatch, capsys):
+def test_ac7_attach_mcp_upgrade_path_self_checks_and_fo_card(tmp_path, monkeypatch, capsys):
     """AC7. Custom MCP upgrade shares install_self_check and the one-shot FO card."""
-    marker = package_root() / UPGRADE_REREAD_MARKER
-    if marker.is_file():
-        marker.unlink()
+    # The attach path writes the one-shot marker under package_root(). Point
+    # that at tmp_path so the test never writes (or deletes) the real marker in
+    # a source checkout and never leaves state behind.
+    repo_root = package_root()
+    repo_marker_existed = (repo_root / UPGRADE_REREAD_MARKER).is_file()
+    marker = tmp_path / UPGRADE_REREAD_MARKER
+    assert not marker.exists()
+    monkeypatch.setattr("essay_writer.first_run.package_root", lambda: tmp_path)
     monkeypatch.setattr(
         "essay_writer.first_run.ensure_cursor_agent",
         lambda **kwargs: {"ok": True, "installed": False},
@@ -157,6 +162,8 @@ def test_ac7_attach_mcp_upgrade_path_self_checks_and_fo_card(monkeypatch, capsys
     assert payload["health_check"]["tool"] == "essay.health"
     assert payload["fo_card"] == UPGRADE_REREAD_SPEECH
     assert "chat" not in payload
+    assert marker.is_file(), "the one-shot marker is written under the tmp root"
+    assert (repo_root / UPGRADE_REREAD_MARKER).is_file() == repo_marker_existed
 
 
 def test_remember_mac_still_wins_over_canonical(tmp_path, monkeypatch):

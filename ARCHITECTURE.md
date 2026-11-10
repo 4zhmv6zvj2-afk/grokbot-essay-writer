@@ -36,8 +36,8 @@ validation, and Word output.
 
 The module names use a small private vocabulary — doors, seats, spine, shelf,
 dig, canon, mid-office. The names are stable and are not being renamed; the
-mapping to plain terms is in [docs/GLOSSARY.md](GLOSSARY.md). Start there before
-reading the modules.
+mapping to plain terms is in [docs/GLOSSARY.md](docs/GLOSSARY.md). Start there
+before reading the modules.
 
 ## Entry points and lockfiles
 
@@ -76,17 +76,28 @@ its own floor through `python_bootstrap.py` (`REQUIRED = (3, 12, 0)`).
 2. `essay_stage` reads the stage pointer, checks the request, and either returns a
    draft/Confirm card or saves a confirmed stage.
 3. Drafts and confirms are stored under `Essay-writer/<module>/sequences/<n>/`.
-4. Validation and Word write only after the matching Confirm.
+4. A save needs the matching draft and file fingerprint; stage 5 is the
+   draft-store exception described below (it stores its first draft and advances
+   to stage 6 on the draft call when its gate passes). A Word file is written
+   only from a confirmed stage.
 5. `essay.health` reports the doors, packs, and build marker.
 
-The stage runner is a thin dispatcher (`essay_stage` → `_run_stage`). The
-run branches are named helpers: `_confirm_path` (card confirm),
-`_build_stage_body` (shared stage body), `_draft_reply` (draft card), and
-`_save_confirm` (saved stage). The pointer boundary uses `Pointer`; stage
-replies use `StageResult`. Those two boundaries and the reply bodies live in
-`stage_state.py`; the landing and reply writers live in `stage_landing.py`
-and `stage_replies.py`. The orchestrator re-exports all three layers, so
-imports of `essay_writer.stage_track` keep working.
+The stage runner keeps the public entry points and the stage decision tree. The
+run branches are named helpers: `_confirm_path` (card confirm), `_build_stage_body`
+(shared stage body), `_draft_reply` (draft card), and `_save_confirm` (saved
+stage); together with `_run_stage` they are several hundred lines of decision
+tree, not a thin pass-through. `Pointer` and `StageResult` in `stage_state.py`
+name the intended pointer and result shapes; most helpers still take a plain
+`pointer: dict`, so treat the boundary as documentation of intent rather than
+an enforced layer. The state layer (the pointer and its
+commit journal, the stage lock, the tracking-note renderer, and the reply
+bodies a held save returns) lives in `stage_state.py`; the landing and report
+helpers live in `stage_landing.py`; the draft and save reply writers live in
+`stage_replies.py`. The orchestrator re-exports all three layers, so imports of
+`essay_writer.stage_track` keep working. That split is a code-organisation
+boundary, not a dependency boundary: many imports happen inside function
+bodies, and `stage_state.py` reaches back into the orchestrator through
+call-time imports in `_confirm_blocked` and `_draft_next_card`.
 
 The stages are 1–10: assignment, thesis or purpose, plan, 4a annotated bibliography,
 4b critical review, first draft, feedback, edit, references, and final Word.
@@ -98,11 +109,13 @@ are the product, so they live in the packaged `src/essay_writer/prompts/` bundle
 and are rendered from there rather than being fetched at runtime.
 Intent tests assert observable outcomes (refusals, stored state, and Word
 output); a thin set of contract tests pins the exact rule strings the chat
-contract depends on. The dispatcher and its branch helpers keep that
-prompt-heavy path readable, while `Pointer` and `StageResult` mark the main
-state boundaries. `StageArgs` and `StageContext` type the pipeline between the
-tool signature and the reply writers; no stage body travels as a string-keyed
-dict with a sentinel any more.
+contract depends on. The stage runner and its branch helpers keep that
+prompt-heavy path in one place, at the cost of a large decision tree.
+`Pointer` and `StageResult` name the intended state shapes rather than enforced
+layers: many helpers still take a plain `pointer: dict`, and the module split
+is arranged at import time. `StageArgs` and `StageContext` type the pipeline
+between the tool signature and the reply writers; no stage body travels as a
+string-keyed dict with a sentinel any more.
 
 ## Where to start
 

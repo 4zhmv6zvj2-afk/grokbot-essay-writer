@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from essay_writer.prompt_loader import text
-from essay_writer.stage_llm import STAGE_KEYS, stage_settings
+from essay_writer.stage_llm import STAGE_KEYS, UNTRUSTED_FENCE, stage_settings
 from essay_writer.writing_basics import CHECKLISTS
 
 DOC = Path("docs/academic-writing-helpers.md")
@@ -76,11 +76,14 @@ def render_seats() -> dict[str, str]:
     helpers = DOC.read_text(encoding="utf-8")
     harvard = HARVARD.read_text(encoding="utf-8")
     return {
-        "research.md": helpers,
+        "research.md": UNTRUSTED_FENCE + "\n\n" + helpers,
         "write.md": (
-            "When the brief does not name a module-specific writing guide, "
+            UNTRUSTED_FENCE
+            + "\n\n"
+            + "When the brief does not name a module-specific writing guide, "
             "use the stage rules and the genre section. The full helper remains at "
-            "docs/academic-writing-helpers.md.\n\n" + harvard
+            "docs/academic-writing-helpers.md.\n\n"
+            + harvard
         ),
     }
 

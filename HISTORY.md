@@ -8,9 +8,15 @@ This file records that plainly.
 
 | Ref | Meaning |
 | --- | --- |
-| `v0.2.1` (2026-11-04) | An import commit. The whole working tree was published in one commit; it is the only tag. It is a snapshot, not a development history. |
+| `v0.2.1` (2026-11-04) | An import commit. The whole working tree was published in one commit; it is a snapshot, not a development history. |
 | Commits after `v0.2.1` | Release-engineering and documentation changes made in public. The `src/` tree was unchanged in this window. |
 | `v0.3.0` and later | Normal releases: tagged commits in this repository, built from this repository, with reproducible artifacts. |
+| `v0.6.1` (2026-11-11) | A tag that was re-cut as `v0.6.2`. It exists on origin; no v0.6.1 release is published. |
+
+The `v0.6.1` tag exists on origin, and its Release workflow ran, but no v0.6.1
+release is published. The release was re-cut as `v0.6.2` from a follow-up
+commit with a release-workflow fix and a changelog entry renumbered from 0.6.1
+to 0.6.2; the `v0.6.1` tag was not moved.
 
 Versions `0.1.0` through `0.2.0` are described in [CHANGELOG.md](CHANGELOG.md)
 but were tagged in a private working repository. They are not tags here and

@@ -4,7 +4,8 @@
 
 | Version | Supported |
 | --- | --- |
-| 0.5.x | yes |
+| 0.6.x | yes |
+| < 0.6 | no |
 
 ## Reporting
 
@@ -31,12 +32,31 @@ page or document has steered, can present a Confirm, and the gate will not
 detect that. The server also cannot tell an attended session from an unattended
 one.
 
+What the gate does guarantee: a save, stage advance, or deliverable write needs
+a draft of the same arguments already on disk. A stage draft call writes that
+draft ledger, the tracking note, and the stage pointer, and the confirm
+re-derives the argument digest and the on-disk file fingerprint.
+
+What the gate does not prevent: draft calls are not inert (they change those
+files before any confirm); stage 5 stores its first draft and advances to stage
+6 on its draft call by design, with no card; the shown draft card is stored in
+the draft record and reused at confirm, so it is outside the digest and
+fingerprint; and `essay.setup` records only whether the Consensus key and
+Unpaywall email were present (booleans), then stores the values passed on the
+confirm call. Binding the shown card and those two values more tightly is
+planned hardening, not a current property.
+
 Trusted: the host model and its chat transport. They are trusted to relay the
 person's yes and no truthfully, to keep operator setup notes out of student
 chat, and not to call a tool the person did not approve.
 
 Not trusted: remote addresses and their redirects. URLs can come from model
-output or from fetched paper metadata, so they are treated as attacker-controlled.
+output or from fetched paper metadata, so they are treated as
+attacker-controlled. Document bodies are untrusted too: uploaded assignments
+and briefs, PDFs, and fetched pages are text from outside this computer, and
+they can carry instructions aimed at the host model. The prompts fence that
+text as quoted evidence rather than instructions, but the fence is a mitigation,
+not a guarantee, and harm from following document text happens before a Confirm.
 The debug log, the setup secrets file, and exported debug archives contain data
 from this computer, so they are treated as sensitive.
 
@@ -58,18 +78,34 @@ Recommendations, in order of value:
   result, an error message, or a log line.
 - Drafts and generated documents are ignored by git (`*.docx`, `output/`,
   `Essay-writer/*/`, `uploads/*/`); never commit them.
-- Assigned file paths are validated before the tool reads or writes, and the
-  Confirm gate must pass before any file is changed.
-- Every direct remote fetch goes through `safe_url`: only http and https, a
-  host that resolves, every resolved address public (no loopback, private,
-  link-local, reserved, multicast, unspecified, or IPv6 ULA), no userinfo, the
-  default port, redirects re-validated with the same rules and capped at three
-  same-scheme hops. Bodies are read whole up to a per-call cap (25 MiB for a
-  paper, 2 MiB for a research API, 1 MiB for a look-up); an over-cap body is
-  refused, not truncated, and maps to the existing empty-download or `None`
-  result instead of an exception to the MCP tool. The address is resolved once
-  for validation and again when the connection is made, so a DNS answer that
-  changes between those two lookups remains a residual risk.
+- Draft ledgers under `Essay-writer/<module>/.../.drafts/` keep the draft text
+  until the workflow folder is deleted; nothing prunes them automatically.
+- Assigned file paths are validated before the tool reads or writes. A save,
+  stage advance, or deliverable write requires a draft of the same arguments
+  already on disk: the confirm re-derives the argument digest and the on-disk
+  file fingerprint. This is not "nothing is written before Confirm": a draft
+  call writes the draft ledger under `.drafts/`, the tracking note, and the
+  stage pointer, and stage 5 stores its first draft and advances to stage 6 on
+  its draft call by design, with no card. The shown draft card is reused at
+  confirm and is not compared as a fingerprint, and `essay.setup` records only
+  the presence (booleans) of the Consensus key and Unpaywall email, then stores
+  the values passed on the confirm call.
+- Every fetch driven by model- or paper-supplied content goes through
+  `safe_url` (paper downloads, research look-ups, and dig look-ups): only http
+  and https, a host that resolves, every resolved address public (no loopback,
+  private, link-local, reserved, multicast, unspecified, or IPv6 ULA), no
+  userinfo, the default port, redirects re-validated with the same rules and
+  capped at three same-scheme hops. Bodies are read whole up to a per-call cap
+  (25 MiB for a paper, 2 MiB for a research API, 1 MiB for a look-up); an
+  over-cap body is refused, not truncated, and maps to the existing
+  empty-download or `None` result instead of an exception to the MCP tool. The
+  address is resolved once for validation and again when the connection is
+  made, so a DNS answer that changes between those two lookups remains a
+  residual risk. Two fetches are outside that opener, both in the setup CLI and
+  not reachable from the MCP tools: the Cursor installer is downloaded with
+  `curl` from the fixed vendor URL `https://cursor.com/install` and is
+  hash-gated before execution, and `pip`/`uv` fetch the pinned packages at
+  install time.
 - `essay.debug.export` redacts each zip member before it is written: absolute
   `/Users/<name>/...`, `/Volumes/<name>/...`, and `/home/<name>/...` paths,
   email addresses, `Bearer` values, `x-api-key` values, and common token
@@ -82,9 +118,15 @@ Recommendations, in order of value:
 - The `python first_run.py` entry point installs the hash-pinned runtime
   requirements (`requirements-runtime.txt` with `--require-hashes`) before the
   project install, which then runs with `--no-deps`. A hash mismatch or a
-  network failure stops the install; nothing after it is installed. See
-  [ARCHITECTURE.md](ARCHITECTURE.md) for the vendored bootstrap and its one
-  recorded local patch.
+  network failure stops the install; nothing after it is installed. The
+  vendored bootstrap core is byte-identical to the upstream release, with no
+  local patch: `VENDOR.json` records the source, release, and file SHA-256. See
+  [ARCHITECTURE.md](ARCHITECTURE.md).
+- `essay-writer --install-upload` is a CLI update path for an already-installed
+  copy; the MCP server never spawns it. The uploaded zip is trusted operator
+  input, not verified content: the zip itself is not hash-checked, the update
+  path runs the uploaded project's build backend, and the zip can supply its
+  own `requirements-runtime.txt`. Pass only a zip you produced or trust.
 - Setup does not install the Cursor CLI silently. Consent (`--install-cursor`
   or `ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1`) authorises the **download** only:
   setup downloads the installer to a file and reports its SHA-256, byte count,
@@ -102,8 +144,11 @@ Recommendations, in order of value:
 
 ## Release verification
 
-Releases from 0.3.0 onward are reproducible from the tag; the release workflow
-builds twice and requires identical SHA-256 before signing. See the "Verify a
-release" section of [README.md](README.md).
+Releases from 0.3.0 onward use a reproducible build. The release workflow builds
+the artifacts twice in one run with `SOURCE_DATE_EPOCH` from the tagged commit
+and requires identical SHA-256 hashes before uploading, signing, or attesting
+them; that proves determinism within the run, not that every independent
+rebuild matches. The "Verify a release" section of [README.md](README.md) gives
+the independent rebuild and the signature and provenance checks.
 
 _This policy covers the software as distributed from this repository._

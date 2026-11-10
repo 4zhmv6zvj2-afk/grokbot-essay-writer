@@ -153,6 +153,40 @@ jobs:
           git -c user.name=ci -c user.email=ci@example.invalid commit -qm "extracted sdist"
           python -m pytest -q
 
+      - name: Require the sdist to carry every tracked file and rebuild its wheel
+        run: |
+          set -euo pipefail
+          # "Tracked" is defined by the tagged checkout the artifacts were built
+          # from. The sdist is the build source of record, so a tracked file
+          # missing from it means docs or build inputs are missing from what
+          # users get.
+          missing=0
+          while IFS= read -r -d '' path; do
+            if [ ! -e "$RUNNER_TEMP/sdist/$path" ]; then
+              echo "::error::the sdist is missing tracked file $path"
+              missing=$((missing + 1))
+            fi
+          done < <(git ls-files -z)
+          if [ "$missing" -ne 0 ]; then
+            echo "the sdist is missing $missing tracked files"
+            exit 1
+          fi
+          echo "the sdist carries all $(git ls-files | wc -l) tracked files"
+          # `pip install <sdist>` builds exactly this wheel. It must be
+          # byte-identical to the released wheel; SOURCE_DATE_EPOCH is inherited
+          # from the tagged commit, not read from the extracted tree's throwaway
+          # git repo.
+          cd "$RUNNER_TEMP/sdist"
+          python -m build --no-isolation --wheel --outdir "$RUNNER_TEMP/from-sdist"
+          release_wheel="$(ls "$GITHUB_WORKSPACE"/dist/*.whl)"
+          sdist_wheel="$(ls "$RUNNER_TEMP"/from-sdist/*.whl)"
+          sha256sum "$release_wheel" "$sdist_wheel"
+          if [ "$(sha256sum "$release_wheel" | cut -d' ' -f1)" != "$(sha256sum "$sdist_wheel" | cut -d' ' -f1)" ]; then
+            echo "::error::the wheel built from the sdist is not identical to the release wheel"
+            exit 1
+          fi
+          echo "the sdist->wheel build is byte-identical to the release wheel"
+
       - name: Verify the GitHub release exists
         run: |
           set -euo pipefail

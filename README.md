@@ -15,10 +15,16 @@ this repository is its source.
 - **An MCP server for one workflow.** 24 tools take a single essay from brief to
   `.docx`: research, plan, annotated bibliography, critical review, first draft,
   feedback, edit, references, and final Word.
-- **Confirm-gated and local.** A write takes two calls: a draft card, then the
-  same arguments confirmed. Nothing is saved until the Confirm, and the Confirm
-  is bound to the exact arguments by a SHA-256 digest and the on-disk file
-  fingerprint.
+- **Confirm-gated and local.** A save, stage advance, or deliverable write needs
+  a matching draft: a stage draft call writes the draft ledger (`.drafts/`), the
+  tracking note, and the stage pointer, and the Confirm re-derives the same
+  argument digest and checks the on-disk file fingerprint. Stage 5 is the
+  designed exception: it stores the first draft and advances to stage 6 on its
+  draft call, with no card. The digest does not cover the shown draft card
+  (confirm reuses it) or the value of the two setup credentials: `essay.setup`
+  records only whether the Consensus key and Unpaywall email were present, and
+  stores the values passed on the confirm call. Binding those more tightly is a
+  planned follow-up, not a current property.
 - **Prompt-heavy by design.** The stage instructions, genre rules, and
   validation checks are the product. They are packaged with the code under
   `src/essay_writer/prompts/` and are not fetched at runtime.
@@ -39,7 +45,10 @@ governance process. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## What it is not
 
-- Not a writing service or an essay mill.
+- Not a submission service: it never submits. The tool drafts the essay from
+  the sources the workflow gathered; the student directs the work, reviews each
+  stage, confirms saves on a card (stage 5 stores its first draft on the draft
+  call, as documented), and owns what is submitted.
 - Not a hosted service: no server, no account, no bundled keys. It is a local
   process the agent talks to.
 - Not a general-purpose Word or referencing library.
@@ -47,15 +56,19 @@ governance process. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Academic integrity
 
-The tool helps a student research, plan, draft, and revise. It does not decide
-what is acceptable at their institution, and it does not submit anything.
+The tool researches and gathers sources, then drafts, revises, and formats the
+essay from them. The student directs the work, reviews each stage, confirms
+saves on a card (stage 5 stores its first draft on the draft call, as
+documented), and owns what is submitted. The tool does not decide what is
+acceptable at the student's institution, and it never submits anything.
 
 - The student owns what they submit. Using a drafting aid without disclosure, or
   where the institution forbids it, is the student's decision and
   responsibility. The tool does not police it, and the maintainer does not
   endorse it.
-- The workflow is built to keep the student in the loop: each stage is reviewed
-  and confirmed in chat, and the final Word file is theirs.
+- The workflow keeps the student in control: each stage is shown in chat, saves
+  are confirmed on a card (stage 5 stores its first draft on the draft call, as
+  documented), and the final Word file is theirs.
 - If your course forbids generative assistance, do not use this.
 
 ## Using Essay Bot (students)
@@ -67,7 +80,8 @@ new essay.
 2. Research finds papers; it downloads a PDF when it can, or gives you the title
    and a link.
 3. A draft is written from those sources.
-4. You review each stage in the chat and press Confirm before anything is saved.
+4. You review each stage in the chat and press Confirm before it is saved and
+   the essay moves on.
 5. The finished essay is a Word file (`.docx`).
 
 Output is Word only (`.docx`); referencing follows Harvard
@@ -126,7 +140,9 @@ On the Grok Bot computer, setup will:
 - Install the runtime dependencies from the hash-pinned `requirements-runtime.txt`
   first, then Essay Writer itself. A hash mismatch stops the install; nothing is
   left half-installed. The `essay-writer --install-upload` update path uses the
-  same standard when the zip carries that file.
+  same standard when the zip carries that file. The uploaded zip itself is
+  trusted operator input, not verified bytes: the update path runs the uploaded
+  project's build backend, so pass only a zip you produced or trust.
 - Download a private Python 3.15.2 into that folder, only after you agree and only
   if no suitable Python is already there. It never changes the Python already
   installed on the computer.
@@ -155,12 +171,12 @@ Python 3.12 or newer:
 
 ```bash
 uv sync --extra dev
-uv run pytest                      # 1078 passed
+uv run pytest                      # the full suite
 uv run ruff check src tests tools
 uv run mypy src
 uv run python tools/generate_docs.py --check
 uv run python tools/update_prompt_snapshot.py --check
-uv run pytest --cov=essay_writer --cov-report=term   # ~87%, CI floor 85%
+uv run pytest --cov=essay_writer --cov-report=term   # CI floor 85%
 ```
 
 - `src/essay_writer/server.py` — MCP entry and tool registration.
@@ -170,8 +186,8 @@ uv run pytest --cov=essay_writer --cov-report=term   # ~87%, CI floor 85%
   stage lock, tracking note, held/refused replies) re-exported by stage_track.
 - `src/essay_writer/stage_context.py` — the typed pipeline values (`StageArgs`,
   `StageContext`, `ConfirmState`).
-- `src/essay_writer/safe_url.py` — the single network opener (public http(s),
-  redirect re-validation, byte caps).
+- `src/essay_writer/safe_url.py` — the network opener for model- and
+  paper-driven fetches (public http(s), redirect re-validation, byte caps).
 - `src/essay_writer/stage_landing.py`, `stage_replies.py` — the landing/report
   helpers and the draft/save reply writers, re-exported by `stage_track.py`.
 - `src/essay_writer/prompts/` — the stage, genre, craft, and review text that is
@@ -197,29 +213,51 @@ Download the files into one folder, then check them:
 
 ```bash
 # The checksums and filenames come from the release:
-sha256sum -c SHA256SUMS
+shasum -a 256 -c SHA256SUMS        # macOS; Linux: sha256sum -c SHA256SUMS
 
-# Check the wheel was built by this repository's release workflow:
-gh attestation verify essay_writer-0.3.0-py3-none-any.whl \
+# Check the Sigstore signature on each artifact. The certificate identity below
+# is this repository's Release workflow on main, where the workflow is
+# dispatched from.
+cosign verify-blob \
+  --bundle essay_writer-0.6.2-py3-none-any.whl.sigstore.json \
+  --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  essay_writer-0.6.2-py3-none-any.whl
+
+cosign verify-blob \
+  --bundle essay_writer-0.6.2.tar.gz.sigstore.json \
+  --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  essay_writer-0.6.2.tar.gz
+
+# Check the build provenance GitHub recorded for the release workflow:
+gh attestation verify essay_writer-0.6.2-py3-none-any.whl \
+  --repo 4zhmv6zvj2-afk/grokbot-essay-writer
+gh attestation verify essay_writer-0.6.2.tar.gz \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
 ```
 
-Releases from 0.3.0 onward are byte-reproducible: CI rebuilds twice from the
-tagged commit with `SOURCE_DATE_EPOCH` set to the commit time and the hash-pinned
-toolchain, and requires identical SHA256 sets before anything is uploaded or
-signed. To verify, check out the tag and rebuild with the same toolchain:
+Releases from 0.3.0 onward use a reproducible build. The release workflow builds
+the wheel and the sdist twice in one run with `SOURCE_DATE_EPOCH` set to the
+tagged commit's time and the hash-pinned build tooling, and requires identical
+SHA-256 hashes before it uploads, signs, or attests anything. That proves the
+build was deterministic in that run. It does not prove that a rebuild elsewhere
+matches the published bytes: the workflow does not rebuild and compare against
+the released `SHA256SUMS`, and the Ubuntu runner image is not pinned. An
+independent rebuild is the stronger check:
 
 ```bash
-git checkout v0.3.0
+git checkout v0.6.2
 python -m pip install --require-hashes -r requirements-build.txt
 SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
     python tools/reproducible_build.py --outdir dist-rebuild
-cd dist-rebuild && sha256sum *.whl *.tar.gz
+cd dist-rebuild && shasum -a 256 *.whl *.tar.gz   # Linux: sha256sum
 ```
 
-The hashes must equal the release's `SHA256SUMS`. `tools/reproducible_build.py`
-normalizes the sdist metadata to `SOURCE_DATE_EPOCH` and fails unless both builds
-are byte-identical; a plain `python -m build` does not reproduce the sdist.
+If those hashes equal the release's `SHA256SUMS`, the artifacts are byte-identical
+to what the tag builds here. `tools/reproducible_build.py` normalizes the sdist
+metadata to `SOURCE_DATE_EPOCH` and fails unless both builds are byte-identical;
+a plain `python -m build` does not reproduce the sdist.
 
 The sdist is complete: it carries the tests, fixtures, and prompt snapshot, so
 `pytest` works from the extracted source distribution. The 0.2.1 artifacts
