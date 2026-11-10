@@ -176,3 +176,9 @@ def test_both_shells_read_the_same_content_check():
     prose = stage_launch("5")["command"] + ["Read https://www.phrasebank.manchester.ac.uk/ before the draft."]
     assert remote_cloud_argv(prose) is False
     assert remote_cloud_argv(["agent", "https://cursor.com/agents/bc-1"]) is True
+    assert remote_cloud_argv(["agent", "--cloud-agent=true"]) is True
+    assert remote_cloud_argv(["agent", "--remote-agent=1"]) is True
+    assert remote_cloud_argv(["agent", "--endpoint=https://remote.example"]) is True
+    assert remote_cloud_argv(["agent", "-e", "https://remote.example"]) is True
+    assert remote_cloud_argv(["agent", "--model", "cloud-agent"]) is False
+    assert remote_cloud_argv(["agent", "--model=cloud-agent"]) is False

@@ -241,6 +241,32 @@ def test_a_named_save_without_a_cloud_workspace_is_read_later(tmp_path, monkeypa
     assert read_setup_secret("CONSENSUS_API_KEY") == key
 
 
+def test_a_beside_app_record_is_read_when_the_home_record_is_missing(tmp_path, monkeypatch):
+    """A record left beside the app by an older confirm is copied home and then read."""
+    from essay_writer.paths import load_saved_setup, workspace_root
+    from essay_writer.setup import read_setup_secret
+
+    monkeypatch.delenv("ESSAY_WRITER_ROOT", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
+    app = tmp_path / "named-parent" / "named-app"
+    app.mkdir(parents=True)
+    legacy = app.parent / "setup.json"
+    legacy.write_text(
+        json.dumps({"app_path": str(app.resolve()), "app": str(app.resolve())}),
+        encoding="utf-8",
+    )
+    secret = app.parent / "setup.secrets.json"
+    secret.write_text(json.dumps({"CONSENSUS_API_KEY": "legacy-key"}), encoding="utf-8")
+    loaded = load_saved_setup()
+    assert loaded is not None
+    assert loaded["app_path"] == str(app.resolve())
+    assert workspace_root() == app.resolve()
+    home = tmp_path / ".essay-writer" / "setup.json"
+    assert json.loads(home.read_text(encoding="utf-8"))["app_path"] == str(app.resolve())
+    assert read_setup_secret("CONSENSUS_API_KEY") == "legacy-key"
+
+
 def test_install_refuses_the_app_folder_named_on_the_setup_record(tmp_path, monkeypatch):
     from essay_writer.first_run import _blocked_dest
 

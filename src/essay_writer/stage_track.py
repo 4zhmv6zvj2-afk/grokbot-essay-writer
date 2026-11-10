@@ -231,13 +231,18 @@ def essay_stage(
                 lockChoice=lockChoice,
             )
         )
-    except DamagedStageCommit:
+    except DamagedStageCommit as exc:
+        _QUARANTINE_NOTICE.set(None)
+        reason = str(exc).strip() or "The last confirm record was damaged and was not applied."
         return refuse(
             "stage",
-            "The last confirm record was damaged and was not applied.",
+            reason,
             wrote=False,
             stored=False,
         )
+    except Exception:
+        _QUARANTINE_NOTICE.set(None)
+        raise
     notice = _QUARANTINE_NOTICE.get()
     if notice and isinstance(result, dict):
         _QUARANTINE_NOTICE.set(None)

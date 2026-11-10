@@ -265,6 +265,30 @@ def test_damaged_stage_journal_is_set_aside_and_the_save_continues(workspace):
     assert NEWER in _note(child, "1")
 
 
+def test_a_failed_quarantine_refuses_instead_of_raising(workspace, monkeypatch):
+    """When the damaged journal cannot be moved, the save refuses and names it."""
+    seq = open_sequence()
+    first = essay_stage(seq, "1", "draft", LOOK)
+    assert first["ok"] is True, first
+    journal = work_dir(seq) / STAGE_COMMIT
+    journal.parent.mkdir(parents=True, exist_ok=True)
+    journal.write_bytes(b"{not json")
+    real = Path.rename
+
+    def refuse_rename(self, target):
+        if self.name == ".stage.commit":
+            raise OSError("rename refused")
+        return real(self, target)
+
+    monkeypatch.setattr(Path, "rename", refuse_rename)
+    saved = essay_stage(seq, "1", "draft", NEWER)
+    assert saved["ok"] is False, saved
+    assert saved["refused"] == "stage"
+    assert str(journal) in saved["reason"]
+    assert "Move that file" in saved["reason"]
+    assert journal.read_bytes() == b"{not json"
+
+
 def test_ac3_open_clone_cannot_publish_a_torn_pair(workspace, monkeypatch):
     """AC3: a clone during the note/pointer window publishes one generation."""
     seq = open_sequence()

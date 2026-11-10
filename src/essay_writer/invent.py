@@ -66,7 +66,14 @@ def read_gathered_text(path: Any, essay_id: str | None = None) -> str:
     if is_image_suffix(suffix):
         return saved_photo_words(path)
     if suffix in TEXT_SUFFIXES:
-        return path.read_text(encoding="utf-8")
+        from essay_writer.textutil import decode_stored_text
+
+        try:
+            return decode_stored_text(path.read_bytes())
+        except UnicodeDecodeError as exc:
+            raise ValueError(
+                f"{path.name} is not UTF-8. Re-save it as UTF-8 and run this check again."
+            ) from exc
     raise ValueError(
         f"cannot verify citations against {suffix or 'that file'}; bring a text or Word original"
     )

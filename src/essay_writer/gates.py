@@ -62,35 +62,36 @@ def _sections_text(pack: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def _read_utf8(path: Path, blocked: list[str]) -> str | None:
+def _read_utf8(path: Path, blocked: list[str], unreadable: list[str]) -> str | None:
     """Read one gathered text file. A non-UTF-8 file is named and not replaced.
 
     UTF-8 and UTF-16 with a byte-order mark are accepted. Other encodings are
     refused so a copied sentence cannot hide behind replacement characters.
+    A file that cannot be opened is named separately. That is not an encoding miss.
     """
+    from essay_writer.textutil import decode_stored_text
+
     try:
         raw = path.read_bytes()
     except OSError:
-        blocked.append(path.name)
+        unreadable.append(path.name)
         return None
-    encoding = "utf-8-sig" if raw.startswith(b"\xef\xbb\xbf") else "utf-8"
-    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
-        encoding = "utf-16"
     try:
-        return raw.decode(encoding)
+        return decode_stored_text(raw)
     except UnicodeDecodeError:
         blocked.append(path.name)
         return None
 
 
-def _gathered_scan(essay_id: str, pack: dict[str, Any] | None) -> tuple[list[str], list[str]]:
-    """Gathered text, plus file names that are not valid UTF-8.
+def _gathered_scan(essay_id: str, pack: dict[str, Any] | None) -> tuple[list[str], list[str], list[str]]:
+    """Gathered text, names that are not UTF-8, and names that could not be opened.
 
-    Those names are not scanned. Replacement characters would let a copied
+    Unreadable names are not scanned. Replacement characters would let a copied
     sentence through the plagiarism check.
     """
     texts: list[str] = []
     blocked: list[str] = []
+    unreadable: list[str] = []
     module = module_code(essay_id)
     brief = _brief_path(module)
     if (
@@ -98,11 +99,11 @@ def _gathered_scan(essay_id: str, pack: dict[str, Any] | None) -> tuple[list[str
         and brief.suffix.lower() in {".md", ".txt"}
         and research_file(essay_id, str(brief)) is not None
     ):
-        brief_text = _read_utf8(brief, blocked)
+        brief_text = _read_utf8(brief, blocked, unreadable)
         if brief_text is not None:
             texts.append(brief_text)
     if not isinstance(pack, dict):
-        return texts, blocked
+        return texts, blocked, unreadable
     for source in pack.get("sources") or []:
         if not isinstance(source, dict):
             continue
@@ -119,7 +120,7 @@ def _gathered_scan(essay_id: str, pack: dict[str, Any] | None) -> tuple[list[str
             continue
         suffix = path.suffix.lower()
         if suffix in {".md", ".txt", ".csv", ".html", ".htm"}:
-            source_text = _read_utf8(path, blocked)
+            source_text = _read_utf8(path, blocked, unreadable)
             if source_text is not None:
                 texts.append(source_text)
         elif suffix in {".docx", ".pdf"}:
@@ -129,11 +130,11 @@ def _gathered_scan(essay_id: str, pack: dict[str, Any] | None) -> tuple[list[str
                 texts.append(read_gathered_text(path, essay_id))
             except (OSError, ValueError):
                 continue
-    return texts, blocked
+    return texts, blocked, unreadable
 
 
 def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
-    texts, _blocked = _gathered_scan(essay_id, pack)
+    texts, _blocked, _unreadable = _gathered_scan(essay_id, pack)
     return texts
 
 
@@ -444,17 +445,26 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         )
     )
 
-    gathered, unreadable = _gathered_scan(essay_id, pack_data)
+    gathered, blocked, unreadable = _gathered_scan(essay_id, pack_data)
     matches = unquoted_exact(text, gathered)
-    if unreadable:
-        blocked_names = ", ".join(unreadable)
-        reason = (
-            f"A gathered file is not valid UTF-8 and was not scanned: {blocked_names}. "
-            "Re-save it as UTF-8 and run this check again."
-        )
+    if blocked or unreadable:
+        reason_parts: list[str] = []
+        if blocked:
+            reason_parts.append(
+                "A gathered file is not valid UTF-8 and was not scanned: "
+                + ", ".join(blocked)
+                + ". Re-save it as UTF-8 and run this check again."
+            )
+        if unreadable:
+            reason_parts.append(
+                "A gathered file could not be read: "
+                + ", ".join(unreadable)
+                + ". Allow file access and run this check again."
+            )
+        reason = " ".join(reason_parts)
         if matches:
             reason += " A gathered sentence appears in the body without quotation marks."
-        plagiarism_code = "gathered-encoding"
+        plagiarism_code = "gathered-encoding" if blocked else "gathered-unreadable"
         plagiarism_passed = False
     elif matches:
         reason = "A gathered sentence appears in the body without quotation marks."

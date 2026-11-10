@@ -17,6 +17,7 @@ import os
 import threading
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, TypedDict, cast
 
 from essay_writer.confirm import (
@@ -103,10 +104,13 @@ def _apply_commit(root, record: dict[str, object]) -> None:
         journal.unlink()
 
 
-QUARANTINE_NOTICE = (
-    "The last confirm record was damaged and was not applied. "
-    "It was set aside, and this save continued."
-)
+def _quarantine_notice(name: str) -> str:
+    return (
+        "The last confirm record was damaged and was not applied. "
+        f"It was set aside as {name}, and this save continued."
+    )
+
+
 _QUARANTINE_NOTICE: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "essay_stage_quarantine_notice",
     default=None,
@@ -149,18 +153,29 @@ def _journal_damaged(root) -> bool:
     return not _commit_record_ok(record)
 
 
-def _quarantine_journal(root) -> None:
-    """Rename a damaged journal aside so the next save can proceed."""
+def _quarantine_journal(root) -> Path | None:
+    """Rename a damaged journal aside so the next save can proceed.
+
+    A failed rename raises DamagedStageCommit and leaves the file in place.
+    The message names the journal and how to move it.
+    """
     journal = root / STAGE_COMMIT
     if not journal.is_file():
-        return
+        return None
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     dest = journal.with_name(f".stage.commit.damaged-{stamp}")
     suffix = 1
     while dest.exists():
         dest = journal.with_name(f".stage.commit.damaged-{stamp}-{suffix}")
         suffix += 1
-    journal.rename(dest)
+    try:
+        journal.rename(dest)
+    except OSError as exc:
+        raise DamagedStageCommit(
+            "The last confirm record was damaged and could not be set aside "
+            f"({journal}). Move that file out of the tracking folder, then save again."
+        ) from exc
+    return dest
 
 
 def _read_commit(root) -> dict[str, object] | None:
@@ -579,8 +594,9 @@ def _commit_pointer(
     """
     with _pointer_lock(essay_id):
         if _journal_damaged(work_dir(essay_id)):
-            _quarantine_journal(work_dir(essay_id))
-            _QUARANTINE_NOTICE.set(QUARANTINE_NOTICE)
+            dest = _quarantine_journal(work_dir(essay_id))
+            if dest is not None:
+                _QUARANTINE_NOTICE.set(_quarantine_notice(dest.name))
         fresh = load_pointer(essay_id)
         if _revision(fresh) != _revision(base):
             return None

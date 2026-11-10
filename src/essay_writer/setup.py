@@ -248,7 +248,7 @@ def read_setup_secret(name: str) -> str | None:
     if os.environ.get("ESSAY_WRITER_ROOT"):
         return None
 
-    record = essay_paths.saved_setup_path()
+    record = essay_paths.resolve_setup_record()
     if record is None:
         return None
     path = _secrets_path(record)

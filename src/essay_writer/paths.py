@@ -42,6 +42,118 @@ def local_setup_record() -> Path:
     return Path.home() / ".essay-writer" / "setup.json"
 
 
+_LEGACY_SKIP = frozenset(
+    {
+        ".essay-writer",
+        ".git",
+        ".venv",
+        "Library",
+        "node_modules",
+        "venv",
+    }
+)
+
+
+def _legacy_record(path: Path) -> bool:
+    """True when setup.json is the old beside-app record for the folder it names."""
+    if path.name != "setup.json" or not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    folder = _folder_from_setup(data)
+    if not folder:
+        return False
+    try:
+        app = Path(folder).expanduser().resolve()
+        return path.resolve().parent == app.parent
+    except OSError:
+        return False
+
+
+def _legacy_beside_setup() -> Path | None:
+    """A setup.json written beside the app before the home record existed.
+
+    The search stays two folders under the home directory. The newest match wins.
+    """
+    home = Path.home()
+    if not home.is_dir():
+        return None
+    found: list[Path] = []
+
+    def consider(path: Path) -> None:
+        if _legacy_record(path):
+            found.append(path)
+
+    try:
+        children = list(home.iterdir())
+    except OSError:
+        return None
+    for child in children:
+        if not child.is_dir() or child.name.startswith(".") or child.name in _LEGACY_SKIP:
+            continue
+        consider(child / "setup.json")
+        try:
+            nested = list(child.iterdir())
+        except OSError:
+            continue
+        for grand in nested:
+            if not grand.is_dir() or grand.name.startswith(".") or grand.name in _LEGACY_SKIP:
+                continue
+            consider(grand / "setup.json")
+    if not found:
+        return None
+    found.sort(key=lambda item: item.stat().st_mtime, reverse=True)
+    return found[0]
+
+
+def _adopt_legacy_setup(legacy: Path, dest: Path) -> None:
+    """Copy a beside-app record into the home record later tools read."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(legacy.read_text(encoding="utf-8"), encoding="utf-8")
+    secret = legacy.parent / "setup.secrets.json"
+    if not secret.is_file():
+        return
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    fd = os.open(dest.parent / "setup.secrets.json", flags, 0o600)
+    try:
+        os.write(fd, secret.read_bytes())
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def resolve_setup_record() -> Path | None:
+    """The setup file later tools read, after a beside-app record is copied home.
+
+    A test root reads nothing. A missing cloud record does not search the home
+    directory. With no cloud workspace, a record left beside the app is copied
+    to the home file and then read from there.
+    """
+    if os.environ.get("ESSAY_WRITER_ROOT"):
+        return None
+    path = saved_setup_path()
+    if path is None:
+        return None
+    if path.is_file():
+        return path
+    if CLOUD_WORKSPACE.is_dir():
+        return None
+    legacy = _legacy_beside_setup()
+    if legacy is None:
+        return None
+    try:
+        _adopt_legacy_setup(legacy, path)
+    except OSError:
+        return legacy
+    return path if path.is_file() else legacy
+
+
 def saved_setup_path() -> Path | None:
     """Where setup.json lives. Later tools do not read recommended_base.
 
@@ -71,9 +183,7 @@ def _folder_from_setup(saved: dict) -> str | None:
 
 def load_saved_setup() -> dict | None:
     """Read the setup record. Ignored when a test root is set."""
-    if os.environ.get("ESSAY_WRITER_ROOT"):
-        return None
-    path = saved_setup_path()
+    path = resolve_setup_record()
     if path is None or not path.is_file():
         return None
     try:
