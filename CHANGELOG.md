@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.3 — 2026-11-11
 
 Review follow-up fixes: truthful claims, a document fence, and packaging coverage.
 
