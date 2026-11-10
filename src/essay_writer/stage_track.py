@@ -162,6 +162,32 @@ from essay_writer.stage_replies import (
 )
 
 
+def _continues_inherited_lock(
+    essay_id: str,
+    stage: str,
+    inherited: str,
+    text: str,
+    card_digest: str | None,
+) -> bool:
+    """True when this call continues a revise card that already has the parent look.
+
+    A bare later draft, with no look and no card, does not continue it.
+    """
+    if not inherited:
+        return False
+    waiting = latest_draft(essay_id, TOOL, stage=stage)
+    if not isinstance(waiting, dict):
+        return False
+    payload = waiting.get("payload")
+    look = payload.get("look") if isinstance(payload, dict) else None
+    if not isinstance(look, str) or inherited.casefold() not in look.casefold():
+        return False
+    digest = waiting.get("digest")
+    if isinstance(card_digest, str) and card_digest.strip() and card_digest.strip() == digest:
+        return True
+    return bool(text.strip()) and inherited.casefold() in text.casefold()
+
+
 def essay_stage(
     essay_id: str,
     stage: str,
@@ -182,26 +208,36 @@ def essay_stage(
     lockChoice: str | None = None,
 ) -> dict[str, Any]:
     """A card saves the final look. Stage 5 starts stage 6."""
-    return _run_stage(
-        StageArgs(
-            essay_id=essay_id,
-            stage=stage,
-            confirmPhase=confirmPhase,
-            look=look,
-            master=master,
-            namedFolder=namedFolder,
-            answers=answers,
-            edited=edited,
-            webCheck=webCheck,
-            heldFile=heldFile,
-            cardAction=cardAction,
-            cardDigest=cardDigest,
-            card_only=card_only,
-            encourageChoice=encourageChoice,
-            paperChoice=paperChoice,
-            lockChoice=lockChoice,
+    from essay_writer.stage_state import DamagedStageCommit
+
+    try:
+        return _run_stage(
+            StageArgs(
+                essay_id=essay_id,
+                stage=stage,
+                confirmPhase=confirmPhase,
+                look=look,
+                master=master,
+                namedFolder=namedFolder,
+                answers=answers,
+                edited=edited,
+                webCheck=webCheck,
+                heldFile=heldFile,
+                cardAction=cardAction,
+                cardDigest=cardDigest,
+                card_only=card_only,
+                encourageChoice=encourageChoice,
+                paperChoice=paperChoice,
+                lockChoice=lockChoice,
+            )
         )
-    )
+    except DamagedStageCommit:
+        return refuse(
+            "stage",
+            "The last confirm record is damaged and was not applied.",
+            wrote=False,
+            stored=False,
+        )
 
 
 def _run_stage(args: StageArgs) -> dict[str, Any]:
@@ -267,8 +303,6 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
     if args.lockChoice == "keep" and pending_lock is not None:
         return _inherited_lock_keep(essay_id, stage, genre, pointer, pending_lock)
     if args.lockChoice in {"revise", "relock"} and pending_lock is not None:
-        from essay_writer.fo_chat_locks import _mark_lock_resolved
-
         inherited = str(pending_lock.get("look") or "").strip()
         if inherited:
             if not text.strip():
@@ -287,8 +321,8 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
                 cardDigest = None
         # The resolved note is the look from here on. The raw look no longer
         # carries anything the save needs once the inherited lock is kept.
+        # The lock stays pending until a later save of this stage stores.
         look = text
-        _mark_lock_resolved(essay_id, stage)
     elif (
         pending_lock is not None
         and confirmPhase in {DRAFT, CONFIRM}
@@ -296,6 +330,13 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
         and args.lockChoice is None
         and not args.card_only
         and not _INHERITED_KEEP.get()
+        and not _continues_inherited_lock(
+            essay_id,
+            stage,
+            str(pending_lock.get("look") or "").strip(),
+            text,
+            args.cardDigest,
+        )
     ):
         return prior_saved_lock_ask(essay_id, stage, pending_lock)
     from essay_writer.spine import advances_without_confirm
@@ -360,8 +401,19 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
     if not isinstance(body, StageContext):
         return body
     if body.confirmPhase == DRAFT:
-        return _draft_reply(body)
-    return _save_confirm(body, cardDigest)
+        result = _draft_reply(body)
+    else:
+        result = _save_confirm(body, cardDigest)
+    if (
+        isinstance(result, dict)
+        and result.get("stored") is True
+        and result.get("ok") is not False
+        and pending_lock is not None
+    ):
+        from essay_writer.fo_chat_locks import _mark_lock_resolved
+
+        _mark_lock_resolved(essay_id, stage)
+    return result
 
 
 def _confirm_path(

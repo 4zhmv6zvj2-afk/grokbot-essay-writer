@@ -217,6 +217,7 @@ def test_mounted_call_writes_a_line_and_keeps_the_door_arguments(workspace, monk
 
 def test_setup_keeps_an_operator_flag_out_of_the_reply(workspace, monkeypatch):
     monkeypatch.delenv("ESSAY_WRITER_DEBUG", raising=False)
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", workspace / "missing-cloud")
     app = workspace / "app"
     kb1 = workspace / "KB1"
     draft = essay_setup(

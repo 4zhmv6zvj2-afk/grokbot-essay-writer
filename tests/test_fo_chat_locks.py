@@ -124,6 +124,24 @@ def test_ac2_keep_skips_confirm_revise_shows_card(workspace):
     assert revised.get("card", {}).get("stage") == "2"
 
 
+def test_inherited_lock_stays_until_the_revised_card_is_saved(workspace):
+    """Revise does not clear the lock. A bare draft asks again until the card is saved."""
+    parent = _parent_with_stage2_lock()
+    child = _child_from(parent)
+    revised = essay_stage(child, "2", "draft", lockChoice="revise")
+    assert revised.get("card", {}).get("stage") == "2"
+    assert revised.get("stored") is not True
+    bare = essay_stage(child, "2", "draft")
+    assert bare.get("prior_saved_lock")
+    assert bare.get("stored") is False
+    note = (work_dir(child) / "tracking" / "2.md").read_text(encoding="utf-8")
+    assert "North occasion" in note
+    saved = essay_stage(child, "2", "confirm", **picked(revised))
+    assert saved["stored"] is True, saved
+    assert "prior_saved_lock" not in saved
+    assert "North occasion" in (work_dir(child) / "tracking" / "2.md").read_text(encoding="utf-8")
+
+
 def test_ac3_delete_scope_refuses_without_where(workspace):
     """AC3. Delete draft refuses until workspace|local|both is chosen."""
     parent = _parent_with_stage2_lock()

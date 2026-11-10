@@ -7,6 +7,7 @@ The writer seat does not pass itself.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any, cast
 
 from essay_writer.diary import blocked_identity_keys
@@ -61,9 +62,23 @@ def _sections_text(pack: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
+def _read_utf8(path: Path, blocked: list[str]) -> str | None:
+    """Read one gathered text file. A non-UTF-8 file is named and not replaced."""
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        blocked.append(path.name)
+        return None
 
+
+def _gathered_scan(essay_id: str, pack: dict[str, Any] | None) -> tuple[list[str], list[str]]:
+    """Gathered text, plus file names that are not valid UTF-8.
+
+    Those names are not scanned. Replacement characters would let a copied
+    sentence through the plagiarism check.
+    """
     texts: list[str] = []
+    blocked: list[str] = []
     module = module_code(essay_id)
     brief = _brief_path(module)
     if (
@@ -71,9 +86,11 @@ def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
         and brief.suffix.lower() in {".md", ".txt"}
         and research_file(essay_id, str(brief)) is not None
     ):
-        texts.append(brief.read_text(encoding="utf-8", errors="replace"))
+        brief_text = _read_utf8(brief, blocked)
+        if brief_text is not None:
+            texts.append(brief_text)
     if not isinstance(pack, dict):
-        return texts
+        return texts, blocked
     for source in pack.get("sources") or []:
         if not isinstance(source, dict):
             continue
@@ -90,7 +107,9 @@ def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
             continue
         suffix = path.suffix.lower()
         if suffix in {".md", ".txt", ".csv", ".html", ".htm"}:
-            texts.append(path.read_text(encoding="utf-8", errors="replace"))
+            source_text = _read_utf8(path, blocked)
+            if source_text is not None:
+                texts.append(source_text)
         elif suffix in {".docx", ".pdf"}:
             try:
                 from essay_writer.invent import read_gathered_text
@@ -98,7 +117,33 @@ def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
                 texts.append(read_gathered_text(path, essay_id))
             except (OSError, ValueError):
                 continue
+    return texts, blocked
+
+
+def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
+    texts, _blocked = _gathered_scan(essay_id, pack)
     return texts
+
+
+def _exclude_in_text_citations(essay_id: str, rules: dict[str, Any]) -> bool:
+    """Whether parentheses count. A pack band keeps its own min and max.
+
+    When the pack does not say, the brief's flag is copied. With no brief
+    flag, the studied module default is copied only in daily use.
+    """
+    if "exclude_in_text_citations" in rules:
+        return bool(rules.get("exclude_in_text_citations"))
+    from essay_writer.assignment_gate import study_defaults_allowed
+    from essay_writer.textutil import BRIEF_WORD_RULES, brief_file_word_rules
+
+    brief_rules = brief_file_word_rules(essay_id)
+    if isinstance(brief_rules, dict) and "exclude_in_text_citations" in brief_rules:
+        return bool(brief_rules["exclude_in_text_citations"])
+    if study_defaults_allowed(essay_id):
+        studied = BRIEF_WORD_RULES.get(module_code(essay_id), {})
+        if isinstance(studied, dict) and "exclude_in_text_citations" in studied:
+            return bool(studied["exclude_in_text_citations"])
+    return False
 
 
 def _sentences(text: str) -> list[str]:
@@ -287,7 +332,7 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
 
         rules = brief_file_word_rules(essay_id)
     low, high = _band_edges(rules) if isinstance(rules, dict) and rules else (None, None)
-    exclude_cites = bool(isinstance(rules, dict) and rules.get("exclude_in_text_citations"))
+    exclude_cites = _exclude_in_text_citations(essay_id, rules) if isinstance(rules, dict) else False
     count = count_words(text, exclude_citations=exclude_cites)
     if pack_data.get("word_count_acknowledged") is True and rules:
         band_ok, band_reason = True, "A person acknowledged the word count."
@@ -389,14 +434,25 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         )
     )
 
-    matches = unquoted_exact(text, _gathered_texts(essay_id, pack_data))
+    gathered, unreadable = _gathered_scan(essay_id, pack_data)
+    matches = unquoted_exact(text, gathered)
+    if unreadable:
+        blocked_names = ", ".join(unreadable)
+        reason = f"A gathered file is not valid UTF-8 and was not scanned: {blocked_names}."
+        if matches:
+            reason += " A gathered sentence appears in the body without quotation marks."
+        plagiarism_passed = False
+    elif matches:
+        reason = "A gathered sentence appears in the body without quotation marks."
+        plagiarism_passed = False
+    else:
+        reason = "No unquoted exact sentence from a gathered file."
+        plagiarism_passed = True
     plagiarism = {
         "code": "unquoted-exact",
-        "passed": not matches,
+        "passed": plagiarism_passed,
         "matches": matches,
-        "reason": "No unquoted exact sentence from a gathered file."
-        if not matches
-        else "A gathered sentence appears in the body without quotation marks.",
+        "reason": reason,
     }
     passed = all(item["passed"] for item in gates) and plagiarism["passed"] and not extra_blockers
     return {

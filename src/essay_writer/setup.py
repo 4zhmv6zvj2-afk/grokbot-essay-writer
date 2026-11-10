@@ -54,13 +54,23 @@ def parse_shell(value: object) -> str | None:
 
 
 def persisted_shell() -> str:
-    """Shell on the setup record later tools already read. Absent means cursor."""
+    """Shell on the setup record later tools already read.
+
+    A missing field stays Cursor. The stored binary token grokbuild stays
+    Grok Build, because older records used that token. Any other value this
+    setup would refuse stays Cursor.
+    """
 
     saved = essay_paths.load_saved_setup()
     if not isinstance(saved, dict) or "mid_office_shell" not in saved:
         return SHELL_CURSOR
-    parsed = parse_shell(saved.get("mid_office_shell"))
-    return parsed if parsed is not None else SHELL_GROK_BUILD
+    raw = saved.get("mid_office_shell")
+    parsed = parse_shell(raw)
+    if parsed is not None:
+        return parsed
+    if isinstance(raw, str) and "".join(raw.split()).casefold() == "grokbuild":
+        return SHELL_GROK_BUILD
+    return SHELL_CURSOR
 
 
 def mid_office() -> str:
@@ -274,6 +284,19 @@ def _under(path: Path, root: Path) -> bool:
 
 def _internal_volume(path: Path) -> bool:
     return any(part.casefold() == "researchdrive" for part in path.parts)
+
+
+def _setup_record_path(app: Path) -> Path:
+    """Where this confirm writes setup.json.
+
+    Later tools read the cloud record when that computer is present, including
+    a save whose app folder was named somewhere else. With no cloud workspace,
+    the record stays beside the named app folder.
+    """
+    cloud = essay_paths.saved_setup_path()
+    if cloud is not None:
+        return cloud
+    return app.parent / "setup.json"
 
 
 def _save_where(app: Path, kb1: Path) -> str | None:
@@ -551,7 +574,16 @@ def essay_setup(
         "consensus_key": bool(key),
         "unpaywall_email": bool(email),
     }
-    record_path = app.parent / "setup.json"
+    record_path = _setup_record_path(app)
+    try:
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        rollback()
+        return refuse(
+            "setup",
+            f"Folders were not kept because the setup record was not written: {exc}",
+            wrote=False,
+        )
     if record_requests_debug(record_path):
         record["debug"] = True
     temporary = record_path.with_suffix(".json.tmp")

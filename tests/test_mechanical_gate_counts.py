@@ -66,6 +66,87 @@ def test_narrative_and_parenthetical_cites_use_the_gathered_source(workspace):
     assert _gate(unnamed_year, "references")["passed"] is False
 
 
+def test_pack_band_keeps_its_max_and_copies_only_the_citation_flag(workspace):
+    """A tighter pack maximum stays. The missing citation flag is copied onto it."""
+    from essay_writer.paths import essay_dir
+
+    body = "one two three four five six seven eight nine ten (Smith, 2020)"
+    pack = {
+        "genre": "essay",
+        "conclusion": "open",
+        "word_rules": {"min": 10, "max": 10},
+        "sources": [{"author": "Smith, J.", "year": "2020"}],
+    }
+    studied = open_sequence("MOD1011AA")
+    pack["essay_id"] = studied
+    studied_report = essay_gates(studied, pack, body=body)
+    studied_band = _gate(studied_report, "word-band")
+    assert studied_band["passed"] is True
+    assert "10–10" in studied_band["reason"]
+
+    briefed = open_sequence()
+    brief = essay_dir("MOD1004AA") / "brief.md"
+    brief.parent.mkdir(parents=True, exist_ok=True)
+    brief.write_text(
+        "Write 800 words. In-text citations do not count.\n",
+        encoding="utf-8",
+    )
+    pack["essay_id"] = briefed
+    brief_report = essay_gates(briefed, pack, body=body)
+    brief_band = _gate(brief_report, "word-band")
+    assert brief_band["passed"] is True
+    assert "10–10" in brief_band["reason"]
+    assert "720" not in brief_band["reason"]
+
+    counted = dict(pack)
+    counted["word_rules"] = {"min": 10, "max": 10, "exclude_in_text_citations": False}
+    forced = essay_gates(studied, counted, body=body)
+    forced_band = _gate(forced, "word-band")
+    assert forced_band["passed"] is False
+    assert "10–10" in forced_band["reason"]
+
+
+def test_plagiarism_scan_refuses_a_non_utf8_text_file(workspace):
+    """A text upload that is not UTF-8 fails closed. A valid file is still scanned."""
+    seq = open_sequence()
+    folder = workspace / "uploads" / "MOD1004AA"
+    folder.mkdir(parents=True)
+    (folder / "broken.txt").write_bytes(
+        b"The strait handles a large share of seaborne crude flows.\n\xff"
+    )
+    (folder / "clean.txt").write_text(
+        "The harbour keeps a written record of every winter closure.\n",
+        encoding="utf-8",
+    )
+    broken = essay_gates(
+        seq,
+        {
+            "essay_id": seq,
+            "genre": "essay",
+            "conclusion": "open",
+            "sources": [{"locator": "uploads/MOD1004AA/broken.txt"}],
+        },
+        body="A clean sentence stays here.",
+    )
+    assert broken["plagiarism"]["passed"] is False
+    assert broken["passed"] is False
+    assert "broken.txt" in broken["plagiarism"]["reason"]
+    assert "not valid UTF-8" in broken["plagiarism"]["reason"]
+    copied = "The harbour keeps a written record of every winter closure."
+    scanned = essay_gates(
+        seq,
+        {
+            "essay_id": seq,
+            "genre": "essay",
+            "conclusion": "open",
+            "sources": [{"locator": "uploads/MOD1004AA/clean.txt"}],
+        },
+        body=copied,
+    )
+    assert scanned["plagiarism"]["passed"] is False
+    assert copied in scanned["plagiarism"]["matches"]
+
+
 def test_docx_log_counts_references_apart_from_sources(monkeypatch):
     """write_docx logs refs_n from the reference list, as the manifest does."""
     seen: dict[str, dict] = {}

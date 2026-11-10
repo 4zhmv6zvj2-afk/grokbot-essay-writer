@@ -92,6 +92,7 @@ def test_later_tools_load_app_path_not_recommended_base(tmp_path, monkeypatch):
 
 def test_setup_does_not_clone_or_store_open(tmp_path, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     assert "git clone" not in SETUP_PROMPT.casefold()
     assert "nothing is cloned" in SETUP_PROMPT.casefold()
     assert "Grok Build" not in SETUP_PROMPT
@@ -223,6 +224,16 @@ def test_mid_office_shell_is_persisted_and_not_an_env_flag(tmp_path, monkeypatch
         encoding="utf-8",
     )
     assert mid_office() == "Grok Build"
+    record.write_text(
+        json.dumps({"app_path": str(tmp_path / "app"), "mid_office_shell": "not-a-shell"}),
+        encoding="utf-8",
+    )
+    assert mid_office() == "Cursor"
+    record.write_text(
+        json.dumps({"app_path": str(tmp_path / "app"), "mid_office_shell": "grokbuild"}),
+        encoding="utf-8",
+    )
+    assert mid_office() == "Grok Build"
     grok_writer = house_instructions()
     assert "Grok Build writes these files for either file-work host" in grok_writer
     assert "Grok Build does the file work and does not own the chat." in grok_writer
@@ -234,6 +245,7 @@ def test_setup_pick_persists_and_branches_the_prompt(tmp_path, monkeypatch):
     from essay_writer.student_voice import for_word, say
 
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     assert setup_prompt(None) == CURSOR_SETUP_PROMPT
     assert setup_prompt("Cursor") == CURSOR_SETUP_PROMPT
     assert setup_prompt("SuperGrok") == SETUP_PROMPT

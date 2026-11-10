@@ -68,6 +68,7 @@ def test_setup_fail_closed_when_the_path_is_a_file(tmp_path, monkeypatch):
 
 def test_optional_secrets_are_stored_and_not_echoed(tmp_path, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     app = tmp_path / "app"
     kb1 = tmp_path / "KB1"
     key = "consensus-secret-value"
@@ -109,6 +110,73 @@ def test_optional_secrets_are_stored_and_not_echoed(tmp_path, monkeypatch):
     assert secrets["ESSAY_WRITER_CONSENSUS_PAID"] == "1"
     mode = (tmp_path / "setup.secrets.json").stat().st_mode
     assert mode & stat.S_IRWXO == 0
+
+
+def test_named_save_on_the_cloud_computer_is_the_record_later_tools_read(tmp_path, monkeypatch):
+    """A named folder still writes the record where later tools read it."""
+    from essay_writer.paths import load_saved_setup
+    from essay_writer.setup import read_setup_secret
+
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    cloud = tmp_path / "cloud"
+    cloud.mkdir()
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
+    app = tmp_path / "named-app"
+    kb1 = tmp_path / "named-kb1"
+    key = "named-consensus-key"
+    draft = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        consensus_api_key=key,
+        consensus_plan="pro",
+        acknowledge_skipped_searches=True,
+    )
+    assert draft["ok"] is True, draft
+    assert draft["wrote"] is False
+    confirmed = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        consensus_api_key=key,
+        consensus_plan="pro",
+        acknowledge_skipped_searches=True,
+    )
+    assert confirmed["ok"] is True, confirmed
+    assert confirmed["where"] == "user-local"
+    assert key not in json.dumps(confirmed)
+    assert not (tmp_path / "setup.json").exists()
+    assert not (tmp_path / "setup.secrets.json").exists()
+    record_path = cloud / "Essay-writer" / "setup.json"
+    secret_path = cloud / "Essay-writer" / "setup.secrets.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    assert record["app_path"] == str(app.resolve())
+    assert record["kb1"] == str(kb1.resolve())
+    assert json.loads(secret_path.read_text(encoding="utf-8"))["CONSENSUS_API_KEY"] == key
+    assert confirmed["setup"].endswith("Essay-writer/setup.json")
+    record["debug"] = True
+    record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        acknowledge_skipped_searches=True,
+    )
+    again = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        acknowledge_skipped_searches=True,
+    )
+    assert again["ok"] is True, again
+    kept = json.loads(record_path.read_text(encoding="utf-8"))
+    assert kept["debug"] is True
+    assert kept["app_path"] == str(app.resolve())
+    monkeypatch.delenv("ESSAY_WRITER_ROOT", raising=False)
+    loaded = load_saved_setup()
+    assert loaded is not None
+    assert loaded["app_path"] == str(app.resolve())
+    assert read_setup_secret("CONSENSUS_API_KEY") == key
 
 
 def test_consensus_switch_is_on_the_health_reminder(workspace, monkeypatch):

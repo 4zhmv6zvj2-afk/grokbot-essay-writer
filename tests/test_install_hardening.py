@@ -425,6 +425,7 @@ def test_optional_secrets_are_created_0600(tmp_path, monkeypatch):
     from essay_writer.setup import essay_setup
 
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
     arguments = {
         "app_path": str(tmp_path / "app"),
         "kb1_path": str(tmp_path / "KB1"),

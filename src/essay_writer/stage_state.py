@@ -102,14 +102,33 @@ def _apply_commit(root, record: dict[str, object]) -> None:
         journal.unlink()
 
 
-def _read_commit(root) -> dict[str, object] | None:
+DAMAGE_REASON = "The last confirm record is damaged and was not applied."
+
+
+class DamagedStageCommit(Exception):
+    """A stage journal exists and cannot be applied. The file stays."""
+
+
+def _journal_damaged(root) -> bool:
+    """True when the journal is present but is not a commit record.
+
+    A missing file is not damage. Damage is not applied and is not deleted.
+    """
     journal = root / STAGE_COMMIT
     if not journal.is_file():
-        return None
+        return False
     try:
         record = json.loads(journal.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return True
+    return not (isinstance(record, dict) and isinstance(record.get("pointer"), dict))
+
+
+def _read_commit(root) -> dict[str, object] | None:
+    journal = root / STAGE_COMMIT
+    if not journal.is_file() or _journal_damaged(root):
         return None
+    record = json.loads(journal.read_text(encoding="utf-8"))
     if not isinstance(record, dict) or not isinstance(record.get("pointer"), dict):
         return None
     return record
@@ -517,6 +536,8 @@ def _commit_pointer(
     between the live files is finished from that journal on the next lock.
     """
     with _pointer_lock(essay_id):
+        if _journal_damaged(work_dir(essay_id)):
+            raise DamagedStageCommit(DAMAGE_REASON)
         fresh = load_pointer(essay_id)
         if _revision(fresh) != _revision(base):
             return None
