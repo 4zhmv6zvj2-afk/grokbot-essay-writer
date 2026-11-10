@@ -43,5 +43,8 @@ When a reply includes heading, post that line as the standing chat heading. The 
 ## stage9_own_words
 Rewrite the title, the opening, and one body paragraph in your own words, and keep the citations and the person the brief names.
 
+## stage6_read_list
+Read the draft and edit it yourself. Look for a fact made smoother or more important than the source, a line that says experts say or research shows with no source you opened, and a quotation, page, or finding you cannot find in the opened file. Also look for empty praise, an empty contrast, a decorative list of three, and serves as where is would do. A real contrast stays. This is not a score, and the draft is not rewritten for you.
+
 ## eqr_first_run_speech
 Independent review runs in a separate specialist review. That review is not a writer-stage save in this chat.

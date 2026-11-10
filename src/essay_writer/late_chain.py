@@ -22,6 +22,7 @@ from essay_writer.diary import (
 )
 from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import module_code, work_dir, workspace_root
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.stage7 import comment_text, load_stage7
 from essay_writer.state import load_state
 from essay_writer.student_voice import say
@@ -137,6 +138,7 @@ FINDINGS_UNMOUNTED = (
 QUIET_STEP = "Wait while the first draft is written."
 FIRST_DRAFT_READY = "Read the first draft in this chat."
 STAGE6_OPEN = "Your draft is saved. Start the first read in this chat."
+STAGE6_READ_LIST = prompt_text("front_office/chat.md", "stage6_read_list")
 _LEAKS = (
     "Essay-writer/",
     "uploads/",
@@ -227,6 +229,7 @@ def quiet_stage5(body: dict[str, Any], essay_id: str) -> dict[str, Any]:
         line = stage5_chat_line(STAGE6_OPEN, STAGE6_OPEN)
     quiet = mark_quiet(body, line, step="5")
     quiet["checklist_in_chat"] = False
+    quiet["read_list"] = say(STAGE6_READ_LIST)
     from essay_writer.cite_fit import speak_cite_ask
 
     return speak_cite_ask(quiet)
