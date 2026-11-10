@@ -286,17 +286,27 @@ def _internal_volume(path: Path) -> bool:
     return any(part.casefold() == "researchdrive" for part in path.parts)
 
 
-def _setup_record_path(app: Path) -> Path:
-    """Where this confirm writes setup.json.
+def _host_cloud_setup() -> Path:
+    return Path("/workspace") / essay_paths.SETUP_DIRNAME / "setup.json"
 
-    Later tools read the cloud record when that computer is present, including
-    a save whose app folder was named somewhere else. With no cloud workspace,
-    the record stays beside the named app folder.
+
+def _setup_record_path(app: Path) -> Path:
+    """Where this confirm writes the record later tools read.
+
+    A named save on the cloud computer uses that record. A test root does not
+    write the host cloud record. With no cloud workspace, the record is the
+    home file later tools read, and a copy stays beside the named app folder.
     """
     cloud = essay_paths.saved_setup_path()
-    if cloud is not None:
-        return cloud
-    return app.parent / "setup.json"
+    if cloud is None:
+        return app.parent / "setup.json"
+    if os.environ.get("ESSAY_WRITER_ROOT"):
+        try:
+            if cloud.resolve() == _host_cloud_setup().resolve():
+                return app.parent / "setup.json"
+        except OSError:
+            return app.parent / "setup.json"
+    return cloud
 
 
 def _save_where(app: Path, kb1: Path) -> str | None:
@@ -610,6 +620,18 @@ def essay_setup(
                 f"The door tree exists but the optional key was not stored: {exc}",
                 wrote=False,
             )
+
+    beside = app.parent / "setup.json"
+    if not essay_paths.CLOUD_WORKSPACE.is_dir():
+        try:
+            same = beside.resolve() == record_path.resolve()
+        except OSError:
+            same = False
+        if not same:
+            beside.write_text(record_path.read_text(encoding="utf-8"), encoding="utf-8")
+            secret_src = _secrets_path(record_path)
+            if secret_src.is_file():
+                _write_secret_text(_secrets_path(beside), secret_src.read_text(encoding="utf-8"))
 
     body["app"] = str(app.resolve())
     body["kb1"] = str(kb1.resolve())

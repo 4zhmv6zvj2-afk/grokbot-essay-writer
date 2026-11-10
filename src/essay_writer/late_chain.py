@@ -738,6 +738,64 @@ def _footer_stop(body: dict[str, Any], *, refused: str, reason: str) -> dict[str
     return body
 
 
+def _stage10_mark_path(source: Path) -> Path:
+    return source.with_name(".stage10-copied.json")
+
+
+def _stage10_pack_sha(pack: dict[str, Any]) -> str:
+    import hashlib
+    import json
+
+    raw = json.dumps(pack, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _remember_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) -> None:
+    import json
+
+    record = {
+        "pack_sha256": _stage10_pack_sha(pack),
+        "copied": body.get("copied") is True,
+        "place": body.get("place") or "",
+        "comments_place": body.get("comments_place") or "",
+        "findings_place": body.get("findings_place") or "",
+        "sequence_written": body.get("sequence_written") is True,
+    }
+    path = _stage10_mark_path(source)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+
+def _reuse_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the previous stage 10 result when this pack was already written."""
+    import json
+
+    mark = _stage10_mark_path(source)
+    if not source.is_file() or not mark.is_file():
+        return None
+    try:
+        record = json.loads(mark.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(record, dict) or record.get("pack_sha256") != _stage10_pack_sha(pack):
+        return None
+    if record.get("sequence_written") is not True:
+        return None
+    if record.get("copied") is True:
+        place = record.get("place")
+        if not isinstance(place, str) or not place or not Path(place).is_file():
+            return None
+    body["ok"] = True
+    body["copied"] = record.get("copied") is True
+    body["sequence_written"] = True
+    body["reused"] = True
+    body["reason"] = ""
+    body["place"] = record.get("place") or body.get("place") or ""
+    body["comments_place"] = record.get("comments_place") or ""
+    body["findings_place"] = record.get("findings_place") or ""
+    return body
+
+
 def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, Any]:
     """Write the sequence Word file, then refresh the sequence -10 final from it.
 
@@ -923,6 +981,9 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
             reason=str(blocked_refs.get("reason") or ""),
         )
         return body
+    reused = _reuse_stage10(source, pack, body)
+    if reused is not None:
+        return reused
     pending = source.with_name(f".{source.name}.writing")
     try:
         write_docx(essay_id, pack, report, pending, product_log=False)
@@ -1099,6 +1160,7 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     body["copied"] = True
     body["reason"] = ""
     body["sequence_written"] = True
+    _remember_stage10(source, pack, body)
     from essay_writer.ml_events import note_stage10_rewrite_paths
 
     note_stage10_rewrite_paths(essay_id)

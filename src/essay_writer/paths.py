@@ -37,11 +37,23 @@ def recommended_paths() -> tuple[Path, Path] | None:
     return base / "app", base / "KB1"
 
 
+def local_setup_record() -> Path:
+    """Setup record used when this computer has no cloud workspace."""
+    return Path.home() / ".essay-writer" / "setup.json"
+
+
 def saved_setup_path() -> Path | None:
-    """Where setup.json lives. Later tools do not read recommended_base."""
-    if not CLOUD_WORKSPACE.is_dir():
+    """Where setup.json lives. Later tools do not read recommended_base.
+
+    The cloud computer wins. With no cloud workspace, a user-local confirm is
+    read from the home record. A test root does not change that path; the
+    reader still ignores the file while ESSAY_WRITER_ROOT is set.
+    """
+    if CLOUD_WORKSPACE.is_dir():
+        return CLOUD_WORKSPACE / SETUP_DIRNAME / "setup.json"
+    if os.environ.get("ESSAY_WRITER_ROOT"):
         return None
-    return CLOUD_WORKSPACE / SETUP_DIRNAME / "setup.json"
+    return local_setup_record()
 
 
 def _folder_from_setup(saved: dict) -> str | None:

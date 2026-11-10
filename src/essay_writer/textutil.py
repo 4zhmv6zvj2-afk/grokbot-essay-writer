@@ -320,8 +320,32 @@ YEAR = r"\d{4}[a-z]?"
 PAREN = re.compile(r"\(([^)]*\d{4}[^)]*)\)")
 # One narrative citation, including "A, B and C (2024)". Leading Both / In are not names.
 # A sentence-initial transition (Similarly, and the same shape) is not an author.
+_NAME = r"[A-Z][A-Za-z'’\-]*"
 NARRATIVE = re.compile(
-    rf"\b([A-Z][A-Za-z'’\-]*(?:\s*,\s*[A-Z][A-Za-z'’\-]*)*(?:\s+[A-Z][A-Za-z'’\-]*)*(?:\s+and\s+[A-Z][A-Za-z'’\-]*)?)\s+\(({YEAR})\)"
+    rf"\b({_NAME}(?:\s*,\s*{_NAME})*(?:\s+{_NAME})*(?:\s+(?:and|&)\s+{_NAME})?)"
+    rf"(?P<etal>\s+et\s+al\.?)?\s+\((?P<year>{YEAR})\)"
+)
+# Title-case words that name an event, a chapter, or a measure. Not surnames.
+_NON_PERSON = frozenset(
+    {
+        "act",
+        "appendix",
+        "article",
+        "chapter",
+        "depression",
+        "figure",
+        "four",
+        "great",
+        "page",
+        "paragraph",
+        "part",
+        "section",
+        "table",
+        "the",
+        "volume",
+        "war",
+        "world",
+    }
 )
 _LEADING_NAME = frozenset({"both", "in"})
 # Discourse words that open a sentence before the author. Not surnames.
@@ -403,6 +427,24 @@ def _without_leading_transition(label: str) -> str:
     return ", ".join(piece for piece in pieces if piece)
 
 
+def _person_piece(piece: str) -> bool:
+    """True for an initial or a surname. Acronyms and event words are not names."""
+    text = piece.strip(" ,")
+    if not text or text.casefold() in _NON_PERSON:
+        return False
+    if len(text) > 1 and (text.isupper() or re.fullmatch(r"[IVXLCDM]+", text) is not None):
+        return False
+    if re.fullmatch(r"[A-Z]", text):
+        return True
+    return re.fullmatch(r"[A-Z][A-Za-z'’\-]*", text) is not None
+
+
+def _person_shaped(name: str) -> bool:
+    pieces = [piece.strip(" ,") for piece in re.split(r"\s+(?:and|&)\s+|,\s*", name)]
+    pieces = [piece for piece in pieces if piece]
+    return bool(pieces) and all(_person_piece(piece) for piece in pieces)
+
+
 def citation_tokens(text: str) -> list[str]:
     found: list[str] = []
     for match in PAREN.finditer(text):
@@ -415,9 +457,10 @@ def citation_tokens(text: str) -> list[str]:
                 found.append(_without_leading_transition(part).casefold())
     for match in NARRATIVE.finditer(text):
         name = _narrative_name(norm_space(match.group(1)))
-        if not name:
+        if not name or not _person_shaped(name):
             continue
-        found.append(norm_space(f"{name}, {match.group(2)}").casefold())
+        label = f"{name} et al., {match.group('year')}" if match.group("etal") else f"{name}, {match.group('year')}"
+        found.append(norm_space(label).casefold())
     return found
 
 
@@ -667,12 +710,34 @@ def token_allowed(token: str, forms: set[str]) -> bool:
     if token in forms:
         return True
     stripped = norm_space(ET_AL.sub("", token)).casefold()
-    return stripped in forms
+    if stripped in forms:
+        return True
+    match = re.fullmatch(rf"(.+),\s*({YEAR})", stripped)
+    if match is None:
+        return False
+    parts = [norm_space(part) for part in re.split(r"\s+(?:and|&)\s+|,\s*", match.group(1))]
+    parts = [part for part in parts if part]
+    if len(parts) < 2:
+        return False
+    year = match.group(2)
+    return all(f"{part}, {year}" in forms for part in parts)
+
+
+def _strip_counted_citations(text: str) -> str:
+    """Drop citation spans so a narrative cite and a parenthetical cite count alike."""
+
+    def narrative(match: re.Match[str]) -> str:
+        name = _narrative_name(norm_space(match.group(1)))
+        if name and _person_shaped(name):
+            return " "
+        return match.group(0)
+
+    return PAREN.sub(" ", NARRATIVE.sub(narrative, text))
 
 
 def count_words(text: str, *, exclude_citations: bool) -> int:
     if exclude_citations:
-        text = PAREN.sub(" ", text)
+        text = _strip_counted_citations(text)
     return len(WORD.findall(text))
 
 

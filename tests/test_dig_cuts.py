@@ -52,7 +52,7 @@ SIMILARLY_FIXTURE = REPO / "tests" / "fixtures" / "dig_cuts_similarly_cite_v1.js
 
 # Pinned dig-cut surfaces. A silent rewrite fails here before behaviour drifts.
 CITATION_TOKENS_SHA = (
-    "7034ca75a129de1b4e55dc7875b608f350d9bbbf41a5bb17eeb5c169f9d090db"
+    "cc06aeedd3b6c93bc63127ab856ae464c765fd93724f871b378ead1365683ffe"
 )
 CITE_REFERENCE_GAPS_SHA = (
     "30c9a4f08715e0d726b8cdde1028adeeb97e66a786aae243ffe3811c871ace38"

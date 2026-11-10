@@ -63,9 +63,21 @@ def _sections_text(pack: dict[str, Any]) -> str:
 
 
 def _read_utf8(path: Path, blocked: list[str]) -> str | None:
-    """Read one gathered text file. A non-UTF-8 file is named and not replaced."""
+    """Read one gathered text file. A non-UTF-8 file is named and not replaced.
+
+    UTF-8 and UTF-16 with a byte-order mark are accepted. Other encodings are
+    refused so a copied sentence cannot hide behind replacement characters.
+    """
     try:
-        return path.read_text(encoding="utf-8")
+        raw = path.read_bytes()
+    except OSError:
+        blocked.append(path.name)
+        return None
+    encoding = "utf-8-sig" if raw.startswith(b"\xef\xbb\xbf") else "utf-8"
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        encoding = "utf-16"
+    try:
+        return raw.decode(encoding)
     except UnicodeDecodeError:
         blocked.append(path.name)
         return None
@@ -126,19 +138,20 @@ def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
 
 
 def _exclude_in_text_citations(essay_id: str, rules: dict[str, Any]) -> bool:
-    """Whether parentheses count. A pack band keeps its own min and max.
+    """Whether in-text citations count. A pack band keeps its own min and max.
 
-    When the pack does not say, the brief's flag is copied. With no brief
-    flag, the studied module default is copied only in daily use.
+    An explicit pack flag wins. Otherwise the mark scheme or brief flag is
+    copied, and only then the studied module default in daily use.
     """
     if "exclude_in_text_citations" in rules:
         return bool(rules.get("exclude_in_text_citations"))
     from essay_writer.assignment_gate import study_defaults_allowed
-    from essay_writer.textutil import BRIEF_WORD_RULES, brief_file_word_rules
+    from essay_writer.specialists.writer import document_word_band
+    from essay_writer.textutil import BRIEF_WORD_RULES
 
-    brief_rules = brief_file_word_rules(essay_id)
-    if isinstance(brief_rules, dict) and "exclude_in_text_citations" in brief_rules:
-        return bool(brief_rules["exclude_in_text_citations"])
+    stated = document_word_band(essay_id)
+    if isinstance(stated, dict) and "exclude_in_text_citations" in stated:
+        return bool(stated["exclude_in_text_citations"])
     if study_defaults_allowed(essay_id):
         studied = BRIEF_WORD_RULES.get(module_code(essay_id), {})
         if isinstance(studied, dict) and "exclude_in_text_citations" in studied:
@@ -352,9 +365,6 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
     safe_default = None
     extra_blockers: list[dict[str, str]] = []
     if pack_sent:
-        from essay_writer.textutil import word_rules_for
-
-        rules_for_sections = word_rules_for(essay_id, pack_data)
         checked = before_word(
             essay_id,
             [
@@ -365,7 +375,7 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
             acknowledged_sections=pack_data.get("section_words_acknowledged") is True,
             acknowledged_contradiction=pack_data.get("contradiction_acknowledged") is True,
             acknowledged_simulation=pack_data.get("simulation_acknowledged") is True,
-            exclude_citations=bool(rules_for_sections.get("exclude_in_text_citations")),
+            exclude_citations=exclude_cites,
             gathered=_gathered_texts(essay_id, pack_data),
         )
         section_rows = checked["section_budgets"]
@@ -438,18 +448,24 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
     matches = unquoted_exact(text, gathered)
     if unreadable:
         blocked_names = ", ".join(unreadable)
-        reason = f"A gathered file is not valid UTF-8 and was not scanned: {blocked_names}."
+        reason = (
+            f"A gathered file is not valid UTF-8 and was not scanned: {blocked_names}. "
+            "Re-save it as UTF-8 and run this check again."
+        )
         if matches:
             reason += " A gathered sentence appears in the body without quotation marks."
+        plagiarism_code = "gathered-encoding"
         plagiarism_passed = False
     elif matches:
         reason = "A gathered sentence appears in the body without quotation marks."
+        plagiarism_code = "unquoted-exact"
         plagiarism_passed = False
     else:
         reason = "No unquoted exact sentence from a gathered file."
+        plagiarism_code = "unquoted-exact"
         plagiarism_passed = True
     plagiarism = {
-        "code": "unquoted-exact",
+        "code": plagiarism_code,
         "passed": plagiarism_passed,
         "matches": matches,
         "reason": reason,

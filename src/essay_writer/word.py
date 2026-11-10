@@ -553,7 +553,8 @@ def essay_pack_render_word(
             body["eqr"] = eqr_verdict(essay_id, stage) or "missing"
         if not gate_report["plagiarism"]["passed"]:
             body["ok"] = False
-            body["refused"] = "unquoted-exact"
+            code = gate_report["plagiarism"].get("code")
+            body["refused"] = code if isinstance(code, str) and code.strip() else "unquoted-exact"
             reason = gate_report["plagiarism"]["reason"]
             body["reason"] = say(reason) if isinstance(reason, str) else reason
             return body

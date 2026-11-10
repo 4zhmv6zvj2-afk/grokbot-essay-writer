@@ -55,6 +55,10 @@ def test_narrative_three_author_cite_is_one_citation():
     pair = citation_tokens("Smith and Jones (2020) argue.")
     assert pair == ["smith and jones, 2020"]
     assert "jones, 2020" not in pair
+    assert citation_tokens("Smith & Jones (2020) argue.") == ["smith & jones, 2020"]
+    assert citation_tokens("Smith et al. (2020) argue.") == ["smith et al., 2020"]
+    assert citation_tokens("World War II (1939) changed trade.") == []
+    assert citation_tokens("GDP (2020) fell.") == []
 
 
 def test_later_tools_load_app_path_not_recommended_base(tmp_path, monkeypatch):

@@ -173,3 +173,6 @@ def test_both_shells_read_the_same_content_check():
     assert cursor_stage_launch("eqr")["settings"]["rules"] == review
     for stage in ("5", "6", "8", "eqr"):
         assert remote_cloud_argv(stage_launch(stage)["command"]) is False
+    prose = stage_launch("5")["command"] + ["Read https://www.phrasebank.manchester.ac.uk/ before the draft."]
+    assert remote_cloud_argv(prose) is False
+    assert remote_cloud_argv(["agent", "https://cursor.com/agents/bc-1"]) is True

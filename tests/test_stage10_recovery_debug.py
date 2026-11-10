@@ -378,6 +378,36 @@ def test_ac3_module_seq_null_saved_pack_matches_clear_cover_and_refs(
     assert _references_body(stage)
 
 
+def test_repeat_stage10_reuses_the_same_pack(tmp_path):
+    """A second write of the same pack does not build the Word file again."""
+    from essay_writer.late_chain import _remember_stage10, _reuse_stage10
+
+    source = tmp_path / "MOD1004AA-1.docx"
+    final = tmp_path / "MOD1004AA-final.docx"
+    source.write_bytes(b"sequence-docx")
+    final.write_bytes(b"final-docx")
+    pack = {"title": "Corridor"}
+    _remember_stage10(
+        source,
+        pack,
+        {
+            "copied": True,
+            "place": str(final),
+            "comments_place": "",
+            "findings_place": "",
+            "sequence_written": True,
+        },
+    )
+    reused = _reuse_stage10(source, pack, {"ok": True, "copied": False, "place": ""})
+    assert reused is not None
+    assert reused["reused"] is True
+    assert reused["copied"] is True
+    assert reused["place"] == str(final)
+    assert final.read_bytes() == b"final-docx"
+    changed = {"title": "Other corridor"}
+    assert _reuse_stage10(source, changed, {"ok": True, "copied": False, "place": ""}) is None
+
+
 def test_build_covered_shared_word_product_log_doors():
     """Build covered. Launch assemblers do not redefine the shared Word product log doors."""
     from essay_writer.build_office import stage_launch

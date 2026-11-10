@@ -39,6 +39,49 @@ def test_word_band_ignores_citations_when_the_rule_says_so(workspace):
     assert "10–10" in band["reason"] or "inside the word band" in band["reason"]
 
 
+def test_narrative_citations_ignore_events_and_accept_joint_authors(workspace):
+    """Events and acronyms are not citations. Joint authors and et al. are."""
+    from essay_writer.textutil import citation_tokens, count_words, token_allowed
+
+    seq = open_sequence()
+    pack = {
+        "essay_id": seq,
+        "genre": "essay",
+        "conclusion": "open",
+        "sources": [
+            {"author": "Smith, J.", "year": "2020"},
+            {"author": "Jones, A.", "year": "2020"},
+        ],
+    }
+    prose = (
+        "World War II (1939) and The Great Depression (1929) sit beside GDP (2020), "
+        "OECD (2021), and Chapter Four (2020). Smith and Jones (2020) name the corridor. "
+        "Smith & Jones (2020) agree. Smith et al. (2020) add a line. Patel et al. (2019) does not."
+    )
+    assert citation_tokens("World War II (1939) changed the route.") == []
+    assert citation_tokens("GDP (2020) fell.") == []
+    assert citation_tokens("Smith & Jones (2020) agree.") == ["smith & jones, 2020"]
+    assert citation_tokens("Patel et al. (2019) does not.") == ["patel et al., 2019"]
+    report = essay_gates(seq, pack, body=prose)
+    reason = _gate(report, "citations")["reason"]
+    assert "world war" not in reason
+    assert "gdp" not in reason
+    assert "oecd" not in reason
+    assert "chapter four" not in reason
+    assert "smith and jones" not in reason
+    assert "smith & jones" not in reason
+    assert "patel et al., 2019" in reason
+    forms = {"smith, 2020", "jones, 2020"}
+    assert token_allowed("smith and jones, 2020", forms)
+    assert token_allowed("smith & jones, 2020", forms)
+    assert token_allowed("(smith & jones, 2020)".strip("()"), forms) or token_allowed("smith & jones, 2020", forms)
+    parenthetical = essay_gates(seq, pack, body="The corridor stays narrow (Smith & Jones, 2020).")
+    assert _gate(parenthetical, "citations")["passed"] is True
+    narrative = "one two three four five six seven eight nine Smith (2020)"
+    paren = "one two three four five six seven eight nine (Smith, 2020)"
+    assert count_words(narrative, exclude_citations=True) == count_words(paren, exclude_citations=True)
+
+
 def test_narrative_and_parenthetical_cites_use_the_gathered_source(workspace):
     """Smith (2020) is a citation. A name the pack did not gather still fails."""
     seq = open_sequence()
@@ -131,7 +174,22 @@ def test_plagiarism_scan_refuses_a_non_utf8_text_file(workspace):
     assert broken["plagiarism"]["passed"] is False
     assert broken["passed"] is False
     assert "broken.txt" in broken["plagiarism"]["reason"]
+    assert broken["plagiarism"]["code"] == "gathered-encoding"
     assert "not valid UTF-8" in broken["plagiarism"]["reason"]
+    assert "Re-save" in broken["plagiarism"]["reason"]
+    wide = "The harbour keeps a written record of every winter closure."
+    (folder / "wide.txt").write_bytes(wide.encode("utf-16"))
+    encoded = essay_gates(
+        seq,
+        {
+            "essay_id": seq,
+            "genre": "essay",
+            "conclusion": "open",
+            "sources": [{"locator": "uploads/MOD1004AA/wide.txt"}],
+        },
+        body="A clean sentence stays here.",
+    )
+    assert encoded["plagiarism"]["code"] != "gathered-encoding"
     copied = "The harbour keeps a written record of every winter closure."
     scanned = essay_gates(
         seq,
@@ -145,6 +203,45 @@ def test_plagiarism_scan_refuses_a_non_utf8_text_file(workspace):
     )
     assert scanned["plagiarism"]["passed"] is False
     assert copied in scanned["plagiarism"]["matches"]
+
+
+def test_mark_scheme_citation_flag_is_the_band_and_the_section_budget(workspace, monkeypatch):
+    """The mark scheme flag is used once. A pack maximum stays."""
+    from essay_writer.brief_checks import before_word
+    from essay_writer.paths import essay_dir
+
+    seq = open_sequence()
+    scheme = essay_dir("MOD1004AA") / "mark-scheme.md"
+    scheme.parent.mkdir(parents=True, exist_ok=True)
+    scheme.write_text(
+        "Write 800 words. In-text citations are not counted.\n",
+        encoding="utf-8",
+    )
+    seen: dict[str, bool] = {}
+    real = before_word
+
+    def capture(*args, **kwargs):
+        seen["exclude"] = kwargs.get("exclude_citations")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr("essay_writer.brief_checks.before_word", capture)
+    body = "one two three four five six seven eight nine ten (Smith, 2020)"
+    pack = {
+        "essay_id": seq,
+        "genre": "essay",
+        "conclusion": "open",
+        "word_rules": {"min": 10, "max": 10},
+        "sections": [{"heading": "Body", "body": body}],
+        "sources": [{"author": "Smith, J.", "year": "2020"}],
+    }
+    report = essay_gates(seq, pack, body=body)
+    assert seen["exclude"] is True
+    assert _gate(report, "word-band")["passed"] is True
+    assert "10–10" in _gate(report, "word-band")["reason"]
+    forced = dict(pack)
+    forced["word_rules"] = {"min": 10, "max": 10, "exclude_in_text_citations": False}
+    essay_gates(seq, forced, body=body)
+    assert seen["exclude"] is False
 
 
 def test_docx_log_counts_references_apart_from_sources(monkeypatch):

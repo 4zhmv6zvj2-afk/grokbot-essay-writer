@@ -116,16 +116,34 @@ _REMOTE_FLAGS = frozenset(
 )
 
 
+_REMOTE_NAMES = frozenset(
+    {
+        "cloud-agent",
+        "cloud_agent",
+        "cloudagent",
+        "remote-agent",
+        "remote_agent",
+    }
+)
+
+
 def remote_cloud_argv(command: list[str]) -> bool:
-    """True when this argv would start a remote or cloud agent."""
-    blob = " ".join(str(part) for part in command).casefold()
-    if "cursor.com/agents" in blob or "://" in blob:
-        return True
-    if any(token in blob for token in ("cloud-agent", "cloud_agent", "cloudagent", "remote-agent", "remote_agent")):
-        return True
+    """True when an argv token would start a remote or cloud agent.
+
+    A URL inside a longer instruction is not a launch target. A token that is
+    only a URL, a cloud-agent name, or a remote flag is.
+    """
     for part in command:
-        flag = str(part).casefold()
-        if flag in _REMOTE_FLAGS or flag.startswith("--cloud=") or flag.startswith("--remote="):
+        flag = str(part).strip().casefold()
+        if not flag:
+            continue
+        if flag in _REMOTE_FLAGS or flag in _REMOTE_NAMES:
+            return True
+        if flag.startswith("--cloud=") or flag.startswith("--remote="):
+            return True
+        if " " in flag or "\n" in flag:
+            continue
+        if flag.startswith(("http://", "https://")) or "cursor.com/agents" in flag:
             return True
     return False
 

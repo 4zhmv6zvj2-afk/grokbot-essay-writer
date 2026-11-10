@@ -208,10 +208,10 @@ def essay_stage(
     lockChoice: str | None = None,
 ) -> dict[str, Any]:
     """A card saves the final look. Stage 5 starts stage 6."""
-    from essay_writer.stage_state import DamagedStageCommit
+    from essay_writer.stage_state import _QUARANTINE_NOTICE, DamagedStageCommit
 
     try:
-        return _run_stage(
+        result = _run_stage(
             StageArgs(
                 essay_id=essay_id,
                 stage=stage,
@@ -234,10 +234,20 @@ def essay_stage(
     except DamagedStageCommit:
         return refuse(
             "stage",
-            "The last confirm record is damaged and was not applied.",
+            "The last confirm record was damaged and was not applied.",
             wrote=False,
             stored=False,
         )
+    notice = _QUARANTINE_NOTICE.get()
+    if notice and isinstance(result, dict):
+        _QUARANTINE_NOTICE.set(None)
+        result["notice"] = notice
+        following = result.get("next")
+        if isinstance(following, str) and notice not in following:
+            result["next"] = f"{notice} {following}"
+        elif not isinstance(following, str):
+            result["next"] = notice
+    return result
 
 
 def _run_stage(args: StageArgs) -> dict[str, Any]:
@@ -412,7 +422,12 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
     ):
         from essay_writer.fo_chat_locks import _mark_lock_resolved
 
-        _mark_lock_resolved(essay_id, stage)
+        try:
+            _mark_lock_resolved(essay_id, stage)
+        except OSError:
+            result["notice"] = (
+                "This stage was saved. The inherited lock could not be marked resolved."
+            )
     return result
 
 
