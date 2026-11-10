@@ -71,7 +71,9 @@ def test_narrative_citations_ignore_events_and_accept_joint_authors(workspace):
     assert "smith and jones" not in reason
     assert "smith & jones" not in reason
     assert "patel et al., 2019" in reason
+    assert "smith et al" not in reason
     forms = {"smith, 2020", "jones, 2020"}
+    assert token_allowed("smith et al., 2020", forms)
     assert token_allowed("smith and jones, 2020", forms)
     assert token_allowed("smith & jones, 2020", forms)
     assert token_allowed("(smith & jones, 2020)".strip("()"), forms) or token_allowed("smith & jones, 2020", forms)
@@ -122,6 +124,14 @@ def test_narrative_citations_cover_names_and_skip_periods(workspace):
     assert _gate(shouted, "citations")["passed"] is True
     titled = essay_gates(seq, pack, body="Dr Smith (2020) names the corridor in one sentence.")
     assert _gate(titled, "citations")["passed"] is True
+    narrative_et = essay_gates(seq, pack, body="Smith et al. (2020) report one corridor in the study.")
+    assert _gate(narrative_et, "citations")["passed"] is True, narrative_et
+    parenthetical_et = essay_gates(
+        seq,
+        pack,
+        body="One corridor moved (Smith et al., 2020).",
+    )
+    assert _gate(parenthetical_et, "citations")["passed"] is True, parenthetical_et
     oxford = essay_gates(seq, pack, body="Smith, Jones, and Brown (2020) name the corridor.")
     assert _gate(oxford, "citations")["passed"] is True
     partial = {
@@ -145,6 +155,38 @@ def test_narrative_citations_cover_names_and_skip_periods(workspace):
     ):
         report = essay_gates(seq, pack, body=body)
         assert _gate(report, "citations")["passed"] is False, body
+
+
+def test_common_labels_with_a_year_are_not_citations(workspace):
+    """A plan, place, month, or organisation beside a year is not an author."""
+    from essay_writer.textutil import citation_tokens
+
+    seq = open_sequence()
+    pack = {
+        "essay_id": seq,
+        "genre": "essay",
+        "conclusion": "open",
+        "sources": [{"author": "Smith, J.", "year": "2020"}],
+    }
+    labels = (
+        "the Marshall Plan (1947) rebuilt one region.",
+        "the Black Death (1348) reduced the towns.",
+        "the Bretton Woods (1944) set one rate.",
+        "Spanish Flu (1918) closed the ports.",
+        "United Nations (2020) counted the flows.",
+        "European Union (2020) counted the flows.",
+        "ASEAN (2020) counted the flows.",
+        "NAFTA (1994) changed one tariff.",
+        "BRICS (2009) changed one tariff.",
+        "June (2020) closed one port.",
+        "Monday (2020) closed one port.",
+        "Manchester (2020) closed one port.",
+        "Smith Report (2020) closed one port.",
+    )
+    for text in labels:
+        assert citation_tokens(text) == [], text
+        report = essay_gates(seq, pack, body=text)
+        assert _gate(report, "citations")["passed"] is True, text
 
 
 def test_narrative_and_parenthetical_cites_use_the_gathered_source(workspace):

@@ -337,11 +337,12 @@ _NARRATIVE_YEAR = re.compile(
     rf"(?P<lead>\s+)(?P<etal>et\s+al\.?,?\s+)?\((?P<year>{YEAR})\)",
     re.IGNORECASE,
 )
-# Not personal names. A lone label, or any word in a longer label, keeps the
-# span out of the citation gate: document parts, heading numbers, periods, and
-# public events. A personal name still matches, including a shouted surname.
+# Not personal names. Any one of these words keeps the whole span out of the
+# citation gate. A personal name still matches, including a shouted surname of
+# five or more letters. All-caps labels of two to four letters stay acronyms.
 _NON_PERSON = frozenset(
     {
+        # Document parts, heading numbers, periods, and public events.
         "act",
         "antiquity",
         "apartheid",
@@ -398,6 +399,70 @@ _NON_PERSON = frozenset(
         "war",
         "watergate",
         "world",
+        # Head noun of a document, organisation, or event: "Smith Report", "Marshall Plan".
+        "accord",
+        "agency",
+        "agreement",
+        "authority",
+        "bank",
+        "commission",
+        "committee",
+        "conference",
+        "council",
+        "death",
+        "department",
+        "epidemic",
+        "flu",
+        "fund",
+        "institute",
+        "kingdom",
+        "ministry",
+        "nations",
+        "organisation",
+        "organization",
+        "outbreak",
+        "pact",
+        "pandemic",
+        "paper",
+        "plan",
+        "program",
+        "programme",
+        "report",
+        "review",
+        "scheme",
+        "study",
+        "summit",
+        "survey",
+        "union",
+        "university",
+        # Months and weekdays. A surname that is also a month is not a citation.
+        "april",
+        "august",
+        "december",
+        "february",
+        "friday",
+        "january",
+        "july",
+        "june",
+        "march",
+        "may",
+        "monday",
+        "november",
+        "october",
+        "saturday",
+        "september",
+        "sunday",
+        "thursday",
+        "tuesday",
+        "wednesday",
+        # Organisation initials longer than four letters, so they are not shouted surnames.
+        "apec",
+        "asean",
+        "brics",
+        "nafta",
+        # A place essays date. "Woods (2020)" stays a surname; "Bretton Woods" does not.
+        "bretton",
+        "manchester",
     }
 )
 _TITLES = frozenset(
@@ -487,7 +552,8 @@ _LEADING_TRANSITION = frozenset(
     }
 )
 WORD = re.compile(r"[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*")
-ET_AL = re.compile(r"\s+et\s+al\.?,?", re.IGNORECASE)
+# Drop "et al." and leave the comma that separates the name from the year.
+ET_AL = re.compile(r"\s+et\s+al\.?", re.IGNORECASE)
 
 
 def norm_space(value: str) -> str:
