@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.6.1 — 2026-11-11
+
+Writing-quality, citation-policy, and recovery round.
+
+Narrative citations:
+- Personal names in prose are recognised, including Unicode names, titles,
+  initials, name particles, Oxford lists, and `et al.` with or without a comma
+  before the year. A gathered `et al.` citation matches; an ungathered one
+  fails. Narrative and parenthetical forms leave the same word count.
+- Policy B: a parenthetical citation, or a narrative citation with a clear
+  person cue, is a hard failure when it was not gathered. A lone ordinary name
+  plus a year is a possible citation: gate 7 passes, the token is named on
+  `questionable_citations` and the gate's `questionable` list, and Word is still
+  written. Cite-fit still reports the gap. A hard miss still refuses Word.
+- Common labels are not citations: document and event head nouns, months,
+  weekdays, and five-plus organisation initials stay silent. Accepted limits
+  (multi-word labels outside the list, `Page`/`May`/`June` collisions,
+  two-to-four-letter all-caps acronyms) are documented in the README and the
+  review note.
+- Gate 9 requires author and year metadata whenever a citation record is
+  present, including a possible one.
+
+Recovery and setup:
+- A damaged confirm journal is renamed to `.stage.commit.damaged-<UTC stamp>`
+  and is not applied. The next save continues and names the set-aside file. If
+  the rename fails, the save refuses, names the journal path, and says to move
+  that file out of the tracking folder; the damaged file stays in place. A
+  valid torn journal still replays; a damaged `state.json` still raises.
+- A setup record written only beside the app, up to two folders under the home
+  directory, is copied to `~/.essay-writer/setup.json` with its secret and is
+  read from there. A test root does not write the real
+  `/workspace/Essay-writer/setup.json`.
+- The plagiarism scan, gathered-text reads, and the module brief accept UTF-8,
+  UTF-8 with a BOM, and UTF-16 with a BOM. cp1252 is still refused as
+  `gathered-encoding`; an unreadable file is `gathered-unreadable`, not bad
+  UTF-8.
+
+Other fixes:
+- The word band and section budget share one citation-count flag. An explicit
+  pack flag wins, then the mark scheme, the brief, and the studied default; the
+  pack minimum and maximum stay as sent.
+- `keep` marks an inherited lock only after the save stores. A failure to mark
+  the lock leaves the stage saved and says so.
+- The first-run folder check reads the app path on the setup record.
+- A repeat stage 10 write reuses the previous copy when the pack is unchanged,
+  the marker says the sequence file was written, and the final file is present.
+- A launch is remote for a remote flag, an `--endpoint`/`-e` URL, or a URL
+  token. A model named `cloud-agent` and a URL inside a longer instruction are
+  not launches.
+- Tests: 1110 (8 terminal-backed cases skip on hosts without a pty); ruff,
+  mypy, docs, and the prompt snapshot are current.
+
 ## 0.6.0 — 2026-11-05
 
 Bootstrap v0.2.0 and the Python version policy.
