@@ -204,7 +204,13 @@ def test_mid_office_shell_is_persisted_and_not_an_env_flag(tmp_path, monkeypatch
     writer = house_instructions()
     reviewer = house_instructions(REVIEW_INSTRUCTIONS)
     assert "Cursor is the mid office" in writer
-    assert "Grok Build" not in writer
+    assert "Grok Build is an alternate file-work host" in writer
+    assert "only when the user wants Grok Build" in writer
+    assert "Cursor is an alternate" not in writer
+    assert "only when the user wants Cursor" not in writer
+    assert "Cursor CLI or Cursor" not in writer
+    assert "Cursor writes these files for either file-work host" in writer
+    assert "Cursor does the file work and does not own the chat." in writer
     assert "agent --version" in writer
     assert "do not install grok" in writer.casefold()
     assert "Cursor does not own this chat" in reviewer
@@ -217,6 +223,11 @@ def test_mid_office_shell_is_persisted_and_not_an_env_flag(tmp_path, monkeypatch
         encoding="utf-8",
     )
     assert mid_office() == "Grok Build"
+    grok_writer = house_instructions()
+    assert "Grok Build writes these files for either file-work host" in grok_writer
+    assert "Grok Build does the file work and does not own the chat." in grok_writer
+    assert "only when the user wants Grok Build" in grok_writer
+    assert "Cursor writes these files" not in grok_writer
 
 
 def test_setup_pick_persists_and_branches_the_prompt(tmp_path, monkeypatch):

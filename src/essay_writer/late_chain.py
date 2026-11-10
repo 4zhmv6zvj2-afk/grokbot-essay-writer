@@ -84,10 +84,6 @@ def findings_place(essay_id: str) -> str:
     return f"Documents/{project}/{project}-findings.docx"
 
 
-def chain_armed(pointer: dict[str, Any]) -> bool:
-    return pointer.get("chain_armed") is True
-
-
 def next_run(essay_id: str, stage: str, *, armed: bool) -> dict[str, Any] | None:
     """The single following run. Never 8, 9, and 10 together."""
     if not armed or stage == "6":
@@ -117,13 +113,6 @@ def next_run(essay_id: str, stage: str, *, armed: bool) -> dict[str, Any] | None
             "eqr": verdict,
         }
     return None
-
-
-def review_block(essay_id: str) -> str | None:
-    from essay_writer.spine import final_review
-
-    text, _verdict = final_review(essay_id)
-    return text
 
 
 STAGE10_UNMOUNTED = (
@@ -303,7 +292,7 @@ def log_word_docx_written(
         conclusion=str(pack.get("conclusion") or ""),
         cover=cover,
         sources_count=len(report.get("sources") or []),
-        refs_count=len(report.get("sources") or []),
+        refs_count=len(report.get("references") or []),
         output_path=path,
     )
 

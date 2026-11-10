@@ -74,7 +74,6 @@ from essay_writer.stage_state import (
     _attach_minted_card as _attach_minted_card,
     _cache_approved_look as _cache_approved_look,
     _card_record as _card_record,
-    _card_records_no_change as _card_records_no_change,
     _clear_copied_writing as _clear_copied_writing,
     _commit_path as _commit_path,
     _commit_pointer as _commit_pointer,

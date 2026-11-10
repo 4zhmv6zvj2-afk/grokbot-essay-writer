@@ -20,8 +20,6 @@ from essay_writer.paths import (
     target_error,
 )
 
-_CITE = re.compile(r"\(([A-Za-z][^,()]{0,40}),\s*((?:19|20)\d{2})\)")
-
 
 def _gate(number: int, name: str, passed: bool, reason: str) -> dict[str, Any]:
     return {"gate": number, "name": name, "passed": passed, "reason": reason}
@@ -61,10 +59,6 @@ def _sections_text(pack: dict[str, Any]) -> str:
             if isinstance(body, str):
                 parts.append(body)
     return "\n".join(parts)
-
-
-def _surname(author: str) -> str:
-    return author.split(",")[0].strip().casefold()
 
 
 def _gathered_texts(essay_id: str, pack: dict[str, Any] | None) -> list[str]:
@@ -259,23 +253,21 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
     )
 
     from essay_writer.brief_checks import before_word, decorative_citations
+    from essay_writer.textutil import citation_tokens, count_words, in_text_forms, token_allowed
 
-    citations = _CITE.findall(text)
+    forms: set[str] = set()
+    for source in sources:
+        year = source.get("year")
+        if year is None or not str(year).strip():
+            continue
+        authors = source.get("authors") or source.get("author")
+        names = authors if isinstance(authors, list) else [authors]
+        for name in names:
+            if isinstance(name, str) and name.strip():
+                forms |= in_text_forms(name, str(year))
+    citations = citation_tokens(text)
     parked = decorative_citations(text)
-    missing: list[str] = []
-    for surname, year in citations:
-        matched = False
-        for source in sources:
-            authors = source.get("authors") or source.get("author")
-            names = authors if isinstance(authors, list) else [authors]
-            years = str(source.get("year") or "")
-            if years != year:
-                continue
-            for name in names:
-                if isinstance(name, str) and _surname(name) == surname.casefold():
-                    matched = True
-        if not matched:
-            missing.append(f"({surname}, {year})")
+    missing = [token for token in citations if not token_allowed(token, forms)]
     cite_ok = not missing and not parked
     if missing:
         cite_reason = "These citations are not in the gathered sources: " + ", ".join(missing)
@@ -294,8 +286,9 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         from essay_writer.textutil import brief_file_word_rules
 
         rules = brief_file_word_rules(essay_id)
-    low, high = _band_edges(rules) if rules else (None, None)
-    count = len(text.split())
+    low, high = _band_edges(rules) if isinstance(rules, dict) and rules else (None, None)
+    exclude_cites = bool(isinstance(rules, dict) and rules.get("exclude_in_text_citations"))
+    count = count_words(text, exclude_citations=exclude_cites)
     if pack_data.get("word_count_acknowledged") is True and rules:
         band_ok, band_reason = True, "A person acknowledged the word count."
     elif low is None or high is None:
@@ -356,7 +349,8 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
                 rules,
                 sections=draft_sections,
                 high=high,
-                counter="split",
+                counter="words",
+                exclude_citations=exclude_cites,
             )
             if decision["waive_word"] and not decision["document_still_fails"]:
                 band_ok = True

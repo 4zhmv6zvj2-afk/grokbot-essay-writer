@@ -270,25 +270,6 @@ def stage_index_line() -> str:
     return " ".join(parts)
 
 
-def _room_confirm_note() -> str:
-    from essay_writer.build_status import MID_BUILD_DOOR
-    from essay_writer.specialists.grok_bot import (
-        ROOM_CONFIRM_PATH,
-        STAGE7_AFTER_ANSWERS,
-        STAGE_CONFIRM_EACH,
-    )
-
-    return (
-        ROOM_CONFIRM_PATH
-        + " "
-        + STAGE_CONFIRM_EACH
-        + " "
-        + STAGE7_AFTER_ANSWERS
-        + " "
-        + MID_BUILD_DOOR
-    )
-
-
 def stage_tool_description() -> str:
     return render_tokens(text("front_office/tools.md", "stage_tool"))
 

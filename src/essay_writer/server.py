@@ -64,6 +64,16 @@ INSTRUCTIONS = (
     + seat_reading("write")
 )
 
+# These sentences name the file-work host that is actually in use.
+# Other "Grok Build" lines name the alternate product or the setup argument.
+# A blanket replace would tell a Cursor briefing to pass mid_office_shell for
+# Cursor, and would call Cursor the alternate host.
+_ACTIVE_HOST_LINES = (
+    "Grok Build does the file work and does not own the chat.",
+    "Grok Build writes these files for either file-work host",
+    "Grok Build does not own this chat.",
+)
+
 HANDLERS = {
     "essay.debug.wipe": essay_debug_wipe,
     "essay.debug.export": essay_debug_export,
@@ -145,7 +155,8 @@ def house_instructions(text: str | None = None) -> str:
     source = INSTRUCTIONS if text is None else text
     office = mid_office()
     if office != "Grok Build":
-        source = source.replace("Grok Build", office)
+        for line in _ACTIVE_HOST_LINES:
+            source = source.replace(line, line.replace("Grok Build", office))
     if text is None:
         source = f"{source}\n\n{setup_prompt(essay_setup_mod.persisted_shell())}"
     elif text == REVIEW_INSTRUCTIONS:

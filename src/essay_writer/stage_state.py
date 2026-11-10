@@ -1043,22 +1043,6 @@ def _replay_confirm_card(
     }
 
 
-def _card_records_no_change(record: dict[str, object] | None) -> bool:
-    """True when this waiting card already recorded a no-change answer."""
-    if not isinstance(record, dict):
-        return False
-    payload = record.get("payload")
-    if not isinstance(payload, dict):
-        return False
-    from essay_writer.stage7 import answers_mean_no_change
-
-    for key in ("answers", "look"):
-        value = payload.get(key)
-        if isinstance(value, str) and answers_mean_no_change(value):
-            return True
-    return False
-
-
 def _stage7_skip_reply(
     essay_id: str,
     stage: str,
