@@ -22,7 +22,6 @@ from essay_writer.word import (
     cover_lines,
     essay_pack_render_word,
     word_manifest,
-    write_docx,
 )
 
 MODULE = ESSAY
@@ -247,4 +246,3 @@ def test_build_covered_cursor_and_grok_build_share_word_manifest():
     assert "def word_manifest" not in inspect.getsource(cursor_stage_launch)
     assert "write_docx(" not in inspect.getsource(stage_launch)
     assert "write_docx(" not in inspect.getsource(cursor_stage_launch)
-    assert "write_docx(" in inspect.getsource(write_docx)

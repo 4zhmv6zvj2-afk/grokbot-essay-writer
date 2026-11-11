@@ -175,8 +175,8 @@ def test_ac5_suite_hooks_and_build_covered(workspace):
     assert "Mac-local" in INSTRUCTIONS or "Mac-local copies" in INSTRUCTIONS
     assert front_office()["handlers"]["essay.stage"] is HANDLERS["essay.stage"]
     assert cursor_shell()["handlers"]["essay.project.delete"] is HANDLERS["essay.project.delete"]
-    assert "stage_launch" in inspect.getsource(stage_launch)
-    assert "stage_launch" in inspect.getsource(cursor_stage_launch)
+    assert "stage_settings(" in inspect.getsource(stage_launch)
+    assert "stage_settings(" in inspect.getsource(cursor_stage_launch)
 
 
 def test_ac6_child_inherits_parent_stage2_entry_locks(workspace):

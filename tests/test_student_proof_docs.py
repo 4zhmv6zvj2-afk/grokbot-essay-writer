@@ -213,4 +213,6 @@ def test_build_covered_shared_delivery_helpers():
     findings_src = inspect.getsource(eqr.write_findings_note)
     assert "chat_docx" in findings_src
     assert "copy_deliverable_to_mac" in findings_src
-    assert inspect.getsource(researcher.deliver_critical_reviews)
+    assert "ship_4b(essay_id, sources, None)" in inspect.getsource(
+        researcher.deliver_critical_reviews
+    )
