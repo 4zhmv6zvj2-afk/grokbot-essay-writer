@@ -18,11 +18,7 @@ from essay_writer.late_chain import _stage10_manifest, write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.research import essay_research_summary
 from essay_writer.validate import essay_pack_validate
-from essay_writer.word import (
-    cover_lines,
-    essay_pack_render_word,
-    word_manifest,
-)
+from essay_writer.word import essay_pack_render_word, word_manifest
 
 MODULE = ESSAY
 TOPIC = "How should the firm manage corridor risk?"
@@ -119,17 +115,6 @@ def _spy(monkeypatch):
 
 def test_ac1_stage6_render_word_uses_shared_cover_refs_door(workspace, monkeypatch):
     """AC1. Stage 6 render_word and Stage 10 call the same word_manifest door."""
-    render = inspect.getsource(essay_pack_render_word)
-    stage10 = inspect.getsource(_stage10_manifest)
-    manifest = inspect.getsource(word_manifest)
-    assert render.count("word_manifest(") == 1
-    assert stage10.count("word_manifest(") == 1
-    assert "_word_pack(" in manifest
-    assert "cover_lines(" in manifest
-    assert "cover_field_rows(" in inspect.getsource(cover_lines)
-    assert "cover_field_rows(" in inspect.getsource(cover_lines)
-    assert "cover_lines_from_field_rows(" in inspect.getsource(cover_lines)
-
     seen = _spy(monkeypatch)
     seq = open_sequence(MODULE)
     body = pack(seq)
@@ -147,15 +132,21 @@ def test_ac2_stage7_and_stage9_use_the_same_door(workspace, monkeypatch):
     stage10 = inspect.getsource(_stage10_manifest)
     assert "_word_pack(" not in render
     assert "_word_pack(" not in stage10
-    assert "word_manifest(" in render
-    assert "word_manifest(" in stage10
 
     seen = _spy(monkeypatch)
     seq = open_sequence(MODULE)
     body = pack(seq)
-    essay_pack_render_word(seq, body, "draft", stage="7")
-    essay_pack_render_word(seq, body, "draft", stage="9")
+    from essay_writer.stage7 import load_stage7, save_stage7
+
+    stage7 = load_stage7(seq)
+    stage7["edited"] = True
+    save_stage7(seq, stage7)
+    preview7 = essay_pack_render_word(seq, body, "draft", stage="7")
+    preview9 = essay_pack_render_word(seq, body, "draft", stage="9")
     assert seen == [seq, seq]
+    _, report = word_manifest(seq, body)
+    assert preview7["cover"] == report["cover"] == preview9["cover"]
+    assert preview7["references"] == report["references"] == preview9["references"]
 
 
 def test_ac3_body_only_pack_keeps_house_cover_and_refs(workspace, monkeypatch, tmp_path):
@@ -237,9 +228,7 @@ def test_build_covered_cursor_and_grok_build_share_word_manifest():
     assert front_office()["handlers"] is shared
     assert shared["essay.pack.render_word"] is essay_pack_render_word
     assert HANDLERS["essay.pack.render_word"] is essay_pack_render_word
-    assert "word_manifest(" in inspect.getsource(essay_pack_render_word)
     assert "write_stage10(" in inspect.getsource(_render_stage10_before_close)
-    assert "word_manifest(" in inspect.getsource(_stage10_manifest)
     assert "def word_manifest" not in inspect.getsource(stage_launch)
     assert "def word_manifest" not in inspect.getsource(cursor_stage_launch)
     assert "write_docx(" not in inspect.getsource(stage_launch)
