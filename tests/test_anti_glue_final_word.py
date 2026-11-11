@@ -122,9 +122,9 @@ def test_ac5_craft_source_is_the_only_inlined_copy():
     helpers = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
     craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
     assert craft.count(ANTI_GLUE) == 1
+    assert helpers.count(ANTI_GLUE) == len(STAGES)
     for stage in STAGES:
         assert stage_settings(stage)["prompt_overlay"].count(ANTI_GLUE) == 1
-        assert ANTI_GLUE not in helpers
         for line in basics_lines(stage):
             assert line in helpers
     for name in OTHER_HELPERS:
@@ -183,8 +183,11 @@ def test_ac6_stage9_save_names_title_opening_and_one_body_paragraph(workspace):
 
 
 def test_ac7_pack_render_and_revise_carry_the_overlay():
+    """Anti-glue stays on the stage-5 and stage-8 rules, not pasted onto the doors."""
     for tool in WORD_DOORS:
-        assert ANTI_GLUE in _door(tool)
+        assert ANTI_GLUE not in _door(tool)
+    assert ANTI_GLUE in stage_settings("5")["rules"]
+    assert ANTI_GLUE in stage_settings("8")["rules"]
     assert ANTI_GLUE in INSTRUCTIONS
 
 

@@ -441,7 +441,7 @@ def test_write_seat_reads_the_notes_and_reviewer_does_not():
     for description in (research, full, write, validate):
         assert HELPERS_MARK not in description
         assert HARVARD_MARK not in description
-        assert "server instructions" in description
+        assert "Basics checklist" not in description
     assert HELPERS_MARK not in REVIEW_INSTRUCTIONS
     assert HARVARD_MARK not in REVIEW_INSTRUCTIONS
     assert HELPERS_MARK not in house_instructions(REVIEW_INSTRUCTIONS)
