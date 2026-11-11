@@ -1,7 +1,9 @@
 """Generate the checklist blocks in docs/academic-writing-helpers.md.
 
-The doc keeps its hand-written router prose. Only the **Basics checklist**
-blocks are replaced from the prompt bundle.
+The doc keeps its hand-written router prose. Each **Basics checklist**
+block is replaced from the prompt bundle. On a stage that already renders
+shared craft, or a shared stage line, the same block then lists those
+rules under **Shared rules:**.
 """
 
 from __future__ import annotations
@@ -11,9 +13,12 @@ import re
 import sys
 from pathlib import Path
 
+from essay_writer.prompt_content import CRAFT_BY_STAGE, SHARED_STAGE_LINES
 from essay_writer.prompt_loader import text
 from essay_writer.stage_llm import STAGE_KEYS, UNTRUSTED_FENCE, stage_settings
 from essay_writer.writing_basics import CHECKLISTS
+
+SHARED_RULES_MARK = "**Shared rules:**"
 
 DOC = Path("docs/academic-writing-helpers.md")
 BOT = Path("docs/templates/bot.md")
@@ -42,6 +47,16 @@ def _stage(match: re.Match[str], text: str) -> str:
     return headings[-1].split(".", 1)[0].removeprefix("### ").strip()
 
 
+def _stage_block(stage: str) -> str:
+    """Checklist bullets, then the shared rules that stage already renders."""
+    lines = [f"- {line}" for line in CHECKLISTS[stage]]
+    shared = SHARED_STAGE_LINES.get(stage, ()) + CRAFT_BY_STAGE.get(stage, ())
+    if shared:
+        lines.append(SHARED_RULES_MARK)
+        lines.extend(f"- {line}" for line in shared)
+    return "\n".join(lines) + "\n"
+
+
 def render(text: str) -> str:
     matches = list(MARKER.finditer(text))
     if not matches:
@@ -64,7 +79,7 @@ def render(text: str) -> str:
         last_line = max(i for i, line in enumerate(lines) if line.startswith("- "))
         start = match.end() + sum(len(line) for line in lines[:start_line])
         stop = match.end() + sum(len(line) for line in lines[: last_line + 1])
-        bullets = "\n".join(f"- {line}" for line in CHECKLISTS[stage]) + "\n"
+        bullets = _stage_block(stage)
         out.append(text[cursor:start])
         out.append(bullets)
         cursor = stop

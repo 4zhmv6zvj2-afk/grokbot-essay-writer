@@ -265,7 +265,7 @@ def test_ac5_writer_voice_limits_on_stages_5_to_8():
     ):
         assert sentence in source
     assert VOICE_LIMIT in source
-    assert VOICE_LIMIT not in helpers
+    assert helpers.count(VOICE_LIMIT) == 4
     assert voice_limit_sha() == __import__("hashlib").sha256(VOICE_LIMIT.encode("utf-8")).hexdigest()
     assert len(voice_limit_sha()) == 64
     folded = source.casefold()

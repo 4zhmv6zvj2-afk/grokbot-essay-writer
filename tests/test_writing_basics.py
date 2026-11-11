@@ -35,7 +35,7 @@ def test_helpers_checklists_match_prompt_wiring():
         end = markers[index + 1].start() if index + 1 < len(markers) else len(text)
         bullets = []
         for line in text[match.end() : end].splitlines():
-            if line.startswith("### ") or line.startswith("## "):
+            if line.startswith("### ") or line.startswith("## ") or line.startswith("**Shared rules:**"):
                 break
             if line.startswith("- "):
                 bullets.append(line[2:].strip())

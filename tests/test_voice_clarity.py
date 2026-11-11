@@ -52,7 +52,7 @@ def test_ac2_craft_source_and_launchers_carry_the_same_bullet():
     helpers = HELPERS.read_text(encoding="utf-8")
     craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
     assert craft.count(PLAIN_WORDS) == 1
-    assert PLAIN_WORDS not in helpers
+    assert helpers.count(PLAIN_WORDS) == len(STAGES)
     for stage in STAGES:
         assert stage_settings(stage)["prompt_overlay"].count(PLAIN_WORDS) == 1
         for line in basics_lines(stage):
