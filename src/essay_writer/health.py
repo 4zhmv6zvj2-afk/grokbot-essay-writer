@@ -34,6 +34,7 @@ from essay_writer.projects import (
     stage_name,
     strip_duplicate_card_ids,
 )
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.specialists.researcher import consensus_status
 from essay_writer.stage_state import load_pointer
 from essay_writer.state import load_state
@@ -176,6 +177,7 @@ def essay_health() -> dict[str, Any]:
         "consensus": consensus_status(),
         "invent_forbid": True,
         "opening": ["new", "continue", "roll-forward", "archive", "unarchive", "delete"],
+        "first_turn_card": prompt_text("front_office/chat.md", "first_turn_card"),
         "sequence": [
             "essay.health",
             "essay.originals",

@@ -239,6 +239,25 @@ def _stage_call(args: StageArgs, *, minting: bool) -> dict[str, Any]:
     return result
 
 
+def _turn_redirect(
+    stage: str, confirm_phase: str | None, *messages: object
+) -> dict[str, Any] | None:
+    """Approved reply for a short ask. A stage note is not one of these."""
+    from essay_writer.student_turns import redirect_for
+
+    for message in messages:
+        reply = redirect_for(message)
+        if reply is not None:
+            return refuse(
+                "turn",
+                reply,
+                next=reply,
+                stage=stage,
+                confirmPhase=confirm_phase,
+            )
+    return None
+
+
 def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
     """Resolve one stage call, then draft it or save it.
 
@@ -258,6 +277,9 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
     if id_error:
         return refuse("essay-id", id_error)
     if args.encourageChoice is not None:
+        redirected = _turn_redirect(stage, confirmPhase, args.encourageChoice)
+        if redirected is not None:
+            return redirected
         from essay_writer.encourage import answer_encourage
 
         return answer_encourage(essay_id, args.encourageChoice)
@@ -292,6 +314,9 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         text = look.strip()
     else:
         return refuse("stage", "look must be plain text.")
+    redirected = _turn_redirect(stage, confirmPhase, text, args.answers)
+    if redirected is not None:
+        return redirected
     pointer = load_pointer(essay_id)
     genre = brief_genre(essay_id)
     pending_lock = inherited_lock_pending(essay_id, stage)

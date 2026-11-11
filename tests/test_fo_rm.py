@@ -31,6 +31,7 @@ from essay_writer.specialists.grok_bot import (
 from essay_writer.spine import AUTO_START
 from essay_writer.stage7 import _QUESTIONS
 from essay_writer.stage_track import essay_stage
+from essay_writer.student_turns import STAGE7_LINE
 from essay_writer.student_voice import say
 
 
@@ -70,7 +71,8 @@ def test_stage6_and_quiet_lines_are_a_verb_and_a_destination():
 
 def test_stage7_lead_names_the_questions_and_the_confirm_card():
     lead = stage7_lead(list(_QUESTIONS), "Ask for feedback")
-    assert lead.startswith("Please answer these questions in this chat.")
+    assert lead.startswith(STAGE7_LINE)
+    assert "Please answer these questions in this chat." in lead
     for question in _QUESTIONS:
         assert question in lead
     assert "Then open the Confirm card to save Stage 7" in lead
@@ -208,7 +210,8 @@ def test_stage7_draft_leads_with_questions(workspace):
     asked = essay_stage(seq, "7", "draft", look)
     assert asked["ok"] is True, asked
     assert asked["questions"]
-    assert asked["next"].startswith("Please answer these questions")
+    assert asked["next"].startswith(STAGE7_LINE)
+    assert "Please answer these questions" in asked["next"]
     assert "Confirm card" in asked["next"]
     assert asked["card"]["actions"] == [
         {"id": "confirm", "label": "Confirm"},

@@ -33,6 +33,13 @@ BOT_BLOCKS = {
     "stage_confirm_each": ("front_office/confirm.md", "stage_confirm_each"),
     "stage7_after_answers": ("front_office/confirm.md", "stage7_after_answers"),
     "stage9_own_words": ("front_office/chat.md", "stage9_own_words"),
+    "first_turn_card": ("front_office/chat.md", "first_turn_card"),
+    "redirect_whole": ("front_office/chat.md", "redirect_whole"),
+    "redirect_order": ("front_office/chat.md", "redirect_order"),
+    "redirect_voice": ("front_office/chat.md", "redirect_voice"),
+    "redirect_close": ("front_office/chat.md", "redirect_close"),
+    "stage6_lead_in": ("front_office/chat.md", "stage6_lead_in"),
+    "stage7_line": ("front_office/chat.md", "stage7_line"),
 }
 MARKER = re.compile(r"\*\*Basics checklist(?: \(([^)]+)\))?:\*\*")
 

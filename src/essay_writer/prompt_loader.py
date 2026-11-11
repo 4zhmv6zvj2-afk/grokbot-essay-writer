@@ -52,13 +52,17 @@ def json_data(relative: str) -> Any:
     return json.loads(_text(relative))
 
 
-_TOKEN = re.compile(r"\{\{(confirm|status):([a-z0-9_]+)\}\}")
+_TOKEN = re.compile(r"\{\{(confirm|status|chat):([a-z0-9_]+)\}\}")
+_TOKEN_FILES = {
+    "confirm": "front_office/confirm.md",
+    "status": "status/mid.md",
+    "chat": "front_office/chat.md",
+}
 
 
 def render_tokens(value: str) -> str:
     def replace(match: re.Match[str]) -> str:
         kind, key = match.group(1), match.group(2)
-        relative = "front_office/confirm.md" if kind == "confirm" else "status/mid.md"
-        return text(relative, key)
+        return text(_TOKEN_FILES[kind], key)
 
     return _TOKEN.sub(replace, value)

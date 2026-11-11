@@ -37,6 +37,7 @@ from essay_writer.prompt_content import (
 )
 from essay_writer.prompt_loader import render_tokens, text
 from essay_writer.specialists.grok_bot import CHECKLIST_WALK
+from essay_writer.student_turns import stage6_student_rule, stage7_student_rule
 from essay_writer.textutil import BRIEF_GENRE, brief_file_genre
 from essay_writer.writing_basics import (
     CHECKLISTS,
@@ -238,6 +239,15 @@ def tracking_file(stage: str) -> str | None:
     return f"tracking/{stage}.md"
 
 
+def _student_line_rule(stage: str) -> str:
+    """Student line for stages 6 and 7. Empty on every other stage."""
+    if stage == "6":
+        return "\n" + stage6_student_rule()
+    if stage == "7":
+        return "\n" + stage7_student_rule()
+    return ""
+
+
 def stage_rules(stage: str, genre: str | None = None) -> str:
     """Stage guidance the agent applies as rules. The overlay text is inside.
 
@@ -250,6 +260,7 @@ def stage_rules(stage: str, genre: str | None = None) -> str:
     text = f"Rules for stage {stage} — {title}. Apply every line.\n{prompt_overlay(stage, genre)}"
     if stage == "7":
         text += "\n" + STAGE7_AGENT
+    text += _student_line_rule(stage)
     return text + "\n" + UNTRUSTED_FENCE
 
 
@@ -311,6 +322,7 @@ def _stage_briefing_body(stage: str) -> str:
         body = body.removesuffix("\n" + SHARED_REVISIT)
     if stage == "7":
         body += "\n" + STAGE7_AGENT
+    body += _student_line_rule(stage)
     return body
 
 

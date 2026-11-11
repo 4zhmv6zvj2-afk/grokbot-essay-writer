@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+Student-facing lines for the opening, four redirects, and stages 6 and 7.
+Not a release. The package version stays 0.8.2.
+
+- The opening says the approved first-turn card in those words before the three choices.
+- A short ask for one of the four blocked turns gets that approved reply and does not save.
+- Stage 6 says the approved lead-in once, then the shipped short read list. That read list is unchanged.
+- Stage 7 says the approved student line before the questions. The shared stage 7 rules stay.
+- Cursor and Grok Build read the same stage rules, including those two student lines.
+
 ## 0.8.2 — 2026-11-11
 
 Formatting and gate-only patch. No runtime behaviour change; every Python file

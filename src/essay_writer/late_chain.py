@@ -214,6 +214,9 @@ def quiet_stage5(body: dict[str, Any], essay_id: str) -> dict[str, Any]:
         line = stage5_chat_line(STAGE6_OPEN, STAGE6_OPEN)
     quiet = mark_quiet(body, line, step="5")
     quiet["checklist_in_chat"] = False
+    from essay_writer.student_turns import STAGE6_LEAD_IN
+
+    quiet["read_lead"] = say(STAGE6_LEAD_IN)
     quiet["read_list"] = say(STAGE6_READ_LIST)
     from essay_writer.cite_fit import speak_cite_ask
 

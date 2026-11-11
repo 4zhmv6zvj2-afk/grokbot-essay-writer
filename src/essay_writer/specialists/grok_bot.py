@@ -189,11 +189,14 @@ def revisit_plan_next(title: str) -> str:
 
 
 def stage7_lead(questions: list[str], title: str) -> str:
-    """Stage 7 opens with the questions and the named Confirm card."""
+    """Stage 7 opens with the student line, then the questions and the Confirm card."""
+    from essay_writer.student_turns import STAGE7_LINE
+
     if not questions:
-        return card_next("7", title)
+        return f"{STAGE7_LINE} {card_next('7', title)}"
     numbered = " ".join(f"{index}. {question}" for index, question in enumerate(questions, 1))
     return (
+        f"{STAGE7_LINE} "
         "Please answer these questions in this chat. "
         f"{numbered} "
         f"Then open the Confirm card to save Stage 7 — {title}, "
