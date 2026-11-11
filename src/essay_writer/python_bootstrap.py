@@ -48,21 +48,63 @@ _SPEC = _core.BootstrapSpec(
     required=REQUIRED,
     pin=PIN,
     install_args=("-e", "."),
+    requirements=(REQUIREMENTS_FILE,),
     verify_import="mcp.server.mcpserver",
     card=CARD,
 )
 
 
 def _spec_for(root: Path) -> _core.BootstrapSpec:
-    """Hash-pinned runtime install when the copy carries the requirements file.
+    """Hash-pinned runtime install for every copy.
 
-    Upstream v0.2.0 installs each ``requirements`` file with ``--require-hashes``
-    before the project install, which then runs with ``--no-deps``. A friend
-    zip made before requirements-runtime.txt existed falls back to the upstream
-    single-command install; the report shows which commands ran.
+    requirements-runtime.txt is the only dependency input: the core installs it
+    with ``--require-hashes`` before the project and then uses ``--no-deps``. A
+    copy without that file is refused by ``_guarded_run`` and ``provision``
+    instead of falling back to an unpinned ``pip install -e .``.
     """
-    requirements = (REQUIREMENTS_FILE,) if (Path(root) / REQUIREMENTS_FILE).is_file() else ()
-    return replace(_SPEC, requirements=requirements)
+    return _SPEC
+
+
+def _requirements_missing(root: Path) -> bool:
+    return not (Path(root) / REQUIREMENTS_FILE).is_file()
+
+
+def _missing_requirements_report(root: Path) -> dict[str, Any]:
+    """Fail-closed report: no requirements file means no install at all."""
+    return {
+        "ok": False,
+        "installed": False,
+        "app": _SPEC.app,
+        "reason": "requirements_missing",
+        "detail": (
+            f"{REQUIREMENTS_FILE} is missing from {Path(root)}, so no hash-pinned "
+            "runtime install can run. The unpinned fallback is refused."
+        ),
+    }
+
+
+def _guarded_run(run: Runner) -> Runner:
+    """Refuse a ``--require-hashes`` install when the requirements file is gone.
+
+    The guard keeps the core's own ordering (requirements before the project)
+    and turns a missing file into a named failure instead of letting the run
+    continue to an unpinned project install.
+    """
+
+    def guarded(command: list[str], cwd: Path, env: dict[str, str], timeout: int) -> dict[str, Any]:
+        hash_install = "--require-hashes" in command or "--no-deps" in command
+        if hash_install and _requirements_missing(cwd):
+            return {
+                "returncode": 1,
+                "stdout": "",
+                "stderr": (
+                    f"{REQUIREMENTS_FILE} is missing; refusing to install the project "
+                    "without hash-pinned dependencies"
+                ),
+            }
+        return run(command, cwd, env, timeout)
+
+    return guarded
 
 
 def version_tuple(text: object) -> tuple[int, int, int] | None:
@@ -92,7 +134,11 @@ def provision(
     run: Runner = run_command,
     probe: Probe = interpreter_version,
 ) -> dict[str, Any]:
-    return _core.provision(root, _spec_for(root), uv=uv, run=run, probe=probe)
+    """Provision the pinned interpreter. Refuses a copy without the requirements file."""
+    root = Path(root)
+    if _requirements_missing(root):
+        return _missing_requirements_report(root)
+    return _core.provision(root, _spec_for(root), uv=uv, run=_guarded_run(run), probe=probe)
 
 
 def bootstrap(
@@ -107,14 +153,14 @@ def bootstrap(
     main_fn: Main | None = None,
 ) -> int:
     """Choose or provision the essay-writer interpreter, then continue."""
-
-    spec = replace(_spec_for(Path(root)), package_main=main_fn or _package_main)
+    root = Path(root)
+    spec = replace(_spec_for(root), package_main=main_fn or _package_main)
     return _core.bootstrap(
         args,
         root,
         spec,
         exec_fn=exec_fn,
-        run=run,
+        run=_guarded_run(run),
         uv=uv,
         probe=probe,
         current=current,

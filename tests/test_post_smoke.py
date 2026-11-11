@@ -5,7 +5,7 @@ import re
 import zipfile
 from pathlib import Path
 
-from helpers import ESSAY, TOPIC, open_sequence, pack, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.doors import DOORS
 from essay_writer.health import essay_health
@@ -142,7 +142,7 @@ def test_student_chat_and_word_omit_house_jargon(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     payload = pack(conclusion="open")
     payload["sections"][0]["body"] += (
         " Keep essay.dig and dig-card.json."
@@ -384,7 +384,7 @@ def test_fail_demo_writer_cannot_clear_a_review(workspace):
     )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
 
@@ -457,7 +457,7 @@ def test_missing_excerpt_list_is_measurement_not_invent_forbid(workspace):
     bare = source()
     bare.pop("quote")
     essay_research_summary(seq, TOPIC, "draft", [bare])
-    essay_research_summary(seq, TOPIC, "confirm", [bare])
+    essay_research_summary(seq, TOPIC, "confirm", [bare], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     payload = pack()
     payload["sources"] = [bare]
     result = essay_pack_validate(seq, payload, "draft")
@@ -473,7 +473,7 @@ def test_excerpt_not_in_the_file_is_invent_forbid(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     payload = pack()
     payload["excerpts"] = ["This excerpt was never in the gathered file."]
     result = essay_pack_validate(seq, payload, "draft")

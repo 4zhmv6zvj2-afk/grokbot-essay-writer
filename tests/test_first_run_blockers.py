@@ -66,13 +66,13 @@ def test_mcp_command_is_absolute_when_the_bare_name_is_off_path(tmp_path, monkey
     project.mkdir()
     def enable(name):
         return {"identifier": name, "enabled": False}
-    cursor = attach_custom_mcp(project, enable=enable)
+    cursor = attach_custom_mcp(project, enable=enable, include_user=False)
     assert cursor["ok"] is True
     written = json.loads((project / ".cursor" / "mcp.json").read_text(encoding="utf-8"))
     assert written["mcpServers"]["essay-writer"]["command"] == command
     assert written["mcpServers"]["essay-writer"]["args"] == []
 
-    build = attach_build_mcp(project, reviewer=True, enable=enable)
+    build = attach_build_mcp(project, reviewer=True, enable=enable, include_user=False)
     text = Path(build["project_config"]).read_text(encoding="utf-8")
     assert f'command = "{command}"' in text
     assert 'command = "essay-writer"' not in text

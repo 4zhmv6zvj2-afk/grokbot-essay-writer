@@ -3,6 +3,7 @@
 from helpers import (
     ESSAY,
     TOPIC,
+    card_digest_for,
     open_sequence,
     pack,
     source,
@@ -148,7 +149,7 @@ def test_word_writes_a_possible_citation_and_refuses_a_hard_miss(workspace):
     brief.write_text(f"Genre: report\nQuestion: {QUESTION}\n", encoding="utf-8")
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     constitution = f"This is a report. {QUESTION}"
     essay_review(seq, "6", "PASS", "draft", constitution=constitution)
     essay_review(seq, "6", "PASS", "confirm", constitution=constitution)

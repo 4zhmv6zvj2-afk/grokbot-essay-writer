@@ -5,7 +5,7 @@ import zipfile
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from helpers import ESSAY, open_sequence, pack, source, write_upload
+from helpers import ESSAY, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.paths import essay_dir, sequence_number
 from essay_writer.research import essay_research_summary
@@ -39,7 +39,7 @@ def _write_essay_docx(workspace, payload=None, essay_id=ESSAY, *, seq=None, setu
         write_upload(workspace, essay_id=essay_id)
         seq = open_sequence(essay_id)
         essay_research_summary(seq, "chokepoints", "draft", [source(essay_id)])
-        essay_research_summary(seq, "chokepoints", "confirm", [source(essay_id)])
+        essay_research_summary(seq, "chokepoints", "confirm", [source(essay_id)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     if seq is None:
         raise ValueError("seq is required when setup is false")
     body = payload or pack(essay_id)

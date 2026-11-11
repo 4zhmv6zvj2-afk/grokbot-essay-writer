@@ -27,7 +27,7 @@ def test_ac1_default_install_attach_includes_essay_reviewer(tmp_path, monkeypatc
         enabled.append(name)
         return {"identifier": name, "enabled": True}
 
-    result = attach_custom_mcp(project, enable=enable)
+    result = attach_custom_mcp(project, enable=enable, include_user=False)
     assert result["ok"] is True
     assert result["servers"] == ["essay-writer", "essay-reviewer"]
     assert enabled == ["essay-writer", "essay-reviewer"]
@@ -43,7 +43,17 @@ def test_ac1_default_install_attach_includes_essay_reviewer(tmp_path, monkeypatc
     source = tmp_path / "tree"
     source.mkdir()
     (source / "pyproject.toml").write_text('[project]\nname = "essay-writer"\nversion = "0.1.0"\n', encoding="utf-8")
-    installed = install_uploaded_copy(source, pip_runner=runner, enable=enable)
+    (source / "requirements-runtime.txt").write_text(
+        "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
+    )
+    installed = install_uploaded_copy(
+        source,
+        pip_runner=runner,
+        enable=enable,
+        include_user=False,
+        path_exposer=lambda: None,
+        allow_cursor_install=False,
+    )
     assert installed["ok"] is True
     assert installed["mcp"]["servers"] == ["essay-writer", "essay-reviewer"]
 

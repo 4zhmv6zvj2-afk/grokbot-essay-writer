@@ -38,7 +38,8 @@ the wheel into a clean environment, extracts the sdist, requires it to carry
 every tracked file, builds a wheel from it that must be byte-identical to the
 checkout wheel, and runs the suite from the extracted sdist. A release is only
 signed after that artifact run passes, and the release workflow repeats the
-sdist checks before signing.
+sdist checks before signing. A separate reproduce workflow rebuilds a published
+release from its tag with the pinned toolchain and compares the SHA-256 set.
 
 ## Layout
 

@@ -20,11 +20,12 @@ this repository is its source.
   tracking note, and the stage pointer, and the Confirm re-derives the same
   argument digest and checks the on-disk file fingerprint. Stage 5 is the
   designed exception: it stores the first draft and advances to stage 6 on its
-  draft call, with no card. The digest does not cover the shown draft card
-  (confirm reuses it) or the value of the two setup credentials: `essay.setup`
-  records only whether the Consensus key and Unpaywall email were present, and
-  stores the values passed on the confirm call. Binding those more tightly is a
-  planned follow-up, not a current property.
+  draft call, with no card. `essay.dig` and the research doors bind the card
+  they showed with a `cardDigest` that confirm re-derives and requires, and
+  `essay.setup` binds the Consensus key and Unpaywall email by SHA-256 so the
+  save call must repeat the same values. A typed yes, ok, or Confirm saves the
+  waiting card when the host cannot send the card fields; a supplied card field
+  still has to be the Confirm action.
 - **Prompt-heavy by design.** The stage instructions, genre rules, and
   validation checks are the product. They are packaged with the code under
   `src/essay_writer/prompts/` and are not fetched at runtime.
@@ -80,8 +81,8 @@ new essay.
 2. Research finds papers; it downloads a PDF when it can, or gives you the title
    and a link.
 3. A draft is written from those sources.
-4. You review each stage in the chat and press Confirm before it is saved and
-   the essay moves on.
+4. You review each stage in the chat and press Confirm (or type yes if the
+   card cannot be used) before it is saved and the essay moves on.
 5. The finished essay is a Word file (`.docx`).
 
 Output is Word only (`.docx`); referencing follows Harvard
@@ -139,10 +140,13 @@ On the Grok Bot computer, setup will:
 
 - Install the runtime dependencies from the hash-pinned `requirements-runtime.txt`
   first, then Essay Writer itself. A hash mismatch stops the install; nothing is
-  left half-installed. The `essay-writer --install-upload` update path uses the
-  same standard when the zip carries that file. The uploaded zip itself is
-  trusted operator input, not verified bytes: the update path runs the uploaded
-  project's build backend, so pass only a zip you produced or trust.
+  left half-installed. The `essay-writer --install-upload` update path requires
+  a `requirements-runtime.txt` in the zip before it unpacks anything, and never
+  falls back to an unpinned install. A zip checksum is optional: pass
+  `--upload-sha256`, or put a matching `essay-writer.zip.sha256` / `SHA256SUMS`
+  file beside the zip, and the installer verifies it; with no checksum it still
+  installs and the result says `upload_verified` is false. The zip's build
+  backend runs, so pass only a zip you produced or trust.
 - Download a private Python 3.15.2 into that folder, only after you agree and only
   if no suitable Python is already there. It never changes the Python already
   installed on the computer.
@@ -237,14 +241,15 @@ gh attestation verify essay_writer-0.6.3.tar.gz \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
 ```
 
-Releases from 0.3.0 onward use a reproducible build. The release workflow builds
-the wheel and the sdist twice in one run with `SOURCE_DATE_EPOCH` set to the
-tagged commit's time and the hash-pinned build tooling, and requires identical
-SHA-256 hashes before it uploads, signs, or attests anything. That proves the
-build was deterministic in that run. It does not prove that a rebuild elsewhere
-matches the published bytes: the workflow does not rebuild and compare against
-the released `SHA256SUMS`, and the Ubuntu runner image is not pinned. An
-independent rebuild is the stronger check:
+Releases from 0.3.0 onward use a reproducible build on a pinned runner image
+(`ubuntu-24.04`) with a pinned cosign release. The release workflow builds the
+wheel and the sdist twice in one run with `SOURCE_DATE_EPOCH` set to the tagged
+commit's time and the hash-pinned build tooling, requires identical SHA-256
+hashes before it uploads, signs, or attests anything, then verifies each
+Sigstore signature and the GitHub attestation after signing. A separate
+reproduce workflow downloads a published release, rebuilds it from the tag with
+the same pinned toolchain, and fails if the SHA-256 set differs. You can do the
+same check yourself:
 
 ```bash
 git checkout v0.6.3

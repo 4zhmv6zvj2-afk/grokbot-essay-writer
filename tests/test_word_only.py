@@ -12,6 +12,7 @@ from helpers import (
     CLARIFY_OPEN,
     ESSAY,
     TOPIC,
+    card_digest_for,
     open_sequence,
     plant_gathered_source,
     source,
@@ -66,6 +67,7 @@ def test_ac1_stage_4b_zip_is_word_only_one_file_per_paper(workspace):
         [source()],
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
+        cardDigest=card_digest_for(seq, 'essay.research.full'),
     )
     assert confirmed["stored"] is True
     folder = _output(workspace) / "reviews"
@@ -116,6 +118,7 @@ def test_ac3_student_speech_never_points_at_markdown_critical_reviews(workspace)
         [source()],
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
+        cardDigest=card_digest_for(seq, 'essay.research.full'),
     )
     next_line = confirmed.get("next") or ""
     assert "word file per paper" in next_line.casefold()
@@ -140,6 +143,7 @@ def test_ac4_build_office_handoff_builds_4b_word_zip(workspace, tmp_path):
         [source()],
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
+        cardDigest=card_digest_for(seq, 'essay.research.full'),
     )
     assert confirmed["stored"] is True
     mac = tmp_path / "mac"

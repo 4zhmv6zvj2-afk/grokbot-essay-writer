@@ -286,7 +286,7 @@ def _collect_stage_misses(
         add(
             refuse(
                 "house-jargon",
-                "That note uses a label that stays off the stage file. Use plain words.",
+                "That note uses an internal label. Say it in plain words.",
                 words=student_surface_hits(text),
             )
         )

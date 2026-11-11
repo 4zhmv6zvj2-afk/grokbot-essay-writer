@@ -32,7 +32,11 @@ _LATE = frozenset({"7", "8", "9", "10"})
 
 
 def documents_root(override: Path | None = None) -> Path | None:
-    """Documents when this computer can see it. Tests pass the folder."""
+    """Documents when this computer can see it. Tests pass the folder.
+
+    ESSAY_WRITER_ROOT stays the isolation switch for a test ledger; this
+    function does not key on the test runner itself.
+    """
     import os
     import sys
 
@@ -44,7 +48,7 @@ def documents_root(override: Path | None = None) -> Path | None:
         if not text or text.casefold() == "open":
             return None
         return Path(text).expanduser()
-    if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("ESSAY_WRITER_ROOT"):
+    if os.environ.get("ESSAY_WRITER_ROOT"):
         return None
     if sys.platform != "darwin":
         return None

@@ -17,7 +17,10 @@ concurrency:
 jobs:
   test:
     name: Test (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    # Pinned runner image, not ubuntu-latest: the release build (and the
+    # reproduce workflow that re-checks it) runs on ubuntu-24.04, so CI should
+    # test and build on the same image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -115,7 +118,7 @@ jobs:
 
   artifacts:
     name: Build and test the shipped artifacts
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1

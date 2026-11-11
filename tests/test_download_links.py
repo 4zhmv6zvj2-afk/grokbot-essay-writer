@@ -8,7 +8,7 @@ from pathlib import Path
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches
-from helpers import ESSAY, TOPIC, open_sequence, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, source, write_upload
 
 from essay_writer.dig import essay_dig
 from essay_writer.downloads import run_downloads
@@ -199,6 +199,7 @@ def test_ship_4a_and_dig_confirm_return_a_chat_links_card(workspace, monkeypatch
             "topic": TOPIC,
             "confirmPhase": "confirm",
             "sources": [row],
+            "cardDigest": card_digest_for(seq, "essay.research.summary"),
         },
     )
     links = confirmed["delivery"]["links"]
@@ -254,7 +255,12 @@ def test_ship_4a_and_dig_confirm_return_a_chat_links_card(workspace, monkeypatch
     essay_dig(dig_seq, "zara supply chain", "draft")
     dug = front_office_call(
         "essay.dig",
-        {"essay_id": dig_seq, "query": "zara supply chain", "confirmPhase": "confirm"},
+        {
+            "essay_id": dig_seq,
+            "query": "zara supply chain",
+            "confirmPhase": "confirm",
+            "cardDigest": card_digest_for(dig_seq, "essay.dig"),
+        },
     )
     card = dug["links"]
     assert card["deliver"] == "chat"

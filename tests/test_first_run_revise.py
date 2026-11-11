@@ -142,7 +142,6 @@ def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
     assert mac["ran_install"] is False
     assert mac["reason"] == "mac-no-install"
 
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     state["binary"] = "/opt/agent"
     state["version"] = None
     blocked = enable_mcp_server("essay-writer")
@@ -184,6 +183,9 @@ def test_ac3_install_uploaded_copy_uses_the_same_installer(tmp_path, monkeypatch
     source = tmp_path / "tree"
     source.mkdir()
     (source / "pyproject.toml").write_text('[project]\nname = "essay-writer"\nversion = "0.1.0"\n', encoding="utf-8")
+    (source / "requirements-runtime.txt").write_text(
+        "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
+    )
 
     def runner(_command, _cwd):
         return {"returncode": 0, "stdout": "", "stderr": ""}
@@ -194,6 +196,7 @@ def test_ac3_install_uploaded_copy_uses_the_same_installer(tmp_path, monkeypatch
         attach=False,
         cursor_installer=fake,
         allow_cursor_install=True,
+        path_exposer=lambda: None,
     )
     assert installed["ok"] is True
     assert calls == [1]
@@ -206,6 +209,7 @@ def test_ac3_install_uploaded_copy_uses_the_same_installer(tmp_path, monkeypatch
         attach=False,
         cursor_installer=fake,
         allow_cursor_install=True,
+        path_exposer=lambda: None,
     )
     assert calls == []
     assert again["cursor_cli"]["ran_install"] is False
@@ -222,7 +226,6 @@ def test_ac4_enable_uses_home_agent_off_path(monkeypatch, tmp_path):
     monkeypatch.setattr("essay_writer.setup.shutil.which", lambda _name: None)
     monkeypatch.setattr("essay_writer.setup.Path.home", lambda: home)
     monkeypatch.setattr("essay_writer.setup.cursor_cli_version", lambda _path: "agent-test-version")
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     ran: list[list[str]] = []
 
     def fake_run(argv, **_kwargs):
@@ -313,3 +316,94 @@ def test_login_consensus_and_mac_cards_are_in_both_prompts():
     assert "use the same cursor account as essay bot" in first.casefold()
     assert "CreateBotShareJson" not in friend
     assert "mcp" not in friend.casefold()
+
+
+def test_enable_mcp_server_runs_the_real_branch_with_a_fake_runner():
+    """The real enable branch is exercised: binary lookup, version, argv, returncode."""
+    ran: list[list[str]] = []
+
+    class Completed:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def runner(argv, **_kwargs):
+        ran.append(list(argv))
+        return Completed()
+
+    enabled = enable_mcp_server(
+        "essay-writer",
+        binary=lambda: "/opt/agent",
+        version=lambda _path: "agent 1.2.3",
+        runner=runner,
+    )
+    assert enabled == {"identifier": "essay-writer", "enabled": True, "returncode": 0}
+    assert ran == [["/opt/agent", "mcp", "enable", "essay-writer"]]
+
+    class Failed:
+        returncode = 1
+        stdout = ""
+        stderr = "no"
+
+    refused = enable_mcp_server(
+        "essay-reviewer",
+        binary=lambda: "/opt/agent",
+        version=lambda _path: "agent 1.2.3",
+        runner=lambda argv, **_kwargs: Failed(),
+    )
+    assert refused["enabled"] is False
+    assert refused["returncode"] == 1
+
+    assert enable_mcp_server("x", binary=lambda: None)["reason"] == "agent-cli-missing"
+    missing_version = enable_mcp_server(
+        "x", binary=lambda: "/opt/agent", version=lambda _path: None
+    )
+    assert missing_version["reason"] == "agent-version-missing"
+    assert missing_version["path"] == "/opt/agent"
+
+
+def test_enable_build_mcp_runs_the_real_branch_with_a_fake_which_and_runner():
+    from essay_writer.first_run import enable_build_mcp
+
+    ran: list[list[str]] = []
+
+    class Completed:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def runner(argv, **_kwargs):
+        ran.append(list(argv))
+        return Completed()
+
+    enabled = enable_build_mcp(
+        "essay-writer", which=lambda name: "/opt/grok", runner=runner
+    )
+    assert enabled["enabled"] is True
+    assert ran == [["/opt/grok", "mcp", "enable", "essay-writer"]]
+    assert enable_build_mcp("x", which=lambda _name: None)["reason"] == "grok-cli-missing"
+
+    class Failed:
+        returncode = 2
+        stdout = ""
+        stderr = "no"
+
+    refused = enable_build_mcp(
+        "essay-reviewer", which=lambda _name: "/opt/grok", runner=lambda *_a, **_k: Failed()
+    )
+    assert refused["enabled"] is False
+    assert refused["returncode"] == 2
+
+
+def test_enable_mcp_server_reports_a_runner_failure():
+    def runner(_argv, **_kwargs):
+        raise OSError("agent is gone")
+
+    result = enable_mcp_server(
+        "essay-writer",
+        binary=lambda: "/opt/agent",
+        version=lambda _path: "agent 1.2.3",
+        runner=runner,
+    )
+    assert result["enabled"] is False
+    assert "agent is gone" in result["reason"]

@@ -38,13 +38,10 @@ draft ledger, the tracking note, and the stage pointer, and the confirm
 re-derives the argument digest and the on-disk file fingerprint.
 
 What the gate does not prevent: draft calls are not inert (they change those
-files before any confirm); stage 5 stores its first draft and advances to stage
-6 on its draft call by design, with no card; the shown draft card is stored in
-the draft record and reused at confirm, so it is outside the digest and
-fingerprint; and `essay.setup` records only whether the Consensus key and
-Unpaywall email were present (booleans), then stores the values passed on the
-confirm call. Binding the shown card and those two values more tightly is
-planned hardening, not a current property.
+files before any confirm), and stage 5 stores its first draft and advances to
+stage 6 on its draft call by design, with no card. The card a side-effect door
+showed is bound to the draft by `cardDigest`, and `essay.setup` binds the
+Consensus key and Unpaywall email by SHA-256 instead of only their presence.
 
 Trusted: the host model and its chat transport. They are trusted to relay the
 person's yes and no truthfully, to keep operator setup notes out of student
@@ -86,10 +83,12 @@ Recommendations, in order of value:
   file fingerprint. This is not "nothing is written before Confirm": a draft
   call writes the draft ledger under `.drafts/`, the tracking note, and the
   stage pointer, and stage 5 stores its first draft and advances to stage 6 on
-  its draft call by design, with no card. The shown draft card is reused at
-  confirm and is not compared as a fingerprint, and `essay.setup` records only
-  the presence (booleans) of the Consensus key and Unpaywall email, then stores
-  the values passed on the confirm call.
+  its draft call by design, with no card. `essay.dig` and the research doors
+  store the card they showed and bind it with `cardDigest`; the confirm call
+  must send that digest, and a missing or different value is refused.
+  `essay.setup` includes a SHA-256 of the stripped Consensus key and Unpaywall
+  email in the draft, so the confirm call must repeat the same values; neither
+  value is echoed in a reply or written into the draft record.
 - Every fetch driven by model- or paper-supplied content goes through
   `safe_url` (paper downloads, research look-ups, and dig look-ups): only http
   and https, a host that resolves, every resolved address public (no loopback,
@@ -123,10 +122,14 @@ Recommendations, in order of value:
   local patch: `VENDOR.json` records the source, release, and file SHA-256. See
   [ARCHITECTURE.md](ARCHITECTURE.md).
 - `essay-writer --install-upload` is a CLI update path for an already-installed
-  copy; the MCP server never spawns it. The uploaded zip is trusted operator
-  input, not verified content: the zip itself is not hash-checked, the update
-  path runs the uploaded project's build backend, and the zip can supply its
-  own `requirements-runtime.txt`. Pass only a zip you produced or trust.
+  copy; the MCP server never spawns it. The zip must carry
+  `requirements-runtime.txt`, and the install is always hash-pinned for
+  dependencies with no unpinned fallback. A zip checksum is optional and is
+  checked when one is available: `--upload-sha256`, a sibling
+  `<zip>.sha256`, or a matching `SHA256SUMS` entry; a present but wrong checksum
+  refuses. With no checksum the zip is trusted operator input, the install
+  proceeds, and the result reports `upload_verified: false`. The zip's own build
+  backend still executes, so pass only a zip you produced or trust.
 - Setup does not install the Cursor CLI silently. Consent (`--install-cursor`
   or `ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1`) authorises the **download** only:
   setup downloads the installer to a file and reports its SHA-256, byte count,
@@ -144,11 +147,13 @@ Recommendations, in order of value:
 
 ## Release verification
 
-Releases from 0.3.0 onward use a reproducible build. The release workflow builds
-the artifacts twice in one run with `SOURCE_DATE_EPOCH` from the tagged commit
-and requires identical SHA-256 hashes before uploading, signing, or attesting
-them; that proves determinism within the run, not that every independent
-rebuild matches. The "Verify a release" section of [README.md](README.md) gives
-the independent rebuild and the signature and provenance checks.
+Releases from 0.3.0 onward use a reproducible build on a pinned `ubuntu-24.04`
+runner with a pinned cosign release. The release workflow builds the artifacts
+twice in one run with `SOURCE_DATE_EPOCH` from the tagged commit, requires
+identical SHA-256 hashes before uploading, signing, or attesting them, then
+verifies each Sigstore signature and the GitHub attestation in the same run. A
+separate reproduce workflow rebuilds a published release from its tag and fails
+on any hash mismatch. The "Verify a release" section of [README.md](README.md)
+gives the independent rebuild and the signature and provenance checks.
 
 _This policy covers the software as distributed from this repository._

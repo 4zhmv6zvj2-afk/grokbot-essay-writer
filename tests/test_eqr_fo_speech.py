@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from helpers import ESSAY, TOPIC, open_sequence, pack, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.research import essay_research_summary
 from essay_writer.shells import front_office_call
@@ -42,7 +42,7 @@ def _ready(workspace) -> str:
     )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     return seq

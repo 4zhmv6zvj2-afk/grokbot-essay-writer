@@ -13,6 +13,7 @@ from pathlib import Path
 from docx import Document
 from helpers import (
     ESSAY,
+    card_digest_for,
     mac_handoff_sequence_dir,
     open_sequence,
     pack,
@@ -108,7 +109,7 @@ def _confirm_research(seq: str, body: dict) -> None:
     sources = body["sources"]
     draft = essay_research_summary(seq, TOPIC, "draft", sources)
     assert draft["ok"] is True, draft
-    essay_research_summary(seq, TOPIC, "confirm", sources)
+    essay_research_summary(seq, TOPIC, "confirm", sources, cardDigest=card_digest_for(seq, 'essay.research.summary'))
 
 
 def test_ac1_report_stage10_cover_has_house_fields(workspace, monkeypatch, tmp_path):

@@ -2,6 +2,7 @@
 
 import inspect
 import json
+from pathlib import Path
 
 from essay_writer.build_office import build_deliverable_handoff
 from essay_writer.cursor_office import cursor_stage_launch
@@ -60,6 +61,9 @@ def test_ac2_unmounted_leaves_mac_file_and_returns_mac_not_mounted(tmp_path, mon
     """AC2. Unmounted copy returns mac-not-mounted and leaves the source file alone."""
     linux, mac, _cloud = _bot_and_mac(tmp_path, monkeypatch)
     monkeypatch.delenv("ESSAY_WRITER_MAC_HOME", raising=False)
+    # The mounted-home discovery collaborator is faked so this test never sees
+    # the real /Users or the real home.
+    monkeypatch.setattr("essay_writer.first_run._one_mounted_mac_home", lambda: None)
     source = tmp_path / "essay.docx"
     source.write_bytes(b"keep-me")
     missing = copy_deliverable_to_mac(source)
@@ -104,11 +108,20 @@ def test_ac5_install_self_checks_essay_health(tmp_path):
         '[project]\nname = "essay-writer"\nversion = "0.1.0"\n',
         encoding="utf-8",
     )
+    (source / "requirements-runtime.txt").write_text(
+        "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
+    )
 
     def pip_ok(command, cwd):
         return {"returncode": 0, "stdout": "", "stderr": ""}
 
-    installed = install_uploaded_copy(source, pip_runner=pip_ok, attach=False)
+    installed = install_uploaded_copy(
+        source,
+        pip_runner=pip_ok,
+        attach=False,
+        path_exposer=lambda: None,
+        allow_cursor_install=False,
+    )
     assert installed["ok"] is True
     check = installed["health_check"]
     assert check["ok"] is True
@@ -192,3 +205,22 @@ def test_cli_remember_mac_still_four_way(tmp_path, monkeypatch, capsys):
     assert payload["remembered"] is False
     direct = choose_mac_handoff("skip")
     assert direct["remembered"] is False
+
+
+def test_documents_root_reads_the_mac_documents_but_keeps_test_isolation(
+    tmp_path, monkeypatch
+):
+    """late_chain resolves Documents without keying on the test runner."""
+    from essay_writer.late_chain import documents_root
+
+    monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    assert documents_root() is None
+    named = tmp_path / "documents-override"
+    assert documents_root(named) == named
+
+    monkeypatch.delenv("ESSAY_WRITER_ROOT", raising=False)
+    monkeypatch.setattr("sys.platform", "darwin")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    (tmp_path / "Documents").mkdir()
+    assert documents_root() == tmp_path / "Documents"

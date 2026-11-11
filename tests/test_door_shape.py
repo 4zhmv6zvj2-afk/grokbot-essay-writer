@@ -1,4 +1,4 @@
-from helpers import CLARIFY_OPEN, ESSAY, TOPIC, open_sequence, source, write_upload
+from helpers import CLARIFY_OPEN, ESSAY, TOPIC, card_digest_for, open_sequence, source, write_upload
 
 from essay_writer.health import essay_health
 from essay_writer.research import essay_research_full, essay_research_summary
@@ -99,6 +99,7 @@ def test_industry_change_needs_a_fresh_draft(workspace):
         sources=kwargs["sources"],
         clarify_context=CLARIFY_OPEN,
         industry={"lane": "containers"},
+        cardDigest=card_digest_for(seq, 'essay.research.full'),
     )
     assert moved["refused"] == "confirm"
     assert moved["stored"] is False

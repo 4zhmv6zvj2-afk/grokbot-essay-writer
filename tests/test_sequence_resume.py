@@ -5,7 +5,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.oxml import parse_xml
-from helpers import ESSAY, TOPIC, open_sequence, pack, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.health import essay_health
 from essay_writer.intake import essay_intake
@@ -318,7 +318,7 @@ def test_shelf_draft_names_the_sequence_shelf(workspace):
     write_upload(workspace, ESSAY)
     seq = open_sequence(ESSAY)
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     essay_pack_render_word(seq, pack(), "draft")

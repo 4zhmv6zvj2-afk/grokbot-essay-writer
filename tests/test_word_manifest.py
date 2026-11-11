@@ -12,7 +12,7 @@ import inspect
 from pathlib import Path
 
 from docx import Document
-from helpers import ESSAY, open_sequence, pack, report_sections, write_upload
+from helpers import ESSAY, card_digest_for, open_sequence, pack, report_sections, write_upload
 
 from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, work_dir
@@ -105,7 +105,7 @@ def _confirm_research(seq: str, body: dict) -> None:
     sources = body["sources"]
     draft = essay_research_summary(seq, TOPIC, "draft", sources)
     assert draft["ok"] is True, draft
-    essay_research_summary(seq, TOPIC, "confirm", sources)
+    essay_research_summary(seq, TOPIC, "confirm", sources, cardDigest=card_digest_for(seq, 'essay.research.summary'))
 
 
 def _spy(monkeypatch):

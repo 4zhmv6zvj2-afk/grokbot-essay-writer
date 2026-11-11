@@ -1,6 +1,6 @@
 import zipfile
 
-from helpers import ESSAY, OTHER, TOPIC, open_sequence, pack, source, write_upload
+from helpers import ESSAY, OTHER, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.originals import essay_originals
 from essay_writer.research import essay_research_summary
@@ -23,7 +23,7 @@ def test_research_validate_word_and_local_shelf(workspace):
     assert draft["resolvers_called"] == []
     assert all("doi" in gap or "pages" in gap or "accessed" in gap for gap in draft["gaps"])
 
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [source()])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["stored"] is True
 
     checked = essay_pack_validate(seq, pack(), "draft")
@@ -77,7 +77,7 @@ def test_research_pack_on_confirm_with_fixture_lookup(workspace, monkeypatch):
     payload = source()
     payload["title"] = FIXTURE_TITLE
     essay_research_summary(seq, TOPIC, "draft", [payload])
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["stored"] is True
     assert confirmed["sources"][0]["doi"] == "10.5555/fixture-chokepoint"
     assert confirmed["research_pack"]["resolvers_called"]
@@ -87,7 +87,7 @@ def test_pdf_is_refused(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     result = essay_pack_render_word(seq, pack(format="pdf"), "draft")
     assert result["refused"] == "word-only"
     assert result["wrote"] is False

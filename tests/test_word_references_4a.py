@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from docx import Document
-from helpers import ESSAY, open_sequence, picked, write_upload
+from helpers import ESSAY, card_digest_for, open_sequence, picked, write_upload
 
 from essay_writer.brief_contract import remember_registration
 from essay_writer.build_office import stage_launch
@@ -169,7 +169,7 @@ def test_ac1_stage10_word_references_match_markdown(workspace, monkeypatch, tmp_
     remember_registration(seq, NUMBER)
     source = _qin_source(annotation=GOOD)
     essay_research_summary(seq, TOPIC, "draft", [source])
-    saved = essay_research_summary(seq, TOPIC, "confirm", [source])
+    saved = essay_research_summary(seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert saved["ok"] is True, saved
     pack = _diary_pack(seq, references_markdown=MARKDOWN)
     pack["sources"] = [source]

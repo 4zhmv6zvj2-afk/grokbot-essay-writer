@@ -1,6 +1,9 @@
-"""Mid-office spawn resolves CLI binaries via setup helpers, not PATH-only which."""
+"""Mid-office spawn resolves CLI binaries via setup helpers, not PATH-only which.
 
-import subprocess
+The opener is injected through `launch`, so these tests run the real spawn
+branch with a fake binary and a fake launcher. No Cursor or Grok CLI starts.
+"""
+
 from pathlib import Path
 
 from essay_writer.build_office import spawn_grok
@@ -13,6 +16,17 @@ class _Proc:
 
     def __init__(self):
         self.stdout = None
+
+
+class _Launcher:
+    """Record the argv the real spawn branch hands to the opener."""
+
+    def __init__(self):
+        self.calls: list[list[str]] = []
+
+    def __call__(self, argv):
+        self.calls.append(list(argv))
+        return _Proc(), None
 
 
 def _thin_path(monkeypatch):
@@ -45,36 +59,27 @@ def test_grokbuild_binary_finds_home_when_path_thin(monkeypatch, tmp_path):
     assert grokbuild_binary() == str(grok)
 
 
-def test_spawn_agent_uses_resolved_home_binary(requires_pty, monkeypatch, tmp_path):
+def test_spawn_agent_uses_resolved_home_binary(monkeypatch, tmp_path):
     _thin_path(monkeypatch)
     agent = _home_with_binary(monkeypatch, tmp_path, ".local/bin/agent")
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    popen_calls: list[list[str]] = []
-
-    def fake_popen(argv, **kwargs):
-        popen_calls.append(list(argv))
-        return _Proc()
-
-    monkeypatch.setattr("essay_writer.mid_spawn.subprocess.Popen", fake_popen)
-    started = spawn_agent(["agent", "--model", "grok-4.7-high"])
+    launch = _Launcher()
+    started = spawn_agent(["agent", "--model", "grok-4.7-high"], launch=launch)
     assert started["started"] is True
-    assert popen_calls == [[str(agent), "--model", "grok-4.7-high"]]
+    assert started["pid"] == 4242
+    assert started["stdout"] is None
+    assert launch.calls == [[str(agent), "--model", "grok-4.7-high"]]
 
 
-def test_spawn_grok_uses_resolved_home_binary(requires_pty, monkeypatch, tmp_path):
+def test_spawn_grok_uses_resolved_home_binary(monkeypatch, tmp_path):
     _thin_path(monkeypatch)
     grok = _home_with_binary(monkeypatch, tmp_path, ".grok/bin/grok")
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    popen_calls: list[list[str]] = []
-
-    def fake_popen(argv, **kwargs):
-        popen_calls.append(list(argv))
-        return _Proc()
-
-    monkeypatch.setattr(subprocess, "Popen", fake_popen)
-    started = spawn_grok(["grok", "--model", "grok-4.7", "--effort", "high"])
+    launch = _Launcher()
+    started = spawn_grok(
+        ["grok", "--model", "grok-4.7", "--effort", "high"], launch=launch
+    )
     assert started["started"] is True
-    assert popen_calls == [[str(grok), "--model", "grok-4.7", "--effort", "high"]]
+    assert started["pid"] == 4242
+    assert launch.calls == [[str(grok), "--model", "grok-4.7", "--effort", "high"]]
 
 
 def test_spawn_missing_only_when_no_candidate(monkeypatch, tmp_path):
@@ -82,33 +87,71 @@ def test_spawn_missing_only_when_no_candidate(monkeypatch, tmp_path):
     home = tmp_path / "empty-home"
     home.mkdir()
     monkeypatch.setattr("essay_writer.setup.Path.home", lambda: home)
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    missing_agent = spawn_agent(["agent", "--model", "grok-4.7-high"])
+    launch = _Launcher()
+    missing_agent = spawn_agent(["agent", "--model", "grok-4.7-high"], launch=launch)
     assert missing_agent["started"] is False
     assert missing_agent["reason"] == "agent-cli-missing"
-    missing_grok = spawn_grok(["grok", "--model", "grok-4.7", "--effort", "high"])
+    missing_grok = spawn_grok(
+        ["grok", "--model", "grok-4.7", "--effort", "high"], launch=launch
+    )
     assert missing_grok["started"] is False
+    assert missing_grok["reason"] == "grok-cli-missing"
+    assert launch.calls == []
+
+
+def test_spawn_runs_in_pytest_without_an_env_branch(monkeypatch):
+    """The real branch runs here. No PYTEST_CURRENT_TEST short-circuit exists."""
+    monkeypatch.setattr("essay_writer.setup.cursor_cli_binary", lambda: "/bin/agent")
+    monkeypatch.setattr("essay_writer.setup.grokbuild_binary", lambda: "/bin/grok")
+    agent_launch = _Launcher()
+    grok_launch = _Launcher()
+    agent = spawn_agent(["agent", "--model", "grok-4.7-high"], launch=agent_launch)
+    grok = spawn_grok(["grok", "--model", "grok-4.7"], launch=grok_launch)
+    assert agent["started"] is True
+    assert grok["started"] is True
+    assert agent_launch.calls == [["/bin/agent", "--model", "grok-4.7-high"]]
+    assert grok_launch.calls == [["/bin/grok", "--model", "grok-4.7"]]
+
+
+def test_spawn_refuses_remote_cloud_before_binary_or_launch(monkeypatch):
+    launch = _Launcher()
+    for command in (
+        ["agent", "--cloud", "https://cursor.com/agents/x"],
+        ["agent", "--remote"],
+        ["agent", "https://cursor.com/agents/bc-1"],
+    ):
+        refused = spawn_agent(command, launch=launch)
+        assert refused["started"] is False
+        assert refused["reason"] == REMOTE_CLOUD_BANNED
+        assert refused["command"] == command
+    for command in (["grok", "--cloud"], ["grok", "--remote"]):
+        refused_grok = spawn_grok(command, launch=launch)
+        assert refused_grok["started"] is False
+        assert refused_grok["reason"] == "not-grok-build"
+    assert launch.calls == []
+
+
+def test_spawn_launch_oserror_is_a_missing_tool(monkeypatch):
+    monkeypatch.setattr("essay_writer.setup.cursor_cli_binary", lambda: "/bin/agent")
+    monkeypatch.setattr("essay_writer.setup.grokbuild_binary", lambda: "/bin/grok")
+
+    def no_terminal(_argv):
+        raise OSError("openpty: out of pty devices")
+
+    missing_agent = spawn_agent(["agent", "--model", "grok-4.7-high"], launch=no_terminal)
+    missing_grok = spawn_grok(["grok", "--model", "grok-4.7"], launch=no_terminal)
+    assert missing_agent["reason"] == "agent-cli-missing"
     assert missing_grok["reason"] == "grok-cli-missing"
 
 
-def test_spawn_still_refuses_remote_cloud_and_pytest(monkeypatch):
-    refused = spawn_agent(["agent", "--cloud", "https://cursor.com/agents/x"])
-    assert refused["started"] is False
-    assert refused["reason"] == REMOTE_CLOUD_BANNED
-    skipped = spawn_agent(["agent", "--model", "grok-4.7-high"])
-    assert skipped["started"] is False
-    assert skipped["reason"] == "skipped-under-test"
-    skipped_grok = spawn_grok(["grok", "--model", "grok-4.7", "--effort", "high"])
-    assert skipped_grok["started"] is False
-    assert skipped_grok["reason"] == "skipped-under-test"
-
-
-def test_spawn_helpers_use_setup_resolvers():
+def test_spawn_helpers_use_setup_resolvers_and_real_opener():
     import inspect
 
     agent_src = inspect.getsource(spawn_agent)
     grok_src = inspect.getsource(spawn_grok)
     assert "cursor_cli_binary" in agent_src
     assert "shutil.which" not in agent_src
+    assert "open_mid_child" in agent_src
     assert "grokbuild_binary" in grok_src
     assert "shutil.which" not in grok_src
+    assert "open_mid_child" in grok_src

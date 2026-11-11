@@ -1,6 +1,6 @@
 """First draft is authored from 4b markdowns. One markdown per paper."""
 
-from helpers import TOPIC, open_sequence, pack, source, write_upload
+from helpers import TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.draft_from_review import author_from_reviews
 from essay_writer.research import essay_research_summary
@@ -37,7 +37,7 @@ def _confirmed(workspace):
     seq = open_sequence()
     draft = essay_research_summary(seq, TOPIC, "draft", [source()])
     assert draft["ok"] is True
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [source()])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["stored"] is True
     return seq
 

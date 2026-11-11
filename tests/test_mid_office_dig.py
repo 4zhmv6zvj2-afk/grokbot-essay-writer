@@ -132,13 +132,13 @@ def test_ac3_second_dig_confirm_is_a_noop(workspace, monkeypatch):
     draft = essay_dig(seq, query, "draft")
     assert draft["ok"] is True, draft
     assert draft["wrote"] is False
-    first = essay_dig(seq, query, "confirm")
+    first = essay_dig(seq, query, "confirm", cardDigest=draft["cardDigest"])
     assert first["wrote"] is True, first
     assert first["stored"] is True
     path = work_dir(seq) / "dig-card.json"
     raw = path.read_bytes()
     assert json.loads(raw)["digest"] == first["digest"]
-    second = essay_dig(seq, query, "confirm")
+    second = essay_dig(seq, query, "confirm", cardDigest=draft["cardDigest"])
     assert second["wrote"] is False
     assert second["stored"] is False
     assert second["noop"] is True

@@ -2,7 +2,7 @@
 
 A room agent confirms with cardAction and cardDigest copied from the draft.
 Stage 7 answers, including no changes, present that card. Confirm saves
-stage 7 and moves to stage 8. A typed yes still does not save.
+stage 7 and moves to stage 8. A typed yes saves the waiting card.
 """
 
 from pathlib import Path
@@ -213,42 +213,40 @@ def test_ac2_stage7_answers_present_confirm(workspace):
     assert isinstance(spoken.get("next"), str) and spoken["next"].strip()
 
 
-def test_ac3_typed_confirm_does_not_save(workspace):
-    """AC3: typed Confirm, yes, or ok still does not save. The card path does."""
-    seq = open_sequence()
-    look = "The task is a short report."
-    draft = essay_stage(seq, "1", "draft", look)
-    before = _pointer_text(seq)
+def test_ac3_typed_confirm_saves_the_waiting_card(workspace):
+    """AC3: a typed Confirm, yes, or ok on a waiting card saves that stage."""
     for typed in ("Confirm", "yes", "ok", "Yes", "OK"):
+        seq = open_sequence()
+        look = "The task is a short report."
+        draft = essay_stage(seq, "1", "draft", look)
+        assert draft["ok"] is True, draft
         spoken = front_office_call(
             "essay.stage",
             {"essay_id": seq, "stage": "1", "confirmPhase": "confirm", "look": typed},
         )
-        assert spoken["ok"] is False
-        assert spoken["refused"] == "confirm-card"
-        assert spoken["stored"] is not True
-        assert spoken["wrote"] is False
-        assert spoken["card"]["digest"] == draft["digest"]
-        assert spoken["cardDigest"] == draft["digest"]
-        assert "Confirm card" in spoken["next"]
-        assert _pointer_text(seq) == before
+        assert spoken["ok"] is True, spoken
+        assert spoken["stored"] is True
+        assert spoken["current"] == "2"
+        assert load_pointer(seq)["saved"] == ["1"]
 
-        spoken = front_office_call(
-            "essay.stage",
-            {
-                "essay_id": seq,
-                "stage": "1",
-                "confirmPhase": "confirm",
-                "look": look,
-                "cardAction": typed,
-                "cardDigest": draft["digest"],
-            },
-        )
-        assert spoken["ok"] is False
-        assert spoken["refused"] == "confirm-card"
-        assert spoken["stored"] is not True
-        assert spoken["cardDigest"] == draft["digest"]
-        assert _pointer_text(seq) == before
+    # A card field that is not the Confirm action still refuses.
+    seq = open_sequence()
+    look = "The task is a short report."
+    draft = essay_stage(seq, "1", "draft", look)
+    refused = front_office_call(
+        "essay.stage",
+        {
+            "essay_id": seq,
+            "stage": "1",
+            "confirmPhase": "confirm",
+            "look": look,
+            "cardAction": "yes",
+            "cardDigest": draft["digest"],
+        },
+    )
+    assert refused["ok"] is False
+    assert refused["refused"] == "confirm-card"
+    assert load_pointer(seq)["saved"] == []
 
     saved = essay_stage(seq, "1", "confirm", **picked(draft))
     assert saved["stored"] is True

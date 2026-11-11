@@ -20,6 +20,7 @@ from essay_writer import safe_url
 from essay_writer.confirm import (
     CONFIRM,
     DRAFT,
+    card_digest,
     confirm_ready,
     phase_refusal,
     refuse,
@@ -504,8 +505,17 @@ def _dig_reply(essay_id: str, query: str, confirmPhase: str, card: dict[str, Any
     }
 
 
-def essay_dig(essay_id: str, query: str, confirmPhase: str | None = None) -> dict[str, Any]:
-    """Draft the local dig card. Confirm writes the card that was shown."""
+def essay_dig(
+    essay_id: str,
+    query: str,
+    confirmPhase: str | None = None,
+    cardDigest: str | None = None,
+) -> dict[str, Any]:
+    """Draft the local dig card. Confirm writes the card that was shown.
+
+    The draft reply carries cardDigest. Confirm rebuilds it from the stored
+    card and refuses a confirm that does not send the same value.
+    """
     id_error = sequence_write_error(essay_id)
     if id_error:
         return refuse("essay-id", id_error)
@@ -525,9 +535,10 @@ def essay_dig(essay_id: str, query: str, confirmPhase: str | None = None) -> dic
         card = _build_card(query, essay_id)
         body = _dig_reply(essay_id, query, confirmPhase, card)
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint, shown=card)
+        body["cardDigest"] = card_digest(payload, card)
         body["next"] = (
             "This source card is not on disk yet. Say yes to write dig-card.json and dig-card.md. "
-            "Only look-up hits are listed."
+            "Only look-up hits are listed. This reply's card digest is needed on the save call."
         )
         if _open_candidates(card):
             body["next"] += (
@@ -535,7 +546,14 @@ def essay_dig(essay_id: str, query: str, confirmPhase: str | None = None) -> dic
                 " An HTML page is not a paper."
             )
         return body
-    ready = confirm_ready(essay_id, TOOL, payload, fingerprint)
+    ready = confirm_ready(
+        essay_id,
+        TOOL,
+        payload,
+        fingerprint,
+        card_digest=cardDigest,
+        require_card=True,
+    )
     if ready.get("ok") is False:
         ready["confirmPhase"] = CONFIRM
         return ready

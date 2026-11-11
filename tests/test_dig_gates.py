@@ -4,7 +4,7 @@ import ast
 import json
 from pathlib import Path
 
-from helpers import ESSAY, TOPIC, open_sequence, pack, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer import build_office
 from essay_writer.dig import consensus_status, essay_dig
@@ -40,7 +40,7 @@ def _ready(workspace):
     )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     return seq
@@ -93,7 +93,7 @@ def test_dig_card_is_local_and_does_not_invent(workspace, monkeypatch):
     assert "Invented Journal" not in json.dumps(draft)
     assert draft["card"]["consensus"]["tier"] == "pro"
     assert draft["card"]["unpaywall"][0]["skipped"] == "no-email"
-    confirmed = essay_dig(seq, "chokepoints", "confirm")
+    confirmed = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert confirmed["wrote"] is True
     card = json.loads((folder / "dig-card.json").read_text(encoding="utf-8"))
     text = (folder / "dig-card.md").read_text(encoding="utf-8")
@@ -135,7 +135,7 @@ def test_openalex_abstract_is_saved_when_there_is_no_pdf(workspace, monkeypatch)
     hit = draft["card"]["openalex"]["hits"][0]
     assert hit["abstract"] == "Supply chains collaborate."
     assert _save_openalex_abstracts(seq, draft["card"], {"10.1/oa"}) == []
-    confirmed = essay_dig(seq, "chokepoints", "confirm")
+    confirmed = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert confirmed["wrote"] is True
     saved = confirmed["abstract_files"]
     assert len(saved) == 1
@@ -190,7 +190,7 @@ def test_key_present_turns_consensus_on_for_dig(workspace, monkeypatch):
     assert "key-not-echoed" not in json.dumps(draft)
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1"
     assert not (folder / "dig-card.json").exists()
-    confirmed = essay_dig(seq, "chokepoints", "confirm")
+    confirmed = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert confirmed["wrote"] is True
     assert confirmed["stored"] is True
     card = json.loads((folder / "dig-card.json").read_text(encoding="utf-8"))
@@ -229,7 +229,7 @@ def test_missing_key_leaves_consensus_off_for_dig(workspace, monkeypatch):
     assert draft["card"]["openalex"]["hits"][0]["title"] == "Returned by OpenAlex"
     assert "Returned by Consensus" not in json.dumps(draft)
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1"
-    confirmed = essay_dig(seq, "ports", "confirm")
+    confirmed = essay_dig(seq, "ports", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert confirmed["wrote"] is True
     text = (folder / "dig-card.md").read_text(encoding="utf-8")
     assert "Consensus was not called." in text
@@ -248,7 +248,7 @@ def test_confirm_without_draft_writes_nothing_when_consensus_is_on(workspace, mo
     _lookup(monkeypatch, calls)
     monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
     monkeypatch.setenv("CONSENSUS_API_KEY", "key-not-echoed")
-    blocked = essay_dig(seq, "chokepoints", "confirm")
+    blocked = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert blocked["ok"] is False
     assert blocked["wrote"] is False
     assert blocked["stored"] is False

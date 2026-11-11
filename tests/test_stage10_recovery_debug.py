@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from docx import Document
-from helpers import ESSAY, open_sequence, pack, report_sections, write_upload
+from helpers import ESSAY, card_digest_for, open_sequence, pack, report_sections, write_upload
 
 from essay_writer.debug_log import debug_log_path, log_word_step
 from essay_writer.late_chain import (
@@ -186,7 +186,7 @@ def test_ac4_operator_log_names_pack_from_docx_path_and_cover_audit(
     seq = open_sequence(MODULE)
     body = _report_pack(seq)
     essay_research_summary(seq, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq, TOPIC, "confirm", body["sources"])
+    essay_research_summary(seq, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, body, "confirm")
     _write_good_word(seq, body)
     _null_saved_pack(seq)
@@ -245,7 +245,7 @@ def test_ac6_write_stage10_recovery_refreshes_ml_paths_sha(
     seq = open_sequence(MODULE)
     body = _report_pack(seq)
     essay_research_summary(seq, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq, TOPIC, "confirm", body["sources"])
+    essay_research_summary(seq, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, body, "confirm")
     stage_path = _write_good_word(seq, body)
     stale_sha = "a0763b9f" + ("0" * 56)
@@ -294,7 +294,7 @@ def test_ac1_null_saved_pack_keeps_house_cover(workspace, monkeypatch, tmp_path)
     seq = open_sequence(MODULE)
     body = _report_pack(seq)
     essay_research_summary(seq, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq, TOPIC, "confirm", body["sources"])
+    essay_research_summary(seq, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, body, "confirm")
     stage = _write_good_word(seq, body)
     _null_saved_pack(seq)
@@ -334,7 +334,7 @@ def test_ac2_null_saved_pack_keeps_references_from_word_and_uploads(
     seq = open_sequence(MODULE)
     body = _report_pack(seq)
     essay_research_summary(seq, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq, TOPIC, "confirm", body["sources"])
+    essay_research_summary(seq, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, body, "confirm")
     stage = _write_good_word(seq, body)
     _null_saved_pack(seq)
@@ -365,7 +365,7 @@ def test_ac3_module_seq_null_saved_pack_matches_clear_cover_and_refs(
     assert seq3.endswith("-3")
     body = _report_pack(seq3)
     essay_research_summary(seq3, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq3, TOPIC, "confirm", body["sources"])
+    essay_research_summary(seq3, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq3, 'essay.research.summary'))
     essay_pack_validate(seq3, body, "confirm")
     stage = _write_good_word(seq3, body)
     _null_saved_pack(seq3)

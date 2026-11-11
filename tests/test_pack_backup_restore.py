@@ -7,7 +7,7 @@ import json
 import shutil
 from pathlib import Path
 
-from helpers import ESSAY, TOPIC, open_sequence, pack, picked, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, picked, source, write_upload
 
 from essay_writer import build_office, cursor_office
 from essay_writer.build_office import _STAGE_DELIVERABLES
@@ -124,7 +124,7 @@ def test_ac2_pack_validate_snapshots_same_shape(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     _plant_reports(seq)
     refused = essay_pack_validate(seq, "nope", "draft")
     assert refused["ok"] is False

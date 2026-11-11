@@ -6,7 +6,6 @@ that research. Status stays plain English and does not skip Confirm.
 
 import ast
 import inspect
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -87,6 +86,11 @@ class _Proc:
     stdout = None
 
 
+def _unavailable_spawn(command):
+    """A failed start with no spoken reason. The process never opened."""
+    return {"started": False, "reason": "", "command": list(command)}
+
+
 _REMOTE_COMMANDS = (
     ["cloud-agent"],
     ["cloud-agent", "--model", "grok-4.7-high"],
@@ -98,9 +102,7 @@ _REMOTE_COMMANDS = (
 )
 
 
-def test_ac1_stage_4a_launches_cursor_cli_not_the_front_office(
-    requires_pty, workspace, monkeypatch
-):
+def test_ac1_stage_4a_launches_cursor_cli_not_the_front_office(workspace, monkeypatch):
     """Local agent only. Remote and cloud agents are refused."""
     seen: list[list[str]] = []
 
@@ -160,7 +162,8 @@ def test_ac1_stage_4a_launches_cursor_cli_not_the_front_office(
     spawn_source = inspect.getsource(spawn_agent)
     assert "CloudAgent" not in runner
     assert "CloudAgent" not in spawn_source
-    assert spawn_source.index("REMOTE_CLOUD_BANNED") < spawn_source.index("open_mid_child(")
+    assert spawn_source.index("REMOTE_CLOUD_BANNED") < spawn_source.index("cursor_cli_binary()")
+    assert spawn_source.index("REMOTE_CLOUD_BANNED") < spawn_source.rindex("open_mid_child")
     office_source = Path(cursor_stage_launch.__code__.co_filename).read_text(encoding="utf-8")
     stage_source = inspect.getsource(_run_stage)
     assert "CloudAgent" not in office_source
@@ -182,13 +185,15 @@ def test_ac1_stage_4a_launches_cursor_cli_not_the_front_office(
     assert "cursor.com" not in " ".join(kept["command"])
 
     monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", spawn_agent)
-    skipped = spawn_agent(["agent", "--model", "grok-4.7-high"])
-    assert skipped["started"] is False
-    assert skipped["reason"] == "skipped-under-test"
+    monkeypatch.setattr("essay_writer.setup.cursor_cli_binary", lambda: None)
+    missing = spawn_agent(["agent", "--model", "grok-4.7-high"])
+    assert missing["started"] is False
+    assert missing["reason"] == "agent-cli-missing"
 
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_GROK_BUILD)
     host = stage_host_launch("4a")
     assert host["command"][0] == "grok"
+    monkeypatch.setattr("essay_writer.build_office.spawn_grok", _unavailable_spawn)
     switched = start_4a_research(seq)
     assert switched["command"][0] == "grok"
     assert switched["command"] == host["command"]
@@ -197,34 +202,22 @@ def test_ac1_stage_4a_launches_cursor_cli_not_the_front_office(
     assert switched["status"] == []
     assert switched["settings"] == stage_settings("4a")
 
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
-    popen_calls: list[tuple[list[str], dict]] = []
+    launched: list[list[str]] = []
 
-    def fake_popen(argv, **kwargs):
-        popen_calls.append((list(argv), kwargs))
-        return _Proc()
+    def fake_launch(argv):
+        launched.append(list(argv))
+        return _Proc(), None
 
-    monkeypatch.setattr("essay_writer.mid_spawn.subprocess.Popen", fake_popen)
     monkeypatch.setattr("essay_writer.setup.cursor_cli_binary", lambda: "/bin/agent")
-    started = spawn_agent(["agent", "--model", "grok-4.7-high"])
+    started = spawn_agent(["agent", "--model", "grok-4.7-high"], launch=fake_launch)
     assert started["started"] is True
     assert started["pid"] == 4242
-    argv, kwargs = popen_calls[0]
-    assert argv == ["/bin/agent", "--model", "grok-4.7-high"]
-    assert kwargs["shell"] is False
-    assert kwargs["stdin"] not in (None, subprocess.DEVNULL)
-    assert kwargs["stdout"] == kwargs["stdin"]
-    assert kwargs["stderr"] is subprocess.PIPE
-    monkeypatch.setattr("essay_writer.setup.cursor_cli_binary", lambda: None)
-    missing = spawn_agent(["agent", "--model", "grok-4.7-high"])
-    assert missing["started"] is False
-    assert missing["reason"] == "agent-cli-missing"
-    assert len(popen_calls) == 1
+    assert launched == [["/bin/agent", "--model", "grok-4.7-high"]]
     for command in _REMOTE_COMMANDS:
-        refused = spawn_agent(command)
+        refused = spawn_agent(command, launch=fake_launch)
         assert refused["started"] is False
         assert refused["reason"] == REMOTE_CLOUD_BANNED
-    assert len(popen_calls) == 1
+    assert launched == [["/bin/agent", "--model", "grok-4.7-high"]]
 
 
 def test_ac2_essay_dig_stays_the_shared_handler(workspace, monkeypatch):
@@ -261,6 +254,7 @@ def test_ac2_essay_dig_stays_the_shared_handler(workspace, monkeypatch):
     )
     assert draft["ok"] is True, draft
     assert calls["n"] == 0
+    monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _unavailable_spawn)
     start_4a_research(seq)
     assert calls["n"] == 0
     assert "essay_dig" not in inspect.getsource(start_4a_research)

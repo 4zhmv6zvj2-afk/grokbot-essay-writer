@@ -8,6 +8,7 @@ This module does not keep a second table.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -156,30 +157,36 @@ def report_phase(essay_id: str, kind: str) -> list[str]:
     return signal_phase(essay_id, kind)
 
 
-def spawn_grok(command: list[str]) -> dict[str, Any]:
+def spawn_grok(
+    command: list[str],
+    *,
+    launch: Callable[[list[str]], tuple[Any, Any]] | None = None,
+) -> dict[str, Any]:
     """Start the local Grok Build CLI. Stdout is kept so a phase line can be read.
 
-    Remote commands are refused. Tests skip a local start. A failed start
+    Remote commands are refused before the binary lookup. A failed start
     does not open a mid session; the caller arms only when started is true.
     stdin and stdout are a terminal, and stderr is a pipe (`open_mid_child`).
     A closed stdin is the same immediate-exit pattern as the Cursor CLI.
-    """
-    import os
 
+    `launch` is the opener collaborator. It defaults to the real
+    `mid_spawn.open_mid_child`; a test passes a fake so no CLI starts.
+    """
     from essay_writer.cursor_office import remote_cloud_argv
-    from essay_writer.mid_spawn import open_mid_child
     from essay_writer.setup import grokbuild_binary
 
     argv = [str(part) for part in command]
     if remote_cloud_argv(argv) or not argv or argv[0] != "grok":
         return {"started": False, "reason": "not-grok-build", "command": argv}
-    if os.environ.get("PYTEST_CURRENT_TEST"):
-        return {"started": False, "reason": "skipped-under-test", "command": argv}
     binary = grokbuild_binary()
     if not binary:
         return {"started": False, "reason": "grok-cli-missing", "command": argv}
+    if launch is None:
+        from essay_writer.mid_spawn import open_mid_child
+
+        launch = open_mid_child
     try:
-        proc, stream = open_mid_child([binary, *argv[1:]])
+        proc, stream = launch([binary, *argv[1:]])
     except OSError:
         return {"started": False, "reason": "grok-cli-missing", "command": argv}
     return {

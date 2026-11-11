@@ -1,4 +1,5 @@
 
+import hashlib
 import json
 import zipfile
 from pathlib import Path
@@ -96,6 +97,7 @@ def test_committed_grok_config_matches_the_writer(tmp_path):
         tmp_path,
         reviewer=False,
         enable=lambda name: {"identifier": name, "enabled": False},
+        include_user=False,
     )
     generated = Path(attached["project_config"]).read_text(encoding="utf-8")
     committed = (package_root() / ".grok" / "config.toml").read_text(encoding="utf-8")
@@ -158,14 +160,37 @@ def test_install_uses_the_cloud_folder_and_names_the_install_residual(tmp_path, 
     upload = tmp_path / "essay-writer.zip"
     with zipfile.ZipFile(upload, "w") as archive:
         archive.writestr("essay-writer-main/pyproject.toml", '[project]\nname = "essay-writer"\n')
+        archive.writestr(
+            "essay-writer-main/requirements-runtime.txt",
+            "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n",
+        )
         archive.writestr("essay-writer-main/src/essay_writer/__init__.py", "")
+    calls: list[list[str]] = []
 
     def run(command: list[str], cwd: Path) -> dict:
-        assert command[1:] == ["-m", "pip", "install", "-e", "."]
+        calls.append(command)
         assert Path(cwd) == cloud / "essay-writer-install" / "essay-writer-main"
         return {"returncode": 0, "stdout": "", "stderr": ""}
 
-    result = install_uploaded_copy(upload, pip_runner=run)
+    result = install_uploaded_copy(
+        upload,
+        pip_runner=run,
+        upload_sha256=hashlib.sha256(upload.read_bytes()).hexdigest(),
+        path_exposer=lambda: None,
+        include_user=False,
+        enable=lambda name: {"identifier": name, "enabled": False},
+        allow_cursor_install=False,
+    )
+    assert len(calls) == 2
+    assert calls[0][1:] == [
+        "-m",
+        "pip",
+        "install",
+        "--require-hashes",
+        "-r",
+        "requirements-runtime.txt",
+    ]
+    assert calls[1][1:] == ["-m", "pip", "install", "--no-deps", "-e", "."]
     assert result["ok"] is True
     assert result["install_residual_id"] == "install-root"
     assert result["install_residual"] == RESIDUALS["install-root"]
@@ -187,6 +212,8 @@ def test_install_uses_the_cloud_folder_and_names_the_install_residual(tmp_path, 
 
 def test_build_handoff_copies_word_and_zip_and_names_packing(tmp_path, monkeypatch):
     monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)
+    # No mounted Mac in a test: the discovery collaborator is faked out.
+    monkeypatch.setattr("essay_writer.first_run.mac_deliverables_dir", lambda **_kwargs: None)
     mac = tmp_path / "mac"
     folder = tmp_path / "output"
     folder.mkdir()

@@ -9,6 +9,7 @@ from essay_writer.clarify import parse_clarify
 from essay_writer.confirm import (
     CONFIRM,
     DRAFT,
+    card_digest,
     confirm_ready,
     now,
     phase_refusal,
@@ -380,6 +381,7 @@ def _run(
     industry: dict[str, Any] | None,
     host_voice: Any,
     reviews: list[Any] | None = None,
+    cardDigest: str | None = None,
 ) -> dict[str, Any]:
     id_error = sequence_write_error(essay_id)
     if id_error:
@@ -446,16 +448,23 @@ def _run(
     if depth == "full":
         body["clarify_context"] = clarify
     if confirmPhase == DRAFT:
-        body["digest"] = save_draft(
-            essay_id, tool, payload, fingerprint, shown=_shown_research(prepared)
-        )
+        draft_shown = _shown_research(prepared)
+        body["digest"] = save_draft(essay_id, tool, payload, fingerprint, shown=draft_shown)
+        body["cardDigest"] = card_digest(payload, draft_shown)
         body["stored"] = False
         body["next"] = say(
             "Show this draft to the human. Say yes only for these same arguments "
-            "after you have seen this result."
+            "after you have seen this result. This reply's card digest is needed on the save call."
         )
         return body
-    ready = confirm_ready(essay_id, tool, payload, fingerprint)
+    ready = confirm_ready(
+        essay_id,
+        tool,
+        payload,
+        fingerprint,
+        card_digest=cardDigest,
+        require_card=True,
+    )
     if ready.get("ok") is False:
         ready["confirmPhase"] = CONFIRM
         return ready
@@ -534,7 +543,9 @@ def essay_research_summary(
     exclude_section_ids: list[str] | None = None,
     industry: dict[str, Any] | None = None,
     host_voice: Any = None,
+    cardDigest: str | None = None,
 ) -> dict[str, Any]:
+    """Draft or confirm the summary. Confirm needs the draft reply's cardDigest."""
     return _run(
         SUMMARY,
         "summary",
@@ -548,6 +559,7 @@ def essay_research_summary(
         exclude_section_ids,
         industry,
         host_voice,
+        cardDigest=cardDigest,
     )
 
 
@@ -563,7 +575,9 @@ def essay_research_full(
     industry: dict[str, Any] | None = None,
     host_voice: Any = None,
     reviews: list[Any] | None = None,
+    cardDigest: str | None = None,
 ) -> dict[str, Any]:
+    """Draft or confirm the full research. Confirm needs the draft reply's cardDigest."""
     return _run(
         FULL,
         "full",
@@ -578,4 +592,5 @@ def essay_research_full(
         industry,
         host_voice,
         reviews,
+        cardDigest=cardDigest,
     )

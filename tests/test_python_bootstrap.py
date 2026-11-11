@@ -83,6 +83,9 @@ def test_existing_good_venv_is_used_without_a_card(tmp_path):
 
 
 def test_consent_provisions_project_local_python(tmp_path):
+    (tmp_path / "requirements-runtime.txt").write_text(
+        "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
+    )
     calls = []
     commands = []
     code = boot.bootstrap(
@@ -99,10 +102,13 @@ def test_consent_provisions_project_local_python(tmp_path):
     joined = [" ".join(command) for command in commands]
     assert any("python install 3.15.2" in line for line in joined)
     assert any("venv .venv --python 3.15.2 --seed" in line for line in joined)
-    # Upstream v0.2.0 names the venv interpreter; --no-deps is added only when a
-    # requirements file is configured, and this copy has none.
-    assert any(f"pip install --python {python} -e ." in line for line in joined)
-    assert not any("--no-deps" in line for line in joined)
+    # The vendored core installs the hash-pinned requirements first, then the
+    # project with --no-deps. There is no single unpinned install.
+    requirements = [line for line in joined if "--require-hashes" in line]
+    assert len(requirements) == 1
+    assert "requirements-runtime.txt" in requirements[0]
+    assert any(f"pip install --python {python} --no-deps -e ." in line for line in joined)
+    assert not any(f"pip install --python {python} -e ." in line for line in joined)
     assert any("mcp.server.mcpserver" in line for line in joined)
     assert (tmp_path / ".python-version").read_text(encoding="utf-8") == "3.15.2\n"
     assert calls[0][0] == str(boot.venv_python(tmp_path))
@@ -209,7 +215,7 @@ def test_attach_uses_the_chosen_interpreter(tmp_path, monkeypatch):
     def enable(name):
         return {"identifier": name, "enabled": False}
 
-    cursor = attach_custom_mcp(project, enable=enable)
+    cursor = attach_custom_mcp(project, enable=enable, include_user=False)
     assert cursor["ok"] is True
     written = json.loads((project / ".cursor" / "mcp.json").read_text(encoding="utf-8"))
     writer = written["mcpServers"]["essay-writer"]
@@ -217,7 +223,7 @@ def test_attach_uses_the_chosen_interpreter(tmp_path, monkeypatch):
     assert writer == {"command": str(python), "args": ["-m", "essay_writer"]}
     assert reviewer == {"command": str(python), "args": ["-m", "essay_writer", "--reviewer"]}
 
-    build = attach_build_mcp(project, reviewer=True, enable=enable)
+    build = attach_build_mcp(project, reviewer=True, enable=enable, include_user=False)
     text = Path(build["project_config"]).read_text(encoding="utf-8")
     assert f'command = "{python}"' in text
     assert 'command = "essay-writer"' not in text
@@ -277,8 +283,8 @@ def test_hash_pinned_requirements_install_runs_before_the_project(tmp_path):
     assert joined.index(requirements[0]) < joined.index(project[0])
 
 
-def test_missing_requirements_file_keeps_the_single_upstream_install(tmp_path):
-    """Legacy copies without the requirements file keep the upstream command."""
+def test_missing_requirements_file_fails_closed_without_an_unpinned_install(tmp_path, capsys):
+    """A copy without requirements-runtime.txt is refused; no unpinned install runs."""
     commands = []
     code = boot.bootstrap(
         ["--install-python", "--no-reviewer"],
@@ -289,12 +295,15 @@ def test_missing_requirements_file_keeps_the_single_upstream_install(tmp_path):
         current=(3, 11, 13),
         probe=lambda _exe: (3, 15, 2),
     )
-    assert code == 0
+    report = json.loads(capsys.readouterr().out)
+    assert code == 5
+    assert report["reason"] == "runtime_requirements_failed"
+    assert report["steps"][-1]["returncode"] == 1
+    assert "requirements-runtime.txt is missing" in report["steps"][-1]["stderr"]
     joined = [" ".join(command) for command in commands]
     python = str(boot.venv_python(tmp_path))
-    assert not any("--require-hashes" in line for line in joined)
-    installs = [line for line in joined if " pip install " in line]
-    assert installs == [f"/fake/uv pip install --python {python} -e ."]
+    assert not any(f"pip install --python {python} --no-deps -e ." in line for line in joined)
+    assert not any(f"pip install --python {python} -e ." in line for line in joined)
 
 
 def test_failed_requirement_hash_install_stops_before_the_project(tmp_path, capsys):
@@ -330,3 +339,11 @@ def test_bootstrap_spec_rejects_requirements_outside_the_project():
 
     with pytest.raises(ValueError, match="requirements must stay inside the project"):
         core.BootstrapSpec(app="essay-writer", requirements=("/etc/passwd",))
+
+
+def test_provision_refuses_a_missing_requirements_file(tmp_path):
+    """The adapter refuses before touching uv; the reason is named."""
+    report = boot.provision(tmp_path, run=lambda *_a, **_k: {"returncode": 0})
+    assert report["ok"] is False
+    assert report["reason"] == "requirements_missing"
+    assert boot._SPEC.requirements == (boot.REQUIREMENTS_FILE,)

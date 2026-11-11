@@ -39,6 +39,7 @@ include uploads/README.md
 include .python-version
 include .github/workflows/ci.yml
 include .github/workflows/release.yml
+include .github/workflows/reproduce.yml
 
 # GitHub configuration the checkout carries: dependency updates, the bug report
 # template, and the Scorecard supply-chain workflow. A source distribution is a

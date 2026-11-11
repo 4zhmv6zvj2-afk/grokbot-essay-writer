@@ -14,6 +14,7 @@ from docx import Document
 from helpers import (
     ESSAY,
     TOPIC,
+    card_digest_for,
     open_sequence,
     pack,
     report_sections,
@@ -85,7 +86,7 @@ def _confirm_full_source(seq: str) -> None:
     }
     draft = essay_research_summary(seq, TOPIC, "draft", [source])
     assert draft["ok"] is True, draft
-    saved = essay_research_summary(seq, TOPIC, "confirm", [source])
+    saved = essay_research_summary(seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert saved["ok"] is True, saved
 
 

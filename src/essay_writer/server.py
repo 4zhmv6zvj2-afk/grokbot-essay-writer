@@ -279,6 +279,7 @@ _FIRST_RUN_FLAGS = frozenset(
         "--install-cursor",
         "--no-install-cursor",
         "--cursor-sha256",
+        "--upload-sha256",
     }
 )
 
@@ -350,8 +351,8 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(
             "usage: essay-writer [--health | --debug-export | --reviewer | --stage-launch STAGE | "
             "--cursor-stage-launch STAGE | "
-            "--read-photo PATH | --install-upload ZIP [--no-reviewer] [--install-cursor] "
-            "[--cursor-sha256 SHA256] | "
+            "--read-photo PATH | --install-upload ZIP [--upload-sha256 SHA256] [--no-reviewer] "
+            "[--install-cursor] [--cursor-sha256 SHA256] | "
             "--attach-mcp [--no-reviewer] [--install-cursor] [--cursor-sha256 SHA256] | "
             "--copy-to-mac PATH | --remember-mac-dir FOLDER]"
         )

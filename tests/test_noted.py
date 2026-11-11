@@ -3,6 +3,7 @@ from pathlib import Path
 from helpers import (
     CLARIFY_OPEN,
     TOPIC,
+    card_digest_for,
     open_sequence,
     pack,
     report_sections,
@@ -18,7 +19,7 @@ def _confirm_summary(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     return seq
 
 
@@ -26,7 +27,7 @@ def _confirm_full(workspace, clarify=CLARIFY_OPEN):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_full(seq, TOPIC, "draft", [source()], clarify_context=clarify)
-    essay_research_full(seq, TOPIC, "confirm", [source()], clarify_context=clarify)
+    essay_research_full(seq, TOPIC, "confirm", [source()], clarify_context=clarify, cardDigest=card_digest_for(seq, 'essay.research.full'))
     return seq
 
 

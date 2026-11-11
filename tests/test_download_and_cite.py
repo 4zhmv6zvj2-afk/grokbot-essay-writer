@@ -55,8 +55,8 @@ def _tracking(seq: str, stage: str) -> str:
     return (work_dir(seq) / "tracking" / f"{stage}.md").read_text(encoding="utf-8")
 
 
-def test_ac1_confirm_is_a_clickable_card_and_typed_yes_does_not_save(workspace):
-    """A typed yes or ok does not save. The card pick does."""
+def test_ac1_confirm_is_a_clickable_card_and_typed_yes_saves(workspace):
+    """A typed yes saves the waiting card; a wrong card still refuses."""
     _brief()
     seq = open_sequence()
     look = _look(seq)
@@ -74,35 +74,39 @@ def test_ac1_confirm_is_a_clickable_card_and_typed_yes_does_not_save(workspace):
     assert draft["stored"] is False
     assert load_pointer(seq)["saved"] == []
 
-    for typed in ("yes", "ok", "Yes", "OK"):
-        refused = essay_stage(seq, "1", "confirm", typed)
-        assert refused["ok"] is False
-        assert refused["refused"] == "confirm-card"
-        assert refused["stored"] is not True
-        assert load_pointer(seq)["saved"] == []
-        refused = essay_stage(
-            seq, "1", "confirm", look, cardAction=typed, cardDigest=draft["digest"],
-        )
-        assert refused["refused"] == "confirm-card"
-        assert load_pointer(seq)["saved"] == []
+    typed = essay_stage(seq, "1", "confirm", "yes")
+    assert typed["ok"] is True, typed
+    assert typed["stored"] is True
+    assert load_pointer(seq)["saved"] == ["1"]
+    assert load_pointer(seq)["current"] == "2"
+
+    # A card field that is not the Confirm action, or a wrong digest, still refuses.
+    seq2 = open_sequence()
+    look2 = _look(seq2)
+    draft2 = essay_stage(seq2, "1", "draft", look2)
+    refused = essay_stage(
+        seq2, "1", "confirm", look2, cardAction="yes", cardDigest=draft2["digest"],
+    )
+    assert refused["refused"] == "confirm-card"
+    assert load_pointer(seq2)["saved"] == []
 
     mismatch = essay_stage(
-        seq, "1", "confirm", cardAction="confirm", cardDigest="not-the-card",
+        seq2, "1", "confirm", cardAction="confirm", cardDigest="not-the-card",
     )
     assert mismatch["refused"] == "confirm-card"
-    assert load_pointer(seq)["saved"] == []
+    assert load_pointer(seq2)["saved"] == []
 
     held = essay_stage(
-        seq, "1", "confirm", cardAction="not_yet", cardDigest=draft["digest"],
+        seq2, "1", "confirm", cardAction="not_yet", cardDigest=draft2["digest"],
     )
     assert held["refused"] == "confirm-card"
-    assert load_pointer(seq)["saved"] == []
+    assert load_pointer(seq2)["saved"] == []
 
-    saved = essay_stage(seq, "1", "confirm", cardAction="confirm", cardDigest=draft["digest"])
+    saved = essay_stage(seq2, "1", "confirm", cardAction="confirm", cardDigest=draft2["digest"])
     assert saved["stored"] is True, saved
     assert saved["current"] == "2"
     assert saved["card"]["stage"] == "2"
-    assert load_pointer(seq)["saved"] == ["1"]
+    assert load_pointer(seq2)["saved"] == ["1"]
 
 
 def test_ac2_rest_of_basics_walk_before_confirm(workspace):

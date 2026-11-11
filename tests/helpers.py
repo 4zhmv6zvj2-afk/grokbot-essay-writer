@@ -37,6 +37,17 @@ SAMPLE_REFERENCE_LINE = (
 )
 
 
+def card_digest_for(seq: str, tool: str) -> str | None:
+    """The cardDigest the last draft for this door returned. None when none waits."""
+    from essay_writer.confirm import latest_draft
+
+    record = latest_draft(seq, tool)
+    if not isinstance(record, dict):
+        return None
+    value = record.get("cardDigest")
+    return value if isinstance(value, str) else None
+
+
 def with_word_references(pack: dict) -> dict:
     """Ensure stage 10 and Word writes have at least one reference line."""
     body = dict(pack)

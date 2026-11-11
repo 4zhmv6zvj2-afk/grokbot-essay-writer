@@ -5,6 +5,7 @@ from pathlib import Path
 from docx import Document
 from helpers import (
     ESSAY,
+    card_digest_for,
     open_sequence,
     pack,
     picked,
@@ -126,7 +127,7 @@ def test_ac2_findings_first_section_is_north_star(workspace, monkeypatch, tmp_pa
     from essay_writer.research import essay_research_summary
 
     essay_research_summary(seq, "chokepoints", "draft", [source()])
-    essay_research_summary(seq, "chokepoints", "confirm", [source()])
+    essay_research_summary(seq, "chokepoints", "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     body = pack()
     assert essay_pack_validate(seq, body, "draft")["ok"] is True
     assert essay_pack_validate(seq, body, "confirm")["stored"] is True
@@ -229,7 +230,7 @@ def test_ac3_stage5_argument_not_paper_digest(workspace):
     from essay_writer.research import essay_research_summary
 
     essay_research_summary(seq, "recycling", "draft", [source(OTHER)])
-    essay_research_summary(seq, "recycling", "confirm", [source(OTHER)])
+    essay_research_summary(seq, "recycling", "confirm", [source(OTHER)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
 
     def reviewed(**extra):
         body = pack(OTHER)

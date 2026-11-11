@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 from docx import Document
-from helpers import CLARIFY_OPEN, open_sequence, write_upload
+from helpers import CLARIFY_OPEN, card_digest_for, open_sequence, write_upload
 
 from essay_writer.assignment_gate import read_assignment
 from essay_writer.brief_contract import (
@@ -162,7 +162,7 @@ def test_ac1_same_text_pdfs_with_different_hashes_keep_one(workspace):
     assert draft["ok"] is True, draft
     assert [source["id"] for source in draft["sources"]] == ["src-1"]
     assert draft["sources"][0]["locator"].endswith("copy-a.pdf")
-    saved = essay_research_summary(seq, "chokepoints", "confirm", rows)
+    saved = essay_research_summary(seq, "chokepoints", "confirm", rows, cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert saved["stored"] is True, saved
     assert [source["id"] for source in saved["sources"]] == ["src-1"]
     annotation = _docx(work_dir(seq) / "output" / "annotation.docx")
@@ -192,6 +192,7 @@ def test_ac1_same_text_pdfs_with_different_hashes_keep_one(workspace):
         rows,
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
+        cardDigest=card_digest_for(seq, 'essay.research.full'),
     )
     assert confirmed["stored"] is True, confirmed
     archive = zipfile.ZipFile(work_dir(seq) / "output" / "critical-reviews.zip")
@@ -281,7 +282,7 @@ def test_ac2_identical_annotation_paragraphs_are_refused(workspace):
     assert "same annotation paragraph" in draft["reason"]
     assert draft["stored"] is False
     assert draft["wrote"] is False
-    confirmed = essay_research_summary(seq, "gauges", "confirm", rows)
+    confirmed = essay_research_summary(seq, "gauges", "confirm", rows, cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["ok"] is False, confirmed
     assert confirmed["refused"] == "gathered-set"
     assert confirmed["stored"] is False
@@ -333,7 +334,7 @@ def test_ac3_source_untied_to_any_entry_is_refused(workspace):
     assert "not tied to an entry" in draft["reason"]
     assert draft["stored"] is False
     assert draft["wrote"] is False
-    confirmed = essay_research_summary(seq, "entries", "confirm", [row])
+    confirmed = essay_research_summary(seq, "entries", "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["ok"] is False
     assert confirmed["refused"] == "gathered-set"
     assert load_state(seq)["research"]["summary"] is None
@@ -379,7 +380,7 @@ def test_ac_nt6_entry_tie_or_ask_for_a_third_writing_type(workspace):
         draft = essay_research_summary(seq, "quay", "draft", [row])
         assert draft["ok"] is True, draft
         assert draft["sources"][0]["tied_to"] == "Quay watch"
-        saved = essay_research_summary(seq, "quay", "confirm", [row])
+        saved = essay_research_summary(seq, "quay", "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
         assert saved["stored"] is True, saved
         assert saved["sources"][0]["tied_to"] == "Quay watch"
     finally:

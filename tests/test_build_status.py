@@ -8,6 +8,7 @@ from helpers import ESSAY, open_sequence, picked, plant_gathered_source, write_u
 from essay_writer.build_office import stage_launch
 from essay_writer.build_status import (
     HEARTBEAT_SECONDS,
+    arm_idle_clock,
     begin_mid_build,
     due_lines,
     heartbeat_sentence,
@@ -255,7 +256,12 @@ def test_front_office_posts_start_milestone_and_five_minute_line(workspace, monk
     assert "status" not in pulsed
 
 
-def test_stage5_draft_that_stores_says_the_first_draft_is_ready(workspace):
+def test_stage5_draft_that_stores_says_the_first_draft_is_ready(workspace, monkeypatch):
+    def _unavailable(command):
+        return {"started": False, "reason": "", "command": list(command)}
+
+    monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _unavailable)
+    monkeypatch.setattr("essay_writer.build_office.spawn_grok", _unavailable)
     write_upload(workspace)
     seq = open_sequence()
     brief = workspace / "Essay-writer" / ESSAY / "brief.md"
@@ -306,3 +312,40 @@ def test_stage5_draft_that_stores_says_the_first_draft_is_ready(workspace):
     assert refused["ok"] is False
     assert "status" not in refused
     assert milestone_sentence("draft", QUESTION) not in json.dumps(refused)
+
+
+def test_idle_clock_thread_is_a_daemon_and_only_arms_once(monkeypatch):
+    """The idle loop cannot keep a process alive: it is a daemon and arms once."""
+    import essay_writer.build_status as build_status
+
+    made: list[dict] = []
+
+    class _Thread:
+        def __init__(self, *, target, name, daemon):
+            self.target = target
+            made.append({"name": name, "daemon": daemon})
+
+        def start(self):
+            made[-1]["started"] = True
+
+    monkeypatch.setattr(build_status, "_clock_started", False)
+    monkeypatch.setattr(build_status.threading, "Thread", _Thread)
+    assert arm_idle_clock() is True
+    assert arm_idle_clock() is False
+    assert made == [{"name": "essay-writer-idle", "daemon": True, "started": True}]
+
+
+def test_idle_clock_explicit_no_start_policy(monkeypatch):
+    """A caller can record the clock as handled without leaving a thread behind."""
+    import essay_writer.build_status as build_status
+
+    made: list[dict] = []
+
+    def _thread(**kwargs):
+        made.append(kwargs)
+
+    monkeypatch.setattr(build_status, "_clock_started", False)
+    monkeypatch.setattr(build_status.threading, "Thread", _thread)
+    assert arm_idle_clock(start=False) is False
+    assert arm_idle_clock() is False
+    assert made == []

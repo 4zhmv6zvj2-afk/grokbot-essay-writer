@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from docx import Document
-from helpers import ESSAY, TOPIC, open_sequence
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence
 
 from essay_writer.cite_open import apply_opened_citation, compound_author, in_text_page_issues
 from essay_writer.harvard_4a import harvard_4a_line
@@ -262,7 +262,7 @@ def test_compound_surname_stays_on_the_author_line(workspace):
     assert "Wamba, S.F." not in line
     assert "104567" in line
     assert "pp." not in line
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [row])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["ok"] is True, confirmed
     annotation = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx"
     text = "\n".join(paragraph.text for paragraph in Document(str(annotation)).paragraphs)

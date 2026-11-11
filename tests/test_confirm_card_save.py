@@ -255,6 +255,12 @@ def test_ac2_press_with_card_saves_in_one_call(workspace, monkeypatch):
 
 def test_ac3_mid_build_status_is_wired_for_both_shells(workspace, monkeypatch):
     """AC3: start, signaled tips, one stale line, then done or Confirm. No invented phase."""
+
+    def _unavailable(command):
+        return {"started": False, "reason": "", "command": list(command)}
+
+    monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _unavailable)
+    monkeypatch.setattr("essay_writer.build_office.spawn_grok", _unavailable)
     reset_status()
     assert MID_BUILD_STATUS_ID == "mid-build-status"
     assert HEARTBEAT_SECONDS == 300

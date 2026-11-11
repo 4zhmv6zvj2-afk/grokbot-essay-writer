@@ -1,5 +1,7 @@
 """Path and setup notes."""
 
+import hashlib
+import zipfile
 from pathlib import Path
 
 from test_projects import MODULE, _confirm_new
@@ -66,16 +68,25 @@ def test_install_json_separates_code_folder_from_grok_home(tmp_path, monkeypatch
     monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
     monkeypatch.setenv("GROK_HOME", str(tmp_path / "grok-home"))
     upload = tmp_path / "essay-writer.zip"
-    import zipfile
-
     with zipfile.ZipFile(upload, "w") as archive:
         archive.writestr("essay-writer-main/pyproject.toml", '[project]\nname = "essay-writer"\n')
+        archive.writestr(
+            "essay-writer-main/requirements-runtime.txt",
+            "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n",
+        )
         archive.writestr("essay-writer-main/src/essay_writer/__init__.py", "")
 
     def run(command, cwd):
         return {"returncode": 0, "stdout": "", "stderr": ""}
 
-    result = install_uploaded_copy(upload, pip_runner=run, attach=False)
+    result = install_uploaded_copy(
+        upload,
+        pip_runner=run,
+        attach=False,
+        upload_sha256=hashlib.sha256(upload.read_bytes()).hexdigest(),
+        path_exposer=lambda: None,
+        allow_cursor_install=False,
+    )
     assert result["grok_config_home"] == grok_config_home()
     assert result["code_install_folder"] == result["root"]
     assert result["unpack_parent"] == str(cloud / "essay-writer-install")
@@ -84,6 +95,8 @@ def test_install_json_separates_code_folder_from_grok_home(tmp_path, monkeypatch
 
 def test_mac_not_mounted_returns_plain_next(tmp_path, monkeypatch):
     monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)
+    # Fake the mounted-home discovery so a test never reads the real home.
+    monkeypatch.setattr("essay_writer.first_run.mac_deliverables_dir", lambda **_kwargs: None)
     doc = tmp_path / "essay.docx"
     doc.write_bytes(b"x")
     missing = copy_deliverable_to_mac(doc)

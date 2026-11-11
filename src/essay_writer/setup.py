@@ -8,6 +8,7 @@ A path the user did not name is refused. Documents is not a fallback and is neve
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -373,6 +374,13 @@ def search_warning(has_key: bool, has_email: bool) -> str | None:
     return " ".join(parts)
 
 
+def _sha256_text(value: str) -> str:
+    """SHA-256 of a normalised secret. The value itself never enters a payload."""
+    if not value:
+        return ""
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
 def essay_setup(
     install_grokbuild: bool = False,
     app_path: str | None = None,
@@ -479,6 +487,10 @@ def essay_setup(
         "where": where,
         "consensus_key": bool(key),
         "unpaywall_email": bool(email),
+        # The key and the email are bound by hash only. The values are never
+        # in the payload, the reply, or the draft record.
+        "consensus_key_sha256": _sha256_text(key),
+        "unpaywall_email_sha256": _sha256_text(email),
         "consensus_paid": paid or "",
         "acknowledge_skipped_searches": acked if warning else False,
         "mid_office_shell": shell,

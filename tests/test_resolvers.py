@@ -1,6 +1,6 @@
 import json
 
-from helpers import ESSAY, TOPIC, open_sequence, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, source, write_upload
 
 from essay_writer.programme import FREE_RESOLVERS, PAID_RESOLVERS
 from essay_writer.research import essay_research_summary
@@ -46,7 +46,7 @@ def test_matched_lookup_stores_doi_and_lists_crossref(workspace, monkeypatch):
         item["name"] == "crossref" and item["result"] == "matched"
         for item in draft["resolvers_called"]
     )
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["stored"] is True
     state = json.loads(
         (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "state.json").read_text(encoding="utf-8")
@@ -109,7 +109,7 @@ def test_resolver_flip_keeps_the_draft_fields(workspace, monkeypatch):
     draft = essay_research_summary(seq, TOPIC, "draft", [payload])
     assert draft["sources"][0]["doi"] == "10.5555/fixture-chokepoint"
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "off")
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["stored"] is True
     assert confirmed.get("refused") is None
     assert "saved files changed" not in confirmed.get("reason", "")

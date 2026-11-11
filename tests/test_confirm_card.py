@@ -80,12 +80,13 @@ def test_both_shells_speak_the_same_stage_card(workspace):
     assert spoken["card"]["actions"][0]["label"] == "Confirm"
     assert cursor_shell()["handlers"]["essay.stage"] is HANDLERS["essay.stage"]
     assert front_office()["handlers"]["essay.stage"] is HANDLERS["essay.stage"]
-    refused = front_office_call(
+    saved_typed = front_office_call(
         "essay.stage",
         {"essay_id": seq, "stage": "1", "confirmPhase": "confirm", "look": "ok"},
     )
-    assert refused["refused"] == "confirm-card"
-    assert load_pointer(seq)["current"] == "1"
+    assert saved_typed["ok"] is True, saved_typed
+    assert saved_typed["stored"] is True
+    assert load_pointer(seq)["current"] == "2"
 
 
 def test_stage5_starts_stage6_and_later_stages_keep_their_cards(workspace):

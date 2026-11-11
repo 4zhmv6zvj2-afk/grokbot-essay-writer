@@ -12,6 +12,7 @@ from docx import Document
 from helpers import (
     SAMPLE_REFERENCE_LINE,
     TOPIC,
+    card_digest_for,
     open_sequence,
     picked,
     plant_gathered_source,
@@ -202,7 +203,7 @@ def test_ac3_stage10_word_keeps_source_ctr_lines(workspace, monkeypatch, tmp_pat
         "annotation": GOOD,
     }
     essay_research_summary(seq, TOPIC, "draft", [source])
-    essay_research_summary(seq, TOPIC, "confirm", [source])
+    essay_research_summary(seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     _advance_to_stage10(seq)
     pack = _diary_pack(seq)
     pack["sources"] = [source]
@@ -289,7 +290,7 @@ def test_ac5_stage4a_confirm_ships_annotation_docx(workspace, monkeypatch, tmp_p
     seq = open_sequence(MODULE)
     row = _qin_source(annotation=GOOD)
     essay_research_summary(seq, TOPIC, "draft", [row])
-    essay_research_summary(seq, TOPIC, "confirm", [row])
+    essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
 
     for stage in ("1", "2", "3"):
         draft = essay_stage(seq, stage, "draft", LOOK)
@@ -316,7 +317,7 @@ def test_ac6_stage10_and_4a_surface_word_in_chat(workspace, monkeypatch, tmp_pat
     remember_registration(seq, NUMBER)
     row = _qin_source(annotation=GOOD)
     essay_research_summary(seq, TOPIC, "draft", [row])
-    essay_research_summary(seq, TOPIC, "confirm", [row])
+    essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     delivery = ship_4a(seq, [row], {row["id"]: GOOD})
     assert delivery["annotation"]["deliver"] == "chat"
     assert "docx_base64" in delivery["annotation"]

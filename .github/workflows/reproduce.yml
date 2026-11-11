@@ -1,0 +1,152 @@
+name: Reproduce release
+
+# Independent proof of the reproducible-build claim: rebuild a published
+# release from its tag on the same pinned runner image as the release workflow
+# and compare the rebuilt SHA-256 set with the SHA256SUMS the release itself
+# publishes. Read-only: this workflow downloads and rebuilds; it never uploads,
+# signs, or publishes anything.
+#
+# The dispatch input cannot default to a value computed at dispatch time, so it
+# is optional; leaving it empty resolves the latest published release here.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to reproduce (leave empty for the latest published release)"
+        required: false
+        type: string
+  schedule:
+    # Weekly, so a reproducibility regression cannot hide for a whole cycle.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  reproduce:
+    name: Rebuild a published release and compare hashes
+    # The same pinned image the release workflow builds on, so the comparison
+    # measures the tag, not a different Ubuntu release.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Resolve the release tag
+        id: release
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="${REQUESTED_TAG}"
+          if [ -z "${tag}" ]; then
+            tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq '.tag_name')"
+          fi
+          if [ -z "${tag}" ]; then
+            echo "::error::No tag input and no latest published release to reproduce."
+            exit 1
+          fi
+          echo "Reproducing release ${tag}"
+          echo "TAG=${tag}" >> "$GITHUB_ENV"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the tagged tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Download the published release assets
+        run: |
+          set -euo pipefail
+          # Keep the downloads outside the checkout: the rebuild cleans the
+          # working tree, and these files are the reference to compare against.
+          published="${RUNNER_TEMP}/published"
+          mkdir -p "${published}"
+          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --dir "${published}"
+          ls -l "${published}"
+          # The downloaded artifacts must match what the release advertises.
+          (cd "${published}" && sha256sum -c SHA256SUMS)
+          echo "PUBLISHED=${published}" >> "$GITHUB_ENV"
+
+      - name: Require the tagged tree to carry the release build tooling
+        run: |
+          set -euo pipefail
+          # Releases that predate the reproducible-build tooling cannot be
+          # rebuilt here. Say so plainly instead of failing later with a
+          # confusing "file not found".
+          for required in requirements-build.txt MANIFEST.in tools/reproducible_build.py tools/normalize_sdist.py; do
+            if [ ! -e "${required}" ]; then
+              echo "::error::tag ${TAG} has no ${required}; it predates the reproducible-build tooling and cannot be reproduced this way."
+              exit 1
+            fi
+          done
+
+      - name: Set up Python 3.12.13
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12.13"
+
+      - name: Install the hash-pinned build tooling
+        run: python -m pip install --require-hashes -r requirements-build.txt
+
+      - name: Set SOURCE_DATE_EPOCH from the tag commit
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+
+      - name: Rebuild the artifacts from the tag
+        run: python tools/reproducible_build.py --outdir rebuilt
+
+      - name: Compare the rebuilt hashes with the published SHA256SUMS
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import os
+          import pathlib
+          import sys
+
+          published = pathlib.Path(os.environ["PUBLISHED"])
+          rebuilt = pathlib.Path("rebuilt")
+
+          def digest(path: pathlib.Path) -> str:
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          expected = {}
+          for line in (published / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
+              if line.strip():
+                  checksum, name = line.split(maxsplit=1)
+                  expected[name.strip()] = checksum
+          actual = {
+              path.name: digest(path)
+              for path in sorted(rebuilt.iterdir())
+              if path.suffix in {".whl", ".gz"}
+          }
+          if not expected:
+              print("FAIL: the release's SHA256SUMS lists no artifacts", file=sys.stderr)
+              sys.exit(1)
+
+          names = sorted(set(expected) | set(actual))
+          width = max(len(name) for name in names)
+          mismatches = []
+          print(f"{'status':<8}  {'artifact':<{width}}  sha256")
+          for name in names:
+              have = actual.get(name)
+              want = expected.get(name)
+              status = "match" if want == have else "MISMATCH"
+              print(f"{status:<8}  {name:<{width}}  {have or 'MISSING'}")
+              if want != have:
+                  mismatches.append(name)
+                  print(f"{'':<8}  {'published':<{width}}  {want or 'MISSING'}")
+
+          if mismatches:
+              print(
+                  "FAIL: the tag rebuilds to different bytes than the release "
+                  "publishes: " + ", ".join(mismatches),
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          print(f"OK: the tag rebuilds the {len(actual)} published artifacts byte-for-byte.")
+          PY

@@ -9,7 +9,6 @@ does not ask for the Confirm card. Copy-to-mac does not invent phases.
 from __future__ import annotations
 
 import asyncio
-import os
 import subprocess
 import sys
 
@@ -82,8 +81,9 @@ def _started(command):
     return {"started": True, "reason": "", "pid": 17, "command": list(command)}
 
 
-def _skipped(command):
-    return {"started": False, "reason": "skipped-under-test", "command": list(command)}
+def _unavailable(command):
+    """A failed start with nothing to say. The process never opened."""
+    return {"started": False, "reason": "", "command": list(command)}
 
 
 def test_ac1_live_stdout_signals_a_real_phase_for_both_shells(
@@ -99,7 +99,6 @@ def test_ac1_live_stdout_signals_a_real_phase_for_both_shells(
         assert kwargs.get("stderr") is subprocess.PIPE
         assert kwargs.get("stdin") not in (None, subprocess.DEVNULL)
         assert kwargs.get("stdout") == kwargs.get("stdin")
-        os.environ["PYTEST_CURRENT_TEST"] = "mid-status"
         return real_popen(
             [sys.executable, "-c", _PHASE_SCRIPT],
             stdout=subprocess.PIPE,
@@ -130,7 +129,6 @@ def test_ac1_live_stdout_signals_a_real_phase_for_both_shells(
             monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_GROK_BUILD)
         else:
             monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: "cursor")
-        monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
         started = start_stage_mid(seq, "4a")
         join_mid_readers(3)
         assert started["started"] is True, started
@@ -141,7 +139,6 @@ def test_ac1_live_stdout_signals_a_real_phase_for_both_shells(
         assert "not_a_real_phase" not in inbox
         assert any(item.endswith(":open_full") for item in seen)
         assert not any("not_a_real_phase" in item for item in seen)
-        monkeypatch.setenv("PYTEST_CURRENT_TEST", "mid-status")
 
     reset_status()
     absent = reply_status(
@@ -225,7 +222,7 @@ def test_ac3_mid_stages_arm_when_the_job_starts_and_4b_does_not_fake_it(workspac
     assert session_open(seq)
     complete_job(seq)
 
-    monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _skipped)
+    monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _unavailable)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: "cursor")
     reset_status()
     clock["t"] = 0.0
@@ -271,7 +268,7 @@ def test_ac4_failed_spawn_does_not_stick_and_exit_clears_the_session(workspace, 
     seq = open_sequence()
     clock = {"t": 0.0}
     _clock(monkeypatch, clock)
-    monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _skipped)
+    monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _unavailable)
     failed = start_stage_mid(seq, "4a")
     assert failed["started"] is False
     assert failed["status"] == []
@@ -280,6 +277,7 @@ def test_ac4_failed_spawn_does_not_stick_and_exit_clears_the_session(workspace, 
     assert due_lines(seq) == []
 
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_GROK_BUILD)
+    monkeypatch.setattr("essay_writer.build_office.spawn_grok", _unavailable)
     grok_failed = start_stage_mid(seq, "4a")
     assert grok_failed["command"][0] == "grok"
     assert grok_failed["command"][0] != "agent"

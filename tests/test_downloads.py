@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from docx import Document
-from helpers import ESSAY, open_sequence
+from helpers import ESSAY, card_digest_for, open_sequence
 
 from essay_writer.dig import essay_dig
 from essay_writer.downloads import classify_download, run_downloads
@@ -275,7 +275,7 @@ def test_dig_confirm_saves_only_real_pdfs_and_lists_the_html_page(workspace, mon
     assert "downloads" not in draft
     assert not (workspace / "uploads" / ESSAY).exists() or not list((workspace / "uploads" / ESSAY).glob("*"))
     assert not (_output(workspace) / "download-list.docx").exists()
-    confirmed = essay_dig(seq, "zara supply chain", "confirm")
+    confirmed = essay_dig(seq, "zara supply chain", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert confirmed["wrote"] is True
     assert confirmed["downloads"]["stopped"] is False
     assert [item["doi"] for item in confirmed["downloads"]["papers"]] == ["10.1/good"]

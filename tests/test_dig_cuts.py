@@ -20,6 +20,7 @@ from docx import Document
 from helpers import (
     ESSAY,
     TOPIC,
+    card_digest_for,
     open_sequence,
     pack,
     report_sections,
@@ -184,7 +185,7 @@ def test_ac1_leading_transition_is_not_the_author(workspace):
         [yulius, shiu],
     )
     essay_research_summary(seq, TOPIC, "draft", [yulius, shiu])
-    essay_research_summary(seq, TOPIC, "confirm", [yulius, shiu])
+    essay_research_summary(seq, TOPIC, "confirm", [yulius, shiu], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     passed = essay_pack_validate(seq, gathered, "draft")
     assert passed["ok"] is True, passed
     assert passed.get("refused") != "invent-forbid"
@@ -234,7 +235,7 @@ def test_ac2_sibling_cite_sites_share_citation_tokens(workspace):
         [yulius],
     )
     essay_research_summary(seq, TOPIC, "draft", [yulius])
-    essay_research_summary(seq, TOPIC, "confirm", [yulius])
+    essay_research_summary(seq, TOPIC, "confirm", [yulius], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     flagged = essay_pack_validate(seq, body, "draft")
     assert flagged.get("refused") != "invent-forbid"
     assert "patel, 2019" not in (flagged.get("reason") or "")
@@ -311,7 +312,7 @@ def test_ac4_stage6_to_stage10_word_journey_smoke(workspace, monkeypatch):
         [yulius],
     )
     essay_research_summary(seq, TOPIC, "draft", [yulius])
-    essay_research_summary(seq, TOPIC, "confirm", [yulius])
+    essay_research_summary(seq, TOPIC, "confirm", [yulius], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     validated = essay_pack_validate(seq, gathered, "draft")
     assert validated["ok"] is True, validated
 

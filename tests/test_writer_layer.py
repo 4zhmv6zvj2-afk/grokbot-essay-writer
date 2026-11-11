@@ -2,7 +2,7 @@
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from helpers import ESSAY, open_sequence, pack, source, write_upload
+from helpers import ESSAY, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.paths import essay_dir
 from essay_writer.research import essay_research_summary
@@ -20,7 +20,7 @@ def _write(workspace, body=None, essay_id=ESSAY):
     write_upload(workspace, essay_id=essay_id)
     seq = open_sequence(essay_id)
     essay_research_summary(seq, "chokepoints", "draft", [source(essay_id)])
-    essay_research_summary(seq, "chokepoints", "confirm", [source(essay_id)])
+    essay_research_summary(seq, "chokepoints", "confirm", [source(essay_id)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     payload = body or pack(essay_id)
     essay_pack_validate(seq, payload, "draft")
     essay_pack_validate(seq, payload, "confirm")

@@ -130,11 +130,22 @@ def test_install_writes_both_configs_from_that_template(tmp_path):
         '[project]\nname = "essay-writer"\nversion = "0.1.0"\n',
         encoding="utf-8",
     )
+    (source / "requirements-runtime.txt").write_text(
+        "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
+    )
 
     def pip_ok(command, cwd):
         return {"returncode": 0, "stdout": "", "stderr": ""}
 
-    result = install_uploaded_copy(source, pip_runner=pip_ok, attach=True)
+    result = install_uploaded_copy(
+        source,
+        pip_runner=pip_ok,
+        attach=True,
+        path_exposer=lambda: None,
+        include_user=False,
+        enable=lambda name: {"identifier": name, "enabled": False},
+        allow_cursor_install=False,
+    )
     assert result["ok"] is True
     from essay_writer.first_run import mcp_launch_command
 

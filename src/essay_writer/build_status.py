@@ -519,13 +519,21 @@ def take_idle(essay_id: str) -> list[str]:
         return list(_pending.pop(essay_id, []))
 
 
-def arm_idle_clock() -> None:
-    """Wake the five-minute line while chat is idle. Tests call pump_idle instead."""
+def arm_idle_clock(*, start: bool = True) -> bool:
+    """Wake the five-minute line while chat is idle.
+
+    The loop thread is a daemon, so a server or test process can exit
+    without waiting for it. Pass ``start=False`` to record the clock as
+    handled without starting a thread; tests that need determinism call
+    `pump_idle` directly. Returns True only when this call started it.
+    """
     global _clock_started
     with _lock:
-        if _clock_started or os.environ.get("PYTEST_CURRENT_TEST"):
-            return
+        if _clock_started:
+            return False
         _clock_started = True
+        if not start:
+            return False
 
     def _loop() -> None:
         while True:
@@ -535,7 +543,9 @@ def arm_idle_clock() -> None:
             except Exception:
                 continue
 
-    threading.Thread(target=_loop, name="essay-writer-idle", daemon=True).start()
+    thread = threading.Thread(target=_loop, name="essay-writer-idle", daemon=True)
+    thread.start()
+    return True
 
 
 def session_open(essay_id: str) -> bool:
@@ -630,7 +640,7 @@ def finish_step(essay_id: str, kind: str) -> list[str]:
 def spawn_exit_status(essay_id: str, spawn_reason: str) -> list[str]:
     """A failed mid-office start. No session is opened."""
     reason = spawn_reason.strip()
-    if not reason or reason in {"skipped-under-test", "no-mid-stage", "not-cursor-cli", "not-grok-build"}:
+    if not reason or reason in {"no-mid-stage", "not-cursor-cli", "not-grok-build"}:
         return []
     line = exit_reason_sentence(subject_for(essay_id), spawn_reason=reason)
     return [line] if line else []

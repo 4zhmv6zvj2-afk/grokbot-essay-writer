@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased
+
+Hardening round: bound confirm side effects, real launch/install branches under test, a verified release chain, and a typed Confirm fallback.
+
+Confirm:
+- `essay.setup` binds the Consensus key and Unpaywall email by SHA-256 in the
+  draft payload, so a save call that repeats different values is refused; the
+  values are never echoed or stored in the draft record.
+- `essay.dig` and `essay.research.summary|full` return `cardDigest` on the draft
+  and require it on the save call. Confirm re-derives it from the stored payload
+  and shown card, so a local edit to the draft record's card is refused. Drafts
+  written before the binding refuse with a "show this step again" action.
+- A typed yes, ok, or Confirm saves the waiting card when the host cannot send
+  the card fields; a supplied card field still has to be the Confirm action.
+  Student-facing next and refusal text no longer carries model directives.
+
+Install, launch, and install-path hardening:
+- Removed every `PYTEST_CURRENT_TEST` branch from production. Spawn, MCP enable,
+  config resolution, PATH exposure, Mac-folder discovery, and the idle clock use
+  explicit injected collaborators; tests exercise the real branches with fake
+  binaries and launchers, and a guard fails if the pytest key returns.
+- `essay-writer --install-upload` verifies a zip checksum when one is available
+  (`--upload-sha256`, a sibling `.sha256` file, or `SHA256SUMS`) and otherwise
+  installs the zip as trusted operator input, reporting `upload_verified: false`.
+  A zip without `requirements-runtime.txt` is refused, and there is no unpinned
+  dependency install. Quarantine/provenance clearing is limited to app-generated
+  sequence deliverables; operator-named files keep their marks.
+
+Release proof:
+- Release builds run on `ubuntu-24.04` with a pinned cosign release, verify each
+  Sigstore signature and the GitHub attestation after signing, and CI's Ubuntu
+  jobs are pinned too.
+- A new reproduce workflow downloads a published release, rebuilds it from the
+  tag with the pinned toolchain, and fails on any SHA-256 mismatch.
+
+Tests:
+- Added confirm-binding, typed-Confirm/UX, no-pytest-env, and release-proof
+  guards; the docs, sdist, and unfenced-content guards stay green.
+
 ## 0.6.3 — 2026-11-11
 
 Review follow-up fixes: truthful claims, a document fence, and packaging coverage.

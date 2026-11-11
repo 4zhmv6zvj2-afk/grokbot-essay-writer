@@ -70,7 +70,7 @@ CURSOR_INSTALL_SHA256_ENV = "ESSAY_WRITER_CURSOR_INSTALL_SHA256"
 CURSOR_INSTALL_NEEDS_CONSENT = "cursor-install-needs-consent"
 CURSOR_INSTALL_NEEDS_HASH = "cursor-install-needs-hash"
 CURSOR_INSTALL_HASH_MISMATCH = "cursor-install-hash-mismatch"
-_CURSOR_SHA256 = re.compile(r"[0-9a-f]{64}")
+_SHA256_HEX = re.compile(r"[0-9a-f]{64}")
 CURSOR_AGENT_MANUAL_INSTALL = (
     f"curl -fsS {CURSOR_AGENT_INSTALL_URL} -o cursor-agent-install.sh\n"
     "shasum -a 256 cursor-agent-install.sh  # Linux: sha256sum cursor-agent-install.sh\n"
@@ -192,19 +192,27 @@ def _launch_entry(name: str, entry: dict[str, Any]) -> dict[str, Any]:
     return copied
 
 
-def expose_writer_on_path() -> str | None:
-    """Link the script into a directory this shell already searches.
+def expose_writer_on_path(
+    *,
+    script: Path | None = None,
+    search_dirs: list[str] | None = None,
+    which: Callable[[str], str | None] | None = None,
+) -> str | None:
+    """Link the installed script into a directory this shell already searches.
 
-    Skipped under pytest. Returns the bare name when the link is on PATH.
+    Production calls with no arguments: it resolves the installed script and
+    walks PATH. Tests pass an explicit script and a temp search directory (or a
+    fake ``which``) so no test writes into the system PATH. Returns the bare
+    name when the link is on a searched directory.
     """
-    if os.environ.get("PYTEST_CURRENT_TEST"):
-        return None
-    if shutil.which("essay-writer"):
+    finder = which or shutil.which
+    if finder("essay-writer"):
         return "essay-writer"
-    script = writer_script()
-    if script is None:
+    resolved = script if script is not None else writer_script()
+    if resolved is None:
         return None
-    for folder in os.environ.get("PATH", "").split(os.pathsep):
+    dirs = os.environ.get("PATH", "").split(os.pathsep) if search_dirs is None else list(search_dirs)
+    for folder in dirs:
         if not folder:
             continue
         dest_dir = Path(folder)
@@ -214,10 +222,10 @@ def expose_writer_on_path() -> str | None:
         if dest.exists():
             continue
         try:
-            dest.symlink_to(script)
+            dest.symlink_to(resolved)
         except OSError:
             continue
-        if shutil.which("essay-writer"):
+        if dest.exists():
             return "essay-writer"
     return None
 
@@ -404,27 +412,100 @@ def _run_pip(command: list[str], cwd: Path) -> dict[str, Any]:
     }
 
 
-def _install_commands(root: Path) -> list[list[str]]:
-    """pip commands for one uploaded copy.
+def _install_commands() -> list[list[str]]:
+    """The only install pair for one uploaded copy.
 
-    A copy that carries the hash-pinned runtime requirements installs those
-    first, then the project with --no-deps. An older copy without the file
-    keeps the upstream single install; the report shows which commands ran.
+    The hash-pinned runtime requirements install first, then the project with
+    --no-deps. A copy without requirements-runtime.txt is refused before this
+    runs, so there is no unpinned ``pip install -e .`` fallback.
     """
-    if (root / RUNTIME_REQUIREMENTS).is_file():
-        return [
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                "--require-hashes",
-                "-r",
-                RUNTIME_REQUIREMENTS,
-            ],
-            [sys.executable, "-m", "pip", "install", "--no-deps", "-e", "."],
-        ]
-    return [[sys.executable, "-m", "pip", "install", "-e", "."]]
+    return [
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--require-hashes",
+            "-r",
+            RUNTIME_REQUIREMENTS,
+        ],
+        [sys.executable, "-m", "pip", "install", "--no-deps", "-e", "."],
+    ]
+
+
+def _file_sha256(path: Path) -> str:
+    """SHA-256 of a file, read in chunks so a large zip stays off the heap."""
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _zip_has_runtime_requirements(path: Path) -> bool:
+    """True when the zip carries requirements-runtime.txt at its project root.
+
+    An unreadable zip returns True so the extractor reports the bad archive
+    instead of this check masking it.
+    """
+    try:
+        with zipfile.ZipFile(path) as archive:
+            return any(
+                name == RUNTIME_REQUIREMENTS or name.endswith("/" + RUNTIME_REQUIREMENTS)
+                for name in archive.namelist()
+            )
+    except (OSError, zipfile.BadZipFile):
+        return True
+
+
+def _expected_upload_sha256(value: str | None = None) -> str | None:
+    """A 64-character hex pin for the uploaded zip, or None. An invalid pin is not a pin."""
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().casefold()
+    return normalized if _SHA256_HEX.fullmatch(normalized) else None
+
+
+def _upload_checksum(source: Path, explicit: str | None) -> tuple[str | None, str | None]:
+    """Expected SHA-256 and where it came from, for an uploaded zip.
+
+    The explicit --upload-sha256 wins. Otherwise a sibling ``<zip>.sha256`` file
+    or a ``SHA256SUMS`` file beside the zip may carry the expected value.
+    ``(None, None)`` means no checksum is available: the caller proceeds and
+    reports the zip as unverified. A value that is present but unusable raises
+    ValueError so a broken checksum file is loud instead of silently skipped.
+    """
+    if isinstance(explicit, str) and explicit.strip():
+        pinned = _expected_upload_sha256(explicit)
+        if pinned is None:
+            raise ValueError("--upload-sha256 needs a 64-character hex SHA-256")
+        return pinned, "--upload-sha256"
+    sidecar = source.with_name(source.name + ".sha256")
+    if sidecar.is_file():
+        try:
+            content = sidecar.read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise ValueError(f"The checksum file {sidecar.name} was not read: {exc}") from exc
+        token = content.split()[0] if content else ""
+        if _SHA256_HEX.fullmatch(token.casefold()) is None:
+            raise ValueError(f"{sidecar.name} is not a usable SHA-256 file.")
+        return token.casefold(), sidecar.name
+    sums = source.parent / "SHA256SUMS"
+    if sums.is_file():
+        try:
+            lines = sums.read_text(encoding="utf-8").splitlines()
+        except OSError as exc:
+            raise ValueError(f"The checksum file SHA256SUMS was not read: {exc}") from exc
+        for line in lines:
+            parts = line.split(maxsplit=1)
+            if len(parts) != 2:
+                continue
+            candidate, name = parts[0].casefold(), parts[1].strip()
+            if name.startswith("*"):
+                name = name[1:]
+            if _SHA256_HEX.fullmatch(candidate) and name == source.name:
+                return candidate, f"SHA256SUMS ({source.name})"
+    return None, None
 
 
 def _ensure_prompt(root: Path) -> bool:
@@ -535,7 +616,7 @@ def _expected_cursor_sha256(value: str | None = None) -> str | None:
     if not isinstance(candidate, str):
         return None
     normalized = candidate.strip().casefold()
-    return normalized if _CURSOR_SHA256.fullmatch(normalized) else None
+    return normalized if _SHA256_HEX.fullmatch(normalized) else None
 
 
 def _run_cursor_installer(expected_sha256: str | None = None) -> dict[str, Any]:
@@ -695,15 +776,6 @@ def ensure_cursor_agent(
                 "rerun with --cursor-sha256 is what runs it."
             ),
         }
-    if installer is None and os.environ.get("PYTEST_CURRENT_TEST"):
-        return {
-            "ok": False,
-            "installed": False,
-            "ran_install": False,
-            "path": None,
-            "version": None,
-            "reason": "skipped-under-test",
-        }
     if installer is not None:
         report = installer()
     else:
@@ -735,19 +807,31 @@ def ensure_cursor_agent(
     }
 
 
-def enable_mcp_server(identifier: str) -> dict[str, Any]:
-    """Approve one server already written to mcp.json. No-op under pytest."""
-    if os.environ.get("PYTEST_CURRENT_TEST"):
-        return {"identifier": identifier, "enabled": False, "reason": "skipped-under-test"}
+def enable_mcp_server(
+    identifier: str,
+    *,
+    binary: Callable[[], str | None] | None = None,
+    version: Callable[[str], str | None] | None = None,
+    runner: Callable[..., Any] | None = None,
+) -> dict[str, Any]:
+    """Approve one server already written to mcp.json.
+
+    The defaults are the real Cursor CLI lookup and ``subprocess.run``. Tests
+    pass a fake binary, version, and runner so they execute this branch without
+    an installed CLI or a real ``agent mcp enable`` side effect.
+    """
     from essay_writer.setup import cursor_cli_binary, cursor_cli_version
 
-    agent = cursor_cli_binary()
+    find_binary = binary or cursor_cli_binary
+    find_version = version or cursor_cli_version
+    agent = find_binary()
     if not agent:
         return {"identifier": identifier, "enabled": False, "reason": "agent-cli-missing"}
-    if not cursor_cli_version(agent):
+    if not find_version(agent):
         return {"identifier": identifier, "enabled": False, "reason": "agent-version-missing", "path": agent}
+    run = runner or subprocess.run
     try:
-        completed = subprocess.run(
+        completed = run(
             [agent, "mcp", "enable", identifier],
             check=False,
             capture_output=True,
@@ -763,15 +847,24 @@ def enable_mcp_server(identifier: str) -> dict[str, Any]:
     }
 
 
-def enable_build_mcp(identifier: str) -> dict[str, Any]:
-    """Approve one server already written to .grok/config.toml. No-op under pytest."""
-    if os.environ.get("PYTEST_CURRENT_TEST"):
-        return {"identifier": identifier, "enabled": False, "reason": "skipped-under-test"}
-    grok = shutil.which("grok")
+def enable_build_mcp(
+    identifier: str,
+    *,
+    which: Callable[[str], str | None] | None = None,
+    runner: Callable[..., Any] | None = None,
+) -> dict[str, Any]:
+    """Approve one server already written to .grok/config.toml.
+
+    The defaults are the real ``grok`` lookup and ``subprocess.run``. Tests
+    pass a fake ``which`` and runner to exercise enable and refusal branches.
+    """
+    finder = which or shutil.which
+    grok = finder("grok")
     if not grok:
         return {"identifier": identifier, "enabled": False, "reason": "grok-cli-missing"}
+    run = runner or subprocess.run
     try:
-        completed = subprocess.run(
+        completed = run(
             [grok, "mcp", "enable", identifier],
             check=False,
             capture_output=True,
@@ -787,12 +880,16 @@ def enable_build_mcp(identifier: str) -> dict[str, Any]:
     }
 
 
-def resolve_user_config(user_config: Path | None = None, *, include_user: bool | None = None) -> Path | None:
+def resolve_user_config(user_config: Path | None = None, *, include_user: bool = True) -> Path | None:
+    """The user's ``~/.cursor/mcp.json`` unless excluded or an explicit file is given.
+
+    ``include_user`` is an explicit policy: production leaves it True, and a
+    test that must not touch the real home passes False. ``user_config`` always
+    wins so a caller can name a temp file.
+    """
     if user_config is not None:
         return Path(user_config).expanduser()
-    if include_user is False:
-        return None
-    if include_user is None and os.environ.get("PYTEST_CURRENT_TEST"):
+    if not include_user:
         return None
     cursor_dir = Path.home() / ".cursor"
     if cursor_dir.is_dir():
@@ -827,10 +924,14 @@ def attach_custom_mcp(
     *,
     reviewer: bool = True,
     user_config: Path | None = None,
-    include_user: bool | None = None,
+    include_user: bool = True,
     enable: Enable | None = None,
 ) -> dict[str, Any]:
-    """Merge essay-writer into the project Cursor mcp.json. Reviewer is on by default."""
+    """Merge essay-writer into the project Cursor mcp.json. Reviewer is on by default.
+
+    ``include_user=False`` keeps the write to the project config only, which is
+    what a test needs when it must not touch the real home.
+    """
     template = mcp_template()
     writer = template.get("essay-writer")
     if not isinstance(writer, dict):
@@ -950,13 +1051,16 @@ def _merge_build_toml(path: Path, reviewer: bool) -> None:
     os.replace(temporary, path)
 
 
-def resolve_build_config(user_config: Path | None = None, *, include_user: bool | None = None) -> Path | None:
-    """User grok config. Project .grok/config.toml is always written separately."""
+def resolve_build_config(user_config: Path | None = None, *, include_user: bool = True) -> Path | None:
+    """User grok config. Project .grok/config.toml is always written separately.
+
+    ``include_user`` is an explicit policy: production leaves it True, and a
+    test that must not touch the real home passes False. The documented
+    GROK_HOME override still wins over the home fallback.
+    """
     if user_config is not None:
         return Path(user_config).expanduser()
-    if include_user is False:
-        return None
-    if include_user is None and os.environ.get("PYTEST_CURRENT_TEST"):
+    if not include_user:
         return None
     override = os.environ.get("GROK_HOME")
     if override is not None and override.strip():
@@ -975,13 +1079,14 @@ def attach_build_mcp(
     *,
     reviewer: bool = True,
     user_config: Path | None = None,
-    include_user: bool | None = None,
+    include_user: bool = True,
     enable: Enable | None = None,
 ) -> dict[str, Any]:
     """Merge essay-writer into project .grok/config.toml. Reviewer is on by default.
 
     Grok Build reads [mcp_servers.<name>] from that file. Compat load of
     .cursor/mcp.json can be turned off, so this file is the attach.
+    ``include_user=False`` keeps the write to the project config only.
     """
     try:
         servers = _template_servers(reviewer)
@@ -1022,21 +1127,33 @@ def install_uploaded_copy(
     cursor_installer: Callable[[], dict[str, Any]] | None = None,
     allow_cursor_install: bool | None = None,
     cursor_sha256: str | None = None,
+    upload_sha256: str | None = None,
+    path_exposer: Callable[[], str | None] | None = None,
+    include_user: bool = True,
 ) -> dict[str, Any]:
-    """Unpack a zip when given one, then pip install -e . in that same call.
+    """Unpack an uploaded zip, then install the hash-pinned project.
 
-    The `python first_run.py` entry point installs requirements-runtime.txt
-    with --require-hashes before the project and stops on a hash mismatch.
-    This function is the already-installed console-script path: it re-installs
-    the project itself, then the Cursor CLI install runs only with consent
-    (allow_cursor_install or ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1). Consent
-    downloads the installer and reports its hash; execution also needs
-    cursor_sha256 (or ESSAY_WRITER_CURSOR_INSTALL_SHA256). Without consent the
-    report says cursor-install-needs-consent and changes nothing.
+    The zip's SHA-256 is verified when an expected value is available: the
+    explicit `upload_sha256`, a sibling ``<zip>.sha256`` file, or a ``SHA256SUMS``
+    file beside the zip. A mismatch refuses before anything is written. With no
+    checksum the zip is trusted operator input: it installs, and the result says
+    `upload_verified` is false so the caller can report that honestly.
+    The copy must carry requirements-runtime.txt: the install runs
+    `--require-hashes -r requirements-runtime.txt` then `--no-deps -e .`, and a
+    copy without that file is refused rather than falling back to an unpinned
+    install. The Cursor CLI install runs only with consent (allow_cursor_install
+    or ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1); consent downloads the installer and
+    reports its hash, and execution also needs cursor_sha256. `path_exposer` and
+    `include_user` are injection points: production leaves them at the real
+    PATH writer and user config, while tests pass fakes so they never write the
+    system PATH or the real home.
     """
     if isinstance(upload, str) and _clone_url(upload):
         return _fail("Nothing is cloned. Pass the uploaded zip, not a git URL.")
     unpacked = False
+    upload_verified: bool | None = None
+    upload_checksum_source: str | None = None
+    upload_sha256_value: str | None = None
     if upload is None:
         root = package_root()
         if not (root / "pyproject.toml").is_file():
@@ -1061,6 +1178,41 @@ def install_uploaded_copy(
             blocked = _blocked_dest(folder)
             if blocked:
                 return _fail(blocked, upload=str(source), dest=str(folder))
+            try:
+                pinned, checksum_source = _upload_checksum(source, upload_sha256)
+            except ValueError as exc:
+                return _fail(str(exc), upload=str(source), dest=str(folder))
+            try:
+                digest = _file_sha256(source)
+            except OSError as exc:
+                return _fail(
+                    f"The upload was not read: {exc}",
+                    upload=str(source),
+                    dest=str(folder),
+                )
+            upload_sha256_value = digest
+            if pinned is not None:
+                if digest != pinned:
+                    return _fail(
+                        "The upload zip did not match its checksum. Nothing was unpacked.",
+                        upload=str(source),
+                        dest=str(folder),
+                        expected_sha256=pinned,
+                        actual_sha256=digest,
+                        checksum_source=checksum_source,
+                    )
+                upload_verified = True
+            else:
+                upload_verified = False
+            upload_checksum_source = checksum_source
+            if not _zip_has_runtime_requirements(source):
+                return _fail(
+                    "That upload has no requirements-runtime.txt, so nothing was unpacked "
+                    "or installed with unpinned dependencies. Use the release zip.",
+                    upload=str(source),
+                    dest=str(folder),
+                    requirements_verified=False,
+                )
             folder.mkdir(parents=True, exist_ok=True)
             try:
                 with zipfile.ZipFile(source) as archive:
@@ -1080,9 +1232,18 @@ def install_uploaded_copy(
         else:
             return _fail("That upload is not on disk.", upload=str(source))
 
+    if not (root / RUNTIME_REQUIREMENTS).is_file():
+        return _fail(
+            "That copy has no requirements-runtime.txt, so nothing was installed "
+            "with unpinned dependencies. Use the release zip.",
+            root=str(root),
+            unpacked=unpacked,
+            requirements_verified=False,
+        )
+
     prompt_present = _ensure_prompt(root)
     runner = pip_runner or _run_pip
-    commands = _install_commands(root)
+    commands = _install_commands()
     pip_steps: list[dict[str, Any]] = []
     pip_body: dict[str, Any] = {}
     for index, command in enumerate(commands):
@@ -1104,17 +1265,22 @@ def install_uploaded_copy(
                 requirements_verified=False,
                 prompt_present=prompt_present,
             )
-    expose_writer_on_path()
-    cursor_cli = None
-    if cursor_installer is not None or not os.environ.get("PYTEST_CURRENT_TEST"):
-        cursor_cli = ensure_cursor_agent(
-            installer=cursor_installer,
-            allow_install=allow_cursor_install,
-            expected_sha256=cursor_sha256,
-        )
+    exposer = path_exposer or expose_writer_on_path
+    exposer()
+    cursor_cli = ensure_cursor_agent(
+        installer=cursor_installer,
+        allow_install=allow_cursor_install,
+        expected_sha256=cursor_sha256,
+    )
     launch = mcp_launch_command()
-    mcp = attach_custom_mcp(root, reviewer=reviewer, enable=enable) if attach else None
-    build_mcp = attach_build_mcp(root, reviewer=reviewer) if attach else None
+    mcp = (
+        attach_custom_mcp(root, reviewer=reviewer, include_user=include_user, enable=enable)
+        if attach
+        else None
+    )
+    build_mcp = (
+        attach_build_mcp(root, reviewer=reviewer, include_user=include_user) if attach else None
+    )
     unpack_parent = install_folder(dest) if unpacked else None
     health_check = install_self_check()
     if not health_check.get("ok"):
@@ -1140,6 +1306,9 @@ def install_uploaded_copy(
         "requirements_verified": bool(
             len(commands) > 1 and pip_steps and pip_steps[0]["returncode"] == 0
         ),
+        "upload_verified": upload_verified,
+        "upload_checksum": upload_checksum_source,
+        "upload_sha256": upload_sha256_value,
         "prompt_present": prompt_present,
         "writer_command": launch,
         "cursor_cli": cursor_cli,
@@ -1149,6 +1318,12 @@ def install_uploaded_copy(
         "install_residual_id": "install-root",
         "install_residual": RESIDUALS["install-root"],
     }
+    if upload_verified is False:
+        payload["upload_note"] = (
+            "The zip was not checksum-verified. It is trusted operator input. "
+            "Pass --upload-sha256, or place a matching <zip>.sha256 or SHA256SUMS "
+            "file beside the zip, to verify it."
+        )
     return attach_friend_upgrade_fo_card(payload, root=root)
 
 
@@ -1185,13 +1360,14 @@ def _one_mounted_mac_home() -> Path | None:
     return None
 
 
-def friend_mac_home() -> Path | None:
+def friend_mac_home(*, discover_mounted: bool = True) -> Path | None:
     """Home folder on the friend's Mac when this computer can already see it.
 
     Darwin uses this process home. Grok Bot Linux does not: that home is the
     bot computer. A mounted Mac home is ESSAY_WRITER_MAC_HOME when that
     directory already exists, or the one /Users home this computer can see.
-    This function does not create the home.
+    This function does not create the home. Tests that must assert an unmounted
+    Mac pass ``discover_mounted=False`` or replace ``_one_mounted_mac_home``.
     """
     if _on_mac():
         home = _process_home()
@@ -1203,7 +1379,7 @@ def friend_mac_home() -> Path | None:
             return None
         home = Path(text).expanduser()
         return home if home.is_dir() else None
-    if os.environ.get("PYTEST_CURRENT_TEST"):
+    if not discover_mounted:
         return None
     return _one_mounted_mac_home()
 
@@ -1457,16 +1633,23 @@ def remember_mac_handoff_dir(path: Path | str) -> dict[str, Any]:
     return {"ok": True, "path": resolved}
 
 
-def mac_deliverables_dir() -> Path | None:
-    """Mac handoff root: ESSAY_WRITER_MAC_DIR, else visible Documents/Essay Bot on the Mac."""
+def mac_deliverables_dir(*, read_remembered: bool | None = None) -> Path | None:
+    """Mac handoff root: ESSAY_WRITER_MAC_DIR, else visible Documents/Essay Bot on the Mac.
+
+    ``read_remembered`` is an explicit policy. The default reads the remembered
+    folder from setup.secrets.json unless ESSAY_WRITER_ROOT isolates this run to
+    a test ledger; a caller that must not consult it passes False. The
+    documented ESSAY_WRITER_MAC_DIR override still wins.
+    """
     override = os.environ.get(MAC_HANDOFF_SECRET)
     if override is not None:
         text = override.strip()
         if not text or text.casefold() == "open":
             return None
         return Path(text).expanduser()
-    in_test = bool(os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("ESSAY_WRITER_ROOT"))
-    remembered = read_mac_handoff_dir() if not in_test else None
+    if read_remembered is None:
+        read_remembered = not os.environ.get("ESSAY_WRITER_ROOT")
+    remembered = read_mac_handoff_dir() if read_remembered else None
     if remembered is not None:
         return remembered
     return visible_canonical_mac_handoff_dir()
@@ -1669,7 +1852,11 @@ def sequence_mac_candidates(essay_id: str) -> list[str]:
 def copy_deliverable_to_mac(source: Path, *, mac_dir: Path | None = None) -> dict[str, Any]:
     """Copy an existing .docx or .zip onto the Mac. Other files stay where they are.
 
-    A directory copies each Word file and zip sitting directly in it.
+    A directory copies each Word file and zip sitting directly in it. Quarantine
+    and provenance are only cleared on a copy the product generated for a
+    sequence (a path under ``Essay-writer/<module>/sequences/<n>``); an
+    operator-named file keeps its marks and the report says the clearing was
+    skipped.
     """
     path = Path(source).expanduser()
     if path.is_dir():
@@ -1694,6 +1881,7 @@ def copy_deliverable_to_mac(source: Path, *, mac_dir: Path | None = None) -> dic
         }
     if not path.is_file():
         return {"ok": False, "copied": False, "source": str(path), "reason": "That deliverable is not a file."}
+    generated = _app_generated_deliverable(path)
     folder = _mac_copy_folder(path, mac_dir)
     if folder is None:
         return {
@@ -1722,7 +1910,7 @@ def copy_deliverable_to_mac(source: Path, *, mac_dir: Path | None = None) -> dic
                 "reason": "The Mac copy path is a folder.",
             }
         if path.resolve() == target.resolve():
-            cleared = _clear_delivered(target)
+            cleared = _clear_delivered(target, generated=generated)
             remember_mac_deliverable(path, target)
             return {
                 "ok": True,
@@ -1734,7 +1922,7 @@ def copy_deliverable_to_mac(source: Path, *, mac_dir: Path | None = None) -> dic
             }
         replaced = target.is_file()
         shutil.copy2(path, target)
-        cleared = _clear_delivered(target)
+        cleared = _clear_delivered(target, generated=generated)
     except OSError as exc:
         return {"ok": False, "copied": False, "source": str(path), "reason": str(exc)}
     remember_mac_deliverable(path, target)
@@ -1748,11 +1936,36 @@ def copy_deliverable_to_mac(source: Path, *, mac_dir: Path | None = None) -> dic
     }
 
 
-def _clear_delivered(path: Path) -> dict[str, Any]:
-    """Quarantine and provenance come off the Documents copy before handoff."""
+def _app_generated_deliverable(path: Path) -> bool:
+    """True when the product wrote this path for a sequence."""
+    from essay_writer.build_office import essay_id_from_deliverable_path
+
+    try:
+        return essay_id_from_deliverable_path(path) is not None
+    except (OSError, ValueError):
+        return False
+
+
+def _clear_delivered(path: Path, *, generated: bool) -> dict[str, Any]:
+    """Clear quarantine and provenance on an app-generated Documents copy.
+
+    An operator-named .docx or .zip crossing the same copy path keeps its
+    marks: ``skipped`` and ``reason`` report that nothing was cleared.
+    """
     from essay_writer.quarantine import clear_mac_quarantine
 
-    return clear_mac_quarantine(path)
+    if not generated:
+        return {
+            "ok": True,
+            "cleared": [],
+            "absent": [],
+            "noop": True,
+            "skipped": True,
+            "reason": "not-an-app-deliverable",
+        }
+    result = dict(clear_mac_quarantine(path))
+    result["skipped"] = False
+    return result
 
 
 def _parse(args: list[str]) -> dict[str, Any]:
@@ -1764,6 +1977,7 @@ def _parse(args: list[str]) -> dict[str, Any]:
     mac_handoff: str | None = None
     allow_cursor_install: bool | None = None
     cursor_sha256: str | None = None
+    upload_sha256: str | None = None
     index = 0
     while index < len(args):
         token = args[index]
@@ -1780,9 +1994,17 @@ def _parse(args: list[str]) -> dict[str, Any]:
             if index >= len(args):
                 raise ValueError("--cursor-sha256 needs a 64-character hex SHA-256")
             value = args[index].strip().casefold()
-            if _CURSOR_SHA256.fullmatch(value) is None:
+            if _SHA256_HEX.fullmatch(value) is None:
                 raise ValueError("--cursor-sha256 needs a 64-character hex SHA-256")
             cursor_sha256 = value
+        elif token == "--upload-sha256":
+            index += 1
+            if index >= len(args):
+                raise ValueError("--upload-sha256 needs a 64-character hex SHA-256")
+            value = args[index].strip().casefold()
+            if _SHA256_HEX.fullmatch(value) is None:
+                raise ValueError("--upload-sha256 needs a 64-character hex SHA-256")
+            upload_sha256 = value
         elif token == "--remember-mac-dir":
             action = "remember_mac"
             index += 1
@@ -1821,6 +2043,8 @@ def _parse(args: list[str]) -> dict[str, Any]:
         raise ValueError("--install-cursor does not copy or remember")
     if action in {"copy", "remember_mac"} and cursor_sha256 is not None:
         raise ValueError("--cursor-sha256 does not copy or remember")
+    if upload_sha256 is not None and not upload:
+        raise ValueError("--upload-sha256 needs --upload ZIP")
     return {
         "action": action,
         "reviewer": reviewer,
@@ -1830,6 +2054,7 @@ def _parse(args: list[str]) -> dict[str, Any]:
         "mac_handoff": mac_handoff,
         "allow_cursor_install": allow_cursor_install,
         "cursor_sha256": cursor_sha256,
+        "upload_sha256": upload_sha256,
     }
 
 
@@ -1858,11 +2083,12 @@ def main(argv: list[str] | None = None) -> int:
         parsed = _parse(args)
     except ValueError as exc:
         sys.stderr.write(
-            "usage: first_run.py [--upload ZIP] [--dest FOLDER] [--no-reviewer]\n"
-            "       [--install-cursor | --no-install-cursor] [--cursor-sha256 SHA256]\n"
-            "       essay-writer [--install-upload ZIP] [--attach-mcp] [--copy-to-mac PATH]\n"
-            "       [--remember-mac-dir FOLDER] [--no-reviewer] [--install-cursor]\n"
+            "usage: first_run.py [--upload ZIP --upload-sha256 SHA256] [--dest FOLDER]\n"
+            "       [--no-reviewer] [--install-cursor | --no-install-cursor]\n"
             "       [--cursor-sha256 SHA256]\n"
+            "       essay-writer [--install-upload ZIP --upload-sha256 SHA256] [--attach-mcp]\n"
+            "       [--copy-to-mac PATH] [--remember-mac-dir FOLDER] [--no-reviewer]\n"
+            "       [--install-cursor] [--cursor-sha256 SHA256]\n"
             f"{exc}\n"
         )
         return 2
@@ -1904,6 +2130,7 @@ def main(argv: list[str] | None = None) -> int:
                 reviewer=parsed["reviewer"],
                 allow_cursor_install=parsed["allow_cursor_install"],
                 cursor_sha256=parsed["cursor_sha256"],
+                upload_sha256=parsed["upload_sha256"],
             )
     json.dump(result, sys.stdout, indent=2)
     sys.stdout.write("\n")

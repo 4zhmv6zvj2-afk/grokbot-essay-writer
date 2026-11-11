@@ -14,7 +14,7 @@ import inspect
 import json
 
 from docx import Document
-from helpers import ESSAY, TOPIC, open_sequence, pack, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.build_office import stage_launch
 from essay_writer.build_office import top_band_mark as build_mark
@@ -78,7 +78,7 @@ def _ready(workspace) -> str:
     (folder / "mark-scheme.md").write_text(TABLE, encoding="utf-8")
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     return seq

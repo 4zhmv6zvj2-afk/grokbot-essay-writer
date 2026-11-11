@@ -7,6 +7,7 @@ from helpers import (
     CLARIFY_OPEN,
     ESSAY,
     TOPIC,
+    card_digest_for,
     open_sequence,
     pack,
     picked,
@@ -84,7 +85,7 @@ def test_word_preview_is_quiet_and_confirm_shows_the_draft(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     preview = essay_pack_render_word(seq, pack(), "draft")
@@ -228,7 +229,7 @@ def _confirm_stage_deliverables(workspace, seq: str) -> None:
     row["annotation"] = annotation
     draft = essay_research_summary(seq, TOPIC, "draft", [row])
     assert draft["ok"] is True, draft
-    saved = essay_research_summary(seq, TOPIC, "confirm", [row])
+    saved = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert saved["stored"] is True, saved
     reviews = [{"paper_id": "src-1", "markdown": review}]
     full_draft = essay_research_full(
@@ -236,7 +237,7 @@ def _confirm_stage_deliverables(workspace, seq: str) -> None:
     )
     assert full_draft["ok"] is True, full_draft
     full = essay_research_full(
-        seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews
+        seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews, cardDigest=card_digest_for(seq, 'essay.research.full')
     )
     assert full["stored"] is True, full
 

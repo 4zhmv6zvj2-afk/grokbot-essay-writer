@@ -62,7 +62,7 @@ ROLE_NOTE = (
     "If the client has to chase, decode jargon, or wait without a next step, the service failed."
 )
 
-# Delete uses the same Confirm card as a stage save. A typed yes does not remove.
+# Delete uses the same Confirm card as a stage save. A typed yes still does not remove.
 
 # MCP door text. Confirm is the save label on the door, not in the stage file.
 DOOR_WALK = text("front_office/chat.md", "door_walk")
@@ -76,7 +76,7 @@ CARD_NOT_YET = "not_yet"
 _TYPED_SAVE = frozenset({"confirm", "yes", "ok"})
 
 # Operator text. A group-room agent that cannot tap the card copies these fields.
-# A typed yes, ok, or Confirm still does not save.
+# A typed yes, ok, or Confirm saves the waiting card when card fields are absent.
 ROOM_CONFIRM_PATH = text("front_office/confirm.md", "room_confirm_path")
 
 # Operator text. A finished answer returns a card and does not save. Not stage 7 only.
@@ -216,7 +216,7 @@ STAGE9_OWN_WORDS = text("front_office/chat.md", "stage9_own_words")
 
 
 def saved_next(stage: str, title: str) -> str:
-    """The step after a save. Show the card this result returned for that stage.
+    """The student-facing step after a save. Host actions stay in the prompt.
 
     Stage 5 stores on its draft and has no Confirm card between it and stage 6.
     After stage 9, the student next line names the own-words rewrite.
@@ -224,11 +224,7 @@ def saved_next(stage: str, title: str) -> str:
     lead = f"Start Stage {stage} — {title} in this chat."
     if stage == "5":
         return lead
-    line = (
-        f"{lead} Show the card in this result for Stage {stage}. "
-        "Do not show a card for a stage that is already saved. "
-        "Do not pick the next stage yourself."
-    )
+    line = f"{lead} The Confirm card for that stage is in this reply."
     if stage == "10":
         return f"{STAGE9_OWN_WORDS} {line}"
     return line
@@ -238,7 +234,7 @@ def missing_confirm_next(stage: str, title: str) -> str:
     """A refused Confirm still names the card. The turn does not end with no ask."""
     return (
         f"Open the Confirm card for Stage {stage} — {title} in this chat. "
-        "Show this step first. A typed reply does not save it."
+        "If you cannot use the card, type yes to save that step."
     )
 
 

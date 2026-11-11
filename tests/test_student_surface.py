@@ -4,7 +4,7 @@ import re
 import zipfile
 from pathlib import Path
 
-from helpers import ESSAY, TOPIC, open_sequence, pack, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.harvard_4a import FOUR_A_FORMAT
 from essay_writer.research import essay_research_summary
@@ -85,7 +85,7 @@ def test_word_bytes_omit_house_labels(workspace):
         "annotation": NOTE,
     }
     essay_research_summary(seq, TOPIC, "draft", [row])
-    saved = essay_research_summary(seq, TOPIC, "confirm", [row])
+    saved = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert saved["stored"] is True
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output"
     for name in ("annotation.docx", "download-list.docx"):
@@ -97,7 +97,7 @@ def test_word_bytes_omit_house_labels(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     preview = essay_pack_render_word(seq, pack(), "draft")

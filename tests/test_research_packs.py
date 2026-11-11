@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 
 from docx import Document
-from helpers import CLARIFY_OPEN, ESSAY, TOPIC, open_sequence, source, write_upload
+from helpers import CLARIFY_OPEN, ESSAY, TOPIC, card_digest_for, open_sequence, source, write_upload
 
 from essay_writer.doors import DOORS
 from essay_writer.harvard_4a import (
@@ -148,7 +148,7 @@ def test_summary_confirm_delivers_word_in_chat_and_a_pdf_zip(workspace):
     assert draft["wrote"] is False
     assert "delivery" not in draft
     assert not (_output(workspace) / "annotation.docx").exists()
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [_journal(annotation=ANN)])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [_journal(annotation=ANN)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["ok"] is True
     assert confirmed["stored"] is True
     assert confirmed["wrote"] is False
@@ -219,12 +219,13 @@ def test_confirm_without_the_same_draft_writes_no_pack(workspace):
         TOPIC,
         "confirm",
         [_journal(annotation="Smith (2020) argues a different paragraph.")],
+        cardDigest=card_digest_for(seq, 'essay.research.summary'),
     )
     assert changed["ok"] is False
     assert changed["refused"] == "confirm"
     assert changed["wrote"] is False
     assert not (_output(workspace) / "annotation.docx").exists()
-    silent = essay_research_summary(seq, TOPIC, "confirm", [_journal()])
+    silent = essay_research_summary(seq, TOPIC, "confirm", [_journal()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert silent["ok"] is False
     assert not (_output(workspace) / "papers.zip").exists()
 
@@ -271,6 +272,7 @@ def test_full_confirm_zips_one_word_file_per_paper(workspace):
         [_journal(), second],
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
+        cardDigest=card_digest_for(seq, 'essay.research.full'),
     )
     assert confirmed["stored"] is True
     delivery = confirmed["delivery"]
@@ -326,7 +328,7 @@ def test_full_without_reviews_still_writes_one_note_per_paper(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_full(seq, TOPIC, "draft", [source()], clarify_context=CLARIFY_OPEN)
-    confirmed = essay_research_full(seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN)
+    confirmed = essay_research_full(seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN, cardDigest=card_digest_for(seq, 'essay.research.full'))
     assert (_output(workspace) / "reviews" / "src-1.md").is_file()
     archive = zipfile.ZipFile(_output(workspace) / "critical-reviews.zip")
     assert archive.namelist() == ["src-1.docx"]

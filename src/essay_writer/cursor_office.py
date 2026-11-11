@@ -22,7 +22,7 @@ not written into prompt text to stand in for a flag.
 
 from __future__ import annotations
 
-import os
+from collections.abc import Callable
 from typing import Any
 
 from essay_writer.assignment_gate import assignment_requirements as _requirements
@@ -191,19 +191,24 @@ def _local_agent_argv(command: list[str]) -> bool:
     return bool(command) and command[0] == "agent" and not remote_cloud_argv(command)
 
 
-def spawn_agent(command: list[str]) -> dict[str, Any]:
+def spawn_agent(
+    command: list[str],
+    *,
+    launch: Callable[[list[str]], tuple[Any, Any]] | None = None,
+) -> dict[str, Any]:
     """Start the local Cursor CLI from an argv list.
 
     The list is the cursor_stage_launch command. argv is passed as a
-    list. Remote and cloud agents are refused. Tests skip a local start.
+    list. Remote and cloud agents are refused before the binary lookup.
     stdin and stdout are a terminal, and stderr is a pipe (`open_mid_child`).
     A closed stdin makes this CLI exit 1 in the same second.
+
+    `launch` is the opener collaborator. It defaults to the real
+    `mid_spawn.open_mid_child`; a test passes a fake so no CLI starts.
     """
     argv = [str(part) for part in command]
     if remote_cloud_argv(argv):
         return {"started": False, "reason": REMOTE_CLOUD_BANNED, "command": argv}
-    if os.environ.get("PYTEST_CURRENT_TEST"):
-        return {"started": False, "reason": "skipped-under-test", "command": argv}
     if not _local_agent_argv(argv):
         return {"started": False, "reason": "not-cursor-cli", "command": argv}
     from essay_writer.setup import cursor_cli_binary
@@ -211,10 +216,12 @@ def spawn_agent(command: list[str]) -> dict[str, Any]:
     binary = cursor_cli_binary()
     if not binary:
         return {"started": False, "reason": "agent-cli-missing", "command": argv}
-    from essay_writer.mid_spawn import open_mid_child
+    if launch is None:
+        from essay_writer.mid_spawn import open_mid_child
 
+        launch = open_mid_child
     try:
-        proc, stream = open_mid_child([binary, *argv[1:]])
+        proc, stream = launch([binary, *argv[1:]])
     except OSError:
         return {"started": False, "reason": "agent-cli-missing", "command": argv}
     return {

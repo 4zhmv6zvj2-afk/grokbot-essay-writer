@@ -24,7 +24,10 @@ env:
 jobs:
   release:
     name: Test, build, sign, and attest release assets
-    runs-on: ubuntu-latest
+    # Pinned runner image, not ubuntu-latest: a floating image silently changes
+    # the build environment and weakens the reproducible-build proof. The
+    # reproduce workflow rebuilds on the same image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: write
@@ -200,6 +203,11 @@ jobs:
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+        with:
+          # Pin the signer instead of taking the installer's floating default:
+          # v3.1.4 is the current stable cosign release (the action version
+          # above is commit-pinned, but its default cosign can change).
+          cosign-release: "v3.1.4"
 
       - name: Sign the build artifacts with Sigstore
         run: |
@@ -212,6 +220,33 @@ jobs:
             echo "Signing ${file}"
             cosign sign-blob --yes --bundle "${file}.sigstore.json" "${file}"
           done
+
+      - name: Verify the Sigstore signatures with cosign
+        run: |
+          set -euo pipefail
+          # Verify what was just signed against this workflow's OIDC identity
+          # before anything is published. A bundle that does not verify here
+          # fails the release instead of shipping an unverifiable signature.
+          shopt -s nullglob
+          artifacts=()
+          for pattern in "dist/*.whl" "dist/*.tar.gz" "dist/SHA256SUMS"; do
+            for artifact in ${pattern}; do
+              artifacts+=("${artifact}")
+            done
+          done
+          if [ "${#artifacts[@]}" -ne 3 ]; then
+            echo "::error::expected the wheel, the sdist, and SHA256SUMS to sign; found ${#artifacts[@]} file(s)"
+            exit 1
+          fi
+          for artifact in "${artifacts[@]}"; do
+            echo "Verifying ${artifact}.sigstore.json"
+            cosign verify-blob \
+              --bundle "${artifact}.sigstore.json" \
+              --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              "${artifact}"
+          done
+          echo "cosign verified the wheel, the sdist, and SHA256SUMS against the release workflow identity."
 
       - name: Upload the signature bundles to the release
         run: gh release upload "${TAG}" dist/*.sigstore.json --clobber
@@ -227,6 +262,31 @@ jobs:
           set -euo pipefail
           cp "${{ steps.provenance.outputs.bundle-path }}" dist/provenance.intoto.jsonl
           gh release upload "${TAG}" dist/provenance.intoto.jsonl --clobber
+
+      - name: Verify the build provenance with gh attestation verify
+        run: |
+          set -euo pipefail
+          # The attestations API can lag right after the upload; retry briefly
+          # so propagation delay cannot mask a bad attestation. Each artifact
+          # is checked separately: gh attestation verify takes one file.
+          verify_attestation() {
+            artifact="$1"
+            for attempt in 1 2 3 4 5; do
+              if gh attestation verify "${artifact}" --repo 4zhmv6zvj2-afk/grokbot-essay-writer; then
+                return 0
+              fi
+              echo "::warning::build provenance for ${artifact} did not verify (attempt ${attempt}); retrying"
+              sleep 10
+            done
+            echo "::error::the build provenance attestation for ${artifact} did not verify"
+            return 1
+          }
+          shopt -s nullglob
+          for artifact in dist/*.whl dist/*.tar.gz; do
+            echo "Verifying the build provenance of ${artifact}"
+            verify_attestation "${artifact}"
+          done
+          echo "gh verified the build provenance of the wheel and the sdist."
 
       - name: Assets are attached; publish the draft
         run: |

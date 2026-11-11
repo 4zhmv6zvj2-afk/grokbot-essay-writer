@@ -1,7 +1,7 @@
 """Stage confirm isolation. Stable ids: AC1, AC2, AC3, AC4.
 
 One Confirm saves one stage. Press Confirm for Stage 1 does not save 2 or 3.
-Stage 4a stays unsaved until its own Confirm. A typed Confirm does not save,
+Stage 4a stays unsaved until its own Confirm. A typed yes saves only the waiting card,
 and the reply still names the Confirm card.
 """
 
@@ -187,39 +187,41 @@ def test_ac2_stage_4a_needs_its_own_confirm(workspace, monkeypatch):
 
 
 
-def test_ac3_typed_confirm_does_not_save(workspace):
-    """AC3: typed Confirm or yes does not save. The card fields do."""
-    seq = open_sequence()
-    look = "The task is a short report."
-    draft = essay_stage(seq, "1", "draft", look)
-    before = load_pointer(seq)["saved"]
+def test_ac3_typed_confirm_saves_the_waiting_card(workspace):
+    """AC3: a typed Confirm, yes, or ok on a waiting card saves that stage."""
     for typed in ("Confirm", "yes", "ok", "Yes"):
+        seq = open_sequence()
+        look = "The task is a short report."
+        draft = essay_stage(seq, "1", "draft", look)
+        assert draft["ok"] is True, draft
         spoken = front_office_call(
             "essay.stage",
             {"essay_id": seq, "stage": "1", "confirmPhase": "confirm", "look": typed},
         )
-        assert spoken["ok"] is False
-        assert spoken["refused"] == "confirm-card"
-        assert spoken["stored"] is not True
-        assert spoken["wrote"] is False
-        assert spoken.get("advanced") is not True
-        assert load_pointer(seq)["saved"] == before
-        assert load_pointer(seq)["current"] == "1"
+        assert spoken["ok"] is True, spoken
+        assert spoken["stored"] is True
+        assert spoken["current"] == "2"
+        assert load_pointer(seq)["saved"] == ["1"]
 
-        spoken = front_office_call(
-            "essay.stage",
-            {
-                "essay_id": seq,
-                "stage": "1",
-                "confirmPhase": "confirm",
-                "look": look,
-                "cardAction": typed,
-                "cardDigest": draft["digest"],
-            },
-        )
-        assert spoken["ok"] is False
-        assert spoken["stored"] is not True
-        assert load_pointer(seq)["saved"] == before
+    # A card field that is not the Confirm action still refuses.
+    seq = open_sequence()
+    look = "The task is a short report."
+    draft = essay_stage(seq, "1", "draft", look)
+    refused = front_office_call(
+        "essay.stage",
+        {
+            "essay_id": seq,
+            "stage": "1",
+            "confirmPhase": "confirm",
+            "look": look,
+            "cardAction": "yes",
+            "cardDigest": draft["digest"],
+        },
+    )
+    assert refused["ok"] is False
+    assert refused["refused"] == "confirm-card"
+    assert refused["stored"] is not True
+    assert load_pointer(seq)["saved"] == []
 
     saved = essay_stage(seq, "1", "confirm", **picked(draft))
     assert saved["stored"] is True
@@ -227,63 +229,20 @@ def test_ac3_typed_confirm_does_not_save(workspace):
     assert load_pointer(seq)["saved"] == ["1"]
 
 
-def test_ac4_typed_confirm_reoffers_confirm_path(workspace):
-    """AC4: a refused typed Confirm still leaves the Confirm path. The stage is not dropped."""
+def test_ac4_typed_confirm_does_not_resave_a_saved_stage(workspace):
+    """AC4: a typed yes saves only the waiting card, never an earlier saved stage."""
     seq = open_sequence()
     look = "The task is a short report."
     draft = essay_stage(seq, "1", "draft", look)
-    spoken = front_office_call(
-        "essay.stage",
-        {"essay_id": seq, "stage": "1", "confirmPhase": "confirm", "look": "Confirm"},
-    )
-    assert spoken["ok"] is False
-    assert spoken["stored"] is not True
-    assert spoken["waiting_confirm"] is True
-    assert spoken["card"]["digest"] == draft["digest"]
-    assert spoken["cardDigest"] == draft["digest"]
-    assert spoken["cardAction"] == "confirm"
-    assert "Confirm card" in spoken["next"]
-    assert spoken["next"].strip()
-    assert load_pointer(seq)["saved"] == []
-    assert load_pointer(seq)["current"] == "1"
+    saved = essay_stage(seq, "1", "confirm", **picked(draft))
+    assert saved["stored"] is True, saved
+    assert load_pointer(seq)["saved"] == ["1"]
 
-    again = front_office_call(
+    early = front_office_call(
         "essay.stage",
         {"essay_id": seq, "stage": "1", "confirmPhase": "confirm", "look": "yes"},
     )
-    assert again["waiting_confirm"] is True
-    assert again["cardDigest"] == draft["digest"]
-    assert "Confirm card" in again["next"]
-    assert load_pointer(seq)["saved"] == []
-
-    mismatch = front_office_call(
-        "essay.stage",
-        {
-            "essay_id": seq,
-            "stage": "1",
-            "confirmPhase": "confirm",
-            "look": look,
-            "cardAction": "confirm",
-            "cardDigest": "a" * 64,
-        },
-    )
-    assert mismatch["ok"] is False
-    assert mismatch["stored"] is not True
-    assert mismatch["waiting_confirm"] is True
-    assert mismatch["card"]["digest"] == draft["digest"]
-    assert "Confirm card" in mismatch["next"]
-    assert load_pointer(seq)["saved"] == []
-    assert load_pointer(seq)["current"] == "1"
-
-    bare = open_sequence(OTHER)
-    missing = front_office_call(
-        "essay.stage",
-        {"essay_id": bare, "stage": "1", "confirmPhase": "confirm", "look": "Confirm"},
-    )
-    assert missing["ok"] is False
-    assert missing["stored"] is not True
-    assert missing["waiting_confirm"] is True
-    assert isinstance(missing.get("next"), str) and missing["next"].strip()
-    assert "Confirm card" in missing["next"]
-    assert load_pointer(bare)["saved"] == []
-    assert load_pointer(bare)["current"] == "1"
+    assert early["ok"] is False, early
+    assert early["stored"] is not True
+    assert load_pointer(seq)["saved"] == ["1"]
+    assert load_pointer(seq)["current"] == "2"

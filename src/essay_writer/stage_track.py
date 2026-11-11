@@ -369,6 +369,20 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
             ),
             waiting_confirm=False,
         )
+    if confirmPhase == CONFIRM and not auto_next and not minting and not cardAction and not cardDigest:
+        # Fallback for a host that cannot pass the card fields: a typed yes,
+        # ok, or Confirm on a waiting card saves that card's draft. The card
+        # path stays preferred, and a later stage is still its own card.
+        from essay_writer.specialists.grok_bot import CARD_CONFIRM, typed_save_word
+
+        if typed_save_word(look):
+            waiting_digest = _waiting_digest(pointer, stage)
+            if not waiting_digest:
+                waiting = latest_draft(essay_id, TOOL, stage=stage)
+                waiting_digest = waiting.get("digest") if isinstance(waiting, dict) else None
+            if isinstance(waiting_digest, str) and waiting_digest:
+                cardAction = CARD_CONFIRM
+                cardDigest = waiting_digest
     if (
         confirmPhase == CONFIRM
         and not auto_next
@@ -542,7 +556,7 @@ def _confirm_path(
                     genre,
                     pointer,
                     cardDigest,
-                    reason="A typed reply does not save this step. Open the Confirm card in this reply.",
+                    reason="Open the Confirm card in this reply to save this step.",
                 )
             if not card_matches or (_room_blocks(pointer, stage) and not granted_here):
                 if not card_matches:
@@ -556,7 +570,7 @@ def _confirm_path(
                             cardDigest,
                             reason=str(
                                 picked_card.get("reason")
-                                or "A typed reply does not save this step. Open the Confirm card in this reply."
+                                or "Open the Confirm card in this reply to save this step."
                             ),
                         )
                 if _room_blocks(pointer, stage):

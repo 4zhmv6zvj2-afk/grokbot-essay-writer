@@ -6,9 +6,11 @@ cannot reuse the old draft.
 
 The fingerprint is the student arguments and the hashes of local files.
 A live look-up body is not a fingerprint field. A drift in gathered-file
-hashes refuses confirm even when the arguments are unchanged. The card that
-was shown may be stored beside the fingerprint. Confirm reuses that card.
-It is not compared as a fingerprint.
+hashes refuses confirm even when the arguments are unchanged. A door that
+acts on a shown card stores that card on the draft and binds it with
+cardDigest, so a local edit to the stored card is refused. The caller passes
+that digest back on confirm; a draft with no stored digest cannot be
+confirmed. The card digest is not a fingerprint field.
 """
 
 from __future__ import annotations
@@ -33,6 +35,16 @@ def now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
+def card_digest(payload: dict[str, Any], shown: dict[str, Any]) -> str:
+    """Digest of one shown card. Confirm rebuilds it from the draft record.
+
+    The digest covers the payload and the card that was shown, so a local edit
+    to the stored card changes it. It is not part of the fingerprint, and a
+    look-up body is not a payload field.
+    """
+    return digest({"payload": payload, "shown": shown})
+
+
 def refuse(code: str, reason: str, **extra: Any) -> dict[str, Any]:
     body: dict[str, Any] = {
         "ok": False,
@@ -51,7 +63,7 @@ def phase_refusal(phase: object) -> dict[str, Any] | None:
     if phase is None:
         return refuse(
             "confirm",
-            "Show this step in the chat first. Then it can be saved. Do not save it silently.",
+            "Show this step in the chat first, then save it.",
         )
     return refuse("confirm", "That step was not shown in a form this chat can save.")
 
@@ -73,7 +85,9 @@ def save_draft(
     """Store one draft.
 
     fingerprint is student arguments and local file hashes. shown is the card
-    the student saw, including look-up rows. shown is not part of the fingerprint.
+    the student saw, including look-up rows. shown is not part of the
+    fingerprint. A stored card carries cardDigest so confirm can prove the
+    card was not edited after the draft.
     """
     payload_digest = digest(payload)
     record = {
@@ -86,6 +100,7 @@ def save_draft(
     }
     if shown is not None:
         record["shown"] = shown
+        record["cardDigest"] = card_digest(payload, shown)
     path = _draft_path(essay_id, tool, payload_digest, root)
 
     refuse_repo_write(path)
@@ -179,6 +194,58 @@ def load_draft_by_digest(
     return _read_draft_record(path, payload_digest)
 
 
+def _card_refusal(
+    record: dict[str, Any], card_digest_value: object, payload: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Refuse unless the stored card and the caller's card digest both match.
+
+    confirm_ready rebuilds the digest from the draft record's own payload and
+    shown card. A draft written before the card was bound has no stored digest,
+    so it cannot be confirmed. The caller must send the digest the draft reply
+    returned; a missing or different value refuses.
+    """
+    stored = record.get("cardDigest")
+    if not isinstance(stored, str) or not stored.strip():
+        return refuse(
+            "confirm",
+            "This draft was saved before the card was bound to the save. "
+            "Show this step again in the chat, then pick the new card.",
+            digest=digest(payload),
+        )
+    shown = record.get("shown")
+    if not isinstance(shown, dict):
+        return refuse(
+            "confirm",
+            "The card that was shown is no longer part of this draft. "
+            "Show this step again in the chat, then pick the new card.",
+            digest=digest(payload),
+        )
+    rebuilt = card_digest(record["payload"], shown)
+    if rebuilt != stored:
+        return refuse(
+            "confirm",
+            "The card that was shown changed after this step was saved. "
+            "Show this step again in the chat, then pick the new card.",
+            digest=digest(payload),
+        )
+    caller = card_digest_value.strip() if isinstance(card_digest_value, str) else ""
+    if not caller:
+        return refuse(
+            "confirm",
+            "Name the card that was shown before this step is saved. "
+            "Show this step again in the chat, then pick the new card.",
+            digest=digest(payload),
+        )
+    if caller != rebuilt:
+        return refuse(
+            "confirm",
+            "That is not the card this step showed. "
+            "Show this step again in the chat, then pick the new card.",
+            digest=digest(payload),
+        )
+    return None
+
+
 def confirm_ready(
     essay_id: str,
     tool: str,
@@ -186,12 +253,16 @@ def confirm_ready(
     fingerprint: dict[str, Any],
     *,
     root: Path | None = None,
+    card_digest: str | None = None,
+    require_card: bool = False,
 ) -> dict[str, Any]:
     """Return the draft record, or a refusal dict (ok false).
 
     A matching draft still refuses when fingerprint differs. That comparison
     is the gathered-file hashes and the student arguments. It is not a live
-    look-up body.
+    look-up body. A door that acts on the shown card passes require_card so
+    the stored card is rebuilt and must equal both the stored digest and the
+    caller's card_digest. A caller that does not bind a card leaves both off.
     """
     record = load_draft(essay_id, tool, payload, root=root)
     if record is None:
@@ -207,4 +278,8 @@ def confirm_ready(
             "The saved files changed after that step was shown. Show this step again in this chat.",
             digest=digest(payload),
         )
+    if require_card or card_digest is not None:
+        refused = _card_refusal(record, card_digest, payload)
+        if refused is not None:
+            return refused
     return record

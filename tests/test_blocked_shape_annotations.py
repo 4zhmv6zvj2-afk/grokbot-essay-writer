@@ -8,7 +8,7 @@ Mark-scheme words stay; they are not scored away.
 import inspect
 
 from docx import Document
-from helpers import ESSAY, TOPIC, open_sequence, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, write_upload
 
 from essay_writer.build_office import stage_launch, write_stage_deliverables
 from essay_writer.cursor_office import cursor_stage_launch
@@ -82,7 +82,7 @@ def _confirm(workspace, annotation: str):
     row = _journal(annotation=annotation)
     draft = essay_research_summary(seq, TOPIC, "draft", [row])
     assert draft["ok"] is True, draft
-    saved = essay_research_summary(seq, TOPIC, "confirm", [row])
+    saved = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert saved["ok"] is True, saved
     return seq, saved
 

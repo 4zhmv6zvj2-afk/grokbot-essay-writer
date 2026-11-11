@@ -8,6 +8,7 @@ import pytest
 from helpers import (
     ESSAY,
     TOPIC,
+    card_digest_for,
     open_sequence,
     pack,
     plant_gathered_source,
@@ -90,7 +91,7 @@ def _ready(workspace, brief="Genre: report\nQuestion: How do chokepoints constra
     (folder / "brief.md").write_text(brief, encoding="utf-8")
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    saved = essay_research_summary(seq, TOPIC, "confirm", [source()])
+    saved = essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert saved["stored"] is True
     return seq
 

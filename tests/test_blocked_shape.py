@@ -7,6 +7,7 @@ from docx import Document
 from helpers import (
     ESSAY,
     TOPIC,
+    card_digest_for,
     mac_handoff_sequence_dir,
     open_sequence,
     pack,
@@ -329,7 +330,7 @@ def test_word_save_rewrites_sequence_draft_note(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()])
+    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     payload = pack()
     essay_pack_validate(seq, payload, "draft")
     essay_pack_validate(seq, payload, "confirm")

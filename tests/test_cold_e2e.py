@@ -32,58 +32,31 @@ def _look_body(seq: str, stage: str) -> str:
     return body
 
 
-def test_ac1_typed_confirm_represents_the_card_and_does_not_write(workspace):
-    """A typed Confirm, yes, or ok shows the waiting card again. It does not save."""
-    seq = open_sequence()
-    look = "The task is a short report."
-    draft = front_office_call(
-        "essay.stage",
-        {"essay_id": seq, "stage": "1", "confirmPhase": "draft", "look": look},
-    )
-    assert draft["card"]["kind"] == "confirm"
-    assert draft["card"]["digest"] == draft["digest"]
-    assert draft["stored"] is False
-    before = _pointer_bytes(seq)
-    assert load_pointer(seq)["saved"] == []
-    assert load_pointer(seq)["current"] == "1"
-
+def test_ac1_typed_confirm_saves_the_waiting_card(workspace):
+    """A typed Confirm, yes, or ok on a waiting card saves it and advances."""
     for typed in ("Confirm", "yes", "ok", "Yes", "OK"):
+        seq = open_sequence()
+        look = "The task is a short report."
+        draft = front_office_call(
+            "essay.stage",
+            {"essay_id": seq, "stage": "1", "confirmPhase": "draft", "look": look},
+        )
+        assert draft["card"]["kind"] == "confirm"
+        assert draft["card"]["digest"] == draft["digest"]
+        assert draft["stored"] is False
+        before = _pointer_bytes(seq)
+        assert load_pointer(seq)["saved"] == []
+        assert load_pointer(seq)["current"] == "1"
+
         spoken = front_office_call(
             "essay.stage",
             {"essay_id": seq, "stage": "1", "confirmPhase": "confirm", "look": typed},
         )
-        assert spoken["ok"] is False
-        assert spoken["refused"] == "confirm-card"
-        assert spoken["stored"] is not True
-        assert spoken.get("advanced") is not True
-        assert spoken["wrote"] is False
-        card = spoken["card"]
-        assert card["kind"] == "confirm"
-        assert card["digest"] == draft["digest"]
-        assert spoken["digest"] == draft["digest"]
-        assert card["actions"][0] == {"id": "confirm", "label": "Confirm"}
-        assert "Confirm card" in spoken["next"]
-        assert load_pointer(seq)["saved"] == []
-        assert load_pointer(seq)["current"] == "1"
-        assert _pointer_bytes(seq) == before
-
-        spoken = front_office_call(
-            "essay.stage",
-            {
-                "essay_id": seq,
-                "stage": "1",
-                "confirmPhase": "confirm",
-                "look": look,
-                "cardAction": typed,
-                "cardDigest": draft["digest"],
-            },
-        )
-        assert spoken["ok"] is False
-        assert spoken["refused"] == "confirm-card"
-        assert spoken["card"]["digest"] == draft["digest"]
-        assert spoken["stored"] is not True
-        assert load_pointer(seq)["saved"] == []
-        assert _pointer_bytes(seq) == before
+        assert spoken["ok"] is True, spoken
+        assert spoken["stored"] is True
+        assert spoken["current"] == "2"
+        assert load_pointer(seq)["saved"] == ["1"]
+        assert _pointer_bytes(seq) != before
 
 
 def test_ac2_card_confirm_still_writes_and_advances(workspace):

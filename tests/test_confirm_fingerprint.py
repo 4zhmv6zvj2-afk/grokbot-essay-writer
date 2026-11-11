@@ -8,7 +8,7 @@ and any later writing type use that same handler.
 import inspect
 import json
 
-from helpers import TOPIC, open_sequence, source, write_upload
+from helpers import TOPIC, card_digest_for, open_sequence, source, write_upload
 
 from essay_writer.confirm import load_draft
 from essay_writer.dig import TOOL as DIG_TOOL
@@ -110,7 +110,7 @@ def _dig_flip(seq, query, phase, calls, fetched):
     assert "consensus" not in record["fingerprint"]
     assert record["shown"]["unpaywall"][0]["oa_url"] == DRAFT_URL
     phase["live"] = "confirm"
-    confirmed = essay_dig(seq, query, "confirm")
+    confirmed = essay_dig(seq, query, "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert confirmed["ok"] is True, confirmed
     assert confirmed["stored"] is True
     assert confirmed.get("refused") is None
@@ -133,7 +133,7 @@ def _query_change_refuses(seq, phase, calls):
     assert draft["ok"] is True, draft
     phase["live"] = "confirm"
     before = dict(calls)
-    refused = essay_dig(seq, "second lock", "confirm")
+    refused = essay_dig(seq, "second lock", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert refused["ok"] is False
     assert refused["refused"] == "confirm"
     assert refused["stored"] is False
@@ -164,7 +164,7 @@ def _file_hash_refuses(workspace, module, seq):
     assert "resolver_values" not in record["fingerprint"]
     assert "unpaywall" not in json.dumps(record["fingerprint"])
     path.write_text(path.read_text(encoding="utf-8") + "\nA later sentence.\n", encoding="utf-8")
-    refused = essay_research_summary(seq, TOPIC, "confirm", [row])
+    refused = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert refused["ok"] is False, refused
     assert refused["refused"] == "confirm"
     assert refused["stored"] is False
@@ -184,7 +184,7 @@ def test_ac2_query_change_refuses_and_does_not_write_the_card(workspace, monkeyp
     seq = open_sequence()
     _query_change_refuses(seq, phase, calls)
     phase["live"] = "draft"
-    kept = essay_dig(seq, "first lock", "confirm")
+    kept = essay_dig(seq, "first lock", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
     assert kept["stored"] is True
     card = json.loads((work_dir(seq) / "dig-card.json").read_text(encoding="utf-8"))
     assert card["query"] == "first lock"
@@ -198,7 +198,12 @@ def test_ac3_gathered_file_hash_change_refuses_research_confirm(workspace, monke
 
 def test_ac4_essay_and_diary_use_the_same_essay_dig_handler(workspace, monkeypatch):
     """Prove on the handler. A stage number is not how dig is chosen."""
-    assert list(inspect.signature(essay_dig).parameters) == ["essay_id", "query", "confirmPhase"]
+    assert list(inspect.signature(essay_dig).parameters) == [
+        "essay_id",
+        "query",
+        "confirmPhase",
+        "cardDigest",
+    ]
     source = inspect.getsource(essay_dig)
     assert "genre" not in source
     assert "diary" not in source
@@ -276,7 +281,7 @@ def test_research_second_unpaywall_keeps_draft_fields(workspace, monkeypatch):
     assert SECOND_URL not in json.dumps(record["fingerprint"])
     assert "url" not in record["shown"]["sources"][0]
 
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["stored"] is True, confirmed
     assert confirmed.get("refused") is None
     assert FILES_CHANGED not in json.dumps(confirmed)

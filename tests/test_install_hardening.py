@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import stat
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -153,7 +154,6 @@ def test_env_consent_runs_the_injected_installer_without_shell(monkeypatch):
 def test_consent_without_expected_hash_downloads_but_never_executes(monkeypatch):
     """Consent downloads and reports the hash; without a pin it stops needs-hash."""
     _missing_agent(monkeypatch)
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     _fixed_which(monkeypatch)
     state = {"binary": None}
     ran: list[dict] = []
@@ -181,7 +181,6 @@ def test_consent_without_expected_hash_downloads_but_never_executes(monkeypatch)
 def test_matching_expected_hash_runs_the_downloaded_file_with_fixed_argv(monkeypatch):
     """A matching --cursor-sha256 runs the downloaded file with no shell."""
     _missing_agent(monkeypatch)
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     _fixed_which(monkeypatch)
     state = {"binary": None}
     ran: list[dict] = []
@@ -227,7 +226,6 @@ def test_matching_expected_hash_runs_the_downloaded_file_with_fixed_argv(monkeyp
 def test_env_hash_pin_also_authorises_execution(monkeypatch):
     """ESSAY_WRITER_CURSOR_INSTALL_SHA256 is the documented env form of the pin."""
     _missing_agent(monkeypatch)
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setenv(CURSOR_INSTALL_SHA256_ENV, INSTALLER_SHA)
     _fixed_which(monkeypatch)
     state = {"binary": None}
@@ -245,7 +243,6 @@ def test_env_hash_pin_also_authorises_execution(monkeypatch):
 def test_mismatched_expected_hash_does_not_execute(monkeypatch):
     """A wrong expected SHA-256 reports the mismatch and runs nothing."""
     _missing_agent(monkeypatch)
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     _fixed_which(monkeypatch)
 
     def fake_run(argv, **_kwargs):
@@ -277,7 +274,6 @@ def test_mismatched_expected_hash_does_not_execute(monkeypatch):
 def test_an_invalid_expected_hash_is_not_a_pin(monkeypatch):
     """A malformed pin is ignored, so execution still waits for a real hash."""
     _missing_agent(monkeypatch)
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     _fixed_which(monkeypatch)
     state = {"binary": None}
     ran: list[dict] = []
@@ -293,7 +289,6 @@ def test_an_invalid_expected_hash_is_not_a_pin(monkeypatch):
 def test_missing_curl_refuses_without_running_anything(monkeypatch):
     """No curl means no download, no exec, and a named reason."""
     _missing_agent(monkeypatch)
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setattr("essay_writer.first_run.shutil.which", lambda _name: None)
     monkeypatch.setattr(
         "essay_writer.first_run.subprocess.run",
@@ -344,6 +339,9 @@ def test_install_uploaded_copy_plumbs_the_expected_hash(monkeypatch, tmp_path):
         '[project]\nname = "essay-writer"\nversion = "0.1.0"\n', encoding="utf-8"
     )
     (source / "FIRST-RUN.txt").write_text("prompt", encoding="utf-8")
+    (source / "requirements-runtime.txt").write_text(
+        "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
+    )
 
     result = first_run.install_uploaded_copy(
         source,
@@ -361,7 +359,6 @@ def test_install_uploaded_copy_plumbs_the_expected_hash(monkeypatch, tmp_path):
 def test_pip_install_report_keeps_the_needs_consent_reason(monkeypatch, tmp_path):
     """The install report carries the structured reason instead of installing silently."""
     _missing_agent(monkeypatch)
-    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setattr("essay_writer.first_run._run_pip", lambda _cmd, _cwd: {"returncode": 0})
     monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
     monkeypatch.setattr("essay_writer.first_run.attach_custom_mcp", lambda *a, **k: None)
@@ -380,6 +377,9 @@ def test_pip_install_report_keeps_the_needs_consent_reason(monkeypatch, tmp_path
         '[project]\nname = "essay-writer"\nversion = "0.1.0"\n', encoding="utf-8"
     )
     (source / "FIRST-RUN.txt").write_text("prompt", encoding="utf-8")
+    (source / "requirements-runtime.txt").write_text(
+        "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
+    )
 
     result = first_run.install_uploaded_copy(
         source,
@@ -481,3 +481,118 @@ def _forbidden(message: str):
         raise AssertionError(message)
 
     return refused
+
+
+def _upload_zip(tmp_path: Path) -> Path:
+    upload = tmp_path / "essay-writer.zip"
+    with zipfile.ZipFile(upload, "w") as archive:
+        archive.writestr("essay-writer-main/pyproject.toml", '[project]\nname = "essay-writer"\n')
+        archive.writestr(
+            "essay-writer-main/requirements-runtime.txt",
+            "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n",
+        )
+    return upload
+
+
+def test_upload_zip_checks_a_sha256_when_present_and_reports_when_absent(tmp_path, monkeypatch):
+    """A checksum is optional: verify when available, report unverified when not."""
+    monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
+    upload = _upload_zip(tmp_path)
+    digest = hashlib.sha256(upload.read_bytes()).hexdigest()
+    calls: list[list[str]] = []
+
+    unverified = first_run.install_uploaded_copy(
+        upload,
+        dest=tmp_path / "dest-none",
+        pip_runner=lambda command, _cwd: calls.append(command) or {"returncode": 0},
+        attach=False,
+        allow_cursor_install=False,
+    )
+    assert unverified["ok"] is True, unverified
+    assert unverified["upload_verified"] is False
+    assert unverified["upload_checksum"] is None
+    assert unverified["upload_sha256"] == digest
+    assert "not checksum-verified" in unverified["upload_note"]
+    assert len(calls) == 2
+
+    mismatch = first_run.install_uploaded_copy(
+        upload,
+        dest=tmp_path / "dest-wrong",
+        pip_runner=lambda command, _cwd: calls.append(command) or {"returncode": 0},
+        attach=False,
+        upload_sha256="0" * 64,
+    )
+    assert mismatch["ok"] is False
+    assert mismatch["expected_sha256"] == "0" * 64
+    assert mismatch["actual_sha256"] == digest
+    assert not (tmp_path / "dest-wrong").exists()
+
+    verified = first_run.install_uploaded_copy(
+        upload,
+        dest=tmp_path / "dest-pin",
+        pip_runner=lambda command, _cwd: calls.append(command) or {"returncode": 0},
+        attach=False,
+        upload_sha256=digest,
+        allow_cursor_install=False,
+    )
+    assert verified["ok"] is True
+    assert verified["upload_verified"] is True
+    assert verified["upload_checksum"] == "--upload-sha256"
+    assert verified["unpacked"] is True
+
+
+def test_upload_zip_rejects_a_broken_sidecar(tmp_path, monkeypatch):
+    """A checksum file that is present but unusable is loud, not skipped."""
+    monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
+    upload = _upload_zip(tmp_path)
+    sidecar = upload.with_name(upload.name + ".sha256")
+    sidecar.write_text("not-a-checksum\n", encoding="utf-8")
+    broken = first_run.install_uploaded_copy(
+        upload,
+        dest=tmp_path / "dest-broken",
+        pip_runner=lambda command, _cwd: {"returncode": 0},
+        attach=False,
+        allow_cursor_install=False,
+    )
+    assert broken["ok"] is False
+    assert "not a usable SHA-256 file" in broken["reason"]
+    assert not (tmp_path / "dest-broken").exists()
+
+    sidecar.write_text("0" * 64 + "\n", encoding="utf-8")
+    wrong = first_run.install_uploaded_copy(
+        upload,
+        dest=tmp_path / "dest-wrong",
+        pip_runner=lambda command, _cwd: {"returncode": 0},
+        attach=False,
+        allow_cursor_install=False,
+    )
+    assert wrong["ok"] is False
+    assert wrong["expected_sha256"] == "0" * 64
+    assert not (tmp_path / "dest-wrong").exists()
+
+
+def test_upload_zip_sibling_checksum_verifies_without_a_flag(tmp_path, monkeypatch):
+    monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
+    upload = _upload_zip(tmp_path)
+    digest = hashlib.sha256(upload.read_bytes()).hexdigest()
+    upload.with_name(upload.name + ".sha256").write_text(f"{digest}  {upload.name}\n", encoding="utf-8")
+    verified = first_run.install_uploaded_copy(
+        upload,
+        dest=tmp_path / "dest",
+        pip_runner=lambda command, _cwd: {"returncode": 0},
+        attach=False,
+        allow_cursor_install=False,
+    )
+    assert verified["ok"] is True, verified
+    assert verified["upload_verified"] is True
+    assert verified["upload_checksum"] == upload.name + ".sha256"
+
+
+def test_python_bootstrap_refuses_a_missing_requirements_file(tmp_path):
+    """The bootstrap has no unpinned fallback: a missing requirements file stops the install."""
+    from essay_writer import python_bootstrap as boot
+
+    report = boot.provision(tmp_path, run=lambda *a, **k: {"returncode": 0})
+    assert report["ok"] is False
+    assert report["reason"] == "requirements_missing"
+    assert boot._SPEC.requirements == (boot.REQUIREMENTS_FILE,)

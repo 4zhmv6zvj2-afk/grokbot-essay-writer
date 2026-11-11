@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from docx import Document
-from helpers import ESSAY, TOPIC, open_sequence, source, write_upload
+from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, source, write_upload
 
 from essay_writer.doors import DOORS
 from essay_writer.paths import student_chat_path
@@ -79,7 +79,7 @@ def test_4a_download_list_is_leftovers_not_annotation_repeat(workspace):
     row = source()
     row["annotation"] = ann
     essay_research_summary(seq, TOPIC, "draft", [row])
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [row])
+    confirmed = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
     assert confirmed["stored"] is True
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output"
     listed = _docx(folder / "download-list.docx")
