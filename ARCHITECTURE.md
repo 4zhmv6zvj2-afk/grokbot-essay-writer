@@ -21,6 +21,13 @@ validation, and Word output.
     public confirm runner as an injected callable.
   - `stage_replies.py` — the draft and save reply writers (`_draft_reply`,
     `_save_confirm`) and the no-op result.
+  - `stage_confirm.py` — the confirm path and the shared stage-7 skip probe.
+    The body builder may import this module for the skip probe. This module
+    never imports the body builder or the orchestrator.
+  - `stage_body.py` — the body builder: note preparation, reply fields
+    (including `rules`), report and database attachments, the stage-7 draft
+    body, and `_build_stage_body`. It load-imports the skip probe from
+    `stage_confirm.py` and never imports the orchestrator.
   - `stage_context.py` — the typed pipeline values: `StageArgs` (the public
     `essay.stage` tool arguments) and `StageContext` (one resolved stage call).
     The old sentinel dict is gone.
@@ -88,8 +95,9 @@ its own floor through `python_bootstrap.py` (`REQUIRED = (3, 12, 0)`).
 5. `essay.health` reports the doors, packs, and build marker.
 
 The stage runner keeps the public entry points and the stage decision tree. The
-run branches are named helpers: `_confirm_path` (card confirm), `_build_stage_body`
-(shared stage body), `_draft_reply` (draft card), and `_save_confirm` (saved
+run branches are named helpers: `_confirm_path` (card confirm, in
+`stage_confirm.py`), `_build_stage_body` (shared stage body, in
+`stage_body.py`), `_draft_reply` (draft card), and `_save_confirm` (saved
 stage); together with `_run_stage` they are several hundred lines of decision
 tree, not a thin pass-through. `Pointer` and `StageResult` in `stage_state.py`
 name the intended pointer and result shapes; most helpers still take a plain
@@ -97,10 +105,11 @@ name the intended pointer and result shapes; most helpers still take a plain
 an enforced schema.
 
 The module split is a real dependency boundary, not only a file split. The
-orchestrator (`stage_track.py`) imports `stage_state.py`, `stage_landing.py`, and
-`stage_replies.py` at module load and keeps `essay_stage` and the public entry
-points. It does not re-export the moved names. In the other direction,
-`stage_state.py`, `stage_landing.py`, and `stage_replies.py` do not import
+orchestrator (`stage_track.py`) imports `stage_state.py`, `stage_landing.py`,
+`stage_replies.py`, `stage_confirm.py`, and `stage_body.py` at module load and
+keeps `essay_stage` and the public entry points. It does not re-export the moved
+names. In the other direction, `stage_state.py`, `stage_landing.py`,
+`stage_replies.py`, `stage_confirm.py`, and `stage_body.py` do not import
 `stage_track`, either at module load or inside a function. Where a state helper
 needs a stage card, the orchestrator threads an injected `CardRun` through the
 commit path: the next-card mint and the reopening of an already-saved stage's
@@ -123,9 +132,9 @@ contract depends on. The stage runner and its branch helpers keep that
 prompt-heavy path in one place, at the cost of a large decision tree.
 `Pointer` and `StageResult` name the intended state shapes rather than enforced
 schemas: many helpers still take a plain `pointer: dict`. The module split is
-enforced by the boundary test: the state, landing, and reply layers never import
-the orchestrator, and the orchestrator supplies the card and confirm runners
-explicitly. `StageArgs` and `StageContext` type the pipeline
+enforced by the boundary test: the state, landing, reply, confirm, and body
+layers never import the orchestrator, and the orchestrator supplies the card
+and confirm runners explicitly. `StageArgs` and `StageContext` type the pipeline
 between the tool signature and the reply writers; no stage body travels as a
 string-keyed dict with a sentinel any more.
 

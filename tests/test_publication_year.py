@@ -128,7 +128,7 @@ def test_ac1_own_cite_year_beats_a_cited_work(workspace):
     assert "(2022)" in line
     assert "(1901)" not in line
 
-    stage_src = (REPO / "src" / "essay_writer" / "stage_track.py").read_text(encoding="utf-8")
+    stage_src = (REPO / "src" / "essay_writer" / "stage_body.py").read_text(encoding="utf-8")
     cite_at = stage_src.index("text = cite_look(essay_id, text)")
     assert 'if stage == "5"' not in stage_src[cite_at - 500 : cite_at]
 

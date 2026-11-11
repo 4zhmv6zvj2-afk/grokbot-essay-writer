@@ -43,9 +43,10 @@ from essay_writer.late_chain import (
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.projects import essay_sequence_new
 from essay_writer.specialists.grok_bot import basics_pass_lines
+from essay_writer.stage_body import _build_stage_body
 from essay_writer.stage_landing import _collect_stage_misses
 from essay_writer.stage_llm import POINTER_FILE, stage_settings, stage_title
-from essay_writer.stage_track import _build_stage_body, essay_stage
+from essay_writer.stage_track import essay_stage
 from essay_writer.textutil import genre_from_brief_text
 from essay_writer.word import cover_lines, essay_pack_render_word, write_docx
 

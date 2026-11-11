@@ -1,12 +1,13 @@
 """Untrusted document text is fenced as evidence and never as instructions."""
 
-from helpers import ESSAY, write_upload
+from helpers import ESSAY, open_sequence, write_upload
 
 from essay_writer.doors import DOORS
 from essay_writer.originals import essay_originals
 from essay_writer.seats import seat_reading
 from essay_writer.server import INSTRUCTIONS
-from essay_writer.stage_llm import stage_settings
+from essay_writer.stage_llm import UNTRUSTED_FENCE, stage_settings
+from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import STAGE_ORDER
 
@@ -40,6 +41,13 @@ def test_every_stage_rule_ends_with_the_untrusted_fence():
     review = stage_settings("eqr")["rules"]
     assert review.endswith(FENCE)
     assert student_surface_hits(review) == []
+
+
+def test_a_live_stage_draft_reply_ends_with_the_untrusted_fence(workspace):
+    write_upload(workspace)
+    seq = open_sequence()
+    result = essay_stage(seq, "1", "draft", "The brief asks for a report.")
+    assert result["rules"].endswith(UNTRUSTED_FENCE)
 
 
 def test_originals_door_names_its_returned_text_as_evidence():

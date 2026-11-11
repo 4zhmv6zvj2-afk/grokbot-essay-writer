@@ -23,12 +23,9 @@ from essay_writer.revise import essay_revise
 from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists.writer import BODY_CITE_STAGES, land_body_cites
+from essay_writer.stage_body import _prepare_stage_text, _stage7_draft_body
 from essay_writer.stage_state import _note_look
-from essay_writer.stage_track import (
-    _prepare_stage_text,
-    _stage7_draft_body,
-    essay_stage,
-)
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.textutil import prepare_word_citations, reference_line
 from essay_writer.word import word_manifest

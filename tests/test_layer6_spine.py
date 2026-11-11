@@ -39,11 +39,18 @@ def test_spine_does_not_keep_a_second_constitution_check():
         .parent.joinpath("stage_replies.py")
         .read_text(encoding="utf-8")
     )
+    # The final_review import moved with the body builder.
+    body = (
+        Path(stage_track.__file__)
+        .resolve()
+        .parent.joinpath("stage_body.py")
+        .read_text(encoding="utf-8")
+    )
     trio = stage + landing + replies
     assert "def assignment_gate" not in spine
     assert "assignment_gate" not in stage
     assert trio.count("essay_writer.spine import gate_save") == 1
-    assert "essay_writer.spine import final_review" in stage
+    assert (stage + body).count("essay_writer.spine import final_review") == 1
     assert trio.count("essay_writer.spine import stage_bibliography") == 1
     assert "quiet_stage5" in trio
     assert advances_without_confirm("5") == "6"

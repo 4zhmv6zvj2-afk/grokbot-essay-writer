@@ -1,8 +1,10 @@
 """The stage layers are a dependency boundary, not only a file split.
 
-The orchestrator imports the state, landing, and reply layers. Those layers do
-not import the orchestrator, at module load or inside a function: the next-card
-mint and the inherited-lock re-entry arrive as injected callables instead.
+The orchestrator imports the state, landing, reply, confirm, and body modules
+at module load and does not re-export the moved names. Those modules do not
+import `stage_track`, either at module load or inside a function. The next-card
+mint arrives as an injected `CardRun`, and the inherited-lock re-entry arrives
+as an injected callable.
 """
 
 import ast
@@ -18,7 +20,13 @@ PACKAGE = Path(essay_writer.__file__).resolve().parent
 REPO = Path(__file__).resolve().parents[1]
 STATE = PACKAGE / "stage_state.py"
 TRACK = PACKAGE / "stage_track.py"
-LAYERS = (STATE, PACKAGE / "stage_landing.py", PACKAGE / "stage_replies.py")
+LAYERS = (
+    STATE,
+    PACKAGE / "stage_landing.py",
+    PACKAGE / "stage_replies.py",
+    PACKAGE / "stage_confirm.py",
+    PACKAGE / "stage_body.py",
+)
 ARCHITECTURE = REPO / "ARCHITECTURE.md"
 
 # Moved private names the orchestrator does not use itself, so their presence
@@ -83,6 +91,8 @@ def test_importing_the_state_layer_does_not_load_the_track():
         "import essay_writer.stage_state\n"
         "import essay_writer.stage_landing\n"
         "import essay_writer.stage_replies\n"
+        "import essay_writer.stage_confirm\n"
+        "import essay_writer.stage_body\n"
         "assert 'essay_writer.stage_track' not in sys.modules, "
         "sorted(name for name in sys.modules if name.startswith('essay_writer'))\n"
     )
@@ -118,6 +128,8 @@ def test_architecture_doc_describes_the_real_boundary():
     assert "does not re-export the moved names" in flat
     assert "do not import `stage_track`" in flat
     assert "injected `CardRun`" in flat
+    assert "`stage_confirm.py`" in text
+    assert "`stage_body.py`" in text
     assert "Re-exported by" not in text
     assert "_MINTING" not in text
     assert "re-exports all three layers" not in text
