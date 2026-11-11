@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -28,10 +30,23 @@ from essay_writer.student_voice import speak
 
 DRAFT = "draft"
 CONFIRM = "confirm"
+_WRITE_ORDER = threading.Lock()
+_LAST_WRITTEN_NS = 0
 
 
 def now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
+
+
+def _written_ns() -> int:
+    """Later save, even when the file clock does not move."""
+    global _LAST_WRITTEN_NS
+    with _WRITE_ORDER:
+        stamp = time.time_ns()
+        if stamp <= _LAST_WRITTEN_NS:
+            stamp = _LAST_WRITTEN_NS + 1
+        _LAST_WRITTEN_NS = stamp
+        return stamp
 
 
 def card_digest(payload: dict[str, Any], shown: dict[str, Any]) -> str:
@@ -86,7 +101,8 @@ def save_draft(
     fingerprint is student arguments and local file hashes. shown is the card
     the student saw, including look-up rows. shown is not part of the
     fingerprint. A stored card carries cardDigest so confirm can prove the
-    card was not edited after the draft.
+    card was not edited after the draft. written_ns orders two saves that
+    share a file clock. It is not a fingerprint field.
     """
     payload_digest = digest(payload)
     record = {
@@ -96,6 +112,7 @@ def save_draft(
         "payload": payload,
         "fingerprint": fingerprint,
         "created_at": now(),
+        "written_ns": _written_ns(),
     }
     if shown is not None:
         record["shown"] = shown
@@ -142,13 +159,17 @@ def latest_draft(
     root: Path | None = None,
     stage: str | None = None,
 ) -> dict[str, Any] | None:
-    """Newest draft for this tool. Stage saves pass stage so another step is not reused."""
+    """Newest draft for this tool. Stage saves pass stage so another step is not reused.
+
+    created_at is whole seconds, and the file clock can stay still across two
+    writes. written_ns is that tie break. Directory order is not a clock.
+    """
     home = root if root is not None else work_dir(essay_id)
     folder = home / ".drafts" / tool
     if not folder.is_dir():
         return None
     best: dict[str, Any] | None = None
-    best_key: tuple[str, float] | None = None
+    best_key: tuple[str, float, int] | None = None
     for path in folder.glob("*.json"):
         if not path.is_file() or path.name.endswith(".tmp"):
             continue
@@ -167,8 +188,11 @@ def latest_draft(
             modified = path.stat().st_mtime
         except OSError:
             modified = 0.0
+        order = record.get("written_ns")
+        if not isinstance(order, int):
+            order = 0
         # created_at is whole seconds. The newer file is the waiting card.
-        key = (created, modified)
+        key = (created, modified, order)
         if best_key is None or key >= best_key:
             best = record
             best_key = key

@@ -7,10 +7,11 @@ and any later writing type use that same handler.
 
 import inspect
 import json
+import os
 
 from helpers import TOPIC, card_digest_for, open_sequence, source, write_upload
 
-from essay_writer.confirm import load_draft
+from essay_writer.confirm import latest_draft, load_draft, save_draft
 from essay_writer.dig import TOOL as DIG_TOOL
 from essay_writer.dig import essay_dig
 from essay_writer.paths import work_dir
@@ -324,3 +325,54 @@ def test_ac_nt5_fingerprint_is_type_agnostic(workspace, monkeypatch):
         monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "off")
         _file_hash_refuses(workspace, module, seq)
         monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+
+
+def test_same_file_clock_keeps_the_later_draft(workspace, monkeypatch):
+    """Two saves in one file-clock tick. The later write is the waiting card.
+
+    Directory order here is the newer file first. A tied clock used to keep
+    whichever name came last.
+    """
+    seq = open_sequence("NOTEBOOK")
+    monkeypatch.setattr("essay_writer.confirm.now", lambda: "2026-11-11T16:42:55+00:00")
+    first_card = {"title": "first"}
+    second_card = {"title": "harbour"}
+    first = save_draft(
+        seq,
+        DIG_TOOL,
+        {"essay_id": seq, "query": "first lock"},
+        {"query": "first lock"},
+        shown=first_card,
+    )
+    second = save_draft(
+        seq,
+        DIG_TOOL,
+        {"essay_id": seq, "query": "harbour lock"},
+        {"query": "harbour lock"},
+        shown=second_card,
+    )
+    folder = work_dir(seq) / ".drafts" / DIG_TOOL
+    stamp = 1700000000
+    for path in folder.glob("*.json"):
+        os.utime(path, (stamp, stamp))
+    mtimes = {path.stat().st_mtime_ns for path in folder.glob("*.json")}
+    assert mtimes == {stamp * 1_000_000_000}
+    real_glob = type(folder).glob
+
+    def newer_first(self, pattern):
+        found = list(real_glob(self, pattern))
+        if pattern == "*.json" and self == folder:
+            found.sort(
+                key=lambda path: json.loads(path.read_text(encoding="utf-8"))["written_ns"],
+                reverse=True,
+            )
+        return iter(found)
+
+    monkeypatch.setattr(type(folder), "glob", newer_first)
+    latest = latest_draft(seq, DIG_TOOL)
+    assert latest is not None
+    assert latest["digest"] == second
+    assert latest["payload"]["query"] == "harbour lock"
+    assert latest["shown"] == second_card
+    assert latest["digest"] != first
+    assert card_digest_for(seq, DIG_TOOL) == latest["cardDigest"]
