@@ -749,34 +749,20 @@ and no on-disk format change. The allowlists do not change, so a revert
 does not restore a list. A reverted slice leaves `essay.stage` and the
 stage files as they were.
 
-## 10. Open questions
+## 10. Decisions from the independent reviewer
 
-These are for an independent reviewer. None of them starts a slice. Q4
-is out of this pass and is written here so it is not read as proposed
-work.
+Q1, Q2, and Q3 are closed. The independent reviewer approved the seams.
+None of these decisions starts an implementation slice. Q4 stays out of
+this pass and is not proposed work.
 
-**Q1.** `stage_note.py` holds two functions, and slice 1 holds one of
-them until slice 2. The reason for a separate module is the heading
-contract: `cite_fit` and the card checks read the look
-`render_tracking` writes, and that reader should not import the refusal
-bodies. Collapsing both functions back into `stage_state.py` keeps the
-hold seam and deletes `stage_note`. Confirm `stage_note`, or keep the
-renderer and `_note_look` in `stage_state.py`.
+**Q1.** Approved. `stage_note` stays a separate module.
 
-**Q2.** `CardRun` is proposed on `stage_hold.py`, next to the functions
-that call it, so the pointer module does not name the callback. Leaving
-`CardRun` on `stage_state.py` is also acyclic: `stage_hold` would import
-it from the leaf, and every stage module already imports that leaf.
-Confirm where `CardRun` lives.
+**Q2.** Approved. `CardRun` lives on `stage_hold.py`.
 
-**Q3.** Confirm the module names `stage_note` and `stage_hold` before
-slice 1. `stage_hold` also contains the stored return of
-`_commit_with_next_card`, because that return is the same function as
-the hold return. A different name has to be chosen before the glossary
-row exists. The dependency direction in section 3 does not depend on
-the spelling.
+**Q3.** Approved. The names `stage_note` and `stage_hold` are approved.
 
 **Q4.** Out of this pass. Further splits of `_run_stage`, and any split
 of `stage_landing.py` or `stage_replies.py`, are not proposed. A later
 design would have to say so on its own. This document's slices stop
-after the note module and the hold module.
+after the note module and the hold module. Q4 is not an approved
+implementation slice.
