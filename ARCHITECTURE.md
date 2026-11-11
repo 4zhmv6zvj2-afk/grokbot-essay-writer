@@ -145,3 +145,5 @@ string-keyed dict with a sentinel any more.
 - Tool contracts: `doors.py` and `docs/workflow.md`.
 - Vocabulary: `docs/GLOSSARY.md`.
 - How the public history came to be: `HISTORY.md`.
+- Proposed split of `stage_state.py` (design only; the layout above is the code
+  as it is): `docs/design-stage-state-split.md`.
