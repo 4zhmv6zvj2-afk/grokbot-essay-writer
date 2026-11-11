@@ -13,6 +13,7 @@ from helpers import open_sequence, picked, plant_gathered_source
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.doors import DOORS
+from essay_writer.prompt_content import ANTI_GLUE
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.grok_bot import STAGE9_OWN_WORDS, saved_next
@@ -20,7 +21,7 @@ from essay_writer.stage7 import questions_for
 from essay_writer.stage_llm import stage_settings, stage_title
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
-from essay_writer.writing_basics import ANTI_GLUE, basics_lines
+from essay_writer.writing_basics import basics_lines
 
 REPO = Path(__file__).resolve().parents[1]
 STAGES = ("5", "6", "7", "8")
@@ -117,10 +118,13 @@ def test_ac4_diary_keeps_its_voice_and_essay_report_are_not_forced_first_person(
     assert "does not turn it into a third-person essay" in stage_settings("8", "diary")["rules"]
 
 
-def test_ac5_academic_helpers_stages_5_to_8_match_the_bullet():
+def test_ac5_craft_source_is_the_only_inlined_copy():
     helpers = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    assert craft.count(ANTI_GLUE) == 1
     for stage in STAGES:
-        assert ANTI_GLUE in helpers
+        assert stage_settings(stage)["prompt_overlay"].count(ANTI_GLUE) == 1
+        assert ANTI_GLUE not in helpers
         for line in basics_lines(stage):
             assert line in helpers
     for name in OTHER_HELPERS:

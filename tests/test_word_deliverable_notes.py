@@ -1,9 +1,10 @@
 """Word deliverable notes."""
 
 from essay_writer.build_office import stage_launch
+from essay_writer.prompt_content import PRECEDENCE
 from essay_writer.server import INSTRUCTIONS
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage_llm import stage_settings
-from essay_writer.writing_basics import CHECKLIST_WALK
 
 REPO = __import__("pathlib").Path(__file__).resolve().parents[1]
 
@@ -16,11 +17,11 @@ def _rules(stage: str) -> str:
 def test_word_budget_and_mark_scheme_win_on_overlays():
     stage_1 = stage_settings("1")["prompt_overlay"]
     assert "Do not invent a word budget" in stage_1
-    assert "mark-scheme" in stage_1.casefold()
+    assert PRECEDENCE in stage_1
     stage_3 = stage_settings("3")["prompt_overlay"]
     assert "Do not invent a section list or word budget" in stage_3
     stage_8 = stage_settings("8")["prompt_overlay"]
-    assert "Listed mark-scheme sections" in stage_8
+    assert PRECEDENCE in stage_8
     assert "Do not invent a word budget" in stage_8
     assert "Inditex" not in stage_8
     assert "MOD1004AA" not in _rules("8")

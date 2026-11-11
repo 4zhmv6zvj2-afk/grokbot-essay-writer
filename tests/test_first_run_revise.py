@@ -9,7 +9,6 @@ from essay_writer.first_run import (
     CURSOR_INSTALL_NEEDS_CONSENT,
     CURSOR_INSTALL_NEEDS_HASH,
     CURSOR_INSTALL_SHA256_ENV,
-    _parse,
     enable_mcp_server,
     ensure_cursor_agent,
     first_run_prompt,
@@ -17,6 +16,7 @@ from essay_writer.first_run import (
     package_root,
     write_bot_share,
 )
+from essay_writer.first_run_cli import _parse
 from essay_writer.setup import (
     CURSOR_SETUP_PROMPT,
     SHELL_CURSOR,
@@ -92,7 +92,7 @@ def test_ac2_friend_prompt_stays_short_and_names_the_chat():
 
 def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
     """AC3. Consent gates a fake installer. Version is required before enable. Never grok."""
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: False)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: False)
     monkeypatch.delenv("ESSAY_WRITER_ALLOW_CURSOR_INSTALL", raising=False)
     calls: list[str] = []
     state = {"binary": None, "version": None}
@@ -112,7 +112,7 @@ def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
     monkeypatch.setattr("essay_writer.setup.cursor_cli_binary", binary)
     monkeypatch.setattr("essay_writer.setup.cursor_cli_version", version)
     monkeypatch.setattr(
-        "essay_writer.first_run.subprocess.run",
+        "essay_writer.first_run_install.subprocess.run",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("grok or curl must not run here")),
     )
 
@@ -136,7 +136,7 @@ def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
 
     state["binary"] = None
     state["version"] = None
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: True)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: True)
     mac = ensure_cursor_agent(installer=fake, allow_install=True)
     assert calls == []
     assert mac["ran_install"] is False
@@ -166,7 +166,7 @@ def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
 
 def test_ac3_install_uploaded_copy_uses_the_same_installer(tmp_path, monkeypatch):
     """The first-run install path calls the installer only when agent is absent and consent is given."""
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: False)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: False)
     calls: list[int] = []
     state = {"binary": None}
 
@@ -238,7 +238,7 @@ def test_ac4_enable_uses_home_agent_off_path(monkeypatch, tmp_path):
 
         return Completed()
 
-    monkeypatch.setattr("essay_writer.first_run.subprocess.run", fake_run)
+    monkeypatch.setattr("essay_writer.first_run_host.subprocess.run", fake_run)
 
     writer = enable_mcp_server("essay-writer")
     reviewer = enable_mcp_server("essay-reviewer")

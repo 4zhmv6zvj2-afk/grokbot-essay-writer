@@ -15,7 +15,8 @@ from essay_writer.specialists.grok_bot import (
     missing_confirm_next,
     saved_next,
 )
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 LOOK = "The task is a short report."

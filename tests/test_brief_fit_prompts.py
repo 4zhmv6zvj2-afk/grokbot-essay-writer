@@ -10,9 +10,10 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
+from essay_writer.prompt_content import MARK_TABLE_LEAN
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import student_surface_hits
-from essay_writer.writing_basics import MARK_TABLE_LEAN, basics_lines
+from essay_writer.writing_basics import basics_lines
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
@@ -33,11 +34,13 @@ def test_ac1_writing_stages_carry_the_mark_table_bullet():
         assert MARK_TABLE_LEAN not in stage_settings(stage)["rules"]
 
 
-def test_ac2_the_helper_note_and_both_launchers_read_the_same_bullet():
-    """AC2. One copy in the helper note, read by both launchers."""
+def test_ac2_the_craft_source_and_both_launchers_read_the_same_bullet():
+    """AC2. One copy in the craft source, read by both launchers."""
     helpers = HELPERS.read_text(encoding="utf-8")
-    assert helpers.count(MARK_TABLE_LEAN) == 2
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    assert craft.count(MARK_TABLE_LEAN) == 1
     for stage in WRITING:
+        assert stage_settings(stage)["prompt_overlay"].count(MARK_TABLE_LEAN) == 1
         for line in basics_lines(stage):
             assert line in helpers
         shared = stage_settings(stage)

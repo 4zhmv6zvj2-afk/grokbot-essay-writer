@@ -20,6 +20,7 @@ from essay_writer.paths import (
     sequence_write_error,
     target_error,
 )
+from essay_writer.textutil import sentences
 
 
 def _gate(number: int, name: str, passed: bool, reason: str) -> dict[str, Any]:
@@ -160,16 +161,6 @@ def _exclude_in_text_citations(essay_id: str, rules: dict[str, Any]) -> bool:
     return False
 
 
-def _sentences(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    found: list[str] = []
-    for part in parts:
-        sentence = part.strip()
-        if len(sentence.split()) >= 8:
-            found.append(sentence)
-    return found
-
-
 def _quote_spans(body: str) -> list[tuple[int, int]]:
     return [
         (match.start(1), match.end(1))
@@ -188,17 +179,18 @@ def _wrapped_in_quotes(body: str, start: int, end: int) -> bool:
 
 
 def unquoted_exact(body: str, gathered: list[str]) -> list[str]:
-    """Sentences of eight or more words copied from a gathered file and not quoted.
+    """Sentences copied from a gathered file and not quoted, short ones included.
 
     A sentence that is also copied again outside quotation marks still counts.
     A sentence that is itself the quotation, even when it contains a quote,
-    does not.
+    does not. The old eight-word floor silently hid short copied lines; the
+    shared splitter keeps them and this gate sees what the checks see.
     """
     spans = _quote_spans(body)
     hits: list[str] = []
     seen: set[str] = set()
     for text in gathered:
-        for sentence in _sentences(text):
+        for sentence in sentences(text):
             if sentence in seen:
                 continue
             cursor = 0

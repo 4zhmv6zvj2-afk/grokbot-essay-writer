@@ -19,12 +19,9 @@ from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.research import essay_research_summary
-from essay_writer.stage_track import (
-    _render_stage10_before_close,
-    _save_confirm,
-    essay_stage,
-    load_pointer,
-)
+from essay_writer.stage_replies import _save_confirm
+from essay_writer.stage_state import _render_stage10_before_close, load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 
 MODULE = "RPT5001AA"

@@ -9,7 +9,8 @@ from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.server import HANDLERS
 from essay_writer.specialists.grok_bot import basics_pass_lines, cached_approved_look
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import _opening_look, essay_stage
+from essay_writer.stage_state import _opening_look
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state
 
 REPO = Path(__file__).resolve().parents[1]

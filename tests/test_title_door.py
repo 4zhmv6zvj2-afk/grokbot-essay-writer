@@ -20,14 +20,15 @@ from essay_writer.confirm import save_draft
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
 from essay_writer.diary import title_page_spec
 from essay_writer.doors import DOORS
-from essay_writer.late_chain import write_stage10
+from essay_writer.late_chain import _write_stage10_sequence, write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office
 from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH, front_office_call
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import TOOL, _save_confirm, load_pointer
+from essay_writer.stage_replies import _save_confirm
+from essay_writer.stage_state import TOOL, load_pointer
 from essay_writer.state import load_state, save_state
 from essay_writer.word import write_docx
 
@@ -242,7 +243,7 @@ def test_build_covered_cursor_and_grok_build_share_the_kick_and_the_cover(monkey
     """Cursor and Grok Build read one stage door, one kick door, and one write_docx."""
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     assert cursor_shell()["handlers"]["essay.sequence.new"] is front_office()["handlers"]["essay.sequence.new"]
-    assert "write_docx(" in inspect.getsource(write_stage10)
+    assert "write_docx(" in inspect.getsource(_write_stage10_sequence)
     assert "return _commit_with_next_card(" in inspect.getsource(_save_confirm)
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
     assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)

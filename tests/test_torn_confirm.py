@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from helpers import ESSAY, open_sequence
 
-from essay_writer import stage_state, stage_track
+from essay_writer import stage_state
 from essay_writer.canon import digest
 from essay_writer.confirm import load_draft_by_digest
 from essay_writer.paths import sequence_dir, work_dir
@@ -24,7 +24,8 @@ from essay_writer.projects import (
     save_sequence_state,
     sequence_id,
 )
-from essay_writer.stage_track import STAGE_COMMIT, TOOL, essay_stage, load_pointer
+from essay_writer.stage_state import STAGE_COMMIT, TOOL, load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 LOOK = "Look A stays."
@@ -321,7 +322,7 @@ def test_ac3_open_clone_cannot_publish_a_torn_pair(workspace, monkeypatch):
     entered_lock = threading.Event()
     acquired_lock = threading.Event()
     real_atomic = stage_state._atomic
-    real_lock = stage_track.stage_lock
+    real_lock = stage_state.stage_lock
 
     def pausing(path, text):
         real_atomic(path, text)
@@ -337,7 +338,7 @@ def test_ac3_open_clone_cannot_publish_a_torn_pair(workspace, monkeypatch):
             yield
 
     monkeypatch.setattr(stage_state, "_atomic", pausing)
-    monkeypatch.setattr(stage_track, "stage_lock", watching)
+    monkeypatch.setattr(stage_state, "stage_lock", watching)
     box: dict = {}
 
     def writer():

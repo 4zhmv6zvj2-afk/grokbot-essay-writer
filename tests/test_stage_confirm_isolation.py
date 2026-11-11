@@ -17,7 +17,8 @@ from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH
 from essay_writer.spine import AUTO_START, advances_without_confirm
 from essay_writer.stage_llm import stage_settings, stage_tool_description
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 REPO = Path(__file__).resolve().parents[1]

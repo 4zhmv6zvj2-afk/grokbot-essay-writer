@@ -1074,7 +1074,8 @@ def _file_named(
         body["wrote"] = True
         body["stored"] = True
         return body
-    assert child is not None
+    if child is None:
+        raise RuntimeError("intake reached placement without a classified child")
     placed = _place_word(
         module,
         child,

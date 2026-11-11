@@ -20,27 +20,20 @@ from essay_writer.shells import (
 from essay_writer.specialists import ROLES
 from essay_writer.specialists.eqr import REVIEW_PROMPT, eqr_verdict
 from essay_writer.specialists.grok_bot import (
-    CHECKLIST_WALK,
-    DOOR_WALK,
     LANGUAGE,
-    MCP_DOWN_SPEECH,
 )
 from essay_writer.specialists.grok_bot import front_office_call as grok_speak
 from essay_writer.specialists.researcher import essay_dig as researcher_dig
 from essay_writer.specialists.researcher import ship_4a as researcher_ship
 from essay_writer.specialists.writer import FIRST_DRAFT_NOTE, essay_pack_render_word
-from essay_writer.spine import essay_stage
 from essay_writer.stage_llm import first_draft_note
 from essay_writer.stage_track import essay_stage as stage_track_stage
 from essay_writer.word import essay_pack_render_word as word_render
-from essay_writer.writing_basics import CHECKLIST_WALK as overlay_walk
-from essay_writer.writing_basics import DOOR_WALK as overlay_door
-from essay_writer.writing_basics import MCP_DOWN_SPEECH as overlay_down
 
 
 def test_four_roles_and_the_spine():
     assert ROLES == ("grok_bot", "writer", "researcher", "eqr")
-    assert essay_stage is stage_track_stage is HANDLERS["essay.stage"]
+    assert stage_track_stage is HANDLERS["essay.stage"]
 
 
 def test_handlers_are_the_specialist_entries_and_the_original_functions():
@@ -61,9 +54,6 @@ def test_handlers_are_the_specialist_entries_and_the_original_functions():
 
 
 def test_personality_has_one_source():
-    assert overlay_walk is CHECKLIST_WALK
-    assert overlay_door is DOOR_WALK
-    assert overlay_down is MCP_DOWN_SPEECH
     assert first_draft_note() == FIRST_DRAFT_NOTE
     assert review_prompt is REVIEW_PROMPT
     share = bot_share_document({"essay-writer": {"command": "essay-writer", "args": []}})

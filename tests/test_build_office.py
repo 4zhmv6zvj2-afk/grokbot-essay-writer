@@ -15,9 +15,10 @@ from essay_writer.build_office import (
 from essay_writer.first_run import attach_build_mcp, install_uploaded_copy, package_root
 from essay_writer.review import REVIEW_PROMPT
 from essay_writer.server import main as server_main
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage_llm import STAGE_KEYS
 from essay_writer.stage_llm import stage_settings as shared_settings
-from essay_writer.writing_basics import CHECKLIST_WALK, CHECKLISTS
+from essay_writer.writing_basics import CHECKLISTS
 
 
 def _rules(command: list[str]) -> str:
@@ -213,7 +214,7 @@ def test_install_uses_the_cloud_folder_and_names_the_install_residual(tmp_path, 
 def test_build_handoff_copies_word_and_zip_and_names_packing(tmp_path, monkeypatch):
     monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)
     # No mounted Mac in a test: the discovery collaborator is faked out.
-    monkeypatch.setattr("essay_writer.first_run.mac_deliverables_dir", lambda **_kwargs: None)
+    monkeypatch.setattr("essay_writer.first_run_mac.mac_deliverables_dir", lambda **_kwargs: None)
     mac = tmp_path / "mac"
     folder = tmp_path / "output"
     folder.mkdir()

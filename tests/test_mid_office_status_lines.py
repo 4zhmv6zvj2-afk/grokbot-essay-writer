@@ -49,7 +49,7 @@ from essay_writer.server import INSTRUCTIONS
 from essay_writer.setup import SHELL_GROK_BUILD
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.writer import FIRST_DRAFT_NOTE
-from essay_writer.stage_track import load_pointer
+from essay_writer.stage_state import load_pointer
 from essay_writer.state import load_state, save_state
 
 QUESTION = "How should Inditex manage its supply chain?"

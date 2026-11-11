@@ -22,6 +22,7 @@ from essay_writer.invent import gather_source
 from essay_writer.originals import essay_originals
 from essay_writer.research import essay_research_summary
 from essay_writer.review import essay_review
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage7 import claim_delta, note_edits, note_questions
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_track import essay_stage
@@ -29,7 +30,7 @@ from essay_writer.student_voice import say, student_surface_hits
 from essay_writer.user_place import CHAT_PLACE, NAMED_PLACE, chat_place
 from essay_writer.validate import essay_pack_validate
 from essay_writer.word import essay_pack_render_word
-from essay_writer.writing_basics import CHECKLIST_WALK, CHECKLISTS
+from essay_writer.writing_basics import CHECKLISTS
 
 REPO = Path(__file__).resolve().parents[1]
 STAGES = ("1", "2", "3", "4a", "4b", "5", "6", "7", "8", "9", "10")
@@ -328,6 +329,14 @@ def test_split_chain_shows_blocked_review_then_final_word(workspace, monkeypatch
 
 def test_word_save_rewrites_sequence_draft_note(workspace):
     write_upload(workspace)
+    # The shared splitter now keeps short bibliography lines in the upload.
+    # The exact bibliography line would match its Word reference-list copy and
+    # count as an unquoted copy, so this fixture gathers the same author,
+    # title, and quote in prose instead.
+    write_upload(
+        workspace,
+        text="Smith, J. (2020) 'Chokepoints and crude'. The Strait handles a large share of flows.\n",
+    )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
     essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))

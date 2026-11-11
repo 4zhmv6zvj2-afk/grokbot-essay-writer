@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 
 from essay_writer.first_run import (
-    _parse,
     attach_custom_mcp,
     copy_deliverable_to_mac,
     expose_writer_on_path,
@@ -26,6 +25,7 @@ from essay_writer.first_run import (
 from essay_writer.first_run import (
     main as first_run_main,
 )
+from essay_writer.first_run_cli import _parse
 from essay_writer.server import first_run_request
 from essay_writer.server import main as server_main
 
@@ -437,7 +437,7 @@ def test_attach_merges_essay_writer_and_optional_reviewer(tmp_path):
 def test_copy_to_mac_takes_word_and_zip_only(tmp_path, monkeypatch):
     monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)
     # The unmounted branch is explicit: a test never discovers the real home.
-    monkeypatch.setattr("essay_writer.first_run.mac_deliverables_dir", lambda **_kwargs: None)
+    monkeypatch.setattr("essay_writer.first_run_mac.mac_deliverables_dir", lambda **_kwargs: None)
     mac = tmp_path / "mac"
     folder = tmp_path / "output"
     folder.mkdir()
@@ -493,7 +493,7 @@ def test_server_routes_install_and_copy(monkeypatch, capsys, tmp_path):
         seen["reviewer"] = reviewer
         return {"ok": True, "installed": True}
 
-    monkeypatch.setattr("essay_writer.first_run.install_uploaded_copy", fake)
+    monkeypatch.setattr("essay_writer.first_run_install.install_uploaded_copy", fake)
     with pytest.raises(SystemExit) as caught:
         server_main(["--install-upload", str(tmp_path / "copy.zip"), "--reviewer"])
     assert caught.value.code == 0
@@ -516,7 +516,7 @@ def test_unknown_flag_does_not_install(monkeypatch):
     def fake(*args, **kwargs):
         raise AssertionError("install should not run")
 
-    monkeypatch.setattr("essay_writer.first_run.install_uploaded_copy", fake)
+    monkeypatch.setattr("essay_writer.first_run_install.install_uploaded_copy", fake)
     with pytest.raises(SystemExit) as caught:
         server_main(["--not-a-flag"])
     assert caught.value.code != 0
@@ -611,7 +611,7 @@ def test_expose_writer_on_path_handles_the_already_on_path_and_missing_script_ca
     )
     assert already == "essay-writer"
 
-    monkeypatch.setattr("essay_writer.first_run.writer_script", lambda: None)
+    monkeypatch.setattr("essay_writer.first_run_host.writer_script", lambda: None)
     search = tmp_path / "bin"
     search.mkdir()
     assert expose_writer_on_path(search_dirs=[str(search)], which=lambda _name: None) is None
@@ -645,14 +645,14 @@ def test_friend_mac_home_takes_an_explicit_mounted_discovery_policy(tmp_path, mo
     monkeypatch.delenv("ESSAY_WRITER_MAC_HOME", raising=False)
     mounted = tmp_path / "Users" / "friend"
     mounted.mkdir(parents=True)
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: False)
-    monkeypatch.setattr("essay_writer.first_run._one_mounted_mac_home", lambda: mounted)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: False)
+    monkeypatch.setattr("essay_writer.first_run_mac._one_mounted_mac_home", lambda: mounted)
 
     assert friend_mac_home() == mounted
     assert friend_mac_home(discover_mounted=False) is None
 
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: True)
-    monkeypatch.setattr("essay_writer.first_run._process_home", lambda: tmp_path)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: True)
+    monkeypatch.setattr("essay_writer.first_run_mac._process_home", lambda: tmp_path)
     assert friend_mac_home() == tmp_path
 
 
@@ -663,8 +663,8 @@ def test_mac_deliverables_dir_takes_an_explicit_remembered_read_policy(tmp_path,
     remembered.mkdir()
     canonical = tmp_path / "canonical"
     canonical.mkdir()
-    monkeypatch.setattr("essay_writer.first_run.read_mac_handoff_dir", lambda: remembered)
-    monkeypatch.setattr("essay_writer.first_run.visible_canonical_mac_handoff_dir", lambda: canonical)
+    monkeypatch.setattr("essay_writer.first_run_mac.read_mac_handoff_dir", lambda: remembered)
+    monkeypatch.setattr("essay_writer.first_run_mac.visible_canonical_mac_handoff_dir", lambda: canonical)
 
     assert mac_deliverables_dir() == remembered
     assert mac_deliverables_dir(read_remembered=False) == canonical
@@ -683,7 +683,7 @@ def test_quarantine_clearing_is_scoped_to_app_generated_deliverables(tmp_path, m
         return {"ok": True, "cleared": [], "absent": list(quarantine.QUARANTINE_ATTRS), "noop": True}
 
     monkeypatch.setattr(quarantine, "clear_mac_quarantine", fake_clear)
-    monkeypatch.setattr("essay_writer.first_run.remember_mac_deliverable", lambda *_a, **_k: None)
+    monkeypatch.setattr("essay_writer.first_run_mac.remember_mac_deliverable", lambda *_a, **_k: None)
     mac = tmp_path / "mac"
 
     output = tmp_path / "Essay-writer" / "MOD1011AA" / "sequences" / "1" / "output"

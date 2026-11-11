@@ -39,5 +39,6 @@ def test_install_prompts_match_snapshot():
 
 def test_seat_reading_matches_snapshot():
     data = _snapshot()["seats"]
-    assert seat_reading("research") == data["research"]
     assert seat_reading("write") == data["write"]
+    assert "research" not in data
+    assert seat_reading("research") == ""

@@ -54,8 +54,36 @@ _LEGACY_SKIP = frozenset(
 )
 
 
+def _product_checkout(folder: Path) -> bool:
+    """True when folder is an essay-writer checkout: pyproject and the package."""
+    try:
+        return (folder / "pyproject.toml").is_file() and (folder / "src" / "essay_writer").is_dir()
+    except OSError:
+        return False
+
+
+def _essay_writer_named(folder: Path) -> bool:
+    """True when a path part names the product folder, such as Essay-writer."""
+    for part in folder.parts:
+        folded = part.casefold().replace("_", "-").replace(" ", "-")
+        if "essay-writer" in folded:
+            return True
+    return False
+
+
+def _legacy_app_is_product(app: Path) -> bool:
+    """True when the record names a real product folder, not a writer's folder.
+
+    A genuine old install names an Essay-writer app path, or sits beside a
+    product checkout (pyproject.toml and src/essay_writer in the app folder or
+    its parent). Anything else is not adopted, so a stray home record cannot
+    redirect the workspace root or copy its secrets home.
+    """
+    return _essay_writer_named(app) or _product_checkout(app) or _product_checkout(app.parent)
+
+
 def _legacy_record(path: Path) -> bool:
-    """True when setup.json is the old beside-app record for the folder it names."""
+    """True when setup.json is the old beside-app record for a product app folder."""
     if path.name != "setup.json" or not path.is_file():
         return False
     try:
@@ -69,15 +97,16 @@ def _legacy_record(path: Path) -> bool:
         return False
     try:
         app = Path(folder).expanduser().resolve()
-        return path.resolve().parent == app.parent
+        return path.resolve().parent == app.parent and _legacy_app_is_product(app)
     except OSError:
         return False
 
 
 def _legacy_beside_setup() -> Path | None:
-    """A setup.json written beside the app before the home record existed.
+    """A setup.json written beside a product app before the home record existed.
 
-    The search stays two folders under the home directory. The newest match wins.
+    The search stays two folders under the home directory, and only a record
+    that names a real product folder is adopted. The newest match wins.
     """
     home = Path.home()
     if not home.is_dir():
@@ -111,7 +140,7 @@ def _legacy_beside_setup() -> Path | None:
 
 
 def _adopt_legacy_setup(legacy: Path, dest: Path) -> None:
-    """Copy a beside-app record into the home record later tools read."""
+    """Copy a product beside-app record into the home record later tools read."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(legacy.read_text(encoding="utf-8"), encoding="utf-8")
     secret = legacy.parent / "setup.secrets.json"

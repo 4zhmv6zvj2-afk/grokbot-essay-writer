@@ -35,7 +35,7 @@ from essay_writer.projects import (
     strip_duplicate_card_ids,
 )
 from essay_writer.specialists.researcher import consensus_status
-from essay_writer.stage_track import load_pointer
+from essay_writer.stage_state import load_pointer
 from essay_writer.state import load_state
 
 

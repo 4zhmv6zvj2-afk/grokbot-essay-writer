@@ -31,8 +31,8 @@ def _bot_and_mac(tmp_path, monkeypatch):
     mac.mkdir(parents=True)
     cloud = tmp_path / "workspace"
     cloud.mkdir()
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: False)
-    monkeypatch.setattr("essay_writer.first_run._process_home", lambda: linux)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: False)
+    monkeypatch.setattr("essay_writer.first_run_mac._process_home", lambda: linux)
     monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
     monkeypatch.setenv("ESSAY_WRITER_MAC_HOME", str(mac))
     monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)
@@ -63,7 +63,7 @@ def test_ac2_unmounted_leaves_mac_file_and_returns_mac_not_mounted(tmp_path, mon
     monkeypatch.delenv("ESSAY_WRITER_MAC_HOME", raising=False)
     # The mounted-home discovery collaborator is faked so this test never sees
     # the real /Users or the real home.
-    monkeypatch.setattr("essay_writer.first_run._one_mounted_mac_home", lambda: None)
+    monkeypatch.setattr("essay_writer.first_run_mac._one_mounted_mac_home", lambda: None)
     source = tmp_path / "essay.docx"
     source.write_bytes(b"keep-me")
     missing = copy_deliverable_to_mac(source)
@@ -155,17 +155,17 @@ def test_ac7_attach_mcp_upgrade_path_self_checks_and_fo_card(tmp_path, monkeypat
     repo_marker_existed = (repo_root / UPGRADE_REREAD_MARKER).is_file()
     marker = tmp_path / UPGRADE_REREAD_MARKER
     assert not marker.exists()
-    monkeypatch.setattr("essay_writer.first_run.package_root", lambda: tmp_path)
+    monkeypatch.setattr("essay_writer.first_run_common.package_root", lambda: tmp_path)
     monkeypatch.setattr(
-        "essay_writer.first_run.ensure_cursor_agent",
+        "essay_writer.first_run_install.ensure_cursor_agent",
         lambda **kwargs: {"ok": True, "installed": False},
     )
     monkeypatch.setattr(
-        "essay_writer.first_run.attach_custom_mcp",
+        "essay_writer.first_run_host.attach_custom_mcp",
         lambda root, **kwargs: {"ok": True, "servers": ["essay-writer"], "reviewer": kwargs.get("reviewer")},
     )
     monkeypatch.setattr(
-        "essay_writer.first_run.attach_build_mcp",
+        "essay_writer.first_run_host.attach_build_mcp",
         lambda *args, **kwargs: {"ok": True, "servers": ["essay-writer"]},
     )
     code = main(["--attach-mcp", "--no-reviewer"])

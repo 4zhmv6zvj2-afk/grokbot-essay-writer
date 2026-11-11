@@ -20,14 +20,14 @@ from essay_writer.brief_contract import remember_registration
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.debug_log import LOG_FILENAME, debug_log_path
-from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.projects import essay_sequence_new
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import _commit_with_next_card, essay_stage, load_pointer
+from essay_writer.stage_state import _commit_with_next_card, load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.word import write_docx
 
@@ -321,8 +321,24 @@ def test_build_covered_both_shells_share_the_write_and_the_log(monkeypatch):
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     assert cursor_shell()["handlers"]["essay.sequence.new"] is front_office()["handlers"]["essay.sequence.new"]
     assert cursor_shell()["handlers"]["essay.health"] is front_office()["handlers"]["essay.health"]
-    assert "write_docx(" in inspect.getsource(write_stage10)
-    assert "copy2" not in inspect.getsource(write_stage10)
+    from essay_writer.late_chain import (
+        _deliver_stage10,
+        _stage10_gate,
+        _stage10_manifest,
+        _write_stage10_sequence,
+    )
+
+    stage10_source = "".join(
+        inspect.getsource(fn)
+        for fn in (
+            _stage10_manifest,
+            _stage10_gate,
+            _write_stage10_sequence,
+            _deliver_stage10,
+        )
+    )
+    assert "write_docx(" in stage10_source
+    assert "copy2" not in stage10_source
     commit = inspect.getsource(_commit_with_next_card)
     assert commit.index("_render_stage10_before_close") < commit.index("_commit_pointer")
     assert "note_call" in inspect.getsource(front_office_call)

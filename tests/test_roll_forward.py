@@ -30,7 +30,8 @@ from essay_writer.projects import (
 )
 from essay_writer.shells import cursor_shell, front_office
 from essay_writer.specialists.eqr import engagement_misses
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 MODULE = "MOD2002AA"
@@ -480,7 +481,8 @@ def test_ac9_build_covered_cursor_and_grok_build_share_roll_forward():
     assert cursor_shell()["handlers"]["essay.sequence.new"] is front_office()["handlers"]["essay.sequence.new"]
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     from essay_writer.projects import clone_sequence as clone
-    from essay_writer.stage_track import _attach_mid_run, _draft_reply
+    from essay_writer.stage_landing import _attach_mid_run
+    from essay_writer.stage_replies import _draft_reply
     from essay_writer.stage_track import essay_stage as stage
 
     assert "shape_cloned_child" in inspect.getsource(clone)

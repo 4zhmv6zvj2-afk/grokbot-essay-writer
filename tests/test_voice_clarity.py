@@ -10,15 +10,11 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
+from essay_writer.prompt_content import PLAIN_WORDS, STUDENT_VOICE, TEMPLATE_OPENERS
 from essay_writer.specialists.writer import _rewrite_supported
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import for_word, say, strip_word_labels, student_surface_hits
-from essay_writer.writing_basics import (
-    PLAIN_WORDS,
-    STUDENT_VOICE,
-    TEMPLATE_OPENERS,
-    basics_lines,
-)
+from essay_writer.writing_basics import basics_lines
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
@@ -51,11 +47,14 @@ def test_ac1_plain_words_bullet_on_stages_5_to_8_and_the_diary():
         assert PLAIN_WORDS not in stage_settings(stage)["rules"]
 
 
-def test_ac2_helpers_and_launchers_carry_the_same_bullet():
-    """AC2. The helper note, Cursor, and Grok Build read one bullet, not a second copy."""
+def test_ac2_craft_source_and_launchers_carry_the_same_bullet():
+    """AC2. The craft source, Cursor, and Grok Build read one bullet, not a second copy."""
     helpers = HELPERS.read_text(encoding="utf-8")
-    assert helpers.count(PLAIN_WORDS) == 4
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    assert craft.count(PLAIN_WORDS) == 1
+    assert PLAIN_WORDS not in helpers
     for stage in STAGES:
+        assert stage_settings(stage)["prompt_overlay"].count(PLAIN_WORDS) == 1
         for line in basics_lines(stage):
             assert line in helpers
     for stage in STAGES:
@@ -94,8 +93,8 @@ def test_ac3_bullet_names_the_three_classes_and_stays_prompt_only():
 
 def test_ac4_no_assistant_voice_bullet_on_stages_5_to_8_and_the_diary():
     """AC4. Every stage 5–8 genre tells the writer to speak as the student, not a tool."""
-    helpers = HELPERS.read_text(encoding="utf-8")
-    assert helpers.count(STUDENT_VOICE) == 4
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    assert craft.count(STUDENT_VOICE) == 1
     for stage in STAGES:
         for genre in GENRES:
             item = stage_settings(stage, genre)
@@ -157,8 +156,8 @@ def test_ac6_word_band_stretch_adds_no_padding_and_no_stock_opening():
 
 def test_ac7_template_openers_are_named_and_repeating_a_key_term_stays_allowed():
     """AC7. One paragraph opener, not a repeated one. Repeating a key term is not the rule."""
-    helpers = HELPERS.read_text(encoding="utf-8")
-    assert helpers.count(TEMPLATE_OPENERS) == 4
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    assert craft.count(TEMPLATE_OPENERS) == 1
     for stage in STAGES:
         for genre in GENRES:
             item = stage_settings(stage, genre)
@@ -175,4 +174,4 @@ def test_ac7_template_openers_are_named_and_repeating_a_key_term_stays_allowed()
         assert phrase in TEMPLATE_OPENERS
     assert student_surface_hits(TEMPLATE_OPENERS) == []
     accepted = "Tie sentences by repeating the key words"
-    assert accepted in helpers
+    assert accepted in HELPERS.read_text(encoding="utf-8")

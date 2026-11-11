@@ -12,6 +12,15 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
+from essay_writer.prompt_content import (
+    ANTI_GLUE,
+    CRAFT_ANCHOR,
+    CRAFT_COMMITMENT,
+    CRAFT_REFUSAL,
+    CRAFT_REVISE,
+    CRAFT_SOURCES,
+    VOICE_LIMIT,
+)
 from essay_writer.specialists.eqr import (
     CLAIM_CHECKS,
     NORTH_STAR,
@@ -21,15 +30,6 @@ from essay_writer.specialists.eqr import (
 )
 from essay_writer.stage7 import questions_for
 from essay_writer.stage_llm import stage_settings
-from essay_writer.writing_basics import (
-    ANTI_GLUE,
-    CRAFT_ANCHOR,
-    CRAFT_COMMITMENT,
-    CRAFT_REFUSAL,
-    CRAFT_REVISE,
-    CRAFT_SOURCES,
-    VOICE_LIMIT,
-)
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
@@ -72,13 +72,6 @@ def _rules(command: list[str]) -> str:
     return command[command.index("--rules") + 1]
 
 
-def _stage5_helpers() -> str:
-    text = HELPERS.read_text(encoding="utf-8")
-    start = text.index("### 5. Write your first draft")
-    end = text.index("### 6. Re-read and make changes")
-    return text[start:end]
-
-
 def _clear_findings(extra: str = "") -> str:
     lines = [
         NORTH_STAR,
@@ -94,18 +87,17 @@ def _clear_findings(extra: str = "") -> str:
 
 
 def test_ac1_stage5_carries_the_eight_craft_rules():
-    """AC1. Stage 5 and the academic helpers carry the eight rules. No planted-error instruction."""
+    """AC1. Stage 5 renders the eight rules once from craft/voice.md. No planted-error instruction."""
     rules = stage_settings("5")["rules"]
     overlay = stage_settings("5")["prompt_overlay"]
-    helpers = _stage5_helpers()
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
     for phrase in EIGHT:
         assert phrase in rules
         assert phrase in overlay
-        assert phrase in helpers
+        assert phrase in craft
     assert "Do not open with a general sentence built only from the topic nouns." in rules
     assert "Do not close with an automatic In conclusion that only restates the topic." in rules
     assert OLD_CLOSER not in rules
-    assert OLD_CLOSER not in helpers
     assert OLD_CLOSER not in (REPO / "docs" / "essay-writing-helpers.md").read_text(encoding="utf-8")
     folded = rules.casefold()
     for banned in PLANTED:

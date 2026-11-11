@@ -4,7 +4,10 @@ These writers turn a built stage context into the tool reply: the quiet no-op,
 the draft card, and the held save. The state layer lives in
 essay_writer/stage_state.py and the landing helpers in
 essay_writer/stage_landing.py. The orchestrator in essay_writer.stage_track
-keeps the public entry points and re-exports every name here.
+imports this module and keeps the public entry points.
+
+This module never imports essay_writer.stage_track. The card runner the state
+layer needs is passed down from the orchestrator.
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ from essay_writer.stage_llm import next_stage, stage_title
 from essay_writer.stage_state import (
     _INHERITED_KEEP,
     TOOL,
+    CardRun,
     StageResult,
     _cache_approved_look,
     _commit_pointer,
@@ -63,7 +67,7 @@ def _noop_result(
     return dict(body)
 
 
-def _draft_reply(context: StageContext) -> dict[str, Any]:
+def _draft_reply(context: StageContext, *, card_run: CardRun | None = None) -> dict[str, Any]:
     from essay_writer.spine import stage_confirm_card
 
     essay_id = context.essay_id
@@ -125,7 +129,7 @@ def _draft_reply(context: StageContext) -> dict[str, Any]:
                 note_text=note_text,
             )
             if stored is None:
-                return _pointer_lost(essay_id, stage, genre)
+                return _pointer_lost(essay_id, stage, genre, card_run=card_run)
             pointer = stored
         body["wrote"] = not minting
         if not minting:
@@ -157,6 +161,7 @@ def _draft_reply(context: StageContext) -> dict[str, Any]:
                 digest=body["digest"],
                 master=master,
                 named_folder=namedFolder,
+                card_run=card_run,
             )
         from essay_writer.specialists.grok_bot import (
             card_next,
@@ -197,7 +202,12 @@ def _draft_reply(context: StageContext) -> dict[str, Any]:
     raise AssertionError("draft path returned nothing")
 
 
-def _save_confirm(context: StageContext, cardDigest: str | None) -> dict[str, Any]:
+def _save_confirm(
+    context: StageContext,
+    cardDigest: str | None,
+    *,
+    card_run: CardRun,
+) -> dict[str, Any]:
     essay_id = context.essay_id
     stage = context.stage
     genre = context.genre
@@ -328,7 +338,7 @@ def _save_confirm(context: StageContext, cardDigest: str | None) -> dict[str, An
         }
         stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
         if stored is None:
-            return _pointer_lost(essay_id, stage, genre)
+            return _pointer_lost(essay_id, stage, genre, card_run=card_run)
         updated = stored
         _cache_approved_look(essay_id, stage, text)
         body["wrote"] = True
@@ -379,4 +389,5 @@ def _save_confirm(context: StageContext, cardDigest: str | None) -> dict[str, An
         ready.get("digest") if isinstance(ready.get("digest"), str) else None,
         text if stage == "3" else None,
         approved_look=text,
+        card_run=card_run,
     )

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import os
 import re
 
 from essay_writer.canon import file_sha256
@@ -24,6 +22,7 @@ from essay_writer.paths import (
     sequence_write_error,
     work_dir,
 )
+from essay_writer.records import read_json, write_json
 from essay_writer.state import load_state, save_state
 from essay_writer.student_voice import say
 from essay_writer.validate import inspect_pack, pack_identity
@@ -137,10 +136,7 @@ def essay_shelf_put(
         "word": word.get("path"),
         "confirmed_at": now(),
     }
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, target)
+    write_json(target, record, mkdir=True)
     state = load_state(essay_id)
     state["shelf"][local_id] = {
         "pack_id": local_id,
@@ -178,8 +174,10 @@ def essay_shelf_get(
     path = _shelf_file(essay_id, cleaned)
     if not path.is_file():
         return refuse("shelf", "no shelf pack for this essay id")
-    record = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(record, dict) or record.get("essay_id") != essay_id:
+    record = read_json(path)
+    if record is None:
+        return refuse("shelf", "no shelf pack for this essay id")
+    if record.get("essay_id") != essay_id:
         return refuse("cross-essay", "that shelf record is not this essay")
     payload = {"essay_id": essay_id, "pack_id": cleaned}
     fingerprint = {"sha256": file_sha256(path)}

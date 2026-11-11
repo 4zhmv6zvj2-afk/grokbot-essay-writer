@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
+from essay_writer.prompt_content import SHARED_REVISIT, STAGE7_AGENT
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage_llm import STAGE_KEYS, stage_rules_briefing, stage_settings
-from essay_writer.writing_basics import (
-    CHECKLIST_WALK,
-    SHARED_REVISIT,
-    STAGE7_AGENT,
-    STAGE_ORDER,
-    basics_lines,
-)
+from essay_writer.writing_basics import STAGE_ORDER, basics_lines
 
 BRIEFING = stage_rules_briefing()
 

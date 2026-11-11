@@ -38,14 +38,11 @@ from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists import researcher
 from essay_writer.specialists.grok_bot import front_office_call as grok_speak
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
+from essay_writer.stage_landing import _attach_mid_run
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import (
-    _attach_mid_run,
-    _draft_reply,
-    _run_stage,
-    essay_stage,
-    load_pointer,
-)
+from essay_writer.stage_replies import _draft_reply
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import _run_stage, essay_stage
 
 REPO = Path(__file__).resolve().parents[1]
 QUESTION = "How should Inditex manage its supply chain?"

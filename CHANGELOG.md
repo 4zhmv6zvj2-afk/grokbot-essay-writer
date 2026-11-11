@@ -1,5 +1,54 @@
 # Changelog
 
+## Unreleased
+
+Structural cleanup round: one sentence splitter, one JSON record store, a real stage boundary, a single-sourced prompt bundle, module splits, and hygiene hardening.
+
+Infrastructure:
+- A single `textutil.sentences` splitter serves gates, brief_checks, cite_fit and
+  stage7. Gates no longer silently drops sentences shorter than eight words; the
+  EQR claim check scans the body before the reference list, so a bibliography
+  line is not reported as copied prose. A single `textutil.content_words`
+  extractor serves the assignment and cite-fit checks.
+- A single `records.py` helper (tolerant read, repo-write guard, writer-unique
+  temp file and atomic replace) replaces the hand-rolled JSON stores; each store
+  keeps its own defaults and validation.
+- New tests pin cross-module sentence segmentation, the short-sentence gate
+  regression, and record concurrency/tolerant reads.
+
+Stage boundary:
+- `stage_track` is the orchestrator only: the 99-name re-export shim and the
+  `_MINTING` contextvar recursion are gone. The state, landing and reply layers
+  no longer import the orchestrator; the next-card mint and inherited-lock
+  confirm arrive as injected `CardRun` callbacks. A guard test holds the
+  boundary, and ARCHITECTURE.md describes the real layering.
+
+Prompt bundle:
+- `craft/voice.md` is the single rendered source for the shared voice/craft
+  rules; stages 5-8 render it once. Precedence (brief > rubric/mark scheme >
+  shared rules) and four repeated non-craft rules moved to one shared source,
+  and 14 duplicate bullets were removed. The dead research seat and dead
+  writing_basics re-exports were deleted. Prompt files are down about 31%, the
+  helper doc about 34%, and the snapshot about 12.5%; new tests cap the
+  assembled instructions plus door descriptions and fail on new duplicated
+  long lines.
+
+Module splits and adapter:
+- `first_run.py` (2,141 lines) is split into `first_run_common`,
+  `first_run_install`, `first_run_host`, `first_run_mac` and `first_run_cli`
+  behind a thin facade. `late_chain.write_stage10` and
+  `stage_track._build_stage_body` are split into named steps, and the stage-7
+  skip probe is one predicate.
+- MCP adapter tests pin the 24 typed tool schemas, the private call-path
+  touchpoint, and active host-line replacement. Production asserts became
+  explicit raises; a `py.typed` marker and a POSIX classifier were added.
+
+Hygiene:
+- The `fcntl` import is guarded with a clear Unix-only error; `state.json`
+  writes take an fcntl lock; legacy setup adoption only accepts real product
+  folders; an essay.intake mount-parity test was added. README states that
+  macOS or Linux is required.
+
 ## 0.7.0 — 2026-11-11
 
 Hardening round: bound confirm side effects, real launch/install branches under test, a verified release chain, and a typed Confirm fallback.

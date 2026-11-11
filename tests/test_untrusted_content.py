@@ -23,9 +23,9 @@ def test_server_instructions_carry_the_untrusted_fence():
     assert FENCE in INSTRUCTIONS
 
 
-def test_both_writing_seats_start_with_the_untrusted_fence():
-    for seat in ("research", "write"):
-        assert seat_reading(seat).startswith(FENCE), seat
+def test_the_write_seat_starts_with_the_untrusted_fence():
+    assert seat_reading("write").startswith(FENCE)
+    assert seat_reading("research") == ""
     assert seat_reading("reviewer") == ""
 
 

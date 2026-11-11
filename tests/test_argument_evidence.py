@@ -10,9 +10,10 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
+from essay_writer.prompt_content import EVIDENCE_STRENGTH
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import student_surface_hits
-from essay_writer.writing_basics import EVIDENCE_STRENGTH, basics_lines
+from essay_writer.writing_basics import basics_lines
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
@@ -34,11 +35,13 @@ def test_ac1_writing_stages_carry_the_evidence_strength_bullet():
         assert EVIDENCE_STRENGTH not in stage_settings(stage)["rules"]
 
 
-def test_ac2_the_helper_note_and_both_launchers_read_the_same_bullet():
-    """AC2. One copy in the helper note, one row on both launchers."""
+def test_ac2_the_craft_source_and_both_launchers_read_the_same_bullet():
+    """AC2. One copy in the craft source, one row on both launchers."""
     helpers = HELPERS.read_text(encoding="utf-8")
-    assert helpers.count(EVIDENCE_STRENGTH) == 2
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    assert craft.count(EVIDENCE_STRENGTH) == 1
     for stage in WRITING:
+        assert stage_settings(stage)["prompt_overlay"].count(EVIDENCE_STRENGTH) == 1
         for line in basics_lines(stage):
             assert line in helpers
         shared = stage_settings(stage)

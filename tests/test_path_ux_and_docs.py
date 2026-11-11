@@ -96,7 +96,7 @@ def test_install_json_separates_code_folder_from_grok_home(tmp_path, monkeypatch
 def test_mac_not_mounted_returns_plain_next(tmp_path, monkeypatch):
     monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)
     # Fake the mounted-home discovery so a test never reads the real home.
-    monkeypatch.setattr("essay_writer.first_run.mac_deliverables_dir", lambda **_kwargs: None)
+    monkeypatch.setattr("essay_writer.first_run_mac.mac_deliverables_dir", lambda **_kwargs: None)
     doc = tmp_path / "essay.docx"
     doc.write_bytes(b"x")
     missing = copy_deliverable_to_mac(doc)

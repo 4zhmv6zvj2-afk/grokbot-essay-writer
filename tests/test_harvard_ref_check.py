@@ -26,11 +26,16 @@ from essay_writer.harvard_ref_check import (
     compliance_misses,
     writer_reference_block,
 )
-from essay_writer.late_chain import write_stage10
+from essay_writer.late_chain import (
+    _deliver_stage10,
+    _write_stage10_sequence,
+    write_stage10,
+)
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.review import PERSON_BLOCK, eqr_verdict, essay_review, writer_clears_left
 from essay_writer.shells import cursor_shell, front_office
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.textutil import reference_line, reference_parts
 
@@ -223,7 +228,9 @@ def test_essay_ref_ctl_a1_writer_checks_before_stage10_done(workspace, monkeypat
     assert saved["ok"] is True, saved
     assert saved.get("closed") is True
     assert load_pointer(seq)["closed"] is True
-    stage_source = inspect.getsource(write_stage10)
+    stage_source = inspect.getsource(_write_stage10_sequence) + inspect.getsource(
+        _deliver_stage10
+    )
     assert stage_source.index("writer_reference_block(") < stage_source.index(
         '["sequence_written"] = True'
     )

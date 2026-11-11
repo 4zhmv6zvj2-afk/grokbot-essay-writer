@@ -800,23 +800,15 @@ def _reuse_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) -> 
     return body
 
 
-def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, Any]:
-    """Write the sequence Word file, then refresh the sequence -10 final from it.
-
-    The sequence file is Essay-writer/<module>/sequences/<n>/output/<id>.docx.
-    Those same bytes are written to output/<module>-10/<module>-final.docx so a
-    cloned parent final cannot stay stale. Documents/<module>-10/<module>-final.docx
-    is written only when that folder is mounted. A missing registration number
-    or an empty footer does not record the sequence file as the final.
-    """
-    import os
-
-    project = module_code(essay_id)
-    place = final_place(essay_id)
-    notes = comments_place(essay_id)
-    root = documents_root(documents)
-    source = work_dir(essay_id) / "output" / f"{essay_id}.docx"
-    body: dict[str, Any] = {
+def _stage10_body(
+    *,
+    project: str,
+    source: Path,
+    place: str,
+    notes: str,
+) -> dict[str, Any]:
+    """The reply body before any pack or Word work starts."""
+    return {
         "ok": True,
         "copied": False,
         "place": place,
@@ -826,6 +818,14 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
         "first_draft_name": source.name,
         "sequence_written": False,
     }
+
+
+def _load_stage10_pack(
+    essay_id: str,
+    source: Path,
+    body: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str, str, int]:
+    """Read the saved pack, or rebuild it from the sequence Word file."""
     saved_pack = _saved_pack(essay_id)
     pack_path = "saved_pack" if saved_pack is not None else "missing"
     pack = saved_pack
@@ -837,59 +837,97 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     saved_pack_state = "present" if saved_pack is not None else "null"
     body["pack_path"] = pack_path
     body["saved_pack_state"] = saved_pack_state
-    if pack is None:
-        body["ok"] = False
-        body["reason"] = "The saved draft Word file is not there yet."
-        from essay_writer.debug_log import log_word_step
+    return pack, pack_path, saved_pack_state, existing_ref_lines
 
-        log_word_step(
-            "write_stage10",
-            essay_id,
-            stage="10",
-            pack_path=pack_path,
-            saved_pack=saved_pack_state,
-            refused="missing-pack",
-            reason=body["reason"],
-        )
-        if root is None:
-            _unmounted_documents(body)
-            body["ok"] = False
-        return body
-    from essay_writer.brief_contract import word_contract_refusal
+
+def _missing_stage10_pack(
+    essay_id: str,
+    body: dict[str, Any],
+    *,
+    root: Path | None,
+    pack_path: str,
+    saved_pack_state: str,
+) -> dict[str, Any]:
+    """The saved draft Word file and a usable pack are both absent."""
+    body["ok"] = False
+    body["reason"] = "The saved draft Word file is not there yet."
+    from essay_writer.debug_log import log_word_step
+
+    log_word_step(
+        "write_stage10",
+        essay_id,
+        stage="10",
+        pack_path=pack_path,
+        saved_pack=saved_pack_state,
+        refused="missing-pack",
+        reason=body["reason"],
+    )
+    if root is None:
+        _unmounted_documents(body)
+        body["ok"] = False
+    return body
+
+
+def _log_stage10_word(
+    essay_id: str,
+    pack: dict[str, Any],
+    *,
+    pack_path: str,
+    saved_pack_state: str,
+    cover: list[Any] | None,
+    sources_count: int,
+    refs_count: int,
+    **extra: Any,
+) -> None:
+    """One debug-line shape for every stage 10 Word stop and success."""
     from essay_writer.debug_log import (
         log_word_step,
         pack_log_assessment,
         pack_log_title,
     )
-    from essay_writer.word import (
-        EmptyFooter,
-        empty_footer_refusal,
-        word_manifest,
-        write_docx,
+
+    log_word_step(
+        "write_stage10",
+        essay_id,
+        stage="10",
+        pack_path=pack_path,
+        saved_pack=saved_pack_state,
+        title=pack_log_title(pack),
+        assessment=pack_log_assessment(pack),
+        conclusion=str(pack.get("conclusion") or ""),
+        cover=cover,
+        sources_count=sources_count,
+        refs_count=refs_count,
+        **extra,
     )
+
+
+def _stage10_manifest(
+    essay_id: str,
+    *,
+    body: dict[str, Any],
+    pack: dict[str, Any],
+    pack_path: str,
+    saved_pack_state: str,
+    existing_ref_lines: int,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Manifest the pack and refuse a recovery that would drop references."""
+    from essay_writer.word import word_manifest
 
     pack, report = word_manifest(essay_id, pack, pack_path=pack_path, product_log=False)
     refs_count = len(report.get("references") or [])
     sources_count = len(report.get("sources") or [])
     cover = report.get("cover") if isinstance(report.get("cover"), list) else []
-    if (
-        pack_path == "pack_from_docx"
-        and existing_ref_lines > 0
-        and refs_count == 0
-    ):
+    if pack_path == "pack_from_docx" and existing_ref_lines > 0 and refs_count == 0:
         reason = (
             "The sequence Word file already lists references, but recovery from that file "
             "would write an empty References section. Restore saved_pack or confirm research first."
         )
-        log_word_step(
-            "write_stage10",
+        _log_stage10_word(
             essay_id,
-            stage="10",
+            pack,
             pack_path=pack_path,
-            saved_pack=saved_pack_state,
-            title=pack_log_title(pack),
-            assessment=pack_log_assessment(pack),
-            conclusion=str(pack.get("conclusion") or ""),
+            saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
             refs_count=refs_count,
@@ -904,7 +942,38 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
         body["references"] = report.get("references") or []
         body["cover"] = cover
         body["sources"] = report.get("sources") or []
-        return body
+        return None, body
+    return (
+        {
+            "pack": pack,
+            "report": report,
+            "pack_path": pack_path,
+            "saved_pack_state": saved_pack_state,
+            "refs_count": refs_count,
+            "sources_count": sources_count,
+            "cover": cover,
+        },
+        None,
+    )
+
+
+def _stage10_gate(
+    essay_id: str,
+    *,
+    source: Path,
+    body: dict[str, Any],
+    prepared: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """The contract, word-count, reference, and repeat-run gates."""
+    from essay_writer.brief_contract import word_contract_refusal
+
+    pack = prepared["pack"]
+    report = prepared["report"]
+    pack_path = prepared["pack_path"]
+    saved_pack_state = prepared["saved_pack_state"]
+    refs_count = prepared["refs_count"]
+    sources_count = prepared["sources_count"]
+    cover = prepared["cover"]
     blocked = word_contract_refusal(essay_id, pack, report)
     if blocked:
         body["ok"] = False
@@ -912,22 +981,18 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
         body["refused"] = blocked.get("refused")
         body["reason"] = blocked.get("reason") or ""
         body["missing_fields"] = blocked.get("missing_fields")
-        log_word_step(
-            "write_stage10",
+        _log_stage10_word(
             essay_id,
-            stage="10",
+            pack,
             pack_path=pack_path,
-            saved_pack=saved_pack_state,
-            title=pack_log_title(pack),
-            assessment=pack_log_assessment(pack),
-            conclusion=str(pack.get("conclusion") or ""),
+            saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
             refs_count=refs_count,
             refused=str(blocked.get("refused") or "refused"),
             reason=str(blocked.get("reason") or ""),
         )
-        return body
+        return None, body
     if pack.get("word_count_acknowledged") is not True:
         blockers = report.get("blockers")
         if isinstance(blockers, list):
@@ -935,15 +1000,11 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
                 if not isinstance(item, dict) or item.get("code") != "word-count":
                     continue
                 reason = str(item.get("reason") or "")
-                log_word_step(
-                    "write_stage10",
+                _log_stage10_word(
                     essay_id,
-                    stage="10",
+                    pack,
                     pack_path=pack_path,
-                    saved_pack=saved_pack_state,
-                    title=pack_log_title(pack),
-                    assessment=pack_log_assessment(pack),
-                    conclusion=str(pack.get("conclusion") or ""),
+                    saved_pack_state=saved_pack_state,
                     cover=cover,
                     sources_count=sources_count,
                     refs_count=refs_count,
@@ -955,7 +1016,7 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
                 body["sequence_written"] = False
                 body["refused"] = "word-count"
                 body["reason"] = reason
-                return body
+                return None, body
     from essay_writer.word_references import stage10_reference_block
 
     blocked_refs = stage10_reference_block(
@@ -969,31 +1030,57 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
         body["sequence_written"] = False
         body["refused"] = blocked_refs.get("refused")
         body["reason"] = blocked_refs.get("reason") or ""
-        log_word_step(
-            "write_stage10",
+        _log_stage10_word(
             essay_id,
-            stage="10",
+            pack,
             pack_path=pack_path,
-            saved_pack=saved_pack_state,
-            title=pack_log_title(pack),
-            assessment=pack_log_assessment(pack),
-            conclusion=str(pack.get("conclusion") or ""),
+            saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
             refs_count=refs_count,
             refused=str(blocked_refs.get("refused") or "empty-references"),
             reason=str(blocked_refs.get("reason") or ""),
         )
-        return body
+        return None, body
     reused = _reuse_stage10(source, pack, body)
     if reused is not None:
-        return reused
+        return None, reused
+    return prepared, None
+
+
+def _write_stage10_sequence(
+    essay_id: str,
+    *,
+    source: Path,
+    body: dict[str, Any],
+    prepared: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Write the pending sequence file and check footer, references, and Harvard.
+
+    A check stops with the reply body in the second slot. A written file leaves
+    the facts the delivery step needs in the first slot.
+    """
+    import os
+
+    from essay_writer.word import (
+        EmptyFooter,
+        empty_footer_refusal,
+        write_docx,
+    )
+
+    pack = prepared["pack"]
+    report = prepared["report"]
+    pack_path = prepared["pack_path"]
+    saved_pack_state = prepared["saved_pack_state"]
+    refs_count = prepared["refs_count"]
+    sources_count = prepared["sources_count"]
+    cover = prepared["cover"]
     pending = source.with_name(f".{source.name}.writing")
     try:
         write_docx(essay_id, pack, report, pending, product_log=False)
     except EmptyFooter:
         pending.unlink(missing_ok=True)
-        return _footer_stop(
+        return None, _footer_stop(
             body,
             refused="footer",
             reason="The page number is missing. An empty footer is refused.",
@@ -1001,7 +1088,7 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     empty = empty_footer_refusal(pending)
     if empty:
         pending.unlink(missing_ok=True)
-        return _footer_stop(
+        return None, _footer_stop(
             body,
             refused=str(empty.get("refused") or "footer"),
             reason=str(empty.get("reason") or ""),
@@ -1012,15 +1099,11 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
             "The References section has no entries. Add reference lines before "
             "this step can close."
         )
-        log_word_step(
-            "write_stage10",
+        _log_stage10_word(
             essay_id,
-            stage="10",
+            pack,
             pack_path=pack_path,
-            saved_pack=saved_pack_state,
-            title=pack_log_title(pack),
-            assessment=pack_log_assessment(pack),
-            conclusion=str(pack.get("conclusion") or ""),
+            saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
             refs_count=0,
@@ -1032,7 +1115,7 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
         body["sequence_written"] = False
         body["refused"] = "empty-references"
         body["reason"] = reason
-        return body
+        return None, body
     from essay_writer.harvard_ref_check import writer_reference_block
 
     blocked_harvard = writer_reference_block(
@@ -1043,15 +1126,11 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     if blocked_harvard:
         pending.unlink(missing_ok=True)
         reason = str(blocked_harvard.get("reason") or "")
-        log_word_step(
-            "write_stage10",
+        _log_stage10_word(
             essay_id,
-            stage="10",
+            pack,
             pack_path=pack_path,
-            saved_pack=saved_pack_state,
-            title=pack_log_title(pack),
-            assessment=pack_log_assessment(pack),
-            conclusion=str(pack.get("conclusion") or ""),
+            saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
             refs_count=refs_count,
@@ -1066,7 +1145,7 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
         body["misses"] = blocked_harvard.get("misses") or []
         body["checked"] = True
         body["handbook"] = blocked_harvard.get("handbook") or ""
-        return body
+        return None, body
     body["harvard_references"] = {
         "checked": True,
         "ok": True,
@@ -1074,6 +1153,26 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     }
     source.parent.mkdir(parents=True, exist_ok=True)
     os.replace(pending, source)
+    return prepared, None
+
+
+def _deliver_stage10(
+    essay_id: str,
+    *,
+    project: str,
+    root: Path | None,
+    source: Path,
+    written: dict[str, Any],
+    body: dict[str, Any],
+) -> dict[str, Any]:
+    """Refresh the sequence final, then copy the Word file where it is mounted."""
+    pack = written["pack"]
+    report = written["report"]
+    pack_path = written["pack_path"]
+    saved_pack_state = written["saved_pack_state"]
+    refs_count = written["refs_count"]
+    sources_count = written["sources_count"]
+    cover = written["cover"]
     _refresh_sequence_final(source, project)
     from essay_writer.assignment_handoff import attach_word_chat
     from essay_writer.word_references import reference_lines_origin
@@ -1081,15 +1180,11 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     attach_word_chat(body, source)
     body["sequence_written"] = True
     refs_from = reference_lines_origin(pack)
-    log_word_step(
-        "write_stage10",
+    _log_stage10_word(
         essay_id,
-        stage="10",
+        pack,
         pack_path=pack_path,
-        saved_pack=saved_pack_state,
-        title=pack_log_title(pack),
-        assessment=pack_log_assessment(pack),
-        conclusion=str(pack.get("conclusion") or ""),
+        saved_pack_state=saved_pack_state,
         cover=cover,
         sources_count=sources_count,
         refs_count=refs_count,
@@ -1129,6 +1224,8 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     folder.mkdir(parents=True, exist_ok=True)
     final = folder / f"{project}-final.docx"
     comments = folder / f"{project}-comments.docx"
+    from essay_writer.word import EmptyFooter, empty_footer_refusal, write_docx
+
     try:
         write_docx(essay_id, pack, report, final, product_log=False)
     except EmptyFooter:
@@ -1164,11 +1261,94 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     body["copied"] = True
     body["reason"] = ""
     body["sequence_written"] = True
+    return body
+
+
+def _remember_stage10_result(
+    essay_id: str,
+    source: Path,
+    pack: dict[str, Any],
+    body: dict[str, Any],
+) -> dict[str, Any]:
+    """Record the delivered pack, then point the ML event log at the new file."""
     _remember_stage10(source, pack, body)
     from essay_writer.ml_events import note_stage10_rewrite_paths
 
     note_stage10_rewrite_paths(essay_id)
     return body
+
+
+def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, Any]:
+    """Write the sequence Word file, then refresh the sequence -10 final from it.
+
+    The sequence file is Essay-writer/<module>/sequences/<n>/output/<id>.docx.
+    Those same bytes are written to output/<module>-10/<module>-final.docx so a
+    cloned parent final cannot stay stale. Documents/<module>-10/<module>-final.docx
+    is written only when that folder is mounted. A missing registration number
+    or an empty footer does not record the sequence file as the final.
+    """
+    project = module_code(essay_id)
+    place = final_place(essay_id)
+    notes = comments_place(essay_id)
+    root = documents_root(documents)
+    source = work_dir(essay_id) / "output" / f"{essay_id}.docx"
+    body = _stage10_body(project=project, source=source, place=place, notes=notes)
+    pack, pack_path, saved_pack_state, existing_ref_lines = _load_stage10_pack(
+        essay_id,
+        source,
+        body,
+    )
+    if pack is None:
+        return _missing_stage10_pack(
+            essay_id,
+            body,
+            root=root,
+            pack_path=pack_path,
+            saved_pack_state=saved_pack_state,
+        )
+    prepared, stopped = _stage10_manifest(
+        essay_id,
+        body=body,
+        pack=pack,
+        pack_path=pack_path,
+        saved_pack_state=saved_pack_state,
+        existing_ref_lines=existing_ref_lines,
+    )
+    if prepared is None:
+        if stopped is None:
+            raise RuntimeError("stage 10 manifest stopped without a reply")
+        return stopped
+    prepared, stopped = _stage10_gate(
+        essay_id,
+        source=source,
+        body=body,
+        prepared=prepared,
+    )
+    if prepared is None:
+        if stopped is None:
+            raise RuntimeError("stage 10 gate stopped without a reply")
+        return stopped
+    written, stopped = _write_stage10_sequence(
+        essay_id,
+        source=source,
+        body=body,
+        prepared=prepared,
+    )
+    if written is None:
+        if stopped is None:
+            raise RuntimeError("stage 10 write stopped without a reply")
+        return stopped
+    body = _deliver_stage10(
+        essay_id,
+        project=project,
+        root=root,
+        source=source,
+        written=written,
+        body=body,
+    )
+    if body.get("copied") is not True:
+        return body
+    return _remember_stage10_result(essay_id, source, written["pack"], body)
 
 
 def _write_comments(essay_id: str, path: Path) -> None:

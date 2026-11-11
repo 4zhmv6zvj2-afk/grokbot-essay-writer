@@ -37,6 +37,18 @@ After the annotated bibliography and the critical review are saved, revisit the 
 ## revisit_door
 After 4a and 4b Confirm, revisit the stage 3 plan before stage 5. Revisit stage 2 only if research breaks that lock: the essay thesis, or the report purpose and scope. The report central theme is the one-sentence answer. A thin edit is allowed. A break is not a thin edit. Check that section arguments still hold, that word weights still match the brief, and that source types are real titles with gaps named. invent-forbid: nothing in the plan that the research never showed. Use only the year printed in the opened source. Do not add a second year. If anything changes, show the delta and why it comes from the gathered sources, update the tracking note, and Confirm again before stage 5. If the theme or the purpose breaks, Confirm stage 2 and then Confirm stage 3. An essay keeps the thesis. A report has no thesis. Do not silently rewrite the plan into the draft.
 
+## precedence
+Precedence: the brief comes first, then the rubric or mark scheme, then these shared rules. Where they differ, follow the brief. Do not add a rule they do not state.
+
+## shared_research_path
+Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout.
+
+## shared_word_safety
+Do not tighten prose below what the opened Word file already says. Word-band cuts must not turn a true sentence into a false one.
+
+## shared_first_draft_rewrite
+On this Word save, rewrite first-draft.md in the sequence folder from the saved Word file in the same step. Do not say that path in the chat.
+
 ## standing_heading
 When a reply includes heading, post that line as the standing chat heading. The heading is the sequence id alone, such as MOD1004AA-3. The module already sits inside that id, so the heading is that id and nothing in front of it. A form such as MOD1004AA · MOD1004AA-3 repeats the module. Post MOD1004AA-3. Post the heading when an essay opens, after each stage Confirm, and when the active essay changes. Leave the heading off later turns of the same essay.
 

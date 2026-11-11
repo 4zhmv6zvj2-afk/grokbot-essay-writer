@@ -3,7 +3,6 @@
 import json
 
 from essay_writer.first_run import (
-    _parse,
     attach_custom_mcp,
     first_run_prompt,
     install_uploaded_copy,
@@ -11,6 +10,7 @@ from essay_writer.first_run import (
     recommended_mac_handoff_dir,
     remember_mac_handoff_dir,
 )
+from essay_writer.first_run_cli import _parse
 from essay_writer.setup import CURSOR_SETUP_PROMPT, FIRST_RUN_MAC_SPEECH, SETUP_PROMPT
 
 

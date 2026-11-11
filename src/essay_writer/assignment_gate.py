@@ -20,7 +20,12 @@ from typing import Any
 
 from essay_writer.diary import extract_marking_table
 from essay_writer.paths import essay_dir, module_code
-from essay_writer.textutil import genre_from_brief_text, module_brief_text, unmarked_labels
+from essay_writer.textutil import (
+    content_words,
+    genre_from_brief_text,
+    module_brief_text,
+    unmarked_labels,
+)
 
 _SCHEME_NAMES = (
     "mark-scheme.md",
@@ -57,7 +62,6 @@ _QUESTION_LABELS = (
     "title",
 )
 _FIELD_LINE = re.compile(r"(?i)^[A-Za-z][A-Za-z ]{0,40}:\s*\S")
-_WORD = re.compile(r"[A-Za-z][A-Za-z'’-]{3,}")
 _STOP = frozenset(
     {
         "this",
@@ -227,14 +231,12 @@ def _question_of(text: str) -> str | None:
 
 
 def _content_words(text: str) -> list[str]:
-    found: list[str] = []
-    for match in _WORD.finditer(text):
-        word = match.group(0).casefold().strip("'’-")
-        if len(word) < 4 or word in _STOP:
-            continue
-        if word not in found:
-            found.append(word)
-    return found
+    """The shared extractor with this gate's vocabulary, in first-seen order.
+
+    Kept as a named binding because the review seat imports this helper. The
+    implementation is textutil.content_words; this module does not tokenize.
+    """
+    return content_words(text, stopwords=_STOP, ordered=True)
 
 
 def _numeric_band(label: str) -> tuple[float, str] | None:
@@ -419,14 +421,14 @@ def question_is_answered(text: str, question: str | None) -> bool:
     """True when the text uses the assignment question's own words."""
     if not question:
         return False
-    return _covers(text or "", _content_words(question))
+    return _covers(text or "", content_words(question, stopwords=_STOP, ordered=True))
 
 
 def ask_content_words(question: str | None) -> list[str]:
     """Words of the assignment ask. Short words and stop words are left out."""
     if not isinstance(question, str) or not question.strip():
         return []
-    return _content_words(question)
+    return content_words(question, stopwords=_STOP, ordered=True)
 
 
 def ask_word_in_text(text: str, question: str | None) -> bool:
@@ -478,7 +480,7 @@ def assignment_gate(essay_id: str, text: str, *, seat: str) -> dict[str, Any]:
         missing.append("record")
     if record["format"] and record["format"] not in submitted.casefold():
         missing.append("format")
-    question_words = _content_words(record["question"] or "")
+    question_words = content_words(record["question"] or "", stopwords=_STOP, ordered=True)
     if record["question"] and not _covers(submitted, question_words):
         missing.append("question")
     band = record["highest_band"]

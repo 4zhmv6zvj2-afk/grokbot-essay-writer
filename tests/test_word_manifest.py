@@ -14,7 +14,7 @@ from pathlib import Path
 from docx import Document
 from helpers import ESSAY, card_digest_for, open_sequence, pack, report_sections, write_upload
 
-from essay_writer.late_chain import write_stage10
+from essay_writer.late_chain import _stage10_manifest, write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.research import essay_research_summary
 from essay_writer.validate import essay_pack_validate
@@ -123,7 +123,7 @@ def _spy(monkeypatch):
 def test_ac1_stage6_render_word_uses_shared_cover_refs_door(workspace, monkeypatch):
     """AC1. Stage 6 render_word and Stage 10 call the same word_manifest door."""
     render = inspect.getsource(essay_pack_render_word)
-    stage10 = inspect.getsource(write_stage10)
+    stage10 = inspect.getsource(_stage10_manifest)
     manifest = inspect.getsource(word_manifest)
     assert render.count("word_manifest(") == 1
     assert stage10.count("word_manifest(") == 1
@@ -147,7 +147,7 @@ def test_ac1_stage6_render_word_uses_shared_cover_refs_door(workspace, monkeypat
 def test_ac2_stage7_and_stage9_use_the_same_door(workspace, monkeypatch):
     """AC2. Stage 7 and Stage 9 do not keep a pack builder that skips cover or refs."""
     render = inspect.getsource(essay_pack_render_word)
-    stage10 = inspect.getsource(write_stage10)
+    stage10 = inspect.getsource(_stage10_manifest)
     assert "_word_pack(" not in render
     assert "_word_pack(" not in stage10
     assert "word_manifest(" in render
@@ -234,7 +234,7 @@ def test_build_covered_cursor_and_grok_build_share_word_manifest():
     from essay_writer.cursor_office import cursor_stage_launch
     from essay_writer.server import HANDLERS
     from essay_writer.shells import cursor_shell, front_office
-    from essay_writer.stage_track import _render_stage10_before_close
+    from essay_writer.stage_state import _render_stage10_before_close
 
     shared = cursor_shell()["handlers"]
     assert front_office()["handlers"] is shared
@@ -242,7 +242,7 @@ def test_build_covered_cursor_and_grok_build_share_word_manifest():
     assert HANDLERS["essay.pack.render_word"] is essay_pack_render_word
     assert "word_manifest(" in inspect.getsource(essay_pack_render_word)
     assert "write_stage10(" in inspect.getsource(_render_stage10_before_close)
-    assert "word_manifest(" in inspect.getsource(write_stage10)
+    assert "word_manifest(" in inspect.getsource(_stage10_manifest)
     assert "def word_manifest" not in inspect.getsource(stage_launch)
     assert "def word_manifest" not in inspect.getsource(cursor_stage_launch)
     assert "write_docx(" not in inspect.getsource(stage_launch)

@@ -22,13 +22,9 @@ from essay_writer.server import HANDLERS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_track import (
-    TOOL,
-    _draft_next_card,
-    _save_confirm,
-    essay_stage,
-    load_pointer,
-)
+from essay_writer.stage_replies import _save_confirm
+from essay_writer.stage_state import TOOL, _draft_next_card, load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 DIARY = """
@@ -137,7 +133,7 @@ def test_ac1_confirm_returns_card_or_does_not_advance(workspace, monkeypatch):
     assert opened["ok"] is True, opened
     held_before = load_pointer(held_seq)
 
-    def _fail(essay_id: str, following: str) -> dict:
+    def _fail(essay_id: str, following: str, card_run) -> dict:
         return {
             "ok": False,
             "refused": "named-parts",
@@ -262,7 +258,9 @@ def test_ac4_cursor_and_grok_build_share_confirm(monkeypatch):
     assert mount_handler("essay.stage").__wrapped__ is essay_stage
     source = inspect.getsource(_save_confirm)
     assert "return _commit_with_next_card(" in source
-    assert "_MINTING.set(True)" in inspect.getsource(_draft_next_card)
+    mint_source = inspect.getsource(_draft_next_card)
+    assert "minting=True" in mint_source
+    assert "_MINTING" not in mint_source
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
     assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_CURSOR)

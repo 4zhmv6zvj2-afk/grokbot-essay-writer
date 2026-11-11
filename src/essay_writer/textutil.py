@@ -561,6 +561,171 @@ def norm_space(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
 
+# Words whose full stop is not a sentence break. `p`/`pp` are page, `vol` is
+# volume, `al` closes "et al.", and the dotted forms (e.g., i.e., U.S.) are
+# matched separately below.
+_ABBREVIATIONS = frozenset(
+    {
+        "approx",
+        "ca",
+        "cf",
+        "co",
+        "corp",
+        "dept",
+        "dr",
+        "ed",
+        "eds",
+        "eg",
+        "est",
+        "etc",
+        "fig",
+        "figs",
+        "ie",
+        "inc",
+        "jr",
+        "ltd",
+        "mr",
+        "mrs",
+        "ms",
+        "p",
+        "pp",
+        "prof",
+        "repr",
+        "sr",
+        "st",
+        "trans",
+        "univ",
+        "vol",
+        "vols",
+        "vs",
+        "al",
+    }
+)
+_DOTTED_ACRONYM = re.compile(r"(?:[a-z]\.)+[a-z]\.?")
+_QUOTE_OPENERS = {'"': '"', "“": "”"}
+
+
+def _word_before(text: str, index: int) -> str:
+    """The word that ends just before index, dots included so e.g. stays whole."""
+    start = index
+    while start > 0 and (text[start - 1].isalpha() or text[start - 1] in ".’-"):
+        start -= 1
+    return text[start:index]
+
+
+def _abbreviation_before(text: str, index: int) -> bool:
+    """True when the full stop at index closes an abbreviation or an initial."""
+    token = _word_before(text, index)
+    if not token:
+        return False
+    folded = token.casefold()
+    if folded.strip(".’-") in _ABBREVIATIONS:
+        return True
+    if _DOTTED_ACRONYM.fullmatch(folded):
+        return True
+    return len(token) == 1 and token.isupper()
+
+
+def _quotes_balanced(text: str) -> bool:
+    return text.count('"') % 2 == 0 and text.count("“") == text.count("”")
+
+
+def _end_after_quote(text: str, index: int) -> bool:
+    """A full stop inside a closed quotation ends the sentence only before a new one.
+
+    A continuation such as 'he said' keeps the quotation in the same sentence.
+    """
+    while index < len(text) and text[index].isspace():
+        index += 1
+    if index >= len(text):
+        return True
+    return text[index] in _QUOTE_OPENERS or text[index].isupper()
+
+
+def _split_sentences(text: str, *, track_quotes: bool) -> list[str]:
+    found: list[str] = []
+    start = 0
+    index = 0
+    closing: str | None = None
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if track_quotes and closing is None and char in _QUOTE_OPENERS:
+            closing = _QUOTE_OPENERS[char]
+        elif track_quotes and closing is not None and char == closing:
+            closing = None
+            if index > 0 and text[index - 1] in ".!?" and _end_after_quote(text, index + 1):
+                chunk = text[start : index + 1].strip()
+                if chunk:
+                    found.append(chunk)
+                start = index + 1
+        elif closing is None and char in ".!?" and (index + 1 >= length or text[index + 1].isspace()):
+            if not (char == "." and _abbreviation_before(text, index)):
+                chunk = text[start : index + 1].strip()
+                if chunk:
+                    found.append(chunk)
+                start = index + 1
+        index += 1
+    tail = text[start:].strip()
+    if tail:
+        found.append(tail)
+    return found
+
+
+def sentences(text: str) -> list[str]:
+    """One sentence splitter for every gate and check.
+
+    A full stop inside quotation marks stays with that quotation and does not
+    cut the sentence there; the sentence ends after the closing quote when the
+    quotation itself ended a sentence. A full stop after a known abbreviation
+    (et al., e.g., Dr., U.S.) does not split. Short sentences are kept: the
+    splitter segments, and the caller decides what to filter.
+
+    Quotation tracking needs balanced double quotes. Unbalanced text is split
+    without that protection so one stray quote cannot swallow the paragraph.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return []
+    return _split_sentences(text, track_quotes=_quotes_balanced(text))
+
+
+_CONTENT_WORD = re.compile(r"[A-Za-z][A-Za-z'’-]+")
+
+
+def content_words(
+    text: str,
+    *,
+    stopwords: frozenset[str] = frozenset(),
+    min_length: int = 4,
+    ordered: bool = False,
+) -> list[str]:
+    """Content words of running prose. One extractor, explicit options.
+
+    Words are casefolded, at least min_length letters, and not in the caller's
+    stop-word vocabulary. `ordered` keeps first-seen order and drops repeats;
+    otherwise repeats stay. A hyphenated compound is one word and a numeral is
+    not a content word. Titles and particles in names have their own helper,
+    `_content_words`; this one is for prose.
+
+    The assignment gate reads its ask with ordered=True. The body-cite gate
+    reads claim words with ordered=False, where repeats do not matter.
+    """
+    if not isinstance(text, str):
+        return []
+    found: list[str] = []
+    seen: set[str] = set()
+    for match in _CONTENT_WORD.finditer(text):
+        word = match.group(0).casefold().strip("'’-")
+        if len(word) < min_length or word in stopwords:
+            continue
+        if ordered:
+            if word in seen:
+                continue
+            seen.add(word)
+        found.append(word)
+    return found
+
+
 def _narrative_name(raw: str) -> str:
     parts = raw.split()
     while len(parts) > 1 and parts[0].strip(",").casefold() in _LEADING_TRANSITION:

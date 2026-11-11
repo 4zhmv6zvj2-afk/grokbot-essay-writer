@@ -66,13 +66,6 @@ def _clear_findings(extra: str = "") -> str:
     return "\n".join(lines)
 
 
-def _stage5_helpers() -> str:
-    body = HELPERS.read_text(encoding="utf-8")
-    start = body.index("### 5. Write your first draft")
-    end = body.index("### 6. Re-read and make changes")
-    return body[start:end]
-
-
 def test_stage5_and_stage8_carry_the_content_check_and_stay_quiet():
     """Stage 5 writes the check into the draft. Stage 8 re-reads a tightened sentence."""
     for genre in (None, "essay", "report", "diary"):
@@ -85,11 +78,13 @@ def test_stage5_and_stage8_carry_the_content_check_and_stay_quiet():
         assert "Chat for this step stays quiet." in stage5
         assert student_surface_hits(stage5) == []
         assert student_surface_hits(stage8) == []
-    helpers = _stage5_helpers()
-    assert CONTENT in helpers
-    assert PHRASE_HOST in helpers
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    assert CONTENT in craft
+    assert PHRASEBANK in craft
+    assert PHRASE_HOST in craft
     assert "://" not in stage_settings("5")["rules"]
     style = HELPERS.read_text(encoding="utf-8")
+    assert PHRASE_HOST in style
     assert PHRASE_URL in style
     assert "Do not copy phrase lists" in style
     assert "Methods and results phrasing from that site is only for a research report" in style

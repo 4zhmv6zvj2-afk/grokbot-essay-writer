@@ -27,7 +27,8 @@ from essay_writer.dig import essay_dig
 from essay_writer.paths import work_dir
 from essay_writer.research import essay_research_full, essay_research_summary
 from essay_writer.setup import essay_setup
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 SETUP_TOOL_DIR = "essay.setup"

@@ -415,8 +415,17 @@ def test_build_covered_shared_word_product_log_doors():
 
     assert "log_word_manifest(" in inspect.getsource(word_manifest)
     assert "log_word_docx_written(" in inspect.getsource(write_docx)
-    assert "log_word_step(" in inspect.getsource(write_stage10)
-    assert "note_stage10_rewrite_paths(" in inspect.getsource(write_stage10)
+    from essay_writer.late_chain import (
+        _deliver_stage10,
+        _log_stage10_word,
+        _remember_stage10_result,
+    )
+
+    assert "log_word_step(" in inspect.getsource(_log_stage10_word)
+    assert "note_stage10_rewrite_paths(" in (
+        inspect.getsource(_deliver_stage10)
+        + inspect.getsource(_remember_stage10_result)
+    )
     assert log_word_manifest.__module__ == "essay_writer.late_chain"
     assert log_word_docx_written.__module__ == "essay_writer.late_chain"
     assert log_word_step.__module__ == "essay_writer.debug_log"

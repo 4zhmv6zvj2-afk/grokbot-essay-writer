@@ -162,6 +162,21 @@ def open_finished_word(essay_id: str, *, documents=None) -> dict[str, Any]:
     }
 
 
+def _body_without_references(text: str) -> str:
+    """Opened body text before the reference list.
+
+    A reference list reproduces gathered metadata by design; it is not copied
+    prose. The claim check scans only the body so a bibliography line cannot be
+    reported as an unquoted gathered sentence.
+    """
+    kept: list[str] = []
+    for line in text.splitlines():
+        if line.strip().casefold() == "references":
+            break
+        kept.append(line)
+    return "\n".join(kept)
+
+
 def claim_check_opened(essay_id: str, text: str) -> dict[str, Any]:
     """Compare the opened Word text with gathered files already stored. No new look-up."""
     if not text.strip():
@@ -195,7 +210,7 @@ def claim_check_opened(essay_id: str, text: str) -> dict[str, Any]:
                 pdfs.append(path.name)
     if not gathered:
         return {"ran": False, "matches": [], "pdfs": pdfs}
-    return {"ran": True, "matches": unquoted_exact(text, gathered), "pdfs": pdfs}
+    return {"ran": True, "matches": unquoted_exact(_body_without_references(text), gathered), "pdfs": pdfs}
 
 
 NORTH_STAR = text("review/eqr.md", "north_star")

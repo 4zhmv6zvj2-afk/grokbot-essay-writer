@@ -41,7 +41,6 @@ from essay_writer.specialists.researcher import (
     essay_research_summary,
 )
 from essay_writer.specialists.writer import essay_pack_render_word
-from essay_writer.spine import essay_stage
 from essay_writer.stage_llm import (
     eqr_llm_note,
     first_draft_note,
@@ -49,6 +48,7 @@ from essay_writer.stage_llm import (
     stage_rules_briefing,
     stage_settings,
 )
+from essay_writer.stage_track import essay_stage
 from essay_writer.validate import essay_pack_validate
 
 INSTRUCTIONS = render_tokens(text("front_office/briefing.md", "server"))

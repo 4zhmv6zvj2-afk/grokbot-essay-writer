@@ -2,23 +2,32 @@
 
 This module owns the pointer and its commit journal, the stage lock, the
 tracking-note renderer, and the reply bodies a stage save returns when it is
-held or refused. The orchestrator in essay_writer.stage_track keeps the public
-entry points and re-exports every name here. This module does not import
-essay_writer.stage_track at module import time; the two call-time imports in
-_confirm_blocked and _draft_next_card close that loop.
+held or refused. The orchestrator in essay_writer.stage_track imports this
+module and keeps the public entry points.
+
+This module never imports essay_writer.stage_track, at module load or inside a
+function. When a state helper needs a stage card, it calls the injected
+:class:`CardRun` callback the orchestrator threads through the commit path.
 """
 
 from __future__ import annotations
 
 import contextvars
-import fcntl
 import json
 import os
+import sys
 import threading
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, Protocol, TypedDict, cast
+
+# The stage lock is POSIX-only. Importing the package on Windows must succeed;
+# only taking the lock refuses, and the refusal names the platform.
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - exercised by the no-fcntl subprocess test
+    fcntl = None  # type: ignore[assignment]
 
 from essay_writer.confirm import (
     CONFIRM,
@@ -39,10 +48,25 @@ from essay_writer.stage_llm import (
 )
 
 TOOL = "essay.stage"
-_MINTING: contextvars.ContextVar[bool] = contextvars.ContextVar(
-    "essay_stage_minting",
-    default=False,
-)
+
+
+class CardRun(Protocol):
+    """Run one card-only stage. The orchestrator injects this into the state layer.
+
+    ``minting=True`` is the next-card mint; the student-answer gates stay off
+    that draft. Reopening an already-saved stage's card keeps the normal gates.
+    """
+
+    def __call__(
+        self,
+        essay_id: str,
+        stage: str,
+        look: str | None = None,
+        *,
+        minting: bool = False,
+    ) -> dict[str, object]: ...
+
+
 _INHERITED_KEEP: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "essay_stage_inherited_keep",
     default=False,
@@ -368,7 +392,11 @@ def _own_door_card(opened: dict[str, object] | None, essay_id: str, stage: str) 
     return opened
 
 
-def door_card_reply(essay_id: str) -> dict[str, object] | None:
+def door_card_reply(
+    essay_id: str,
+    *,
+    card_run: CardRun | None = None,
+) -> dict[str, object] | None:
     """Confirm card for this sequence's open stage.
 
     A fresh stage 1, with nothing saved, gets that stage's door card.
@@ -390,8 +418,8 @@ def door_card_reply(essay_id: str) -> dict[str, object] | None:
     own = _own_door_card(replay, essay_id, current)
     if own is not None:
         return own
-    if current == "1" and not saved:
-        return _own_door_card(_draft_next_card(essay_id, "1"), essay_id, "1")
+    if current == "1" and not saved and card_run is not None:
+        return _own_door_card(_draft_next_card(essay_id, "1", card_run), essay_id, "1")
     return None
 
 
@@ -529,6 +557,21 @@ def _held_locks() -> set[str]:
     return held
 
 
+def require_fcntl() -> Any:
+    """The POSIX ``fcntl`` module, or a clear unsupported-platform refusal.
+
+    This module imports on every platform. Only a caller that actually takes a
+    lock needs fcntl, and only then is the platform named.
+    """
+    if fcntl is None:
+        raise RuntimeError(
+            "Cross-process file locking needs POSIX fcntl, which this platform "
+            f"({sys.platform}) does not provide. Run the essay writer on macOS or Linux; "
+            "Windows is not supported."
+        )
+    return fcntl
+
+
 @contextmanager
 def _pointer_lock(essay_id: str):
     """One exclusive lock for the note and pointer on this sequence.
@@ -540,11 +583,12 @@ def _pointer_lock(essay_id: str):
     if essay_id in held:
         yield
         return
+    module = require_fcntl()
     folder = work_dir(essay_id) / "tracking"
     folder.mkdir(parents=True, exist_ok=True)
     handle = (folder / ".stage.lock").open("a+")
     try:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        module.flock(handle.fileno(), module.LOCK_EX)
         held.add(essay_id)
         try:
             _replay_commit(work_dir(essay_id))
@@ -552,7 +596,7 @@ def _pointer_lock(essay_id: str):
         finally:
             held.discard(essay_id)
     finally:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        module.flock(handle.fileno(), module.LOCK_UN)
         handle.close()
 
 
@@ -613,12 +657,18 @@ def _commit_pointer(
         return stored
 
 
-def _pointer_lost(essay_id: str, stage: str, genre: str | None) -> dict[str, object]:
+def _pointer_lost(
+    essay_id: str,
+    stage: str,
+    genre: str | None,
+    *,
+    card_run: CardRun | None = None,
+) -> dict[str, object]:
     """The pointer moved after this call read it. The newer pointer stays."""
     fresh = load_pointer(essay_id)
     blocked = _stage_refusal(cast(Pointer, fresh), stage, genre)
     if blocked is not None:
-        return _confirm_blocked(essay_id, fresh, stage, genre, blocked)
+        return _confirm_blocked(essay_id, fresh, stage, genre, blocked, card_run=card_run)
     return refuse(
         "pointer",
         f"This step was saved in another chat. The current stage is {fresh['current']}.",
@@ -637,11 +687,12 @@ def _confirm_blocked(
     stage: str,
     genre: str | None,
     blocked: dict[str, object],
+    *,
+    card_run: CardRun | None = None,
 ) -> dict[str, object]:
     """An already-saved stage does not replay its card. The draft card is for current."""
     from essay_writer.specialists.grok_bot import missing_confirm_next
     from essay_writer.spine import stage_uses_confirm_card
-    from essay_writer.stage_track import essay_stage
 
     current = pointer["current"]
     blocked["waiting_confirm"] = False
@@ -661,8 +712,8 @@ def _confirm_blocked(
     opened = None
     if stage_uses_confirm_card(current) and current != stage:
         opened = _replay_confirm_card(essay_id, current, genre, pointer, None)
-        if opened is None:
-            opened = essay_stage(essay_id, current, "draft", card_only=True)
+        if opened is None and card_run is not None:
+            opened = card_run(essay_id, current, None, minting=False)
     opened_reply = opened if isinstance(opened, dict) else None
     card = opened_reply.get("card") if isinstance(opened_reply, dict) else None
     digest = opened_reply.get("cardDigest") if isinstance(opened_reply, dict) else None
@@ -722,26 +773,23 @@ def _next_card_look(essay_id: str, stage: str) -> str:
     return "\n".join(lines)
 
 
-def _draft_next_card(essay_id: str, following: str) -> dict[str, object]:
+def _draft_next_card(
+    essay_id: str,
+    following: str,
+    card_run: CardRun,
+) -> dict[str, object]:
     """One card-only draft of the next stage. It does not move the pointer.
 
     Student-answer rules (part names, Entry N, house words) stay off this mint.
-    They run when the student later writes that stage. The flag is not a door
-    argument.
+    They run when the student later writes that stage. The injected runner
+    carries the mint flag; this module never imports the orchestrator.
     """
-    from essay_writer.stage_track import essay_stage
-
-    token = _MINTING.set(True)
-    try:
-        return essay_stage(
-            essay_id,
-            following,
-            "draft",
-            _next_card_look(essay_id, following),
-            card_only=True,
-        )
-    finally:
-        _MINTING.reset(token)
+    return card_run(
+        essay_id,
+        following,
+        _next_card_look(essay_id, following),
+        minting=True,
+    )
 
 
 def _next_card_fields(opened: dict[str, object], essay_id: str, following: str) -> dict[str, object] | None:
@@ -967,11 +1015,14 @@ def _commit_with_next_card(
     plan_text: str | None = None,
     *,
     approved_look: str | None = None,
+    card_run: CardRun,
 ) -> dict[str, object]:
     """One write advances the pointer and stores the next waiting card.
 
     A stage that expects a card and cannot mint one does not write. Stage 5
-    and the last stage write the advance with no card, and say so.
+    and the last stage write the advance with no card, and say so. The next
+    card is minted through the injected ``card_run``; this module never
+    imports the orchestrator.
     """
     if isinstance(approved_look, str) and approved_look.strip():
         _cache_approved_look(essay_id, stage, approved_look)
@@ -985,7 +1036,7 @@ def _commit_with_next_card(
     # A copied stage 2 or 3 names the parent save. Confirm waits for revise or re-lock.
     expects_card = _expects_next_card(following) and pending_next is None
     if expects_card:
-        opened = _draft_next_card(essay_id, following or "")
+        opened = _draft_next_card(essay_id, following or "", card_run)
         if isinstance(opened, dict):
             fields = _next_card_fields(opened, essay_id, following or "")
         if fields is None or opened is None:
@@ -1005,7 +1056,7 @@ def _commit_with_next_card(
         updated["waiting_digest"] = None
     stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
     if stored is None:
-        return _pointer_lost(essay_id, stage, genre)
+        return _pointer_lost(essay_id, stage, genre, card_run=card_run)
     updated = stored
     body["wrote"] = True
     body["stored"] = True

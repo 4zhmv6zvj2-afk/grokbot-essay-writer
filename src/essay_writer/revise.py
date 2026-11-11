@@ -203,7 +203,7 @@ def _attach_cite_report(body: dict[str, object], report: dict[str, object] | Non
 def _quiet_revise(essay_id: str, body: dict[str, object]) -> bool:
     """Middle revise during the first draft stays quiet unless the call was refused."""
     from essay_writer.late_chain import QUIET_STEP, mark_quiet
-    from essay_writer.stage_track import in_first_draft
+    from essay_writer.stage_state import in_first_draft
 
     if body.get("ok") is False or not in_first_draft(essay_id):
         return False

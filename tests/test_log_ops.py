@@ -275,6 +275,6 @@ def _assert_launch_fields(row: dict, stage: str, sequence: str) -> None:
 
 
 def _record_source():
-    from essay_writer import first_run
+    from essay_writer import first_run_cli
 
-    return first_run._record_copy_handoff
+    return first_run_cli._record_copy_handoff

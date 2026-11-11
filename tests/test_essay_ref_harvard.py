@@ -19,7 +19,7 @@ from essay_writer.build_office import stage_launch
 from essay_writer.cite_open import apply_opened_citation
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.invent import gather_source
-from essay_writer.late_chain import write_stage10
+from essay_writer.late_chain import _write_stage10_sequence
 from essay_writer.resolvers import crossref_lookup
 from essay_writer.state import load_state, save_state
 from essay_writer.textutil import reference_line
@@ -359,7 +359,7 @@ def test_build_covered_cursor_and_build_share_write_docx():
     """Build covered. Cursor and Build both print the essay through write_docx."""
     assert write_docx.__module__ == "essay_writer.word"
     assert "write_docx(" in inspect.getsource(essay_pack_render_word)
-    assert "write_docx(" in inspect.getsource(write_stage10)
+    assert "write_docx(" in inspect.getsource(_write_stage10_sequence)
     for stage in ("6", "9"):
         cursor = cursor_stage_launch(stage)
         build = stage_launch(stage)

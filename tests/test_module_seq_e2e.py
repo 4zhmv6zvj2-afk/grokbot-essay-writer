@@ -233,10 +233,12 @@ def test_ac2_stage10_references_follow_gathered_cites(workspace, monkeypatch, tm
 
 def test_ac3_build_covered_on_shared_stage10_path():
     """AC3. Cursor and Grok Build share write_stage10 and write_docx."""
-    from essay_writer.late_chain import write_stage10 as chain_write
+    from essay_writer.late_chain import _stage10_manifest, _write_stage10_sequence
     from essay_writer.word import word_manifest
 
-    source = inspect.getsource(chain_write)
+    source = inspect.getsource(_stage10_manifest) + inspect.getsource(
+        _write_stage10_sequence
+    )
     assert "write_docx(" in source
     assert "word_manifest(" in source
     manifest = inspect.getsource(word_manifest)

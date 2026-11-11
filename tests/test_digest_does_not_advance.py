@@ -20,7 +20,8 @@ from essay_writer.shells import cursor_shell, front_office
 from essay_writer.specialists.grok_bot import basics_pass_lines, front_office_call
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 
 QUESTION = "How should Inditex manage its supply chain?"
 SCHEME = (

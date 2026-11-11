@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from essay_writer import first_run
+from essay_writer import first_run, first_run_cli
 from essay_writer.first_run import (
     CURSOR_AGENT_INSTALL_URL,
     CURSOR_AGENT_MANUAL_INSTALL,
@@ -41,7 +41,7 @@ BASH = "/usr/bin/bash"
 
 def _missing_agent(monkeypatch) -> None:
     """No agent on disk and not the Mac, so the consent branch is reachable."""
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: False)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: False)
     monkeypatch.setattr("essay_writer.setup.cursor_cli_binary", lambda: None)
     monkeypatch.delenv("ESSAY_WRITER_ALLOW_CURSOR_INSTALL", raising=False)
     monkeypatch.delenv(CURSOR_INSTALL_SHA256_ENV, raising=False)
@@ -49,7 +49,7 @@ def _missing_agent(monkeypatch) -> None:
 
 def _fixed_which(monkeypatch) -> None:
     """Deterministic curl and bash paths, so these tests do not depend on the host."""
-    monkeypatch.setattr("essay_writer.first_run.shutil.which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr("essay_writer.first_run_install.shutil.which", lambda name: f"/usr/bin/{name}")
 
 
 def _downloader(monkeypatch, state: dict, ran: list[dict]) -> None:
@@ -69,7 +69,7 @@ def _downloader(monkeypatch, state: dict, ran: list[dict]) -> None:
 
         return Completed()
 
-    monkeypatch.setattr("essay_writer.first_run.subprocess.run", fake_run)
+    monkeypatch.setattr("essay_writer.first_run_install.subprocess.run", fake_run)
 
 
 def _working_agent(monkeypatch, state: dict) -> None:
@@ -81,11 +81,11 @@ def test_no_consent_downloads_nothing_and_changes_nothing(monkeypatch, tmp_path)
     """No consent: no download, no exec, no temp file, and manual install guidance."""
     _missing_agent(monkeypatch)
     monkeypatch.setattr(
-        "essay_writer.first_run.subprocess.run",
+        "essay_writer.first_run_install.subprocess.run",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("no exec without consent")),
     )
     monkeypatch.setattr(
-        "essay_writer.first_run.tempfile.mkdtemp",
+        "essay_writer.first_run_install.tempfile.mkdtemp",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("no temp file without consent")),
     )
     monkeypatch.setenv("TMPDIR", str(tmp_path))
@@ -107,20 +107,20 @@ def test_consent_flag_env_and_hash_flag_are_parsed(monkeypatch):
     """--install-cursor, the env consent, and --cursor-sha256 are the documented switches."""
     monkeypatch.delenv("ESSAY_WRITER_ALLOW_CURSOR_INSTALL", raising=False)
     assert cursor_install_consent() is False
-    assert first_run._parse(["--install-cursor"])["allow_cursor_install"] is True
-    assert first_run._parse(["--no-install-cursor"])["allow_cursor_install"] is False
+    assert first_run_cli._parse(["--install-cursor"])["allow_cursor_install"] is True
+    assert first_run_cli._parse(["--no-install-cursor"])["allow_cursor_install"] is False
     assert first_run_request(["--install-cursor"]) is True
     assert first_run_request(["--cursor-sha256", "a" * 64]) is True
 
-    parsed = first_run._parse(["--install-cursor", "--cursor-sha256", "A" * 64])
+    parsed = first_run_cli._parse(["--install-cursor", "--cursor-sha256", "A" * 64])
     assert parsed["cursor_sha256"] == "a" * 64
     assert parsed["allow_cursor_install"] is True
 
     for bad in ("not-a-hash", "a" * 63, "g" * 64):
         with pytest.raises(ValueError):
-            first_run._parse(["--cursor-sha256", bad])
+            first_run_cli._parse(["--cursor-sha256", bad])
     with pytest.raises(ValueError):
-        first_run._parse(["--cursor-sha256"])
+        first_run_cli._parse(["--cursor-sha256"])
 
     for value in ("1", "true", "TRUE", "yes", "on"):
         monkeypatch.setenv("ESSAY_WRITER_ALLOW_CURSOR_INSTALL", value)
@@ -134,7 +134,7 @@ def test_env_consent_runs_the_injected_installer_without_shell(monkeypatch):
     """Env consent is enough for the test seam; the fake installer records that it ran."""
     _missing_agent(monkeypatch)
     monkeypatch.setenv("ESSAY_WRITER_ALLOW_CURSOR_INSTALL", "1")
-    monkeypatch.setattr("essay_writer.first_run._run_cursor_installer", _forbidden("no real download"))
+    monkeypatch.setattr("essay_writer.first_run_install._run_cursor_installer", _forbidden("no real download"))
     ran: list[str] = []
     state = {"binary": None}
 
@@ -257,7 +257,7 @@ def test_mismatched_expected_hash_does_not_execute(monkeypatch):
             return Downloaded()
         raise AssertionError("a hash mismatch must not run")
 
-    monkeypatch.setattr("essay_writer.first_run.subprocess.run", fake_run)
+    monkeypatch.setattr("essay_writer.first_run_install.subprocess.run", fake_run)
     monkeypatch.setattr("essay_writer.setup.cursor_cli_binary", lambda: None)
 
     result = ensure_cursor_agent(allow_install=True, expected_sha256="0" * 64)
@@ -289,9 +289,9 @@ def test_an_invalid_expected_hash_is_not_a_pin(monkeypatch):
 def test_missing_curl_refuses_without_running_anything(monkeypatch):
     """No curl means no download, no exec, and a named reason."""
     _missing_agent(monkeypatch)
-    monkeypatch.setattr("essay_writer.first_run.shutil.which", lambda _name: None)
+    monkeypatch.setattr("essay_writer.first_run_install.shutil.which", lambda _name: None)
     monkeypatch.setattr(
-        "essay_writer.first_run.subprocess.run",
+        "essay_writer.first_run_install.subprocess.run",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("must not run")),
     )
     result = ensure_cursor_agent(allow_install=True)
@@ -304,9 +304,9 @@ def test_mac_is_refused_even_with_consent_and_hash(monkeypatch):
     """Consent and a hash never install the Cursor CLI on the Mac."""
     _missing_agent(monkeypatch)
     monkeypatch.setenv("ESSAY_WRITER_ALLOW_CURSOR_INSTALL", "1")
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: True)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: True)
     monkeypatch.setattr(
-        "essay_writer.first_run._run_cursor_installer",
+        "essay_writer.first_run_install._run_cursor_installer",
         _forbidden("never install on the Mac"),
     )
     result = ensure_cursor_agent(expected_sha256=INSTALLER_SHA)
@@ -323,14 +323,14 @@ def test_install_uploaded_copy_plumbs_the_expected_hash(monkeypatch, tmp_path):
         seen["expected_sha256"] = expected_sha256
         return {"ok": False, "reason": CURSOR_INSTALL_NEEDS_HASH}
 
-    monkeypatch.setattr("essay_writer.first_run.ensure_cursor_agent", fake_ensure)
-    monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
+    monkeypatch.setattr("essay_writer.first_run_install.ensure_cursor_agent", fake_ensure)
+    monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
     monkeypatch.setattr(
-        "essay_writer.first_run.install_self_check",
+        "essay_writer.first_run_install.install_self_check",
         lambda: {"ok": True, "tool": "essay.health"},
     )
     monkeypatch.setattr(
-        "essay_writer.first_run.attach_friend_upgrade_fo_card",
+        "essay_writer.first_run_mac.attach_friend_upgrade_fo_card",
         lambda payload, **_kwargs: payload,
     )
     source = tmp_path / "tree"
@@ -359,16 +359,16 @@ def test_install_uploaded_copy_plumbs_the_expected_hash(monkeypatch, tmp_path):
 def test_pip_install_report_keeps_the_needs_consent_reason(monkeypatch, tmp_path):
     """The install report carries the structured reason instead of installing silently."""
     _missing_agent(monkeypatch)
-    monkeypatch.setattr("essay_writer.first_run._run_pip", lambda _cmd, _cwd: {"returncode": 0})
-    monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
-    monkeypatch.setattr("essay_writer.first_run.attach_custom_mcp", lambda *a, **k: None)
-    monkeypatch.setattr("essay_writer.first_run.attach_build_mcp", lambda *a, **k: None)
+    monkeypatch.setattr("essay_writer.first_run_install._run_pip", lambda _cmd, _cwd: {"returncode": 0})
+    monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
+    monkeypatch.setattr("essay_writer.first_run_host.attach_custom_mcp", lambda *a, **k: None)
+    monkeypatch.setattr("essay_writer.first_run_host.attach_build_mcp", lambda *a, **k: None)
     monkeypatch.setattr(
-        "essay_writer.first_run.install_self_check",
+        "essay_writer.first_run_install.install_self_check",
         lambda: {"ok": True, "tool": "essay.health"},
     )
     monkeypatch.setattr(
-        "essay_writer.first_run.attach_friend_upgrade_fo_card",
+        "essay_writer.first_run_mac.attach_friend_upgrade_fo_card",
         lambda payload, **_kwargs: payload,
     )
     source = tmp_path / "tree"
@@ -496,7 +496,7 @@ def _upload_zip(tmp_path: Path) -> Path:
 
 def test_upload_zip_checks_a_sha256_when_present_and_reports_when_absent(tmp_path, monkeypatch):
     """A checksum is optional: verify when available, report unverified when not."""
-    monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
+    monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
     upload = _upload_zip(tmp_path)
     digest = hashlib.sha256(upload.read_bytes()).hexdigest()
     calls: list[list[str]] = []
@@ -543,7 +543,7 @@ def test_upload_zip_checks_a_sha256_when_present_and_reports_when_absent(tmp_pat
 
 def test_upload_zip_rejects_a_broken_sidecar(tmp_path, monkeypatch):
     """A checksum file that is present but unusable is loud, not skipped."""
-    monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
+    monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
     upload = _upload_zip(tmp_path)
     sidecar = upload.with_name(upload.name + ".sha256")
     sidecar.write_text("not-a-checksum\n", encoding="utf-8")
@@ -572,7 +572,7 @@ def test_upload_zip_rejects_a_broken_sidecar(tmp_path, monkeypatch):
 
 
 def test_upload_zip_sibling_checksum_verifies_without_a_flag(tmp_path, monkeypatch):
-    monkeypatch.setattr("essay_writer.first_run.expose_writer_on_path", lambda: None)
+    monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
     upload = _upload_zip(tmp_path)
     digest = hashlib.sha256(upload.read_bytes()).hexdigest()
     upload.with_name(upload.name + ".sha256").write_text(f"{digest}  {upload.name}\n", encoding="utf-8")

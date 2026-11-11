@@ -24,12 +24,20 @@ from helpers import with_word_references
 from essay_writer.assignment_gate import read_assignment
 from essay_writer.brief_contract import pack_with_registration, remember_registration
 from essay_writer.diary import blank_field_labels, diary_cover_lines, title_page_spec
-from essay_writer.late_chain import _pack_from_docx, write_stage10
+from essay_writer.late_chain import (
+    _deliver_stage10,
+    _pack_from_docx,
+    _stage10_gate,
+    _stage10_manifest,
+    _write_stage10_sequence,
+    write_stage10,
+)
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.projects import essay_sequence_new
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.word import cover_lines, write_docx
 
@@ -486,4 +494,13 @@ def test_ac5_stage10_confirm_refreshes_the_sequence_final(workspace):
     assert stale.stat().st_mtime_ns == parent_mtime
     assert f"Registration number: {NUMBER}" in "\n".join(_texts(child_final))
     assert NAME not in "\n".join(_texts(child_final))
-    assert "copy2" not in inspect.getsource(write_stage10)
+    stage10_source = "".join(
+        inspect.getsource(fn)
+        for fn in (
+            _stage10_manifest,
+            _stage10_gate,
+            _write_stage10_sequence,
+            _deliver_stage10,
+        )
+    )
+    assert "copy2" not in stage10_source

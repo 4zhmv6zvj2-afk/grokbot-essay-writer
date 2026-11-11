@@ -19,7 +19,8 @@ from essay_writer.server import INSTRUCTIONS
 from essay_writer.specialists.grok_bot import OPENING_CHOICE
 from essay_writer.specialists.writer import FIRST_DRAFT_NOTE
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.textutil import genre_from_brief_text
 from essay_writer.writing_basics import CHECKLISTS, STAGE_ORDER
 

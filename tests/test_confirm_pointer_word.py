@@ -20,14 +20,21 @@ from essay_writer.brief_contract import (
 )
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
-from essay_writer.late_chain import write_stage10
+from essay_writer.late_chain import (
+    _deliver_stage10,
+    _stage10_gate,
+    _stage10_manifest,
+    _write_stage10_sequence,
+    write_stage10,
+)
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.projects import essay_sequence_new
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.word import empty_footer_refusal, essay_pack_render_word, write_docx
 from essay_writer.writing_basics import STAGE_ORDER
@@ -322,7 +329,15 @@ def test_build_covered_cursor_and_grok_share_the_word_path(monkeypatch):
     assert overlay == MAPPED_TYPE_OVERLAY
     assert "page layout" in overlay
     assert "registration number" in overlay
-    source = inspect.getsource(write_stage10)
+    source = "".join(
+        inspect.getsource(fn)
+        for fn in (
+            _stage10_manifest,
+            _stage10_gate,
+            _write_stage10_sequence,
+            _deliver_stage10,
+        )
+    )
     assert "write_docx(" in source
     assert "copy2" not in source
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]

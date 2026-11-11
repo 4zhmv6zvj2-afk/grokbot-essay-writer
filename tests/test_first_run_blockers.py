@@ -18,7 +18,8 @@ from essay_writer.originals import essay_originals
 from essay_writer.paths import student_chat_path
 from essay_writer.setup import essay_setup
 from essay_writer.stage_llm import brief_genre
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 
 MODULE = "RPT6001AA"
@@ -55,7 +56,7 @@ def test_mcp_command_is_absolute_when_the_bare_name_is_off_path(tmp_path, monkey
     script.chmod(0o755)
     monkeypatch.setattr(Path, "home", lambda: home)
     monkeypatch.setattr(sysconfig, "get_path", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("essay_writer.first_run.shutil.which", lambda _name: None)
+    monkeypatch.setattr("essay_writer.first_run_host.shutil.which", lambda _name: None)
 
     command = mcp_launch_command()
     assert command == str(script.resolve())
@@ -82,7 +83,7 @@ def test_mcp_command_is_absolute_when_the_bare_name_is_off_path(tmp_path, monkey
 
 def test_bare_mcp_name_stays_when_the_script_is_already_on_path(monkeypatch):
     monkeypatch.setattr(
-        "essay_writer.first_run.shutil.which",
+        "essay_writer.first_run_host.shutil.which",
         lambda name: "/usr/bin/essay-writer" if name == "essay-writer" else None,
     )
     assert mcp_launch_command() == "essay-writer"

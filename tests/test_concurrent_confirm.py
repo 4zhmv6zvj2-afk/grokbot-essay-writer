@@ -9,10 +9,11 @@ import threading
 
 from helpers import open_sequence
 
-from essay_writer import stage_state, stage_track
+from essay_writer import stage_landing, stage_replies, stage_state, stage_track
 from essay_writer.paths import work_dir
 from essay_writer.shells import front_office_call
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 
 LOOK = "Look A stays."
 NEWER = "Look B replaces."
@@ -125,7 +126,7 @@ def test_ac2_stale_pointer_write_loses(workspace):
         "room_grant": None,
         "room_lock": True,
     }
-    lost = stage_track._commit_pointer(seq, early, rollback)
+    lost = stage_state._commit_pointer(seq, early, rollback)
     assert lost is None
     fresh = load_pointer(seq)
     assert fresh["current"] == "3"
@@ -284,6 +285,6 @@ def test_ac5_commit_is_shared_for_later_stages(workspace, monkeypatch):
     assert "1" in seen
     assert "2" in seen
     assert "_save_pointer" not in inspect.getsource(stage_track._run_stage)
-    assert "_commit_pointer" in inspect.getsource(stage_track._save_confirm)
-    assert "_commit_pointer" in inspect.getsource(stage_track._store_stage)
-    assert "stage ==" not in inspect.getsource(stage_track._commit_pointer)
+    assert "_commit_pointer" in inspect.getsource(stage_replies._save_confirm)
+    assert "_commit_pointer" in inspect.getsource(stage_landing._store_stage)
+    assert "stage ==" not in inspect.getsource(stage_state._commit_pointer)

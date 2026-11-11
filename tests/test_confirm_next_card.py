@@ -22,7 +22,9 @@ from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH, basics_pass_lines
-from essay_writer.stage_track import TOOL, _save_confirm, essay_stage, load_pointer
+from essay_writer.stage_replies import _save_confirm
+from essay_writer.stage_state import TOOL, load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 REPO = Path(__file__).resolve().parents[1]

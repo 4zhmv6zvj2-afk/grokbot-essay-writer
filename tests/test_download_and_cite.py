@@ -13,7 +13,8 @@ from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists.grok_bot import BASICS_FIRST_LINES
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER, basics_lines
 
 QUESTION = "How should the firm manage the corridor?"

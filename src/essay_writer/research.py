@@ -409,7 +409,8 @@ def _run(
         essay_id, packs, exclude_section_ids, industry, host_voice
     )
     if option_refusal or options is None:
-        assert option_refusal is not None
+        if option_refusal is None:
+            raise RuntimeError("a refused option set must carry a refusal body")
         option_refusal["confirmPhase"] = confirmPhase
         return option_refusal
     payload = _payload(
@@ -431,7 +432,8 @@ def _run(
         reviews if depth == "full" else None,
     )
     if refusal or prepared is None:
-        assert refusal is not None
+        if refusal is None:
+            raise RuntimeError("a refused preparation must carry a refusal body")
         refusal["confirmPhase"] = confirmPhase
         return refusal
     fingerprint = prepared["fingerprint"]

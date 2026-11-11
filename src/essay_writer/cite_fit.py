@@ -15,21 +15,21 @@ so a later file cannot put that cite back into the body or the reference list.
 
 from __future__ import annotations
 
-import json
-import os
 import re
 from typing import Any
 
 from essay_writer import assignment_gate as essay_assignment_gate
-from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import work_dir
+from essay_writer.records import read_json, write_json
 from essay_writer.state import load_state
 from essay_writer.textutil import (
     PAREN,
     citation_tokens,
+    content_words,
     family_name,
     in_text_forms,
     norm_space,
+    sentences,
     token_allowed,
     without_narrative_citations,
 )
@@ -107,8 +107,6 @@ _DROP = re.compile(
 _SWAP = re.compile(
     r"(?i)\b(?:swap|replace)\s+([A-Z][A-Za-z'’\-]+)\s+(?:for|with)\s+([A-Z][A-Za-z'’\-]+)"
 )
-_WORD = re.compile(r"[a-z0-9]+(?:'[a-z0-9]+)?")
-_SENTENCE = re.compile(r"(?<=[.!?])\s+")
 
 
 def _blank() -> dict[str, Any]:
@@ -122,15 +120,9 @@ def _record_path(essay_id: str):
 
 def load_record(essay_id: str) -> dict[str, Any]:
     """Surnames the student allowed or rejected, and cites withheld from Word."""
-    path = _record_path(essay_id)
     record = _blank()
-    if not path.is_file():
-        return record
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return record
-    if not isinstance(data, dict):
+    data = read_json(_record_path(essay_id))
+    if data is None:
         return record
     for key in ("ok", "rejected", "withheld"):
         raw = data.get(key)
@@ -141,12 +133,7 @@ def load_record(essay_id: str) -> dict[str, Any]:
 
 def _write_record(essay_id: str, record: dict[str, Any]) -> None:
 
-    path = _record_path(essay_id)
-    refuse_repo_write(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    write_json(_record_path(essay_id), record, mkdir=True)
 
 
 def _names(pattern: re.Pattern[str], text: str) -> set[str]:
@@ -170,10 +157,6 @@ def _added_names(text: str) -> set[str]:
     return _names(_ADD, text) - _names(_DROP, text)
 
 
-def _content_words(text: str) -> list[str]:
-    return [word for word in _WORD.findall(text.casefold()) if len(word) > 3 and word not in _STOP]
-
-
 def _bare(text: str) -> str:
 
     cleaned = without_narrative_citations(text)
@@ -183,10 +166,10 @@ def _bare(text: str) -> str:
 
 def _claim_words(sentence: str, topic: str = "") -> list[str]:
     """Content words of the student's sentence that are not the assignment topic."""
-    topic_words = set(_content_words(topic))
+    topic_words = set(content_words(topic, stopwords=_STOP))
     seen: set[str] = set()
     claim: list[str] = []
-    for word in _content_words(_bare(sentence)):
+    for word in content_words(_bare(sentence), stopwords=_STOP):
         if word in topic_words or word in seen:
             continue
         seen.add(word)
@@ -207,14 +190,10 @@ def same_idea(sentence: str, excerpt: str, topic: str = "") -> bool:
         return False
     if not isinstance(excerpt, str) or not excerpt.strip():
         return False
-    have = set(_content_words(excerpt))
+    have = set(content_words(excerpt, stopwords=_STOP))
     found = sum(1 for word in claim if word in have)
     need = max(3, len(claim) // 2 + 1)
     return found >= need
-
-
-def _sentences(text: str) -> list[str]:
-    return [part.strip() for part in _SENTENCE.split(text) if part.strip()]
 
 
 def _topic(essay_id: str) -> str:
@@ -227,7 +206,7 @@ def _topic(essay_id: str) -> str:
 
 
 def _student_sentences(essay_id: str, answers: str) -> list[str]:
-    from essay_writer.stage_track import _note_look
+    from essay_writer.stage_state import _note_look
 
     chunks: list[str] = []
     for stage in _STUDENT_STAGES:
@@ -238,14 +217,14 @@ def _student_sentences(essay_id: str, answers: str) -> list[str]:
         chunks.append(answers)
     found: list[str] = []
     for chunk in chunks:
-        for sentence in _sentences(chunk):
+        for sentence in sentences(chunk):
             if len(_claim_words(sentence)) >= 3:
                 found.append(sentence)
     return found
 
 
 def _prior_body(essay_id: str, stage: str) -> str:
-    from essay_writer.stage_track import _note_look
+    from essay_writer.stage_state import _note_look
 
     if stage in _BODY_ORDER:
         earlier = _BODY_ORDER[: _BODY_ORDER.index(stage)]
@@ -309,14 +288,14 @@ def rejected_names(record: dict[str, Any]) -> set[str]:
 
 def _sentence_with(text: str, token: str) -> str:
 
-    for sentence in _sentences(text):
+    for sentence in sentences(text):
         if token in citation_tokens(sentence):
             return sentence
     return text
 
 
 def _on_student_sentence(sentence: str, students: list[str], topic: str) -> str | None:
-    bare_words = set(_content_words(_bare(sentence)))
+    bare_words = set(content_words(_bare(sentence), stopwords=_STOP))
     for student in students:
         claim = _claim_words(student, topic)
         if len(claim) < 3:
@@ -369,7 +348,7 @@ def strip_token(text: str, token: str) -> str:
 
 
 def _asked_names(essay_id: str, answers: str, ok: set[str]) -> set[str]:
-    from essay_writer.stage_track import _note_look
+    from essay_writer.stage_state import _note_look
 
     names = set(ok)
     names |= _added_names(answers)

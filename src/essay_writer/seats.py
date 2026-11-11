@@ -6,12 +6,12 @@ from essay_writer.prompt_loader import raw
 
 
 def seat_reading(seat: str) -> str:
-    """Research reads the writing helpers. Write also reads Harvard Referencing.
+    """The write seat reads the stage rules and Harvard Referencing.
 
-    The reviewer seat reads neither file.
+    The reviewer seat reads neither. The old research seat was never wired and
+    is gone; the research stages read the writing helpers from the server
+    instructions.
     """
-    if seat == "research":
-        return raw("seats/research.md")
     if seat == "write":
         return raw("seats/write.md")
     return ""

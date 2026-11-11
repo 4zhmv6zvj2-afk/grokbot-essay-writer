@@ -116,11 +116,3 @@ def _submit_file_has_no_citations(essay_id: str) -> bool:
 
     opened = read_submit_word(essay_id)
     return opened.get("opened") is True and opened.get("citations") is not True
-
-
-def __getattr__(name: str):
-    if name == "essay_stage":
-        from essay_writer.stage_track import essay_stage
-
-        return essay_stage
-    raise AttributeError(name)

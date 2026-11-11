@@ -26,7 +26,8 @@ from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_llm import stage_tool_description
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 
 MODULE = "RPT5001AA"
 DIARY_BRIEF = """

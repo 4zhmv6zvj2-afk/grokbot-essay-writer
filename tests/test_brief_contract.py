@@ -33,12 +33,19 @@ from essay_writer.diary import (
     section_word_plan,
     title_page_spec,
 )
-from essay_writer.late_chain import write_stage10
+from essay_writer.late_chain import (
+    _deliver_stage10,
+    _stage10_gate,
+    _stage10_manifest,
+    _write_stage10_sequence,
+    write_stage10,
+)
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.projects import essay_sequence_new
 from essay_writer.specialists.grok_bot import basics_pass_lines
+from essay_writer.stage_landing import _collect_stage_misses
 from essay_writer.stage_llm import POINTER_FILE, stage_settings, stage_title
-from essay_writer.stage_track import _build_stage_body, _collect_stage_misses, essay_stage
+from essay_writer.stage_track import _build_stage_body, essay_stage
 from essay_writer.textutil import genre_from_brief_text
 from essay_writer.word import cover_lines, essay_pack_render_word, write_docx
 
@@ -437,8 +444,17 @@ def test_ac_nt4_title_page_identity(workspace, monkeypatch):
     assert "102938" not in (REPO / "src" / "essay_writer" / "diary.py").read_text(encoding="utf-8")
     assert "cover_lines(" in inspect.getsource(write_docx)
     assert "cover_lines(" in inspect.getsource(essay_pack_render_word)
-    assert "write_docx(" in inspect.getsource(write_stage10)
-    assert "copy2" not in inspect.getsource(write_stage10)
+    stage10_source = "".join(
+        inspect.getsource(fn)
+        for fn in (
+            _stage10_manifest,
+            _stage10_gate,
+            _write_stage10_sequence,
+            _deliver_stage10,
+        )
+    )
+    assert "write_docx(" in stage10_source
+    assert "copy2" not in stage10_source
     assert not hasattr(write_stage10, "stage10_cover")
 
     _write_brief("QUA9001HK", NUMBERED)

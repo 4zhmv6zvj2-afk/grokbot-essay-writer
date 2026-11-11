@@ -21,17 +21,14 @@ from essay_writer.encourage import (
     ask_order,
     student_facts,
 )
+from essay_writer.prompt_content import ANTI_GLUE, ENCOURAGE_FACT_RULE, VOICE_LIMIT
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.eqr import REVIEW_LIMIT, REVIEW_PROMPT, review_limit_sha
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
-from essay_writer.writing_basics import (
-    ANTI_GLUE,
-    ENCOURAGE_FACT_RULE,
-    VOICE_LIMIT,
-    voice_limit_sha,
-)
+from essay_writer.writing_basics import voice_limit_sha
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE_ID = "encourage-plan-v1"
@@ -267,8 +264,8 @@ def test_ac5_writer_voice_limits_on_stages_5_to_8():
         "Do not plant grammar errors.",
     ):
         assert sentence in source
-        assert sentence in helpers
-    assert VOICE_LIMIT in helpers
+    assert VOICE_LIMIT in source
+    assert VOICE_LIMIT not in helpers
     assert voice_limit_sha() == __import__("hashlib").sha256(VOICE_LIMIT.encode("utf-8")).hexdigest()
     assert len(voice_limit_sha()) == 64
     folded = source.casefold()
@@ -289,6 +286,7 @@ def test_ac5_writer_voice_limits_on_stages_5_to_8():
             assert "Do not plant grammar errors." in text
             assert ENCOURAGE_FACT_RULE in text
             assert ANTI_GLUE in text
+            assert VOICE_LIMIT in text
             assert student_surface_hits(stage_settings(stage, genre)["prompt_overlay"]) == []
     gates = (REPO / "src" / "essay_writer" / "gates.py").read_text(encoding="utf-8")
     validate = (REPO / "src" / "essay_writer" / "validate.py").read_text(encoding="utf-8")

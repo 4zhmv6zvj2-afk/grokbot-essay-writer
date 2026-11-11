@@ -25,7 +25,8 @@ from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.research import essay_research_summary
 from essay_writer.research_packs import ship_4a
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 
 MODULE = "RPT5001AA"

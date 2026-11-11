@@ -5,13 +5,14 @@ from pathlib import Path
 from essay_writer.doors import DOORS
 from essay_writer.review import REVIEW_INSTRUCTIONS, REVIEW_PROMPT
 from essay_writer.server import INSTRUCTIONS, house_instructions
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage_llm import (
     HOUSE_MODEL,
     STAGE_KEYS,
     all_stage_settings,
     stage_settings,
 )
-from essay_writer.writing_basics import CHECKLIST_WALK, CHECKLISTS, STAGE_ORDER
+from essay_writer.writing_basics import CHECKLISTS, STAGE_ORDER
 
 REPO = Path(__file__).resolve().parents[1]
 

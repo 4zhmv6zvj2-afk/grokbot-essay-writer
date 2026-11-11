@@ -31,7 +31,14 @@ LONG = "The corridor depends on a narrow strait that carries crude."
 
 
 def _ready(workspace):
-    write_upload(workspace)
+    # The shared splitter now keeps short bibliography lines in the upload.
+    # The exact bibliography line would match its Word reference-list copy and
+    # count as an unquoted copy, so this fixture gathers the same author,
+    # title, and quote in prose instead.
+    write_upload(
+        workspace,
+        text="Smith, J. (2020) 'Chokepoints and crude'. The Strait handles a large share of flows.\n",
+    )
     brief = workspace / "Essay-writer" / ESSAY / "brief.md"
     brief.parent.mkdir(parents=True, exist_ok=True)
     brief.write_text(

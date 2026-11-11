@@ -248,7 +248,8 @@ def _continue_row(module: str) -> dict[str, Any]:
             }
         )
     if saved is None:
-        assert sequential is not None
+        if sequential is None:
+            raise RuntimeError("a saved sequence needs a sequential id")
         sequential_id = sequence_id(module, sequential)
         continue_row = {
             "module": module,
@@ -1299,7 +1300,7 @@ def clone_sequence(module: str, parent: int, child: int, *, reason: str) -> None
         _discard_tree(staging)
         _discard_tree(kb1_staging)
         target.parent.mkdir(parents=True, exist_ok=True)
-        from essay_writer.stage_track import (
+        from essay_writer.stage_state import (
             init_cloned_sequence_pointer,
             rebind_cloned_confirms,
             stage_lock,
@@ -1438,9 +1439,10 @@ def essay_sequence_new(
     body["wrote"] = True
     body["stored"] = True
     body["digest"] = digest(payload)
-    from essay_writer.stage_track import door_card_reply
+    from essay_writer.stage_state import door_card_reply
+    from essay_writer.stage_track import _run_card_only
 
-    opened = door_card_reply(child_id)
+    opened = door_card_reply(child_id, card_run=_run_card_only)
     card = opened.get("card") if isinstance(opened, dict) else None
     if isinstance(opened, dict) and isinstance(card, dict) and card.get("essay_id") == child_id:
         body["card"] = card

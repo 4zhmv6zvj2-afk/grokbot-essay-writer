@@ -208,7 +208,8 @@ def gather_source(essay_id: str, raw: object, index: int) -> tuple[dict[str, Any
         return None, [{"code": "invent-forbid", "reason": f"{label} origin brief does not match the locator"}]
 
     if kind == "kb1-file":
-        assert path is not None
+        if path is None:
+            raise RuntimeError(f"{label} has a kb1-file locator with no path")
         if not path.is_file():
             return None, [
                 {
@@ -232,7 +233,8 @@ def gather_source(essay_id: str, raw: object, index: int) -> tuple[dict[str, Any
             }
         ]
     else:
-        assert path is not None
+        if path is None:
+            raise RuntimeError(f"{label} has a {kind} locator with no path")
         if not path.is_file():
             return None, [
                 {

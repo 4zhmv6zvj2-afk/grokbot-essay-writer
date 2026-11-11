@@ -9,7 +9,8 @@ from essay_writer.late_chain import STAGE6_OPEN
 from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.spine import AUTO_START, advances_without_confirm
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 

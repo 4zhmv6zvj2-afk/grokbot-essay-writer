@@ -18,7 +18,7 @@ newline. It covers exactly the values asserted by
 * ``doors`` from ``essay_writer.doors.DOORS`` (``tool`` -> ``description``);
 * ``setup`` from ``essay_writer.setup.SETUP_PROMPT`` and
   ``CURSOR_SETUP_PROMPT``;
-* ``seats`` from ``seat_reading("research")`` and ``seat_reading("write")``.
+* ``seats`` from ``seat_reading("write")``.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def build_snapshot() -> dict:
             "setup_prompt": SETUP_PROMPT,
             "cursor_setup_prompt": CURSOR_SETUP_PROMPT,
         },
-        "seats": {"research": seat_reading("research"), "write": seat_reading("write")},
+        "seats": {"write": seat_reading("write")},
     }
 
 

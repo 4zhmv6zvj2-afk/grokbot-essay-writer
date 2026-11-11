@@ -171,7 +171,7 @@ On the Grok Bot computer, setup will:
 
 ## For developers
 
-Python 3.12 or newer:
+Python 3.12 or newer on macOS or Linux (the stage lock uses `fcntl`; Windows is not supported):
 
 ```bash
 uv sync --extra dev
@@ -187,13 +187,15 @@ uv run pytest --cov=essay_writer --cov-report=term   # CI floor 85%
 - `src/essay_writer/doors.py` — the tool catalogue (one "door" per tool).
 - `src/essay_writer/stage_track.py` — the stage runner, cards, and confirm flow.
 - `src/essay_writer/stage_state.py` — the state layer (pointer, commit journal,
-  stage lock, tracking note, held/refused replies) re-exported by stage_track.
+  stage lock, tracking note, held/refused replies). Imported by the stage
+  runner; it never imports the runner back.
 - `src/essay_writer/stage_context.py` — the typed pipeline values (`StageArgs`,
   `StageContext`, `ConfirmState`).
 - `src/essay_writer/safe_url.py` — the network opener for model- and
   paper-driven fetches (public http(s), redirect re-validation, byte caps).
 - `src/essay_writer/stage_landing.py`, `stage_replies.py` — the landing/report
-  helpers and the draft/save reply writers, re-exported by `stage_track.py`.
+  helpers and the draft/save reply writers. The runner injects the card and
+  confirm runners those helpers need.
 - `src/essay_writer/prompts/` — the stage, genre, craft, and review text that is
   the actual product.
 - `tests/` — behaviour and acceptance tests; `tests/fixtures/` is synthetic, no

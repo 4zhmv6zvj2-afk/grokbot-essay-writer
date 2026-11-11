@@ -6,7 +6,6 @@ from essay_writer import stage_track
 from essay_writer.server import HANDLERS
 from essay_writer.spine import (
     advances_without_confirm,
-    essay_stage,
     final_review,
     gate_save,
     save_line,
@@ -15,8 +14,8 @@ from essay_writer.spine import (
 from essay_writer.stage_track import essay_stage as tracked
 
 
-def test_stage_door_is_the_spine_export():
-    assert essay_stage is tracked is HANDLERS["essay.stage"]
+def test_stage_door_is_the_track_export():
+    assert tracked is HANDLERS["essay.stage"]
     assert gate_save.__module__ == "essay_writer.spine"
     assert save_line("10", None) == "Confirm to save the final look. The tool does not submit."
     assert stage_bibliography.__module__ == "essay_writer.spine"

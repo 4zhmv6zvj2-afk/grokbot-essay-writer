@@ -10,7 +10,8 @@ from essay_writer.assignment_gate import _question_of, assignment_gate, read_ass
 from essay_writer.cite_open import cite_look
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.shells import front_office_call
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 TITLE_QUESTION = "How should the firm manage the corridor?"

@@ -28,13 +28,18 @@ from typing import Any
 
 from essay_writer.assignment_gate import assignment_requirements, study_defaults_allowed
 from essay_writer.paths import module_code
+from essay_writer.prompt_content import (
+    CRAFT_BY_STAGE,
+    PRECEDENCE,
+    SHARED_REVISIT,
+    SHARED_STAGE_LINES,
+    STAGE7_AGENT,
+)
 from essay_writer.prompt_loader import render_tokens, text
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.textutil import BRIEF_GENRE, brief_file_genre
 from essay_writer.writing_basics import (
-    CHECKLIST_WALK,
     CHECKLISTS,
-    SHARED_REVISIT,
-    STAGE7_AGENT,
     STAGE_ORDER,
     basics_lines,
     genre_lock,
@@ -155,6 +160,30 @@ def stage_title(stage: str, genre: str | None = None) -> str:
     return STAGE_TITLES[stage]
 
 
+def craft_block(stage: str) -> str:
+    """Shared craft rules for a stage, rendered once from craft/voice.md."""
+    lines = CRAFT_BY_STAGE.get(stage, ())
+    if not lines:
+        return ""
+    return "Craft rules:\n" + "\n".join(lines)
+
+
+def shared_stage_block(stage: str) -> str:
+    """Stage-specific shared rules, rendered once from chat.md.
+
+    Precedence is assembled separately because every stage carries it and the
+    combined briefing shows it once at the top instead of repeating it in each
+    stage body. These sections render only on the stages that used to carry a
+    copy of that sentence.
+    """
+    if stage not in STAGE_ORDER:
+        return ""
+    lines = SHARED_STAGE_LINES.get(stage, ())
+    if not lines:
+        return ""
+    return "Shared stage rules:\n" + "\n".join(lines)
+
+
 def prompt_overlay(stage: str, genre: str | None = None) -> str:
     """The stage prompt. The checklist walk sits above the bullets."""
     if stage == "eqr":
@@ -175,11 +204,17 @@ def prompt_overlay(stage: str, genre: str | None = None) -> str:
     if not lines:
         return ""
     bullets = "\n".join(f"- {line}" for line in lines)
-    parts = [CHECKLIST_WALK]
+    parts = [CHECKLIST_WALK, PRECEDENCE]
+    shared = shared_stage_block(stage)
+    if shared:
+        parts.append(shared)
     lock = genre_lock(stage, genre)
     if lock:
         parts.append(lock)
     parts.append(bullets)
+    craft = craft_block(stage)
+    if craft:
+        parts.append(craft)
     note = revisit_note(stage, genre)
     if note:
         parts.append(note)
@@ -288,9 +323,10 @@ def stage_tool_description() -> str:
 
 
 def _stage_briefing_body(stage: str) -> str:
-    """Stage overlay without the common walk and shared revisit blocks."""
+    """Stage overlay without the common walk, precedence, and shared revisit blocks."""
     body = prompt_overlay(stage)
     body = body.removeprefix(CHECKLIST_WALK + "\n")
+    body = body.removeprefix(PRECEDENCE + "\n")
     if stage in {"3", "4a", "4b", "5"}:
         body = body.removesuffix("\n" + SHARED_REVISIT)
     if stage == "7":
@@ -303,6 +339,7 @@ def stage_rules_briefing() -> str:
     chunks = [
         text("front_office/briefing.md", "stage_rules_header"),
         CHECKLIST_WALK,
+        PRECEDENCE,
         "Shared revisit for stages 3, 4a, 4b, and 5:\n" + SHARED_REVISIT,
     ]
     for stage in STAGE_ORDER:

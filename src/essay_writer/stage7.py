@@ -6,12 +6,13 @@ folder in that same step. That note is not a second student file.
 
 from __future__ import annotations
 
-import json
 import os
 import re
 from typing import Any
 
 from essay_writer.paths import work_dir
+from essay_writer.records import read_json, write_json
+from essay_writer.textutil import sentences
 
 _QUESTIONS = (
     "Does the structure still match the brief?",
@@ -21,7 +22,6 @@ _QUESTIONS = (
     "Which lines are too vague to defend from the sources?",
 )
 
-_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _GLOSSARY = re.compile(r"\b(means|stands for|short for|that is)\b", re.IGNORECASE)
 _LOCATOR = re.compile(r"\b(available at|doi:|pp?\.\s*\d+)\b", re.IGNORECASE)
 _CLAIM = re.compile(r"\b(because|shows|finds|limit|claim)\b", re.IGNORECASE)
@@ -41,13 +41,8 @@ def load_stage7(essay_id: str) -> dict[str, Any]:
         "delta": [],
         "comments": "",
     }
-    if not path.is_file():
-        return blank
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return blank
-    if not isinstance(data, dict):
+    data = read_json(path)
+    if data is None:
         return blank
     blank["asked"] = data.get("asked") is True
     blank["edited"] = data.get("edited") is True
@@ -67,11 +62,7 @@ def load_stage7(essay_id: str) -> dict[str, Any]:
 
 
 def save_stage7(essay_id: str, record: dict[str, Any]) -> None:
-    path = _record_path(essay_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    write_json(_record_path(essay_id), record, mkdir=True)
 
 
 def stage7_edited(essay_id: str) -> bool:
@@ -240,12 +231,6 @@ def web_check_ready(value: object) -> bool:
     return value.get("tone") is True or value.get("clarity") is True
 
 
-def _sentences(text: str) -> list[str]:
-    if not isinstance(text, str) or not text.strip():
-        return []
-    return [part.strip() for part in _SENTENCE_END.split(text.strip()) if part.strip()]
-
-
 def _claim_or_limit(sentence: str) -> bool:
     if _GLOSSARY.search(sentence):
         return False
@@ -256,8 +241,8 @@ def _claim_or_limit(sentence: str) -> bool:
 
 def claim_delta(before: str, after: str) -> list[str]:
     """Every claim or limit sentence that changed. Not only glossary or locator lines."""
-    before_claims = [sentence for sentence in _sentences(before) if _claim_or_limit(sentence)]
-    after_claims = [sentence for sentence in _sentences(after) if _claim_or_limit(sentence)]
+    before_claims = [sentence for sentence in sentences(before) if _claim_or_limit(sentence)]
+    after_claims = [sentence for sentence in sentences(after) if _claim_or_limit(sentence)]
     before_set = set(before_claims)
     changed: list[str] = []
     for sentence in before_claims:

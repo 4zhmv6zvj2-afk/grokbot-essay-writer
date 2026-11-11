@@ -5,13 +5,12 @@ Names come from the brief. No look-up runs. A directory path is not stored.
 
 from __future__ import annotations
 
-import json
-import os
 import re
 from typing import Any
 
 from essay_writer.paths import BRIEF_NAMES, essay_dir, work_dir
 from essay_writer.programme import PAID_RESOLVERS
+from essay_writer.records import read_json, write_json
 
 _SLOT = "student-held file"
 _LINE = re.compile(r"(?im)^\s*databases?\s*:\s*(.+)$")
@@ -72,16 +71,7 @@ def _slot_path(essay_id: str):
 
 
 def _load(essay_id: str) -> dict[str, Any] | None:
-    path = _slot_path(essay_id)
-    if not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(data, dict):
-        return None
-    return data
+    return read_json(_slot_path(essay_id))
 
 
 def held_filename(raw: object) -> str:
@@ -130,9 +120,5 @@ def remember_databases(essay_id: str, held_file: object = None) -> dict[str, Any
     if not names and not held:
         return database_view(essay_id)
     payload = {"names": names, "held_file": held, "slot": _SLOT, "path_stored": False}
-    path = _slot_path(essay_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    write_json(_slot_path(essay_id), payload, mkdir=True)
     return database_view(essay_id)

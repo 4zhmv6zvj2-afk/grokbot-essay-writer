@@ -22,7 +22,7 @@ from essay_writer.projects import (
     essay_sequence_new,
     save_sequence_state,
 )
-from essay_writer.stage_track import load_pointer
+from essay_writer.stage_state import load_pointer
 
 MODULE = "MOD1004AA"
 

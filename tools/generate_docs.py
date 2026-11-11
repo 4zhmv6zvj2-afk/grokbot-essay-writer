@@ -73,10 +73,8 @@ def render(text: str) -> str:
 
 
 def render_seats() -> dict[str, str]:
-    helpers = DOC.read_text(encoding="utf-8")
     harvard = HARVARD.read_text(encoding="utf-8")
     return {
-        "research.md": UNTRUSTED_FENCE + "\n\n" + helpers,
         "write.md": (
             UNTRUSTED_FENCE
             + "\n\n"

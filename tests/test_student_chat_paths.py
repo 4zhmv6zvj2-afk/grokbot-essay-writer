@@ -9,9 +9,9 @@ from essay_writer.doors import DOORS
 from essay_writer.paths import student_chat_path
 from essay_writer.research import essay_research_summary
 from essay_writer.server import INSTRUCTIONS
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK, MCP_DOWN_SPEECH
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import say, speak
-from essay_writer.writing_basics import CHECKLIST_WALK, MCP_DOWN_SPEECH
 
 JOURNAL_TEXT = (
     "Smith, J. (2020) Chokepoints and crude. Maritime Policy 12(3) pp. 4-9. doi:10.1000/strait\n"

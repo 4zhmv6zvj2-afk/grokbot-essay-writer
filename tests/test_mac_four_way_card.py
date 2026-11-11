@@ -25,8 +25,8 @@ def _bot_and_mac(tmp_path, monkeypatch):
     mac.mkdir(parents=True)
     cloud = tmp_path / "workspace"
     cloud.mkdir()
-    monkeypatch.setattr("essay_writer.first_run._on_mac", lambda: False)
-    monkeypatch.setattr("essay_writer.first_run._process_home", lambda: linux)
+    monkeypatch.setattr("essay_writer.first_run_mac._on_mac", lambda: False)
+    monkeypatch.setattr("essay_writer.first_run_mac._process_home", lambda: linux)
     monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
     monkeypatch.setenv("ESSAY_WRITER_MAC_HOME", str(mac))
     monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)

@@ -249,7 +249,7 @@ def test_a_beside_app_record_is_read_when_the_home_record_is_missing(tmp_path, m
     monkeypatch.delenv("ESSAY_WRITER_ROOT", raising=False)
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
-    app = tmp_path / "named-parent" / "named-app"
+    app = tmp_path / "Documents" / "Essay-writer" / "app"
     app.mkdir(parents=True)
     legacy = app.parent / "setup.json"
     legacy.write_text(
@@ -268,7 +268,7 @@ def test_a_beside_app_record_is_read_when_the_home_record_is_missing(tmp_path, m
 
 
 def test_install_refuses_the_app_folder_named_on_the_setup_record(tmp_path, monkeypatch):
-    from essay_writer.first_run import _blocked_dest
+    from essay_writer.first_run_install import _blocked_dest
 
     monkeypatch.delenv("ESSAY_WRITER_ROOT", raising=False)
     cloud = tmp_path / "cloud"

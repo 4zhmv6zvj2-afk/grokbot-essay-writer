@@ -16,15 +16,14 @@ confirmed. The card digest is not a fingerprint field.
 from __future__ import annotations
 
 import json
-import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from essay_writer.canon import digest, dump
-from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import work_dir
+from essay_writer.records import write_json
 from essay_writer.student_voice import speak
 
 DRAFT = "draft"
@@ -103,11 +102,7 @@ def save_draft(
         record["cardDigest"] = card_digest(payload, shown)
     path = _draft_path(essay_id, tool, payload_digest, root)
 
-    refuse_repo_write(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    write_json(path, record, mkdir=True)
     return payload_digest
 
 

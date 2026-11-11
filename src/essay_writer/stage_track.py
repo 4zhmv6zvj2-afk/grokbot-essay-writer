@@ -26,21 +26,20 @@ The state layer — the pointer and its commit journal, the stage lock, the
 tracking-note renderer, and the reply bodies a held save returns — lives in
 essay_writer/stage_state.py. The landing and report helpers live in
 essay_writer/stage_landing.py and the draft and save reply writers in
-essay_writer/stage_replies.py. This module keeps the orchestrator and public
-entry points, and re-exports every moved name below so existing imports of
-essay_writer.stage_track keep working. The typed stage values (StageArgs and
-StageContext) live in essay_writer/stage_context.py.
+essay_writer/stage_replies.py. This module is the orchestrator: it imports the
+three layers at module load and keeps the public entry point.
+
+Those layers do not import this module, at module load or at call time. A save
+that needs the next stage's card or the current stage's card gets an injected
+card runner (``_run_card_only``); the state layer never sets a contextvar to
+re-enter the door. The typed stage values (StageArgs and StageContext) live in
+essay_writer/stage_context.py.
 """
 
-# The state layer moved to stage_state.py, the landing helpers to
-# stage_landing.py, and the reply writers to stage_replies.py. Every moved name
-# is re-exported here with the PEP 484 redundant-alias form, which marks it as
-# an explicit re-export instead of an unused import. The block is grouped by
-# origin, not alphabetically, so isort is disabled for this file in
-# pyproject.toml.
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 from typing import Any, cast
 
 from essay_writer.confirm import (
@@ -52,6 +51,14 @@ from essay_writer.confirm import (
 )
 from essay_writer.known_paths import guard_write_door
 from essay_writer.paths import sequence_write_error, work_dir
+from essay_writer.stage_context import ConfirmState, StageArgs, StageContext
+from essay_writer.stage_landing import (
+    _attach_cite_report,
+    _attach_outline_report,
+    _attach_short_report,
+    _collect_stage_misses,
+    _inherited_lock_keep,
+)
 from essay_writer.stage_llm import (
     RULES_SOURCE,
     STAGE_ORDER,
@@ -59,106 +66,29 @@ from essay_writer.stage_llm import (
     stage_settings,
     stage_title,
 )
-from essay_writer.stage_context import ConfirmState, StageArgs, StageContext
+from essay_writer.stage_replies import _draft_reply, _noop_result, _save_confirm
 from essay_writer.stage_state import (
-    Pointer as Pointer,
-    STAGE_COMMIT as STAGE_COMMIT,
-    StageResult as StageResult,
-    _CARD_FIELDS as _CARD_FIELDS,
-    _INHERITED_KEEP as _INHERITED_KEEP,
-    _LOCKS as _LOCKS,
-    _MINTING as _MINTING,
-    _STAGE_NOTE_RELS as _STAGE_NOTE_RELS,
-    _apply_commit as _apply_commit,
-    _atomic as _atomic,
-    _attach_minted_card as _attach_minted_card,
-    _cache_approved_look as _cache_approved_look,
-    _card_record as _card_record,
-    _clear_copied_writing as _clear_copied_writing,
-    _commit_path as _commit_path,
-    _commit_pointer as _commit_pointer,
-    _commit_with_next_card as _commit_with_next_card,
-    _confirm_blocked as _confirm_blocked,
-    _confirm_line as _confirm_line,
-    _draft_next_card as _draft_next_card,
-    _expects_next_card as _expects_next_card,
-    _grant_room as _grant_room,
-    _held_locks as _held_locks,
-    _hold_confirm as _hold_confirm,
-    _hydrate_card as _hydrate_card,
-    _mark_explicit_end as _mark_explicit_end,
-    _mint_stage_allowed as _mint_stage_allowed,
-    _name_inherited_lock as _name_inherited_lock,
-    _next_card_fields as _next_card_fields,
-    _next_card_look as _next_card_look,
-    _normalize_pointer as _normalize_pointer,
-    _note_look as _note_look,
-    _note_path as _note_path,
-    _note_rel as _note_rel,
-    _older_card as _older_card,
-    _opening_look as _opening_look,
-    _own_door_card as _own_door_card,
-    _payload as _payload,
-    _pending_inherited as _pending_inherited,
-    _pointer_lock as _pointer_lock,
-    _pointer_lost as _pointer_lost,
-    _pointer_path as _pointer_path,
-    _pointer_text as _pointer_text,
-    _read_commit as _read_commit,
-    _read_pointer_data as _read_pointer_data,
-    _render_stage10_before_close as _render_stage10_before_close,
-    _reoffer_confirm as _reoffer_confirm,
-    _replay_commit as _replay_commit,
-    _replay_confirm_card as _replay_confirm_card,
-    _revision as _revision,
-    _revisit_window as _revisit_window,
-    _rolls_backward as _rolls_backward,
-    _room_after_card_save as _room_after_card_save,
-    _room_blocks as _room_blocks,
-    _room_state as _room_state,
-    _saved_after_confirm as _saved_after_confirm,
-    _snapshot_stage_save as _snapshot_stage_save,
-    _stage5_held as _stage5_held,
-    _stage7_skip_reply as _stage7_skip_reply,
-    _stage_refusal as _stage_refusal,
-    _stale_confirm_body as _stale_confirm_body,
-    _superseded_card as _superseded_card,
-    _waiting_digest as _waiting_digest,
-    _waiting_pair as _waiting_pair,
-    _with_plan_encourage as _with_plan_encourage,
-    blank_pointer as blank_pointer,
-    door_card_reply as door_card_reply,
-    in_first_draft as in_first_draft,
-    init_cloned_sequence_pointer as init_cloned_sequence_pointer,
-    load_pointer as load_pointer,
-    rebind_cloned_confirms as rebind_cloned_confirms,
-    render_tracking as render_tracking,
-    stage_lock as stage_lock,
-    TOOL as TOOL,
-)
-
-# The landing helpers moved to stage_landing.py. Every moved name is re-exported
-# here with the PEP 484 redundant-alias form.
-from essay_writer.stage_landing import (
-    _MID_RUN_STAGES as _MID_RUN_STAGES,
-    _attach_cite_report as _attach_cite_report,
-    _attach_mid_run as _attach_mid_run,
-    _attach_outline_report as _attach_outline_report,
-    _attach_short_report as _attach_short_report,
-    _collect_stage_misses as _collect_stage_misses,
-    _inherited_lock_keep as _inherited_lock_keep,
-    _join_stage_misses as _join_stage_misses,
-    _late_armed as _late_armed,
-    _miss_record as _miss_record,
-    _open_stage6 as _open_stage6,
-    _store_stage as _store_stage,
-)
-
-# The reply writers moved to stage_replies.py.
-from essay_writer.stage_replies import (
-    _draft_reply as _draft_reply,
-    _noop_result as _noop_result,
-    _save_confirm as _save_confirm,
+    _INHERITED_KEEP,
+    TOOL,
+    CardRun,
+    Pointer,
+    _card_record,
+    _confirm_blocked,
+    _grant_room,
+    _hydrate_card,
+    _mint_stage_allowed,
+    _note_path,
+    _older_card,
+    _payload,
+    _pointer_lost,
+    _reoffer_confirm,
+    _revisit_window,
+    _room_blocks,
+    _stage7_skip_reply,
+    _stage_refusal,
+    _superseded_card,
+    _waiting_digest,
+    load_pointer,
 )
 
 
@@ -208,29 +138,83 @@ def essay_stage(
     lockChoice: str | None = None,
 ) -> dict[str, Any]:
     """A card saves the final look. Stage 5 starts stage 6."""
+    return _stage_call(
+        StageArgs(
+            essay_id=essay_id,
+            stage=stage,
+            confirmPhase=confirmPhase,
+            look=look,
+            master=master,
+            namedFolder=namedFolder,
+            answers=answers,
+            edited=edited,
+            webCheck=webCheck,
+            heldFile=heldFile,
+            cardAction=cardAction,
+            cardDigest=cardDigest,
+            card_only=card_only,
+            encourageChoice=encourageChoice,
+            paperChoice=paperChoice,
+            lockChoice=lockChoice,
+        ),
+        minting=False,
+    )
+
+
+def _run_card_only(
+    essay_id: str,
+    stage: str,
+    look: str | None = None,
+    *,
+    minting: bool = False,
+) -> dict[str, Any]:
+    """The card-only stage run the state layer calls through injection.
+
+    The next-card mint passes ``minting=True`` so the student-answer gates stay
+    off that draft. Reopening an already-saved stage's card keeps the normal
+    gates. The state layer never imports this module to reach it.
+    """
+    return _stage_call(
+        StageArgs(
+            essay_id=essay_id,
+            stage=stage,
+            confirmPhase=DRAFT,
+            look=look,
+            card_only=True,
+        ),
+        minting=minting,
+    )
+
+
+def _inherited_keep_confirm(
+    essay_id: str,
+    stage: str,
+    look: str,
+    digest: str | None,
+) -> dict[str, Any]:
+    """Save a kept inherited lock through the public door.
+
+    The landing layer sets the keep flag around this call; it never imports
+    this module to re-enter the door.
+    """
+    from essay_writer.specialists.grok_bot import CARD_CONFIRM
+
+    return essay_stage(
+        essay_id,
+        stage,
+        CONFIRM,
+        look,
+        cardAction=CARD_CONFIRM,
+        cardDigest=digest,
+    )
+
+
+def _stage_call(args: StageArgs, *, minting: bool) -> dict[str, Any]:
+    """Run one stage call with the shared damage and quarantine handling."""
     from essay_writer.stage_state import _QUARANTINE_NOTICE, DamagedStageCommit
 
     try:
-        result = _run_stage(
-            StageArgs(
-                essay_id=essay_id,
-                stage=stage,
-                confirmPhase=confirmPhase,
-                look=look,
-                master=master,
-                namedFolder=namedFolder,
-                answers=answers,
-                edited=edited,
-                webCheck=webCheck,
-                heldFile=heldFile,
-                cardAction=cardAction,
-                cardDigest=cardDigest,
-                card_only=card_only,
-                encourageChoice=encourageChoice,
-                paperChoice=paperChoice,
-                lockChoice=lockChoice,
-            )
-        )
+        result = _run_stage(args, minting=minting)
     except DamagedStageCommit as exc:
         _QUARANTINE_NOTICE.set(None)
         reason = str(exc).strip() or "The last confirm record was damaged and was not applied."
@@ -255,14 +239,17 @@ def essay_stage(
     return result
 
 
-def _run_stage(args: StageArgs) -> dict[str, Any]:
+def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
     """Resolve one stage call, then draft it or save it.
 
     The tool call arrives as StageArgs. The runner validates it, resolves the
     waiting card, and builds a StageContext for the reply writers. A refusal
     stops at the step that raised it and is returned unchanged.
+
+    ``minting`` is true only inside the injected card runner. The state and
+    reply layers receive the same runner and never import this module.
     """
-    minting = _MINTING.get()
+    card_run = None if minting else _run_card_only
     essay_id = args.essay_id
     stage = args.stage
     confirmPhase = args.confirmPhase
@@ -311,12 +298,19 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
     blocked = _stage_refusal(cast(Pointer, pointer), stage, genre)
     if blocked and not (minting and _mint_stage_allowed(pointer, stage)):
         if confirmPhase == CONFIRM:
-            return _confirm_blocked(essay_id, pointer, stage, genre, blocked)
+            return _confirm_blocked(essay_id, pointer, stage, genre, blocked, card_run=card_run)
         return blocked
     cardAction = args.cardAction
     cardDigest = args.cardDigest
     if args.lockChoice == "keep" and pending_lock is not None:
-        return _inherited_lock_keep(essay_id, stage, genre, pointer, pending_lock)
+        return _inherited_lock_keep(
+            essay_id,
+            stage,
+            genre,
+            pointer,
+            pending_lock,
+            run_confirm=_inherited_keep_confirm,
+        )
     if args.lockChoice in {"revise", "relock"} and pending_lock is not None:
         inherited = str(pending_lock.get("look") or "").strip()
         if inherited:
@@ -398,7 +392,7 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
         cardAction=cardAction,
         cardDigest=cardDigest,
     )
-    state = _confirm_path(resolved, pointer, genre, minting)
+    state = _confirm_path(resolved, pointer, genre, card_run=card_run)
     if not isinstance(state, ConfirmState):
         return state
     confirmPhase = state.confirmPhase
@@ -411,10 +405,17 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
     namedFolder = state.namedFolder
     heldFile = state.heldFile
     if stage == "7" and confirmPhase == DRAFT:
-        from essay_writer.stage7 import answers_mean_skip as _skip_probe
-
-        if _skip_probe(text) or _skip_probe(answers if isinstance(answers, str) else None):
-            return _stage7_skip_reply(essay_id, stage, genre, pointer, confirmPhase)
+        skipped = _stage7_skip_request(
+            essay_id,
+            stage,
+            genre,
+            pointer,
+            confirmPhase,
+            text,
+            answers,
+        )
+        if skipped is not None:
+            return skipped
     filled = replace(
         resolved,
         confirmPhase=confirmPhase,
@@ -430,9 +431,10 @@ def _run_stage(args: StageArgs) -> dict[str, Any]:
     if not isinstance(body, StageContext):
         return body
     if body.confirmPhase == DRAFT:
-        result = _draft_reply(body)
+        result = _draft_reply(body, card_run=card_run)
     else:
-        result = _save_confirm(body, cardDigest)
+        # A minted call is always a draft, so a save always has the runner.
+        result = _save_confirm(body, cardDigest, card_run=cast(CardRun, card_run))
     if (
         isinstance(result, dict)
         and result.get("stored") is True
@@ -454,7 +456,8 @@ def _confirm_path(
     args: StageArgs,
     pointer: dict[str, Any],
     genre: str | None,
-    minting: bool,
+    *,
+    card_run: CardRun | None,
 ) -> ConfirmState | dict[str, Any]:
     """Resolve the confirm phase against the waiting card.
 
@@ -482,7 +485,7 @@ def _confirm_path(
             press_confirm_stage,
             typed_save_word,
         )
-        from essay_writer.stage7 import answers_mean_no_change, answers_mean_skip
+        from essay_writer.stage7 import answers_mean_no_change
 
         named = press_confirm_stage(cardAction)
         if named is None:
@@ -494,8 +497,18 @@ def _confirm_path(
         card_matches = cardAction == CARD_CONFIRM and card_record is not None
         probe = look if isinstance(look, str) else ""
         answer_text = answers if isinstance(answers, str) else ""
-        if stage == "7" and (answers_mean_skip(probe) or answers_mean_skip(answer_text)):
-            return _stage7_skip_reply(essay_id, stage, genre, pointer, confirmPhase)
+        if stage == "7":
+            skipped = _stage7_skip_request(
+                essay_id,
+                stage,
+                genre,
+                pointer,
+                confirmPhase,
+                probe,
+                answer_text,
+            )
+            if skipped is not None:
+                return skipped
         # "All fine" is the answer. A waiting card copied into that same call does not save.
         stage7_no_change = stage == "7" and (
             answers_mean_no_change(probe) or answers_mean_no_change(answer_text)
@@ -540,7 +553,7 @@ def _confirm_path(
                 # One press plus the waiting card saves this stage only.
                 stored_room = _grant_room(essay_id, pointer, stage)
                 if stored_room is None:
-                    return _pointer_lost(essay_id, stage, genre)
+                    return _pointer_lost(essay_id, stage, genre, card_run=card_run)
                 pointer = stored_room
                 look = None
                 text = ""
@@ -548,7 +561,7 @@ def _confirm_path(
             elif press_target == stage:
                 stored_room = _grant_room(essay_id, pointer, stage)
                 if stored_room is None:
-                    return _pointer_lost(essay_id, stage, genre)
+                    return _pointer_lost(essay_id, stage, genre, card_run=card_run)
                 pointer = stored_room
                 return _reoffer_confirm(
                     essay_id,
@@ -637,37 +650,23 @@ def _confirm_path(
     )
 
 
-def _build_stage_body(
+def _prepare_stage_text(
     args: StageArgs,
-    pointer: dict[str, Any],
-    genre: str | None,
+    text: str,
+    *,
     minting: bool,
-    auto_next: str | None,
-) -> StageContext | dict[str, Any]:
-    """Apply the gates and build the reply body for one resolved stage call.
-
-    ``args`` is the resolved call: its look is already the normalised note.
-    A refusal is returned unchanged as a dict; a buildable reply is returned
-    as a StageContext for the draft or save writer.
-    """
+) -> tuple[str, bool, str | None, dict[str, Any], dict[str, Any] | None]:
+    """Seed the draft, then run the shared citation report before the gates."""
     from essay_writer.specialists.grok_bot import maybe_seed_basics_on_draft
 
     essay_id = args.essay_id
     stage = args.stage
-    confirmPhase = args.confirmPhase
-    look = args.look
-    text = look.strip() if isinstance(look, str) else ""
     answers = args.answers
     edited = args.edited
-    webCheck = args.webCheck
-    master = args.master
-    namedFolder = args.namedFolder
-    heldFile = args.heldFile
-    card_only = args.card_only
     text, basics_seeded = maybe_seed_basics_on_draft(
         essay_id,
         stage,
-        confirmPhase,
+        args.confirmPhase,
         text,
         minting=minting,
     )
@@ -712,35 +711,30 @@ def _build_stage_body(
                 "applied": True,
                 "cut": list(short_report.get("cut") or []) + woven,
             }
-    # A waiting-card mint is not the student's answer. Part names, Entry N,
-    # and house words are checked when the student later writes that stage.
-    blocked_save, stage5_gate = _collect_stage_misses(
-        essay_id,
-        stage,
-        confirmPhase,
-        text,
-        pointer,
-        minting=minting,
-    )
-    if blocked_save is not None:
-        if basics_seeded:
-            blocked_save["basics_seeded"] = True
-        return blocked_save
-    revisit = _revisit_window(pointer) and stage in {"2", "3"}
-    if revisit and not text:
-        return refuse(
-            "stage",
-            "Write what changed, or that the plan still holds, and which gathered source shows it.",
-        )
+    return text, basics_seeded, edited, short_report, cite_report
+
+
+def _stage_body_fields(
+    args: StageArgs,
+    text: str,
+    pointer: dict[str, Any],
+    genre: str | None,
+    *,
+    revisit: bool,
+    basics_seeded: bool,
+) -> tuple[dict[str, Any], dict[str, object], dict[str, object], Path]:
+    """Build the payload, fingerprint, note path, and base reply body."""
+    essay_id = args.essay_id
+    stage = args.stage
     item = stage_settings(stage, genre)
     payload = _payload(essay_id, stage, text)
     for key, value in (
-        ("master", master),
-        ("namedFolder", namedFolder),
-        ("answers", answers),
-        ("edited", edited),
-        ("webCheck", webCheck),
-        ("heldFile", heldFile),
+        ("master", args.master),
+        ("namedFolder", args.namedFolder),
+        ("answers", args.answers),
+        ("edited", args.edited),
+        ("webCheck", args.webCheck),
+        ("heldFile", args.heldFile),
     ):
         if value is not None:
             payload[key] = value
@@ -755,7 +749,7 @@ def _build_stage_body(
         "essay_id": essay_id,
         "stage": stage,
         "stage_title": stage_title(stage, genre),
-        "confirmPhase": confirmPhase,
+        "confirmPhase": args.confirmPhase,
         "rules": item["rules"],
         "source": RULES_SOURCE,
         "tracking_file": item["tracking_file"],
@@ -771,6 +765,20 @@ def _build_stage_body(
     }
     if basics_seeded:
         body["basics_seeded"] = True
+    return body, payload, fingerprint, note
+
+
+def _attach_stage_reports(
+    args: StageArgs,
+    body: dict[str, Any],
+    short_report: dict[str, Any],
+    cite_report: dict[str, Any] | None,
+    *,
+    stage5_gate: dict[str, Any] | None,
+) -> None:
+    """Attach the outline, cite, basics, and host-launch report fields."""
+    essay_id = args.essay_id
+    stage = args.stage
     _attach_outline_report(body, essay_id, stage)
     _attach_short_report(body, short_report)
     _attach_cite_report(body, cite_report)
@@ -796,13 +804,218 @@ def _build_stage_body(
     from essay_writer.cursor_office import stage_host_launch
 
     body["mid_office_launch"] = stage_host_launch(stage)
-    if stage in {"1", "4a"} or heldFile is not None:
-        from essay_writer.databases import database_view, remember_databases
 
-        remember_databases(essay_id, heldFile)
-        body["databases"] = database_view(essay_id)
+
+def _attach_stage_databases(args: StageArgs, body: dict[str, Any]) -> None:
+    """Attach the database view for the stages that hold a file."""
+    if args.stage not in {"1", "4a"} and args.heldFile is None:
+        return
+    from essay_writer.databases import database_view, remember_databases
+
+    remember_databases(args.essay_id, args.heldFile)
+    body["databases"] = database_view(args.essay_id)
+
+
+def _stage7_skip_request(
+    essay_id: str,
+    stage: str,
+    genre: str | None,
+    pointer: dict[str, Any],
+    confirm_phase: str,
+    text: str | None,
+    answers: str | None,
+) -> dict[str, Any] | None:
+    """The stage-7 skip reply when the look or answers only ask to skip.
+
+    A skip does not save. The reply asks the questions again. The draft,
+    confirm, and body paths all read this one probe.
+    """
+    if stage != "7":
+        return None
+    from essay_writer.stage7 import answers_mean_skip
+
+    if not (answers_mean_skip(text) or answers_mean_skip(answers)):
+        return None
+    return _stage7_skip_reply(essay_id, stage, genre, pointer, confirm_phase)
+
+
+def _stage7_draft_body(
+    args: StageArgs,
+    text: str,
+    pointer: dict[str, Any],
+    genre: str | None,
+    body: dict[str, Any],
+    payload: dict[str, object],
+    short_report: dict[str, Any],
+    cite_report: dict[str, Any] | None,
+) -> tuple[dict[str, Any] | None, str | None, str | None, dict[str, Any] | None]:
+    """Fill the stage-7 draft reply, or return the skip or edit refusal.
+
+    A skip asks the questions again and does not save. Answers are read into
+    the note before the body is built.
+    """
+    essay_id = args.essay_id
+    stage = args.stage
+    confirm_phase = args.confirmPhase
+    answers = args.answers
+    edited = args.edited
+    web_check = args.webCheck
+    if stage == "7" and confirm_phase == DRAFT and args.card_only:
+        from essay_writer.stage7 import note_questions
+
+        body.update(note_questions(essay_id))
+        return None, answers, edited, web_check
+    if stage != "7" or confirm_phase != DRAFT:
+        return None, answers, edited, web_check
+    from essay_writer.short_cites import apply_short_cite_request
+    from essay_writer.specialists.writer import BODY_CITE_STAGES, land_body_cites
+    from essay_writer.stage7 import (
+        answers_mean_no_change,
+        load_stage7,
+        note_edits,
+        note_questions,
+    )
+
+    skipped = _stage7_skip_request(
+        essay_id,
+        stage,
+        genre,
+        pointer,
+        confirm_phase,
+        text,
+        answers,
+    )
+    if skipped is not None:
+        return skipped, answers, edited, web_check
+    # A later draft whose whole note is "no changes" is the answer.
+    # The door keeps the text already saved and does not invent sentences.
+    if (
+        answers is None
+        and edited is None
+        and web_check is None
+        and load_stage7(essay_id).get("asked") is True
+        and answers_mean_no_change(text)
+    ):
+        answers = text
+    if answers is not None or edited is not None or web_check is not None:
+        edited_note = note_edits(essay_id, answers=answers, edited=edited, web_check=web_check)
+        if edited_note.get("ok") is False:
+            return (
+                refuse(
+                    "stage",
+                    str(edited_note.get("reason") or "Ask, then edit from the answers."),
+                    next=edited_note.get("next"),
+                    stage=stage,
+                    current=pointer["current"],
+                ),
+                answers,
+                edited,
+                web_check,
+            )
+        answers = edited_note.get("answers", answers)
+        edited = edited_note.get("edited", edited)
+        web_check = edited_note.get("webCheck", web_check)
+        if stage in BODY_CITE_STAGES:
+            short_report = apply_short_cite_request(
+                essay_id,
+                text,
+                answers=answers if isinstance(answers, str) else None,
+                edited=edited if isinstance(edited, str) else None,
+            )
+            text = short_report["text"]
+            if isinstance(edited, str):
+                edited = short_report["edited"]
+            cite_report = land_body_cites(
+                essay_id,
+                stage,
+                text,
+                answers=answers if isinstance(answers, str) else None,
+                edited=edited if isinstance(edited, str) else None,
+            )
+            text = cite_report["text"]
+            if isinstance(edited, str):
+                edited = cite_report["edited"]
+        payload["look"] = text
+        for key, value in (
+            ("answers", answers),
+            ("edited", edited),
+            ("webCheck", web_check),
+        ):
+            if value is not None:
+                payload[key] = value
+        body.update(edited_note)
+        if isinstance(edited, str):
+            body["edited"] = edited
+        _attach_short_report(body, short_report)
+        _attach_cite_report(body, cite_report)
+    else:
+        body.update(note_questions(essay_id))
+    return None, answers, edited, web_check
+
+
+def _build_stage_body(
+    args: StageArgs,
+    pointer: dict[str, Any],
+    genre: str | None,
+    minting: bool,
+    auto_next: str | None,
+) -> StageContext | dict[str, Any]:
+    """Apply the gates and build the reply body for one resolved stage call.
+
+    ``args`` is the resolved call: its look is already the normalised note.
+    A refusal is returned unchanged as a dict; a buildable reply is returned
+    as a StageContext for the draft or save writer.
+    """
+    essay_id = args.essay_id
+    stage = args.stage
+    confirmPhase = args.confirmPhase
+    look = args.look
+    text = look.strip() if isinstance(look, str) else ""
+    answers = args.answers
+    edited = args.edited
+    webCheck = args.webCheck
+    master = args.master
+    namedFolder = args.namedFolder
+    heldFile = args.heldFile
+    card_only = args.card_only
+    text, basics_seeded, edited, short_report, cite_report = _prepare_stage_text(
+        args,
+        text,
+        minting=minting,
+    )
+    # A waiting-card mint is not the student's answer. Part names, Entry N,
+    # and house words are checked when the student later writes that stage.
+    blocked_save, stage5_gate = _collect_stage_misses(
+        essay_id,
+        stage,
+        confirmPhase,
+        text,
+        pointer,
+        minting=minting,
+    )
+    if blocked_save is not None:
+        if basics_seeded:
+            blocked_save["basics_seeded"] = True
+        return blocked_save
+    revisit = _revisit_window(pointer) and stage in {"2", "3"}
+    if revisit and not text:
+        return refuse(
+            "stage",
+            "Write what changed, or that the plan still holds, and which gathered source shows it.",
+        )
+    body, payload, fingerprint, note = _stage_body_fields(
+        args,
+        text,
+        pointer,
+        genre,
+        revisit=revisit,
+        basics_seeded=basics_seeded,
+    )
+    _attach_stage_reports(args, body, short_report, cite_report, stage5_gate=stage5_gate)
+    _attach_stage_databases(args, body)
     if stage == "6":
         from essay_writer.late_chain import stage6_fields
+
         body.update(stage6_fields(essay_id, master=master, named_folder=namedFolder))
         block_master = body.pop("block_confirm", False)
         if confirmPhase == CONFIRM and block_master:
@@ -814,79 +1027,18 @@ def _build_stage_body(
                 master_ask=True,
                 chain_started=False,
             )
-    if stage == "7" and confirmPhase == DRAFT and card_only:
-        from essay_writer.stage7 import note_questions
-
-        body.update(note_questions(essay_id))
-    elif stage == "7" and confirmPhase == DRAFT:
-        from essay_writer.stage7 import (
-            answers_mean_no_change,
-            answers_mean_skip,
-            load_stage7,
-            note_edits,
-            note_questions,
-        )
-
-        if answers_mean_skip(text) or answers_mean_skip(answers if isinstance(answers, str) else None):
-            return _stage7_skip_reply(essay_id, stage, genre, pointer, confirmPhase)
-        # A later draft whose whole note is "no changes" is the answer.
-        # The door keeps the text already saved and does not invent sentences.
-        if (
-            answers is None
-            and edited is None
-            and webCheck is None
-            and load_stage7(essay_id).get("asked") is True
-            and answers_mean_no_change(text)
-        ):
-            answers = text
-        if answers is not None or edited is not None or webCheck is not None:
-            edited_note = note_edits(essay_id, answers=answers, edited=edited, web_check=webCheck)
-            if edited_note.get("ok") is False:
-                return refuse(
-                    "stage",
-                    str(edited_note.get("reason") or "Ask, then edit from the answers."),
-                    next=edited_note.get("next"),
-                    stage=stage,
-                    current=pointer["current"],
-                )
-            answers = edited_note.get("answers", answers)
-            edited = edited_note.get("edited", edited)
-            webCheck = edited_note.get("webCheck", webCheck)
-            if stage in BODY_CITE_STAGES:
-                short_report = apply_short_cite_request(
-                    essay_id,
-                    text,
-                    answers=answers if isinstance(answers, str) else None,
-                    edited=edited if isinstance(edited, str) else None,
-                )
-                text = short_report["text"]
-                if isinstance(edited, str):
-                    edited = short_report["edited"]
-                cite_report = land_body_cites(
-                    essay_id,
-                    stage,
-                    text,
-                    answers=answers if isinstance(answers, str) else None,
-                    edited=edited if isinstance(edited, str) else None,
-                )
-                text = cite_report["text"]
-                if isinstance(edited, str):
-                    edited = cite_report["edited"]
-            payload["look"] = text
-            for key, value in (
-                ("answers", answers),
-                ("edited", edited),
-                ("webCheck", webCheck),
-            ):
-                if value is not None:
-                    payload[key] = value
-            body.update(edited_note)
-            if isinstance(edited, str):
-                body["edited"] = edited
-            _attach_short_report(body, short_report)
-            _attach_cite_report(body, cite_report)
-        else:
-            body.update(note_questions(essay_id))
+    stage7_refusal, answers, edited, webCheck = _stage7_draft_body(
+        args,
+        text,
+        pointer,
+        genre,
+        body,
+        payload,
+        short_report,
+        cite_report,
+    )
+    if stage7_refusal is not None:
+        return stage7_refusal
     if stage == "10" and confirmPhase == CONFIRM and pointer.get("chain_armed") is True:
         from essay_writer.spine import final_review
 

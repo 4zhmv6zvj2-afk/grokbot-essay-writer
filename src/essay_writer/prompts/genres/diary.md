@@ -33,6 +33,6 @@
 
 ## 8
 - The edit improves the diary. It does not turn it into a third-person essay, and it does not add a report conclusion, unless the brief asked for that shape.
-- Cuts remove repetition. They do not turn a true sentence into a false one.
+- Cuts remove repetition.
 - Entries that are over or under a per-entry allowance are brought inside it, and the whole piece is brought inside the overall allowance.
-- The brief's headings stay. Listed mark-scheme sections and the brief's own word rules win over helper defaults. Do not invent a word budget or a mark band.
+- The brief's headings stay. Do not invent a word budget or a mark band.

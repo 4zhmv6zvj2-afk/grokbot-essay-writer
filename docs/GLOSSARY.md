@@ -7,7 +7,7 @@ are unchanged.
 | Word | Plain meaning | Where it lives |
 | --- | --- | --- |
 | **door** | One MCP tool. "Calling a door" means calling a tool. | `src/essay_writer/doors.py`, `src/essay_writer/prompts/front_office/tools.json` |
-| **seat** | The prompt subset a specialist stage is allowed to read. The research seat reads the writing helpers; the write seat also reads Harvard referencing; the reviewer seat reads neither. | `src/essay_writer/seats.py`, `src/essay_writer/prompts/seats/` |
+| **seat** | The prompt subset a specialist stage is allowed to read. The write seat reads Harvard referencing and a pointer to the writing helpers; the reviewer seat reads neither. | `src/essay_writer/seats.py`, `src/essay_writer/prompts/seats/` |
 | **spine** | The ordered stage definitions, and the one rule that stage 5 stores on its draft and starts stage 6 without a confirm card. | `src/essay_writer/spine.py` |
 | **shelf** | The local per-essay store for confirmed research packs (`essay.shelf.get` / `essay.shelf.put`). Both directions are draft-then-confirm. | `src/essay_writer/shelf.py` |
 | **dig** | The research card: an OpenAlex lookup (no key), an optional Consensus lookup, and an Unpaywall lookup for free copies. Draft shows the card; confirm writes `dig-card.json` / `dig-card.md`. | `src/essay_writer/dig.py` |
@@ -20,7 +20,7 @@ are unchanged.
 | **landing / replies** | The two writers behind the stage runner: `stage_landing.py` stores a saved stage and attaches report bodies; `stage_replies.py` builds the draft and save reply dicts. | `src/essay_writer/stage_landing.py`, `src/essay_writer/stage_replies.py` |
 | **stage context** | The typed values between the tool signature and the reply writers: `StageArgs` is the public `essay.stage` tool call; `StageContext` is one resolved stage call. | `src/essay_writer/stage_context.py` |
 | **confirm state** | The resolved fields a confirm returns before the body is built (phase, text, pointer, and the draft fields). A refusal stays a plain dict. | `src/essay_writer/stage_context.py` |
-| **stage_state** | The state layer behind the stage runner: pointer and commit journal, stage lock, tracking-note renderer, and held/refused reply bodies. `stage_track.py` re-exports it. | `src/essay_writer/stage_state.py` |
+| **stage_state** | The state layer behind the stage runner: pointer and commit journal, stage lock, tracking-note renderer, and held/refused reply bodies. Imported by the runner; it never imports the runner back. | `src/essay_writer/stage_state.py` |
 | **stage 1–10** | The workflow steps: assignment, thesis/purpose, plan, annotated bibliography, critical review, first draft, feedback, edit, references, final Word. | `src/essay_writer/stage_track.py` |
 | **AC1, AC2** | Stable local labels for acceptance criteria in test names and docstrings. They are not tracker ids. See `docs/testing.md`. | `tests/test_*.py` |
 | **operator** | The person (or agent) setting the tool up on the computer, as opposed to the student writing the essay. | `FIRST-RUN.txt` |

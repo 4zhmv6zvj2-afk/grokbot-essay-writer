@@ -10,7 +10,8 @@ import json
 from essay_writer.health import essay_health
 from essay_writer.paths import sequence_dir
 from essay_writer.projects import essay_sequence_new, save_sequence_state, sequence_id
-from essay_writer.stage_track import essay_stage, load_pointer
+from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 MODULE = "MOD2001BB"

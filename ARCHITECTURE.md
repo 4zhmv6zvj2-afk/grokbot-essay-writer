@@ -9,16 +9,18 @@ validation, and Word output.
 - `src/essay_writer/` — the package.
   - `server.py` — MCP entry and tool registration.
   - `doors.py` — tool catalogue and descriptions.
-  - `stage_track.py` — the orchestrator: `essay_stage`, the stage run branches, and
-    the draft/confirm replies.
+  - `stage_track.py` — the orchestrator: `essay_stage`, the stage run branches,
+    the injected card runner, and the draft/confirm entry points.
   - `stage_state.py` — the state layer: pointer and its commit journal, stage lock,
-    tracking-note renderer, and the held/refused reply bodies. Re-exported by
-    `stage_track.py`.
+    tracking-note renderer, and the held/refused reply bodies. It defines
+    `CardRun`, the card-only runner the orchestrator injects, and never imports
+    the orchestrator.
   - `stage_landing.py` — landing and report helpers: storing a saved stage,
     attaching report bodies, mid-run and missed-stage records, inherited-lock
-    bookkeeping, and the stage 6 opener. Re-exported by `stage_track.py`.
+    bookkeeping, and the stage 6 opener. The inherited-lock keep takes the
+    public confirm runner as an injected callable.
   - `stage_replies.py` — the draft and save reply writers (`_draft_reply`,
-    `_save_confirm`) and the no-op result. Re-exported by `stage_track.py`.
+    `_save_confirm`) and the no-op result.
   - `stage_context.py` — the typed pipeline values: `StageArgs` (the public
     `essay.stage` tool arguments) and `StageContext` (one resolved stage call).
     The old sentinel dict is gone.
@@ -45,7 +47,10 @@ before reading the modules.
   a Python before the package can be imported and then hands off to
   `essay_writer.first_run`. The package also has a `first_run.py`; that one is
   the installed setup logic that runs after the package is importable. Two
-  files, two jobs, by design.
+  files, two jobs, by design. The package's `first_run.py` is a thin facade over
+  `first_run_common.py`, `first_run_install.py` (install/update + Cursor
+  installer), `first_run_host.py` (Cursor/Grok config attach), `first_run_mac.py`
+  (Mac handoff), and `first_run_cli.py` (argument parsing and `main`).
 - `uv.lock` is the developer lockfile used by `uv sync`.
   `requirements-ci.txt` is the hash-pinned environment CI installs.
   `requirements-build.txt` pins the build tooling.
@@ -88,16 +93,21 @@ run branches are named helpers: `_confirm_path` (card confirm), `_build_stage_bo
 stage); together with `_run_stage` they are several hundred lines of decision
 tree, not a thin pass-through. `Pointer` and `StageResult` in `stage_state.py`
 name the intended pointer and result shapes; most helpers still take a plain
-`pointer: dict`, so treat the boundary as documentation of intent rather than
-an enforced layer. The state layer (the pointer and its
-commit journal, the stage lock, the tracking-note renderer, and the reply
-bodies a held save returns) lives in `stage_state.py`; the landing and report
-helpers live in `stage_landing.py`; the draft and save reply writers live in
-`stage_replies.py`. The orchestrator re-exports all three layers, so imports of
-`essay_writer.stage_track` keep working. That split is a code-organisation
-boundary, not a dependency boundary: many imports happen inside function
-bodies, and `stage_state.py` reaches back into the orchestrator through
-call-time imports in `_confirm_blocked` and `_draft_next_card`.
+`pointer: dict`, so treat those two types as documentation of intent rather than
+an enforced schema.
+
+The module split is a real dependency boundary, not only a file split. The
+orchestrator (`stage_track.py`) imports `stage_state.py`, `stage_landing.py`, and
+`stage_replies.py` at module load and keeps `essay_stage` and the public entry
+points. It does not re-export the moved names. In the other direction,
+`stage_state.py`, `stage_landing.py`, and `stage_replies.py` do not import
+`stage_track`, either at module load or inside a function. Where a state helper
+needs a stage card, the orchestrator threads an injected `CardRun` through the
+commit path: the next-card mint and the reopening of an already-saved stage's
+card both call it. The inherited-lock keep receives the public confirm runner
+the same way. `spine.py` does not forward `essay_stage`. Other package imports
+still happen inside function bodies; that is a package-wide import-graph
+question, not evidence for the stage layers.
 
 The stages are 1–10: assignment, thesis or purpose, plan, 4a annotated bibliography,
 4b critical review, first draft, feedback, edit, references, and final Word.
@@ -112,8 +122,10 @@ output); a thin set of contract tests pins the exact rule strings the chat
 contract depends on. The stage runner and its branch helpers keep that
 prompt-heavy path in one place, at the cost of a large decision tree.
 `Pointer` and `StageResult` name the intended state shapes rather than enforced
-layers: many helpers still take a plain `pointer: dict`, and the module split
-is arranged at import time. `StageArgs` and `StageContext` type the pipeline
+schemas: many helpers still take a plain `pointer: dict`. The module split is
+enforced by the boundary test: the state, landing, and reply layers never import
+the orchestrator, and the orchestrator supplies the card and confirm runners
+explicitly. `StageArgs` and `StageContext` type the pipeline
 between the tool signature and the reply writers; no stage body travels as a
 string-keyed dict with a sentinel any more.
 

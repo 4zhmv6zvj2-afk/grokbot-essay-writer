@@ -22,6 +22,7 @@ from typing import Any
 from essay_writer.confirm import refuse
 from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import sequence_write_error, work_dir, workspace_root
+from essay_writer.records import read_json, write_json
 
 RECORD = "roll-forward.json"
 REFERENCE = "reference"
@@ -39,22 +40,16 @@ def _record_path(folder: Path) -> Path:
     return folder / RECORD
 
 
-def _read_record(folder: Path) -> dict[str, Any] | None:
-    path = _record_path(folder)
-    if not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(data, dict):
-        return None
+def _valid_record(data: dict[str, Any]) -> bool:
+    """A roll-forward record carries a papers list, or inherited locks and nothing to pick."""
     papers = data.get("papers")
     if papers is not None and not isinstance(papers, list):
-        return None
-    if papers is None and not data.get("inherited_locks"):
-        return None
-    return data
+        return False
+    return not (papers is None and not data.get("inherited_locks"))
+
+
+def _read_record(folder: Path) -> dict[str, Any] | None:
+    return read_json(_record_path(folder), validate=_valid_record)
 
 
 def load_record(essay_id: str) -> dict[str, Any] | None:
@@ -64,12 +59,7 @@ def load_record(essay_id: str) -> dict[str, Any] | None:
 
 def _write_record(folder: Path, record: dict[str, Any]) -> None:
 
-    path = _record_path(folder)
-    refuse_repo_write(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    write_json(_record_path(folder), record, mkdir=True)
 
 
 def save_record(essay_id: str, record: dict[str, Any]) -> None:

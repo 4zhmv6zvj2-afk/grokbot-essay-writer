@@ -14,14 +14,12 @@ Quoted text is not cut.
 
 from __future__ import annotations
 
-import json
-import os
 import re
 from datetime import UTC
 from typing import Any
 
-from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import work_dir
+from essay_writer.records import read_json, write_json
 
 # A verb a student uses for the ask, then the word for the citation itself.
 _ASK = re.compile(
@@ -49,14 +47,8 @@ def _record_path(essay_id: str):
 
 
 def _read_record(essay_id: str) -> dict[str, Any]:
-    path = _record_path(essay_id)
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(data, dict):
+    data = read_json(_record_path(essay_id))
+    if data is None:
         return {}
     limit = data.get("max_sentences")
     if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
@@ -80,16 +72,12 @@ def remember_limit(essay_id: str, limit: int) -> None:
         return
     from datetime import datetime
 
-    path = _record_path(essay_id)
-    refuse_repo_write(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
     asked_at = datetime.now(UTC).replace(microsecond=0).isoformat()
-    body = json.dumps(
-        {"max_sentences": limit, "asked_at": asked_at}, indent=2, ensure_ascii=False
-    ) + "\n"
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(body, encoding="utf-8")
-    os.replace(temporary, path)
+    write_json(
+        _record_path(essay_id),
+        {"max_sentences": limit, "asked_at": asked_at},
+        mkdir=True,
+    )
 
 
 def parse_limit(text: str | None) -> int | None:

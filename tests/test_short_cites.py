@@ -21,7 +21,8 @@ from essay_writer.short_cites import (
     parse_limit,
     shorten,
 )
-from essay_writer.stage_track import _note_look, essay_stage
+from essay_writer.stage_state import _note_look
+from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.writing_basics import STAGE_ORDER
 
@@ -100,9 +101,9 @@ def _walk(seq: str, stop: str, *, stage3: str) -> None:
 
 
 def _cited_sentences(text: str, name: str) -> list[str]:
-    from essay_writer.cite_fit import _sentences
+    from essay_writer.textutil import sentences
 
-    return [sentence for sentence in _sentences(text) if name in sentence]
+    return [sentence for sentence in sentences(text) if name in sentence]
 
 
 def test_ac1_the_ask_is_read_and_the_length_is_kept(workspace):

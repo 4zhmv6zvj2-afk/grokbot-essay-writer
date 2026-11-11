@@ -9,13 +9,12 @@ until this one is answered or skipped.
 
 from __future__ import annotations
 
-import json
-import os
 import re
 from typing import Any
 
 from essay_writer import textutil as essay_textutil
 from essay_writer.paths import work_dir
+from essay_writer.records import read_json, write_json
 from essay_writer.state import load_state
 from essay_writer.student_voice import say
 
@@ -112,14 +111,8 @@ def _blank() -> dict[str, Any]:
 
 
 def load_encourage(essay_id: str) -> dict[str, Any] | None:
-    path = _record_path(essay_id)
-    if not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(data, dict):
+    data = read_json(_record_path(essay_id))
+    if data is None:
         return None
     record = _blank()
     plan = data.get("plan_text")
@@ -151,11 +144,7 @@ def load_encourage(essay_id: str) -> dict[str, Any] | None:
 
 
 def _save(essay_id: str, record: dict[str, Any]) -> None:
-    path = _record_path(essay_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    temporary.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    write_json(_record_path(essay_id), record, mkdir=True)
 
 
 def _words(text: str) -> list[str]:

@@ -11,7 +11,7 @@ from typing import Any
 
 from essay_writer import textutil as essay_textutil
 from essay_writer.assignment_gate import mark_scheme_text
-from essay_writer.textutil import WORD, count_words, norm_space
+from essay_writer.textutil import WORD, count_words, norm_space, sentences
 
 SAFE_DEFAULT = "The safe default is the task headings and the rubric that was used."
 
@@ -45,7 +45,6 @@ _SIMULATION = re.compile(r"(?i)\bsimulation events?\b|\bsimulation\b")
 _GROUP = re.compile(r"(?i)\bgroup (?:assessment|coursework|project|report|assignment)\b")
 _INDIVIDUAL = re.compile(r"(?i)\bindividual\b")
 _HARVARD_APA = re.compile(r"(?i)harvard\s*/\s*apa|\bharvard\b.*\bapa\b|\bapa\b.*\bharvard\b")
-_SENTENCE = re.compile(r"[^.!?]+[.!?]?")
 _COUNTED = re.compile(r"(\d{2,5})\s*(?:words?\b)?")
 _RANGE_FOLLOWS = re.compile(r"^\s*(?:[-–—]|to\s+\d)")
 
@@ -355,29 +354,6 @@ def _flat(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
 
 
-def _sentences(text: str) -> list[str]:
-    """Sentences, keeping a period inside quotation marks with that quotation."""
-    if not isinstance(text, str) or not text.strip():
-        return []
-    held: list[str] = []
-
-    def protect(match: re.Match[str]) -> str:
-        held.append(match.group(0))
-        return f"\x00{len(held) - 1}\x00"
-
-    masked = re.sub(r'"[^"]*"|“[^”]*”', protect, text)
-
-    def restore(match: re.Match[str]) -> str:
-        return held[int(match.group(1))]
-
-    found: list[str] = []
-    for raw in _SENTENCE.findall(masked):
-        sentence = norm_space(re.sub(r"\x00(\d+)\x00", restore, raw))
-        if sentence:
-            found.append(sentence)
-    return found
-
-
 def invented_simulation(
     sections: list[dict[str, str]],
     brief: str,
@@ -389,7 +365,7 @@ def invented_simulation(
     corpus = _corpus([brief, *gathered])
     issues: list[dict[str, object]] = []
     for section in sections:
-        for sentence in _sentences(section.get("body", "")):
+        for sentence in sentences(section.get("body", "")):
             if not _SIMULATION.search(sentence):
                 continue
             flat = _flat(sentence)
@@ -414,7 +390,7 @@ def decorative_citations(text: str) -> list[str]:
     if not isinstance(text, str) or not text.strip():
         return []
     parked: list[str] = []
-    for sentence in _sentences(text):
+    for sentence in sentences(text):
         if "(" not in sentence and not re.search(r"\(\d{4}\)", sentence):
             continue
         from essay_writer.textutil import citation_tokens

@@ -3,14 +3,17 @@
 These helpers build the reply pieces a stage draft and save return: the late
 chain flag, the stage 6 opening fields, the outline and cite reports, the
 no-card store, the mid-run launch, the save misses, and the inherited lock
-keep. The orchestrator in essay_writer.stage_track keeps the public entry
-points and re-exports every name here. This module does not import
-essay_writer.stage_track at module import time; the call-time import in
-_inherited_lock_keep closes that loop.
+keep. The orchestrator in essay_writer.stage_track imports this module and
+keeps the public entry points.
+
+This module never imports essay_writer.stage_track. The inherited-lock keep
+gets the public confirm runner as an injected callable, and the pointer-lost
+path gets the same card runner the state layer uses.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from essay_writer.confirm import CONFIRM, confirm_ready, refuse, save_draft
@@ -19,6 +22,7 @@ from essay_writer.stage_llm import brief_genre, next_stage, stage_title
 from essay_writer.stage_state import (
     _INHERITED_KEEP,
     TOOL,
+    CardRun,
     _commit_pointer,
     _mark_explicit_end,
     _payload,
@@ -30,6 +34,8 @@ from essay_writer.stage_state import (
     render_tracking,
 )
 from essay_writer.student_voice import student_surface_hits
+
+InheritedConfirm = Callable[[str, str, str, str | None], dict[str, object]]
 
 
 def _late_armed(pointer: dict[str, Any], stage: str, essay_id: str) -> bool:
@@ -139,6 +145,7 @@ def _store_stage(
     digest: str,
     master: str | None,
     named_folder: str | None,
+    card_run: CardRun | None = None,
 ) -> dict[str, object]:
     """Store one stage that has no card between it and the next."""
     note_text = render_tracking(stage, status="final", look=text, genre=genre, essay_id=essay_id)
@@ -161,7 +168,7 @@ def _store_stage(
     }
     stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
     if stored is None:
-        return _pointer_lost(essay_id, stage, genre)
+        return _pointer_lost(essay_id, stage, genre, card_run=card_run)
     updated = stored
     body["wrote"] = True
     body["stored"] = True
@@ -336,11 +343,15 @@ def _inherited_lock_keep(
     genre: str | None,
     pointer: dict[str, Any],
     row: dict[str, Any],
+    *,
+    run_confirm: InheritedConfirm,
 ) -> dict[str, Any]:
-    """Keep continues the parent save without showing Confirm again."""
-    from essay_writer.specialists.grok_bot import CARD_CONFIRM
-    from essay_writer.stage_track import essay_stage
+    """Keep continues the parent save without showing Confirm again.
 
+    ``run_confirm`` is the public stage runner injected by the orchestrator.
+    This module does not import it, so the landing layer never depends on the
+    orchestrator.
+    """
     text = str(row.get("look") or "").strip()
     if not text:
         return refuse("lock-choice", "The inherited lock is empty. Revise instead.")
@@ -369,13 +380,11 @@ def _inherited_lock_keep(
         return ready
     token = _INHERITED_KEEP.set(True)
     try:
-        saved = essay_stage(
+        saved = run_confirm(
             essay_id,
             stage,
-            CONFIRM,
             text,
-            cardAction=CARD_CONFIRM,
-            cardDigest=digest if isinstance(digest, str) else ready.get("digest"),
+            digest if isinstance(digest, str) else ready.get("digest"),
         )
     finally:
         _INHERITED_KEEP.reset(token)

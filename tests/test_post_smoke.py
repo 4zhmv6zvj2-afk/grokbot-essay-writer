@@ -426,7 +426,7 @@ def test_fail_demo_writer_cannot_clear_a_review(workspace):
     assert written["wrote"] is True
 
 
-def test_research_and_write_seats_read_the_notes_and_reviewer_does_not():
+def test_write_seat_reads_the_notes_and_reviewer_does_not():
     helpers = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
     harvard = (REPO / "docs" / "referencing-harvard.md").read_text(encoding="utf-8")
     assert HELPERS_MARK in helpers
@@ -446,7 +446,8 @@ def test_research_and_write_seats_read_the_notes_and_reviewer_does_not():
     assert HARVARD_MARK not in REVIEW_INSTRUCTIONS
     assert HELPERS_MARK not in house_instructions(REVIEW_INSTRUCTIONS)
     assert seat_reading("reviewer") == ""
-    assert HELPERS_MARK in seat_reading("research")
+    assert seat_reading("research") == ""
+    assert HELPERS_MARK not in seat_reading("research")
     assert HARVARD_MARK not in seat_reading("research")
     assert HARVARD_MARK in seat_reading("write")
 
