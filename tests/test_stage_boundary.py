@@ -1,10 +1,10 @@
 """The stage layers are a dependency boundary, not only a file split.
 
-The orchestrator imports the state, landing, reply, confirm, and body modules
-at module load and does not re-export the moved names. Those modules and the
-note module do not import `stage_track`, either at module load or inside a
-function. The next-card mint arrives as an injected `CardRun`, and the
-inherited-lock re-entry arrives as an injected callable.
+The orchestrator imports the state, hold, landing, reply, confirm, and body
+modules at module load and does not re-export the moved names. Those modules
+and the note module do not import `stage_track`, either at module load or
+inside a function. The next-card mint arrives as an injected `CardRun`, and
+the inherited-lock re-entry arrives as an injected callable.
 """
 
 import ast
@@ -23,6 +23,7 @@ TRACK = PACKAGE / "stage_track.py"
 LAYERS = (
     STATE,
     PACKAGE / "stage_note.py",
+    PACKAGE / "stage_hold.py",
     PACKAGE / "stage_landing.py",
     PACKAGE / "stage_replies.py",
     PACKAGE / "stage_confirm.py",
@@ -91,6 +92,7 @@ def test_importing_the_state_layer_does_not_load_the_track():
         "import sys\n"
         "import essay_writer.stage_state\n"
         "import essay_writer.stage_note\n"
+        "import essay_writer.stage_hold\n"
         "import essay_writer.stage_landing\n"
         "import essay_writer.stage_replies\n"
         "import essay_writer.stage_confirm\n"
@@ -121,6 +123,7 @@ def test_stage_track_does_not_reexport_the_moved_names():
 
 def test_the_state_layer_dropped_the_minting_contextvar():
     source = STATE.read_text(encoding="utf-8")
+    source += (PACKAGE / "stage_hold.py").read_text(encoding="utf-8")
     assert "_MINTING" not in source
 
 

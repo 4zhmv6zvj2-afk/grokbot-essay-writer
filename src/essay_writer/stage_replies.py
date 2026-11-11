@@ -1,13 +1,15 @@
 """The draft and save reply writers for the stage tracking note.
 
 These writers turn a built stage context into the tool reply: the quiet no-op,
-the draft card, and the held save. The state layer lives in
-essay_writer/stage_state.py and the landing helpers in
+the draft card, and the held save. The pointer, the commit journal, and the
+stage lock live in essay_writer/stage_state.py. The tracking-note renderer and
+look reader live in essay_writer/stage_note.py. The held and refused reply
+bodies live in essay_writer/stage_hold.py. The landing helpers live in
 essay_writer/stage_landing.py. The orchestrator in essay_writer.stage_track
 imports this module and keeps the public entry points.
 
-This module never imports essay_writer.stage_track. The card runner the state
-layer needs is passed down from the orchestrator.
+This module never imports essay_writer.stage_track. The card runner the hold
+module needs is passed down from the orchestrator.
 """
 
 from __future__ import annotations
@@ -17,30 +19,32 @@ from typing import Any
 from essay_writer.confirm import DRAFT, confirm_ready, save_draft
 from essay_writer.paths import relative
 from essay_writer.stage_context import StageContext
+from essay_writer.stage_hold import (
+    CardRun,
+    _cache_approved_look,
+    _commit_with_next_card,
+    _confirm_line,
+    _mark_explicit_end,
+    _older_card,
+    _pointer_lost,
+    _reoffer_confirm,
+    _replay_confirm_card,
+    _snapshot_stage_save,
+    _stale_confirm_body,
+    _with_plan_encourage,
+)
 from essay_writer.stage_landing import _attach_mid_run, _late_armed, _store_stage
 from essay_writer.stage_llm import next_stage, stage_title
 from essay_writer.stage_note import render_tracking
 from essay_writer.stage_state import (
     _INHERITED_KEEP,
     TOOL,
-    CardRun,
     StageResult,
-    _cache_approved_look,
     _commit_pointer,
-    _commit_with_next_card,
-    _confirm_line,
-    _mark_explicit_end,
     _note_path,
-    _older_card,
-    _pointer_lost,
-    _reoffer_confirm,
-    _replay_confirm_card,
     _room_after_card_save,
     _saved_after_confirm,
-    _snapshot_stage_save,
-    _stale_confirm_body,
     _waiting_digest,
-    _with_plan_encourage,
 )
 
 

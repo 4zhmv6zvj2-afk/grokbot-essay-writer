@@ -22,14 +22,12 @@ def test_stage_save_speech_comes_from_grok_bot():
     )
     assert confirm_line("10", None) == "Confirm to save the final look. The tool does not submit."
     stage = Path(stage_track.__file__).read_text(encoding="utf-8")
-    # The state layer moved to stage_state.py, so the save speech check reads both.
-    state = (
-        Path(stage_track.__file__)
-        .resolve()
-        .parent.joinpath("stage_state.py")
-        .read_text(encoding="utf-8")
-    )
-    stage_pair = stage + state
+    # The save line moved with the held replies, so the check reads the orchestrator,
+    # the pointer module, and the hold module.
+    parent = Path(stage_track.__file__).resolve().parent
+    state = parent.joinpath("stage_state.py").read_text(encoding="utf-8")
+    hold = parent.joinpath("stage_hold.py").read_text(encoding="utf-8")
+    stage_pair = stage + state + hold
     # The landing and reply writers moved, so the save-gate check reads all three.
     landing = (
         Path(stage_track.__file__)

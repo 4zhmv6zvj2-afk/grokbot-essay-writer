@@ -190,9 +190,13 @@ uv run pytest --cov=essay_writer --cov-report=term   # CI floor 85%
 - `src/essay_writer/server.py` — MCP entry and tool registration.
 - `src/essay_writer/doors.py` — the tool catalogue (one "door" per tool).
 - `src/essay_writer/stage_track.py` — the stage runner, cards, and confirm flow.
-- `src/essay_writer/stage_state.py` — the state layer (pointer, commit journal,
-  stage lock, tracking note, held/refused replies). Imported by the stage
-  runner; it never imports the runner back.
+- `src/essay_writer/stage_state.py` — the pointer, the commit journal, and the
+  stage lock. Imported by the stage runner; it never imports the runner back.
+- `src/essay_writer/stage_note.py` — the tracking-note renderer and look reader.
+  It does not write the pointer or the commit journal, and it never imports
+  the orchestrator.
+- `src/essay_writer/stage_hold.py` — the held and refused reply bodies. The
+  pointer write stays in `stage_state.py`. It never imports the orchestrator.
 - `src/essay_writer/stage_context.py` — the typed pipeline values (`StageArgs`,
   `StageContext`, `ConfirmState`).
 - `src/essay_writer/safe_url.py` — the network opener for model- and

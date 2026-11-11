@@ -231,7 +231,7 @@ def test_build_covered_cursor_and_grok_build_share_word_manifest():
     from essay_writer.cursor_office import cursor_stage_launch
     from essay_writer.server import HANDLERS
     from essay_writer.shells import cursor_shell, front_office
-    from essay_writer.stage_state import _render_stage10_before_close
+    from essay_writer.stage_hold import _render_stage10_before_close
 
     shared = cursor_shell()["handlers"]
     assert front_office()["handlers"] is shared

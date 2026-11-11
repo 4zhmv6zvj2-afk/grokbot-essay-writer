@@ -18,7 +18,7 @@ from essay_writer.cite_fit import apply_body_cites, load_record
 from essay_writer.pack_backup import backups_dir, essay_pack_restore
 from essay_writer.paths import module_code
 from essay_writer.shells import front_office_call
-from essay_writer.stage_state import _note_look
+from essay_writer.stage_note import _note_look
 from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.textutil import prepare_word_citations, reference_line

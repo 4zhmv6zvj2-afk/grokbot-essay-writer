@@ -208,7 +208,7 @@ def _topic(essay_id: str) -> str:
 
 
 def _student_sentences(essay_id: str, answers: str) -> list[str]:
-    from essay_writer.stage_state import _note_look
+    from essay_writer.stage_note import _note_look
 
     chunks: list[str] = []
     for stage in _STUDENT_STAGES:
@@ -226,7 +226,7 @@ def _student_sentences(essay_id: str, answers: str) -> list[str]:
 
 
 def _prior_body(essay_id: str, stage: str) -> str:
-    from essay_writer.stage_state import _note_look
+    from essay_writer.stage_note import _note_look
 
     if stage in _BODY_ORDER:
         earlier = _BODY_ORDER[: _BODY_ORDER.index(stage)]
@@ -350,7 +350,7 @@ def strip_token(text: str, token: str) -> str:
 
 
 def _asked_names(essay_id: str, answers: str, ok: set[str]) -> set[str]:
-    from essay_writer.stage_state import _note_look
+    from essay_writer.stage_note import _note_look
 
     names = set(ok)
     names |= _added_names(answers)

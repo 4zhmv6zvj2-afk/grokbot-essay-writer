@@ -9,7 +9,7 @@ import threading
 
 from helpers import open_sequence
 
-from essay_writer import stage_landing, stage_replies, stage_state, stage_track
+from essay_writer import stage_hold, stage_landing, stage_replies, stage_state, stage_track
 from essay_writer.paths import work_dir
 from essay_writer.shells import front_office_call
 from essay_writer.stage_state import load_pointer
@@ -58,6 +58,7 @@ def test_ac1_concurrent_confirm_cannot_roll_pointer_back(workspace, monkeypatch)
         return real(essay_id, base, proposed, **kwargs)
 
     monkeypatch.setattr(stage_state, "_commit_pointer", pausing)
+    monkeypatch.setattr(stage_hold, "_commit_pointer", pausing)
     box: dict = {}
 
     def runner():
@@ -257,6 +258,7 @@ def test_ac5_commit_is_shared_for_later_stages(workspace, monkeypatch):
         return real(essay_id, base, proposed, **kwargs)
 
     monkeypatch.setattr(stage_state, "_commit_pointer", spy)
+    monkeypatch.setattr(stage_hold, "_commit_pointer", spy)
     seq = open_sequence()
     first = essay_stage(seq, "1", "draft", "Stage one.")
     saved = _confirm(seq, "1", first)

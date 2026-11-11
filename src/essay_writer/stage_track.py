@@ -22,20 +22,22 @@ the write does not happen and the waiting card stays. Stage 5 and the
 last stage name an advance with no card. A newer current or saved list
 is left in place.
 
-The state layer — the pointer and its commit journal, the stage lock, the
-tracking-note renderer, and the reply bodies a held save returns — lives in
-essay_writer/stage_state.py. The landing and report helpers live in
+The pointer, the commit journal, and the stage lock live in
+essay_writer/stage_state.py. The tracking-note renderer and look reader live
+in essay_writer/stage_note.py. The held and refused reply bodies live in
+essay_writer/stage_hold.py. The landing and report helpers live in
 essay_writer/stage_landing.py and the draft and save reply writers in
 essay_writer/stage_replies.py. The confirm path and the shared stage-7 skip
 probe live in essay_writer/stage_confirm.py. The body builder lives in
-essay_writer/stage_body.py. This module is the orchestrator: it imports those
-modules at module load and keeps the public entry point.
+essay_writer/stage_body.py. This module is the orchestrator: it imports the
+state, hold, landing, reply, confirm, and body modules at module load and
+keeps the public entry point.
 
-Those modules do not import this module, at module load or at call time. A save
-that needs the next stage's card or the current stage's card gets an injected
-card runner (``_run_card_only``); the state layer never sets a contextvar to
-re-enter the door. The typed stage values (StageArgs and StageContext) live in
-essay_writer/stage_context.py.
+Those modules do not import this module, at module load or at call time. The
+note module does not import it either. A save that needs the next stage's card
+or the current stage's card gets an injected card runner (``_run_card_only``);
+the state side never sets a contextvar to re-enter the door. The typed stage
+values (StageArgs and StageContext) live in essay_writer/stage_context.py.
 """
 
 from __future__ import annotations
@@ -55,18 +57,20 @@ from essay_writer.paths import sequence_write_error, work_dir
 from essay_writer.stage_body import _build_stage_body
 from essay_writer.stage_confirm import _confirm_path, _stage7_skip_request
 from essay_writer.stage_context import ConfirmState, StageArgs, StageContext
+from essay_writer.stage_hold import (
+    CardRun,
+    _card_record,
+    _confirm_blocked,
+    _mint_stage_allowed,
+    _stage_refusal,
+)
 from essay_writer.stage_landing import _inherited_lock_keep
 from essay_writer.stage_llm import STAGE_ORDER, brief_genre
 from essay_writer.stage_replies import _draft_reply, _noop_result, _save_confirm
 from essay_writer.stage_state import (
     _INHERITED_KEEP,
     TOOL,
-    CardRun,
     Pointer,
-    _card_record,
-    _confirm_blocked,
-    _mint_stage_allowed,
-    _stage_refusal,
     _waiting_digest,
     load_pointer,
 )

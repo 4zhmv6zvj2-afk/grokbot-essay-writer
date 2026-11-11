@@ -22,8 +22,9 @@ from essay_writer.server import HANDLERS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import basics_pass_lines
+from essay_writer.stage_hold import _draft_next_card
 from essay_writer.stage_replies import _save_confirm
-from essay_writer.stage_state import TOOL, _draft_next_card, load_pointer
+from essay_writer.stage_state import TOOL, load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
@@ -140,7 +141,7 @@ def test_ac1_confirm_returns_card_or_does_not_advance(workspace, monkeypatch):
             "reason": "The brief names these parts: North occasion.",
         }
 
-    monkeypatch.setattr("essay_writer.stage_state._draft_next_card", _fail)
+    monkeypatch.setattr("essay_writer.stage_hold._draft_next_card", _fail)
     refused = _live(
         essay_id=held_seq,
         stage="1",

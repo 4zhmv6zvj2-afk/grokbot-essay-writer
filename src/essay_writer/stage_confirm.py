@@ -11,19 +11,21 @@ from typing import Any
 
 from essay_writer.confirm import CONFIRM, DRAFT, latest_draft
 from essay_writer.stage_context import ConfirmState, StageArgs
-from essay_writer.stage_state import (
-    _INHERITED_KEEP,
-    TOOL,
+from essay_writer.stage_hold import (
     CardRun,
     _card_record,
-    _grant_room,
     _hydrate_card,
     _older_card,
     _pointer_lost,
     _reoffer_confirm,
-    _room_blocks,
     _stage7_skip_reply,
     _superseded_card,
+)
+from essay_writer.stage_state import (
+    _INHERITED_KEEP,
+    TOOL,
+    _grant_room,
+    _room_blocks,
 )
 
 

@@ -116,6 +116,7 @@ STAGE_LAYERS = frozenset(
     {
         "stage_body",
         "stage_confirm",
+        "stage_hold",
         "stage_landing",
         "stage_note",
         "stage_replies",
