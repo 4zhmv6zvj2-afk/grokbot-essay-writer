@@ -302,22 +302,6 @@ def eqr_llm_note() -> str:
 
 
 
-def stage_index_line() -> str:
-    """Every writing stage, its tracking file, and the stage that follows."""
-    parts: list[str] = []
-    for stage in STAGE_ORDER:
-        following = next_stage(stage)
-        if following:
-            hop = f" Next: {following} — {stage_title(following)}."
-        else:
-            hop = " Next: none. The tool does not submit."
-        parts.append(
-            f"Stage {stage} — {stage_title(stage)}. "
-            f"File: tracking/{stage}.md.{hop}"
-        )
-    return " ".join(parts)
-
-
 def stage_tool_description() -> str:
     return render_tokens(text("front_office/tools.md", "stage_tool"))
 

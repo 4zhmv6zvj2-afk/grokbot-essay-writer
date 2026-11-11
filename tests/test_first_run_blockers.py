@@ -320,16 +320,13 @@ def test_health_shows_the_writing_stage_and_the_app_folder(workspace):
 def test_secret_card_speech_cites_the_provider_pages():
     from essay_writer.doors import DOORS
     from essay_writer.first_run import first_run_prompt
+    from essay_writer.prompt_loader import text as prompt_text
     from essay_writer.server import INSTRUCTIONS
-    from essay_writer.setup import (
-        CARD_RULES,
-        CURSOR_SETUP_PROMPT,
-        ORDINARY_SETUP_SPEECH,
-        SETUP_PROMPT,
-    )
+    from essay_writer.setup import CURSOR_SETUP_PROMPT, SETUP_PROMPT
 
+    ordinary_setup = prompt_text("install/operator.md", "ordinary_setup")
     prompt = first_run_prompt()
-    for text in (prompt, SETUP_PROMPT, CURSOR_SETUP_PROMPT, INSTRUCTIONS, CARD_RULES):
+    for text in (prompt, SETUP_PROMPT, CURSOR_SETUP_PROMPT, INSTRUCTIONS):
         assert "https://help.consensus.app/en/articles/16516328-the-consensus-api" in text
         assert "profile icon" in text
         assert "API & MCP Dashboard" in text
@@ -351,7 +348,8 @@ def test_secret_card_speech_cites_the_provider_pages():
         assert "never to email" in text
         assert "Unpaywall's own page promised never to email" in text
     assert "Ordinary setup collects the Consensus key" in prompt
-    assert ORDINARY_SETUP_SPEECH in SETUP_PROMPT
+    assert ordinary_setup in SETUP_PROMPT
+    assert ordinary_setup in CURSOR_SETUP_PROMPT
     assert "secret card" in prompt
     assert "secret card" in SETUP_PROMPT
     assert "Grok Bot secret card" not in prompt
@@ -359,7 +357,7 @@ def test_secret_card_speech_cites_the_provider_pages():
     assert "Cursor" not in SETUP_PROMPT
     assert "Grok Build" not in SETUP_PROMPT
     setup = next(door["description"] for door in DOORS if door["tool"] == "essay.setup")
-    assert CARD_RULES not in setup
+    assert "https://help.consensus.app/en/articles/16516328-the-consensus-api" not in setup
     assert "secret card" in setup
     assert "by hash" in setup
     assert "Grok Bot" not in setup

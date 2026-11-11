@@ -14,15 +14,17 @@ from helpers import (
 from essay_writer.assignment_gate import read_assignment
 from essay_writer.build_status import subject_for
 from essay_writer.paths import essay_dir, work_dir
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.review import essay_review
 from essay_writer.server import INSTRUCTIONS
-from essay_writer.specialists.grok_bot import OPENING_CHOICE
 from essay_writer.specialists.writer import FIRST_DRAFT_NOTE
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.textutil import genre_from_brief_text
 from essay_writer.writing_basics import CHECKLISTS, STAGE_ORDER
+
+OPENING_CHOICE = prompt_text("front_office/chat.md", "opening_choice")
 
 QUESTION = "How should the firm manage the corridor?"
 LOOK = f"This is a report. {QUESTION}"

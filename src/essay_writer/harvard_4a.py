@@ -285,11 +285,6 @@ def note_ban_words(text: str) -> list[str]:
     return [name for pattern, name in _NOTE_BAN_WORDS if pattern.search(text)]
 
 
-def uses_house_jargon(text: str) -> bool:
-    """House labels that must not be saved into an annotation or a paper note."""
-    return bool(note_ban_words(text))
-
-
 def _protect_dots(text: str) -> str:
     text = _ET_AL.sub("et al\x00", text)
     text = _ABBREV.sub(lambda match: match.group(0)[:-1] + "\x00", text)

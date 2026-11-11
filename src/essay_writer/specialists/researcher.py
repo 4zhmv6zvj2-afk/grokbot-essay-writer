@@ -7,8 +7,6 @@ call this entry. There is not a second dig.
 
 from __future__ import annotations
 
-ROLE = "researcher"
-
 _HOME = {
     "essay_dig": "essay_writer.dig",
     "consensus_status": "essay_writer.dig",

@@ -18,6 +18,7 @@ from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.late_chain import chat_leaks, completed_draft_chat
 from essay_writer.paths import essay_dir, work_dir
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.review import eqr_verdict, essay_review
 from essay_writer.server import HANDLERS
 from essay_writer.specialists.eqr import (
@@ -26,7 +27,7 @@ from essay_writer.specialists.eqr import (
     findings_note_clears,
     write_findings_note,
 )
-from essay_writer.specialists.grok_bot import BASICS_FIRST_LINES, basics_pass_lines
+from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.specialists.writer import FIRST_DRAFT_NOTE
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_track import essay_stage
@@ -34,6 +35,8 @@ from essay_writer.state import load_state, save_state
 from essay_writer.validate import essay_pack_validate
 from essay_writer.word import essay_pack_render_word
 from essay_writer.writing_basics import CHECKLISTS
+
+BASICS_FIRST_LINES = prompt_text("front_office/chat.md", "basics_first_lines")
 
 REPO = Path(__file__).resolve().parents[1]
 QUESTION = "How should the firm manage the corridor?"

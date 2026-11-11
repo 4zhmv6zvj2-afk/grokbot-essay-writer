@@ -13,7 +13,7 @@ from helpers import open_sequence, picked, plant_gathered_source
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.doors import DOORS
-from essay_writer.prompt_content import ANTI_GLUE
+from essay_writer.prompt_loader import sections as prompt_sections
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.grok_bot import STAGE9_OWN_WORDS, saved_next
@@ -22,6 +22,8 @@ from essay_writer.stage_llm import stage_settings, stage_title
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import basics_lines
+
+ANTI_GLUE = prompt_sections("craft/voice.md")["anti_glue"]
 
 REPO = Path(__file__).resolve().parents[1]
 STAGES = ("5", "6", "7", "8")

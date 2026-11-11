@@ -10,10 +10,12 @@ import inspect
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.harvard_4a import ANNOTATION_SENTENCES, FOUR_A_FORMAT
-from essay_writer.prompt_content import STUDENT_VOICE
 from essay_writer.prompt_loader import bullets
+from essay_writer.prompt_loader import sections as prompt_sections
 from essay_writer.stage_llm import stage_settings
 from essay_writer.writing_basics import CHECKLISTS, basics_lines
+
+STUDENT_VOICE = prompt_sections("craft/voice.md")["student_voice"]
 
 OWNERSHIP = "The draft is model-assisted; the student owns what they submit."
 OPENER = "Do not open with a general sentence built only from the topic nouns."

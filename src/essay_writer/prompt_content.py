@@ -6,22 +6,6 @@ from essay_writer.prompt_loader import bullets, sections
 
 _CRAFT = sections("craft/voice.md")
 
-ANTI_GLUE = _CRAFT["anti_glue"]
-VOICE_LIMIT = _CRAFT["voice_limit"]
-PLAIN_WORDS = _CRAFT["plain_words"]
-TEMPLATE_OPENERS = _CRAFT["template_openers"]
-STUDENT_VOICE = _CRAFT["student_voice"]
-EVIDENCE_STRENGTH = _CRAFT["evidence_strength"]
-OPEN_GAP = _CRAFT["open_gap"]
-MARK_TABLE_LEAN = _CRAFT["mark_table_lean"]
-CRAFT_COMMITMENT = _CRAFT["craft_commitment"]
-CRAFT_ANCHOR = _CRAFT["craft_anchor"]
-CRAFT_REVISE = _CRAFT["craft_revise"]
-CRAFT_SOURCES = _CRAFT["craft_sources"]
-CRAFT_REFUSAL = _CRAFT["craft_refusal"]
-ENCOURAGE_FACT_RULE = _CRAFT["encourage_fact_rule"]
-CRAFT_LINES = (CRAFT_COMMITMENT, CRAFT_ANCHOR, CRAFT_REVISE, CRAFT_SOURCES, CRAFT_REFUSAL)
-
 # The craft sections each writing stage renders. Stages 5 and 8 carry the full
 # set; stages 6 and 7 carry the shared voice limits. The section bodies live in
 # craft/voice.md, so editing that file changes the runtime rules.
@@ -108,15 +92,11 @@ GENRE_ADDITIONS = {
     for stage in SHARED_STAGES
 }
 _SHARED = sections("front_office/chat.md")
-MCP_DOWN_SPEECH = _SHARED["mcp_down_speech"]
-SERVER_BASICS_NOTE = _SHARED["server_basics_note"]
-GENRE_LOCK_LINE = _SHARED["genre_lock_line"]
 STAGE7_AGENT = _SHARED["stage7_agent"]
 SHARED_REVISIT = _SHARED["shared_revisit"]
 REPORT_REVISIT = _SHARED["report_revisit"]
 ESSAY_REVISIT = _SHARED["essay_revisit"]
 DIARY_REVISIT = _SHARED["diary_revisit"]
-REVISIT_DOOR = _SHARED["revisit_door"]
 
 # Non-craft rules that more than one stage file used to carry a copy of. They
 # live once here and stage_llm renders the ones a stage needs. The plain-English
@@ -144,12 +124,9 @@ SHARED_STAGE_LINES: dict[str, tuple[str, ...]] = {
 }
 
 __all__ = [
-    "ANTI_GLUE", "VOICE_LIMIT", "PLAIN_WORDS", "TEMPLATE_OPENERS", "STUDENT_VOICE",
-    "EVIDENCE_STRENGTH", "OPEN_GAP", "MARK_TABLE_LEAN", "CRAFT_COMMITMENT", "CRAFT_ANCHOR",
-    "CRAFT_REVISE", "CRAFT_SOURCES", "CRAFT_REFUSAL", "CRAFT_LINES",
     "CRAFT_SECTIONS", "CRAFT_BY_STAGE",
-    "ENCOURAGE_FACT_RULE", "CHECKLISTS", "SHARED_STAGES", "GENRE_ADDITIONS",
-    "MCP_DOWN_SPEECH", "SERVER_BASICS_NOTE", "GENRE_LOCK_LINE", "STAGE7_AGENT",
-    "SHARED_REVISIT", "REPORT_REVISIT", "ESSAY_REVISIT", "DIARY_REVISIT", "REVISIT_DOOR",
+    "CHECKLISTS", "SHARED_STAGES", "GENRE_ADDITIONS",
+    "STAGE7_AGENT",
+    "SHARED_REVISIT", "REPORT_REVISIT", "ESSAY_REVISIT", "DIARY_REVISIT",
     "PRECEDENCE", "SHARED_STAGE_SECTIONS", "SHARED_STAGE_RULES", "SHARED_STAGE_LINES",
 ]

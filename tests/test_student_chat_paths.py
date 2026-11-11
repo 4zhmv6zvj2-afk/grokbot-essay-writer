@@ -7,11 +7,14 @@ from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, source, write_
 
 from essay_writer.doors import DOORS
 from essay_writer.paths import student_chat_path
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.research import essay_research_summary
 from essay_writer.server import INSTRUCTIONS
-from essay_writer.specialists.grok_bot import CHECKLIST_WALK, MCP_DOWN_SPEECH
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import say, speak
+
+MCP_DOWN_SPEECH = prompt_text("front_office/chat.md", "mcp_down_speech")
 
 JOURNAL_TEXT = (
     "Smith, J. (2020) Chokepoints and crude. Maritime Policy 12(3) pp. 4-9. doi:10.1000/strait\n"

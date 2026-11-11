@@ -16,14 +16,17 @@ from helpers import (
 
 from essay_writer.build_office import stage_launch
 from essay_writer.doors import DOORS
-from essay_writer.prompt_content import REVISIT_DOOR
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import INSTRUCTIONS, build_review_server, build_server
 from essay_writer.shells import front_office_call
-from essay_writer.specialists.grok_bot import CHECKLIST_WALK, DOOR_WALK
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage_llm import STAGE_ORDER, brief_genre, stage_settings, stage_title
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import CHECKLISTS, basics_lines
+
+REVISIT_DOOR = prompt_text("front_office/chat.md", "revisit_door")
+DOOR_WALK = prompt_text("front_office/chat.md", "door_walk")
 
 REPO_DOCS = Path(__file__).resolve().parents[1]
 

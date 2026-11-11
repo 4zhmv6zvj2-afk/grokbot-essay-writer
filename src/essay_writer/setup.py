@@ -96,24 +96,6 @@ def resolve_setup_shell(value: object) -> str | dict[str, object]:
     return parsed
 
 
-CARD_RULES = """The Consensus key is for academic research search: it finds papers for the research step. Consensus's help center says the API is how a tool programmatically searches academic research and retrieves relevant papers: https://help.consensus.app/en/articles/16516328-the-consensus-api
-
-Create that key with Consensus's own steps from that page. Click the profile icon in the bottom-left corner, select API & MCP Dashboard, open the Keys and Clients tab, click New key, give the key a name so you can tell what it is for, then create it and copy it somewhere secure. The full key is shown once. If it is lost, revoke it and create a new one. The same path is on https://docs.consensus.app/api-plans-and-access : profile icon, then API & MCP Dashboard, then Keys and clients, then New key. The dashboard named from get-started is https://consensus.app/api-mcp
-
-Ask which Consensus plan they have. Free stores ESSAY_WRITER_CONSENSUS_PAID as 0. Pro stores it as 1. Teams, Deep, and Enterprise use 1, the same paid flag as Pro. Do not add another flag. The published limits are only those on https://docs.consensus.app/api-plans-and-access : Free includes 30 calls a month and the maximum with additional usage is 30; Pro includes 500 and the maximum with additional usage is 1,000. Max papers per request is 20 on Free and 300 on Pro. Pagination past the first page is no on Free and yes on Pro. Full-text excerpts are no on Free and yes on Pro. The rate limit is 1 request per second on Free and 1 request per second on Pro.
-
-The email is for Unpaywall free-PDF lookup. Unpaywall's API docs say a request must include the email as ?email=YOUR_EMAIL, and they ask for at most 100,000 calls a day: https://unpaywall.org/products/api . OpenAlex, from the same team, asks for an email where they can contact you if a script goes wrong, and says that approach is copied from Crossref: https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md . Crossref's REST API FAQ answers "Will you spam me with marketing bumf once you have our contact info?" with "No. We will only use it to contact you about problems with your scripts." https://github.com/CrossRef/rest-api-doc/blob/master/README.md . Say that limit, attributed to the Crossref FAQ by way of OpenAlex. Do not say that Unpaywall's own page promised never to email.
-
-If the user skips the Consensus key, the Unpaywall email, or both, show the warning before the skip is accepted. Consensus is not used when the key is missing. Unpaywall free PDF lookup will not run when the email is missing. OpenAlex still runs. After an explicit yes to that warning, call essay.setup with confirmPhase draft, acknowledge_skipped_searches true, and the same other arguments. Show that result. After another explicit yes, call essay.setup with confirmPhase confirm and those same arguments. A confirm that skips without acknowledge_skipped_searches writes nothing.
-
-Do not ask the user to edit a .env file. Do not repeat the key or the email.
-"""
-
-FIRST_RUN_MAC_SPEECH = text("install/operator.md", "first_run_mac")
-
-ORDINARY_SETUP_SPEECH = text("install/operator.md", "ordinary_setup")
-
-
 SETUP_PROMPT = text("install/operator.md", "setup_prompt") + "\n"
 
 CURSOR_SETUP_PROMPT = text("install/operator.md", "cursor_setup_prompt") + "\n"

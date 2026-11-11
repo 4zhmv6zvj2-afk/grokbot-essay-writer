@@ -13,10 +13,7 @@ from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, 
 
 from essay_writer.research import essay_research_summary
 from essay_writer.shells import front_office_call
-from essay_writer.specialists.grok_bot import (
-    EQR_FIRST_RUN_SPEECH,
-    eqr_first_run_tip_sha,
-)
+from essay_writer.specialists.grok_bot import EQR_FIRST_RUN_SPEECH
 from essay_writer.validate import essay_pack_validate
 
 REPO = Path(__file__).resolve().parents[1]
@@ -107,7 +104,6 @@ def test_ac3_build_covered_shared_fo_word_path():
     assert "front_office_call" in shells_src
     bot = (REPO / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
     assert "separate specialist review" in bot.casefold()
-    assert eqr_first_run_tip_sha() == eqr_first_run_tip_sha()
 
 
 def test_first_eqr_intro_is_spoken_only_once_per_workspace(workspace):

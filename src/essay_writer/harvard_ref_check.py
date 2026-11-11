@@ -126,17 +126,6 @@ def reference_sources(essay_id: str) -> list[dict[str, object]]:
     return [row for row in rows if isinstance(row, dict)]
 
 
-def italic_journal_title(line: str, sources: list[Any], essay_id: str | None = None) -> str | None:
-    """Journal title to italicise when this line is that gathered source."""
-    source = _match_source(line, sources, essay_id)
-    if source is None:
-        return None
-    container = _text(source.get("container"))
-    if not container or container not in line:
-        return None
-    return container
-
-
 def compliance_misses(
     path: Path,
     sources: list[Any],
@@ -268,12 +257,6 @@ def _surname(author: str) -> str:
     return family_name(author).split()[-1] if author else ""
 
 
-def _year_present(text: str, year: str) -> bool:
-    if not year:
-        return False
-    return re.search(rf"(?<![0-9]){re.escape(year)}(?![0-9a-z])", text, re.IGNORECASE) is not None
-
-
 def _name_present(text: str, surname: str) -> bool:
     if not surname:
         return False
@@ -308,19 +291,6 @@ def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
     # The author is listed but this year is not. Check that entry so the
     # first pass can name the missing year instead of skipping the source.
     return candidates[0]
-
-
-def _match_source(line: str, sources: list[Any], essay_id: str | None) -> dict[str, object] | None:
-    for source in sources:
-        if not isinstance(source, dict):
-            continue
-        normalized = _normalized(source, essay_id)
-        author = _text(normalized.get("author"))
-        year = _text(normalized.get("year"))
-        surname = _surname(author)
-        if surname and year and _name_present(line, surname) and _year_present(line, year):
-            return normalized
-    return None
 
 
 def _cite_covered(token: str, paragraphs: list[Any]) -> bool:

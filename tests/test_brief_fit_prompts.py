@@ -10,10 +10,12 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.prompt_content import MARK_TABLE_LEAN
+from essay_writer.prompt_loader import sections as prompt_sections
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import basics_lines
+
+MARK_TABLE_LEAN = prompt_sections("craft/voice.md")["mark_table_lean"]
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
@@ -68,7 +70,5 @@ def test_ac3_the_bullet_leans_on_listed_criteria_and_invents_none():
     validate = (REPO / "src" / "essay_writer" / "validate.py").read_text(encoding="utf-8")
     assert "MARK_TABLE_LEAN" not in gates
     assert "MARK_TABLE_LEAN" not in validate
-    content = (REPO / "src" / "essay_writer" / "prompt_content.py").read_text(encoding="utf-8")
-    assert "MARK_TABLE_LEAN" in content
     voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
     assert 'Use the criteria it lists and no others' in voice

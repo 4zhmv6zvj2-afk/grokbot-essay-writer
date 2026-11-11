@@ -10,11 +10,16 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.prompt_content import PLAIN_WORDS, STUDENT_VOICE, TEMPLATE_OPENERS
+from essay_writer.prompt_loader import sections as prompt_sections
 from essay_writer.specialists.writer import _rewrite_supported
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import for_word, say, strip_word_labels, student_surface_hits
 from essay_writer.writing_basics import basics_lines
+
+_CRAFT = prompt_sections("craft/voice.md")
+PLAIN_WORDS = _CRAFT["plain_words"]
+STUDENT_VOICE = _CRAFT["student_voice"]
+TEMPLATE_OPENERS = _CRAFT["template_openers"]
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"

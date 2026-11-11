@@ -6,11 +6,12 @@ from pathlib import Path
 from essay_writer.doors import DOORS
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.writing_basics import (
-    BASICS_MARKER,
     CHECKLISTS,
     STAGE_ORDER,
     basics_lines,
 )
+
+BASICS_MARKER = "Basics checklist"
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"

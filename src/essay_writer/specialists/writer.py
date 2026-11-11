@@ -29,8 +29,6 @@ from essay_writer.textutil import (
     word_rules_for,
 )
 
-ROLE = "writer"
-
 HIGHEST_BAND = prompt_text("craft/draft.md", "writer_highest_band")
 
 FIRST_DRAFT_NOTE = prompt_text("craft/draft.md", "first_draft_note")

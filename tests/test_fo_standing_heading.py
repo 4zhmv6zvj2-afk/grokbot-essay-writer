@@ -14,16 +14,18 @@ from pathlib import Path
 
 from helpers import picked
 
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import INSTRUCTIONS, call_local
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.grok_bot import (
-    STANDING_HEADING,
     attach_standing_heading,
     standing_heading_label,
 )
 from essay_writer.specialists.grok_bot import (
     front_office_call as grok_speak,
 )
+
+STANDING_HEADING = prompt_text("front_office/chat.md", "standing_heading")
 
 REPO = Path(__file__).resolve().parents[1]
 MODULE = "MOD1004AA"

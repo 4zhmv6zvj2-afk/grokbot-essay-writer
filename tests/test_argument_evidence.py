@@ -10,10 +10,12 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.prompt_content import EVIDENCE_STRENGTH
+from essay_writer.prompt_loader import sections as prompt_sections
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import basics_lines
+
+EVIDENCE_STRENGTH = prompt_sections("craft/voice.md")["evidence_strength"]
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
@@ -73,7 +75,5 @@ def test_ac3_the_bullet_names_the_ceilings_and_stays_prompt_only():
     validate = (REPO / "src" / "essay_writer" / "validate.py").read_text(encoding="utf-8")
     assert "EVIDENCE_STRENGTH" not in gates
     assert "EVIDENCE_STRENGTH" not in validate
-    content = (REPO / "src" / "essay_writer" / "prompt_content.py").read_text(encoding="utf-8")
-    assert "EVIDENCE_STRENGTH" in content
     voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
     assert 'A claim is no stronger than the evidence under it.' in voice
