@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-__version__ = "0.8.2"
+__version__ = "0.9.0"
 
 # A build writes this file next to the package modules, with the commit the
 # copy was built from. The environment value wins when a label is set for one run.

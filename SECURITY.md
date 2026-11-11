@@ -4,8 +4,8 @@
 
 | Version | Supported |
 | --- | --- |
-| 0.8.x | yes |
-| < 0.8 | no |
+| 0.9.x | yes |
+| < 0.9 | no |
 
 ## Reporting
 
