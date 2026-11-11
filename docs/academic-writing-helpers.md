@@ -144,6 +144,7 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - A PDF larger than 20MB is read in parts on this machine. Each part stays readable. A part that cannot be read is recorded for the later citation pass. The PDF bytes stay on this machine.
 - Before a Word file or a zip is handed across, clear the Mac quarantine mark and the provenance mark on the Documents copy. If those marks are absent, leave the file unchanged.
 - A database the brief names is not a look-up. The file the student holds fills that slot. Do not store a folder path.
+
 **Shared rules:**
 - Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout.
 
@@ -160,6 +161,7 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - Evidence vs claim. Bias, validity, and reliability only from the gathered text. Opposing views only if a gathered source states them. Do not invent them.
 - Fit to the argument on the papers you will use.
 - When the assignment is itself a critical review: introduction with author, title, topic, aim, findings, and your overall judgement; a summary of about a quarter to a third; a critique ordered by importance or by criterion; a conclusion that restates the judgement. The brief wins on structure.
+
 **Shared rules:**
 - Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout.
 
@@ -184,6 +186,7 @@ The name is the same for both genres. Essay shape is in `docs/essay-writing-help
 - Chat for this step stays quiet. Do not paste this checklist into the chat, and do not name a file path. The person does not read or edit Word in this stage. The person sees the finished first draft after the save. A middle pass stays quiet unless the draft is blocked.
 - When the critical-review notes are too long for this step, drop only a repeated model line, then take whole notes in groups that fit, then re-open a source only for a gap that note does not cover. Do not cut off the end of a note without saying so. Do not invent a quotation that is not in the full note. Keep going while a group or a re-opened passage still fits. Stop and tell the person only when none of those ways fits.
 - When the student supplied an outline or base prose, its headings and their order stay. Add no section and no body text around whatever was gathered, and weave a short cite only where a gathered paper supports the student's own sentence.
+
 **Shared rules:**
 - Keep the person the brief names. A diary keeps that brief voice and is not forced into third person. An essay or a report is not forced into first person to sound human. Ban AI-glue: do not pad with stock transitions, empty emphasis, or lines that could sit on any assignment. When no lecture, reading, or workplace detail is on the opened files, ask the student once for one real detail and use only that detail. Never invent a lecture, a reading, or a workplace detail. Do not open with a general sentence built only from the topic nouns. Do not close with an automatic In conclusion that only restates the topic. A paragraph closer must not only restate the topic sentence. Make it assignment-specific: a cited finding, a limit, or a figure. Use a connective only when the relation is true. However has to mark a real contrast. More connectives are not more coherence.
 - Vary the sentence rhythm. Cut AI connectors such as Furthermore, Moreover, In conclusion, and It is important to note. Do not open a diary with a polished line such as In this reflective diary I will. A diary may be slightly fragmented. An essay or a report body stays academic and uses Harvard Referencing. Prefer a concrete detail over an abstract line. Do not plant grammar errors. Use words the writer can define out loud. Do not nominalize a verb into -ion, -ment, or -ance to sound scientific, and do not swap in a rarer synonym the writer does not use.
@@ -221,6 +224,7 @@ The tool drafts. The student directs and confirms. Stage 6 is the student's read
 - Local Word edit. A changed Word upload leaves the parent sequence in place and rolls forward onto the next sequence.
 - When the student supplied an outline or base prose, the structure stays theirs. A cited point stays to one or two sentences, and an ask to shorten the cites is answered on this save, not left for the reader to trim.
 - At the start of the first read, show the short read list once, then stop. The student edits. Do not rewrite the draft for them. Do not add a gate, a score, or a blocker.
+
 **Shared rules:**
 - Do not tighten prose below what the opened Word file already says. Word-band cuts must not turn a true sentence into a false one.
 - Keep the person the brief names. A diary keeps that brief voice and is not forced into third person. An essay or a report is not forced into first person to sound human. Ban AI-glue: do not pad with stock transitions, empty emphasis, or lines that could sit on any assignment. When no lecture, reading, or workplace detail is on the opened files, ask the student once for one real detail and use only that detail. Never invent a lecture, a reading, or a workplace detail. Do not open with a general sentence built only from the topic nouns. Do not close with an automatic In conclusion that only restates the topic. A paragraph closer must not only restate the topic sentence. Make it assignment-specific: a cited finding, a limit, or a figure. Use a connective only when the relation is true. However has to mark a real contrast. More connectives are not more coherence.
@@ -243,6 +247,7 @@ The tool drafts. The student directs and confirms. Stage 7 asks questions and ed
 - Heavy file work is a separate file step. Asking, the light check, and edits from answers stay in the chat.
 - The delta lists every sentence whose claim or limit changed. A glossary line or a locator line is not the whole list.
 - Do not start the later edit, references, or final Word from stage 6. Those steps wait until the questions are asked and the edits from the answers are saved. Each later step is its own run.
+
 **Shared rules:**
 - On this Word save, rewrite first-draft.md in the sequence folder from the saved Word file in the same step. Do not say that path in the chat.
 - Keep the person the brief names. A diary keeps that brief voice and is not forced into third person. An essay or a report is not forced into first person to sound human. Ban AI-glue: do not pad with stock transitions, empty emphasis, or lines that could sit on any assignment. When no lecture, reading, or workplace detail is on the opened files, ask the student once for one real detail and use only that detail. Never invent a lecture, a reading, or a workplace detail. Do not open with a general sentence built only from the topic nouns. Do not close with an automatic In conclusion that only restates the topic. A paragraph closer must not only restate the topic sentence. Make it assignment-specific: a cited finding, a limit, or a figure. Use a connective only when the relation is true. However has to mark a real contrast. More connectives are not more coherence.
@@ -265,6 +270,7 @@ Read the helper the brief picked. An essay conclusion adds nothing new, and each
 - Word count: if under the band, the answer is complete and the evidence is enough. If over the band, cut repetition and detail that does not answer the question.
 - Structure still matches the genre. Approve the save before the tool writes .docx when it does.
 - This step is only the edit. It does not also write the references or the final Word. The next step is separate.
+
 **Shared rules:**
 - Do not tighten prose below what the opened Word file already says. Word-band cuts must not turn a true sentence into a false one.
 - Keep the person the brief names. A diary keeps that brief voice and is not forced into third person. An essay or a report is not forced into first person to sound human. Ban AI-glue: do not pad with stock transitions, empty emphasis, or lines that could sit on any assignment. When no lecture, reading, or workplace detail is on the opened files, ask the student once for one real detail and use only that detail. Never invent a lecture, a reading, or a workplace detail. Do not open with a general sentence built only from the topic nouns. Do not close with an automatic In conclusion that only restates the topic. A paragraph closer must not only restate the topic sentence. Make it assignment-specific: a cited finding, a limit, or a figure. Use a connective only when the relation is true. However has to mark a real contrast. More connectives are not more coherence.
@@ -302,6 +308,7 @@ Final in-text citations and reference list — **Harvard Referencing** only. **D
 - Do not invent sources on every citation line.
 - Do not approve a save if references are unchanged from the last saved draft bundle.
 - When this save is done, the next step is the final Word, as its own step. A blocked independent review is shown before that Word is written.
+
 **Shared rules:**
 - On this Word save, rewrite first-draft.md in the sequence folder from the saved Word file in the same step. Do not say that path in the chat.
 

@@ -3,7 +3,8 @@
 The doc keeps its hand-written router prose. Each **Basics checklist**
 block is replaced from the prompt bundle. On a stage that already renders
 shared craft, or a shared stage line, the same block then lists those
-rules under **Shared rules:**.
+rules under **Shared rules:**, with a blank line before that label and
+after those bullets.
 """
 
 from __future__ import annotations
@@ -48,13 +49,18 @@ def _stage(match: re.Match[str], text: str) -> str:
 
 
 def _stage_block(stage: str) -> str:
-    """Checklist bullets, then the shared rules that stage already renders."""
+    """Checklist bullets, then the shared rules that stage already renders.
+
+    A blank line before the label ends the checklist list. A blank line
+    after the shared bullets ends that list.
+    """
     lines = [f"- {line}" for line in CHECKLISTS[stage]]
     shared = SHARED_STAGE_LINES.get(stage, ()) + CRAFT_BY_STAGE.get(stage, ())
-    if shared:
-        lines.append(SHARED_RULES_MARK)
-        lines.extend(f"- {line}" for line in shared)
-    return "\n".join(lines) + "\n"
+    block = "\n".join(lines) + "\n"
+    if not shared:
+        return block
+    shared_lines = "\n".join(f"- {line}" for line in shared)
+    return block + "\n" + SHARED_RULES_MARK + "\n" + shared_lines + "\n\n"
 
 
 def render(text: str) -> str:
@@ -82,6 +88,8 @@ def render(text: str) -> str:
         bullets = _stage_block(stage)
         out.append(text[cursor:start])
         out.append(bullets)
+        if bullets.endswith("\n\n") and stop < len(text) and text[stop] == "\n":
+            stop += 1
         cursor = stop
     out.append(text[cursor:])
     return "".join(out)

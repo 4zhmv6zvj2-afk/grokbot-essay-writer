@@ -77,6 +77,28 @@ def test_case_1():
     assert "Stage 7 asks questions and edits from the student's answers." in helper
 
 
+def test_case_3():
+    """AC2: Shared rules is a Markdown block.
+
+    A blank line comes before the label and after the bullets. The generator
+    check matches the file.
+    """
+    helper = HELPERS.read_text(encoding="utf-8")
+    module = _generate_docs()
+    assert module.render(helper) == helper
+    lines = helper.splitlines()
+    marks = [index for index, line in enumerate(lines) if line == MARK]
+    assert marks
+    for index in marks:
+        assert lines[index - 1] == ""
+        cursor = index + 1
+        assert lines[cursor].startswith("- ")
+        while cursor < len(lines) and lines[cursor].startswith("- "):
+            cursor += 1
+        assert cursor < len(lines)
+        assert lines[cursor] == ""
+
+
 def test_case_2():
     """AC2: The voice sections and the stage-6 read list stay. Bullets stay flat.
 
