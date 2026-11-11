@@ -24,17 +24,6 @@ SHELLS = (SHELL_CURSOR, SHELL_GROK_BOT)
 CORE_COMMAND = "essay-writer"
 ENTRY_SOURCE = "placeholders/mcp.config.json"
 
-# Operator text is still written in more than one note. The doors are not.
-RESIDUALS: dict[str, str] = {
-    "briefing-prose": (
-        "The operator briefing in server.INSTRUCTIONS, the door descriptions, "
-        "docs/workflow.md, and docs/templates/bot.md are still written by hand. "
-        "They are not a second door. bot.md is switched on and uses the same MCP command as Cursor. "
-        "Every essay tool it names is one of the writer doors. "
-        "It does not list the later doors."
-    ),
-}
-
 
 def _servers() -> dict[str, Any]:
     from essay_writer.first_run import mcp_template
@@ -66,7 +55,6 @@ def writer_handlers() -> dict[str, Any]:
     return HANDLERS
 
 
-BOT_SHARE_RELATIVE = "docs/templates/essay-bot.share.json"
 BOT_SHARE_NAME = "essay-bot.share.json"
 
 

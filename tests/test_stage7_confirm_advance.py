@@ -14,15 +14,18 @@ from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.doors import DOORS
 from essay_writer.paths import work_dir
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.setup import SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
-from essay_writer.specialists.grok_bot import ROOM_CONFIRM_PATH, STAGE7_AFTER_ANSWERS
 from essay_writer.stage7 import NEED_EDIT
 from essay_writer.stage_llm import stage_settings, stage_tool_description
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
+
+ROOM_CONFIRM_PATH = prompt_text("front_office/confirm.md", "room_confirm_path")
+STAGE7_AFTER_ANSWERS = prompt_text("front_office/confirm.md", "stage7_after_answers")
 
 REPO = Path(__file__).resolve().parents[1]
 LOOK = "Kept."
@@ -134,10 +137,12 @@ def test_ac1_room_agent_confirms_with_draft_fields(workspace):
 
     assert ROOM_CONFIRM_PATH in INSTRUCTIONS
     assert "Do not invent a digest." in ROOM_CONFIRM_PATH
-    assert ROOM_CONFIRM_PATH in stage_tool_description()
-    assert STAGE7_AFTER_ANSWERS in stage_tool_description()
+    assert STAGE7_AFTER_ANSWERS in INSTRUCTIONS
+    assert ROOM_CONFIRM_PATH not in stage_tool_description()
+    assert STAGE7_AFTER_ANSWERS not in stage_tool_description()
     door = next(item["description"] for item in DOORS if item["tool"] == "essay.stage")
-    assert "Do not invent a digest." in door
+    assert "cardDigest" in door
+    assert "Do not invent a digest." not in door
     sheet = (REPO / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
     assert "unable to tap the Confirm card" in sheet
     assert "Do not invent a digest." in sheet

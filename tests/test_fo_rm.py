@@ -24,7 +24,6 @@ from essay_writer.projects import essay_project_delete, essay_projects
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.shells import front_office_call, mount_handler
 from essay_writer.specialists.grok_bot import (
-    ROLE_NOTE,
     card_next,
     hide_curtain,
     stage7_lead,
@@ -36,24 +35,16 @@ from essay_writer.student_voice import say
 
 
 def test_role_note_is_a_bespoke_private_banking_relationship_manager():
-    text = ROLE_NOTE
-    assert "private banking Relationship Manager" in text
-    assert "bespoke" in text.casefold()
-    assert "brief" in text
-    assert "mark scheme" in text
-    assert "Not sales." in text
-    assert "Not thin customer service." in text
-    assert "Not a generic bank role" in text
-    assert "customer service only" not in text.casefold()
-    assert "satisfaction" in text
-    assert "behind the curtain" in text
-    assert "Propose options" in text
-    assert "first three steps" in text
-    assert "the service failed" in text
     assert "private banking Relationship Manager" in INSTRUCTIONS
+    assert "bespoke" in INSTRUCTIONS.casefold()
+    assert "brief" in INSTRUCTIONS
+    assert "mark scheme" in INSTRUCTIONS
     assert "Not sales." in INSTRUCTIONS
+    assert "satisfaction" in INSTRUCTIONS
+    assert "Not a thin script." in INSTRUCTIONS
     sheet = (Path(__file__).resolve().parents[1] / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
     assert "private banking Relationship Manager" in sheet
+    assert "Not sales." in sheet
     assert "generic script" in sheet.casefold()
 
 

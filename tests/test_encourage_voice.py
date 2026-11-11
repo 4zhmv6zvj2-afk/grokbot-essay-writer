@@ -21,14 +21,20 @@ from essay_writer.encourage import (
     ask_order,
     student_facts,
 )
-from essay_writer.prompt_content import ANTI_GLUE, ENCOURAGE_FACT_RULE, VOICE_LIMIT
+from essay_writer.prompt_loader import sections as prompt_sections
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.shells import front_office_call
-from essay_writer.specialists.eqr import REVIEW_LIMIT, REVIEW_PROMPT, review_limit_sha
+from essay_writer.specialists.eqr import REVIEW_PROMPT
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
-from essay_writer.writing_basics import voice_limit_sha
+
+_CRAFT = prompt_sections("craft/voice.md")
+ANTI_GLUE = _CRAFT["anti_glue"]
+ENCOURAGE_FACT_RULE = _CRAFT["encourage_fact_rule"]
+VOICE_LIMIT = _CRAFT["voice_limit"]
+REVIEW_LIMIT = prompt_text("review/eqr.md", "review_limit")
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE_ID = "encourage-plan-v1"
@@ -265,9 +271,7 @@ def test_ac5_writer_voice_limits_on_stages_5_to_8():
     ):
         assert sentence in source
     assert VOICE_LIMIT in source
-    assert VOICE_LIMIT not in helpers
-    assert voice_limit_sha() == __import__("hashlib").sha256(VOICE_LIMIT.encode("utf-8")).hexdigest()
-    assert len(voice_limit_sha()) == 64
+    assert helpers.count(VOICE_LIMIT) == 4
     folded = source.casefold()
     for banned in ("plant a grammar error", "add a typo", "deliberate mistake", "insert an error"):
         assert banned not in folded
@@ -300,7 +304,6 @@ def test_ac6_reviewer_limits_facts_structure_and_citations():
     source = (REPO / "src" / "essay_writer" / "prompts" / "review" / "eqr.md").read_text(encoding="utf-8")
     assert REVIEW_LIMIT in REVIEW_PROMPT
     assert REVIEW_LIMIT in source
-    assert review_limit_sha() == __import__("hashlib").sha256(REVIEW_LIMIT.encode("utf-8")).hexdigest()
     assert "Do not polish voice, elegance, or parallelism." in REVIEW_PROMPT
     assert "Keep the student's voice and the writer's voice." in REVIEW_PROMPT
     folded = REVIEW_PROMPT.casefold()

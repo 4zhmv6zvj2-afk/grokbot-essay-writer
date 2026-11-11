@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.8.1 — 2026-11-11
+
+Prompt catalogue trim, with the release version guard and the omitted-checksum note.
+
+- The release job checks that the tag, `pyproject.toml`, and the newest changelog
+  heading agree before it builds, signs, or uploads anything. A `SHA256SUMS`
+  file that is present but has no entry for the zip is reported as omitted, the
+  install stays unverified, and the README and SECURITY notes describe that case.
+- Door descriptions keep the contract. Duplicated stage rules are one copy,
+  stages 6 and 7 tell the same story on both launch paths, and the shared rules
+  are mirrored into the generated helper. The assembled prompt measures 24,365
+  tokens and the 24 door descriptions measure 14,295 characters. The caps stay
+  33,600 assembled tokens, 1,200 characters per door, and 24,000 for the catalogue.
+- Unused public helpers are removed. The same paragraphs still reach the
+  instructions and both setup prompts from the prompt files. Cursor still reads
+  `CURSOR_SETUP_PROMPT`. Grok Build still reads `SETUP_PROMPT`.
+- Four source pins that matched only a function name, a `def` line, or any
+  function with source now point at the call they were meant to check.
+
 ## 0.8.0 — 2026-11-11
 
 Structural cleanup round: one sentence splitter, one JSON record store, a real stage boundary, a single-sourced prompt bundle, module splits, and hygiene hardening.

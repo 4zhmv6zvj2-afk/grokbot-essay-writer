@@ -10,10 +10,12 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.prompt_content import OPEN_GAP
+from essay_writer.prompt_loader import sections as prompt_sections
 from essay_writer.stage_llm import stage_settings
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import basics_lines
+
+OPEN_GAP = prompt_sections("craft/voice.md")["open_gap"]
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
@@ -69,7 +71,5 @@ def test_ac3_the_bullet_keeps_the_gap_open_and_stays_prompt_only():
     validate = (REPO / "src" / "essay_writer" / "validate.py").read_text(encoding="utf-8")
     assert "OPEN_GAP" not in gates
     assert "OPEN_GAP" not in validate
-    content = (REPO / "src" / "essay_writer" / "prompt_content.py").read_text(encoding="utf-8")
-    assert "OPEN_GAP" in content
     voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
     assert 'say that the evidence is mixed or thin' in voice

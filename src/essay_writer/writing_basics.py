@@ -16,7 +16,6 @@ from essay_writer.prompt_content import (
     GENRE_ADDITIONS,
     REPORT_REVISIT,
     SHARED_REVISIT,
-    VOICE_LIMIT,
 )
 
 STAGE_ORDER: tuple[str, ...] = (
@@ -32,16 +31,6 @@ STAGE_ORDER: tuple[str, ...] = (
     "9",
     "10",
 )
-BASICS_MARKER = "Basics checklist"
-
-
-def voice_limit_sha() -> str:
-    """Stable id for the stage 5–8 voice limit. PR bodies cite this."""
-    import hashlib
-
-    return hashlib.sha256(VOICE_LIMIT.encode("utf-8")).hexdigest()
-
-
 def basics_lines(stage: str, genre: str | None = None) -> tuple[str, ...]:
     """Shared stage bullets plus the additive genre section."""
     shared = CHECKLISTS.get(stage, ())

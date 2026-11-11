@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from essay_writer.assignment_gate import north_star_gate
 
-ROLE = "spine"
-
 # Stage 5 stores on the draft and starts stage 6. Stages 8, 9, and 10 keep
 # their own cards. No other stage is stored without its own Confirm.
 AUTO_START = {"5": "6"}

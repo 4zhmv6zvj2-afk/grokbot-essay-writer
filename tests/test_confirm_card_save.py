@@ -276,9 +276,11 @@ def test_ac3_mid_build_status_is_wired_for_both_shells(workspace, monkeypatch):
     assert "no mid-office path is running" in MID_BUILD_STATUS
     assert "fixed clock" in MID_BUILD_STATUS
     assert MID_BUILD_STATUS in INSTRUCTIONS
-    assert MID_BUILD_DOOR in stage_tool_description()
+    assert MID_BUILD_DOOR not in stage_tool_description()
     assert "Cursor" not in MID_BUILD_DOOR
     assert "Grok Build" not in MID_BUILD_DOOR
+    assert "Cursor" not in stage_tool_description()
+    assert "Grok Build" not in stage_tool_description()
     bot = (REPO / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
     workflow = (REPO / "docs" / "workflow.md").read_text(encoding="utf-8")
     for doc in (bot, workflow):

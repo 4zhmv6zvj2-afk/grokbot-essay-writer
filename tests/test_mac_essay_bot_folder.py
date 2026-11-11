@@ -14,7 +14,10 @@ from essay_writer.first_run import (
     friend_mac_home,
     main,
 )
-from essay_writer.setup import CURSOR_SETUP_PROMPT, FIRST_RUN_MAC_SPEECH, SETUP_PROMPT
+from essay_writer.prompt_loader import text as prompt_text
+from essay_writer.setup import CURSOR_SETUP_PROMPT, SETUP_PROMPT
+
+FIRST_RUN_MAC_SPEECH = prompt_text("install/operator.md", "first_run_mac")
 
 REAL_ESSAY_BOT = Path.home() / "Documents" / "Essay Bot"
 

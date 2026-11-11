@@ -18,14 +18,17 @@ from essay_writer.build_office import stage_launch
 from essay_writer.confirm import save_draft
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
 from essay_writer.paths import essay_dir, work_dir
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
-from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH, basics_pass_lines
+from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_replies import _save_confirm
 from essay_writer.stage_state import TOOL, load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
+
+STAGE_CONFIRM_EACH = prompt_text("front_office/confirm.md", "stage_confirm_each")
 
 REPO = Path(__file__).resolve().parents[1]
 BOT = REPO / "docs" / "templates" / "bot.md"

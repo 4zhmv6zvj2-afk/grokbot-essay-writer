@@ -9,15 +9,18 @@ from helpers import ESSAY, open_sequence, picked, plant_gathered_source
 
 from essay_writer.build_status import reset_status, start_sentence
 from essay_writer.cursor_office import start_stage_mid
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.shells import front_office_call
-from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH, card_next
+from essay_writer.specialists.grok_bot import card_next
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_progress import (
     may_speak_confirm,
     shape_student_reply,
     upload_reconcile_next,
 )
+
+STAGE_CONFIRM_EACH = prompt_text("front_office/confirm.md", "stage_confirm_each")
 
 _CONFIRM = re.compile(r"\bconfirm\b|confirm card|button above", re.IGNORECASE)
 _PHANTOM = re.compile(r"don't click|do not click", re.IGNORECASE)

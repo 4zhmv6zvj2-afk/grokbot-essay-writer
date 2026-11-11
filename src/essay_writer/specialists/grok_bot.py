@@ -9,7 +9,6 @@ Research, writing, and independent review stay behind the curtain.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -23,11 +22,6 @@ from essay_writer.prompt_loader import text
 from essay_writer.state import load_state, save_state
 from essay_writer.student_voice import say, speak
 
-ROLE = "grok_bot"
-
-# Opening contract. The continue list still names every module. A new student does not inherit one.
-OPENING_CHOICE = text("front_office/chat.md", "opening_choice")
-
 # Canonical client-language rule. Shells and the bot sheet use this text.
 LANGUAGE = (
     "Default to English in student chat. Match the language of the student's current "
@@ -37,35 +31,9 @@ LANGUAGE = (
     "titles, DOIs/URLs, Harvard cites, module ids, tool names, or file names."
 )
 
-# Stage prompt and tracking note. The save label "Confirm" stays off this text.
-# The short Basics pass is the chat opening. The rest of the checklist stays out.
-BASICS_FIRST_LINES = text("front_office/chat.md", "basics_first_lines")
-
 CHECKLIST_WALK = text("front_office/chat.md", "checklist_walk")
 
-MCP_DOWN_SPEECH = text("front_office/chat.md", "mcp_down_speech")
-
-# Private banking Relationship Manager. Not sales. Not thin customer service.
-# Not a generic bank script. Client chat never hears the desk behind this note.
-ROLE_NOTE = (
-    "Grok Bot is a private banking Relationship Manager. "
-    "The service is bespoke for this client: know the assignment, the brief, and the mark scheme, "
-    "and use excellent client-serving skills. It is not one generic script. "
-    "The Relationship Manager is client-facing, stays professional, and owns the relationship "
-    "and the client's satisfaction. "
-    "Not sales. Not thin customer service. Not a generic bank role without the private-banking bar. "
-    "Front-desk work may think through and draft the first three steps with the client. "
-    "Deeper research, the writing, and the independent review stay behind the curtain. "
-    "Propose options and one next step. Do not describe how that work runs. "
-    "The client hears what happened for them and what to do next. "
-    "Never name a worker, a command line, a model flag, a status file, or an internal path. "
-    "If the client has to chase, decode jargon, or wait without a next step, the service failed."
-)
-
 # Delete uses the same Confirm card as a stage save. A typed yes still does not remove.
-
-# MCP door text. Confirm is the save label on the door, not in the stage file.
-DOOR_WALK = text("front_office/chat.md", "door_walk")
 
 _FILE_ONLY = frozenset({"annotation.docx", "download-list.docx", "papers.zip"})
 CRITICAL_REVIEWS_ZIP = "critical-reviews.zip"
@@ -74,16 +42,6 @@ CRITICAL_REVIEWS_ZIP = "critical-reviews.zip"
 CARD_CONFIRM = "confirm"
 CARD_NOT_YET = "not_yet"
 _TYPED_SAVE = frozenset({"confirm", "yes", "ok"})
-
-# Operator text. A group-room agent that cannot tap the card copies these fields.
-# A typed yes, ok, or Confirm saves the waiting card when card fields are absent.
-ROOM_CONFIRM_PATH = text("front_office/confirm.md", "room_confirm_path")
-
-# Operator text. A finished answer returns a card and does not save. Not stage 7 only.
-STAGE7_AFTER_ANSWERS = text("front_office/confirm.md", "stage7_after_answers")
-
-# One press names one stage. A later stage is a different press. Operator only.
-STAGE_CONFIRM_EACH = text("front_office/confirm.md", "stage_confirm_each")
 
 _PRESS_CONFIRM = re.compile(
     r"^press confirm(?: for stage (?P<stage>[0-9]+[a-z]?|n))?$",
@@ -129,13 +87,6 @@ def typed_save_word(value: str | None) -> bool:
     return token in _TYPED_SAVE
 
 
-def typed_save_attempt(card_action: str | None, look: str | None) -> bool:
-    """A typed Confirm, yes, or ok while a card is the save. Not yet is a choice."""
-    if card_action == CARD_NOT_YET or card_action == CARD_CONFIRM:
-        return False
-    return typed_save_word(card_action) or typed_save_word(look)
-
-
 def press_confirm_stage(value: str | None) -> str | None:
     """Stage named by a room press. Empty string means this call's stage. None if this is not a press."""
     if not isinstance(value, str):
@@ -150,11 +101,6 @@ def press_confirm_stage(value: str | None) -> str | None:
     if named[-1].isalpha():
         return named[:-1] + named[-1].casefold()
     return named
-
-
-def room_press_confirm(value: str | None) -> bool:
-    """A room line that asks to press the waiting card. The line itself does not save."""
-    return press_confirm_stage(value) is not None
 
 
 def accept_card_pick(card_action: str | None):
@@ -261,11 +207,6 @@ def wait_next() -> str:
 
 # First time the writer path needs EQR before Word. Spoken once per workspace.
 EQR_FIRST_RUN_SPEECH = text("front_office/chat.md", "eqr_first_run_speech")
-
-
-def eqr_first_run_tip_sha() -> str:
-    """Stable id for the first-run EQR FO line. PR bodies cite this."""
-    return hashlib.sha256(EQR_FIRST_RUN_SPEECH.encode("utf-8")).hexdigest()[:12]
 
 
 def _eqr_first_run_marker_path() -> Path | None:
@@ -633,8 +574,6 @@ def sequence_delete_speech(sequence_id: str, *, computer: bool) -> str:
 
 # Standing chat heading. Sequence id alone. There is no host call that renames
 # the Grok chat or the agent, so FO posts this line from the reply field.
-STANDING_HEADING = text("front_office/chat.md", "standing_heading")
-
 _PREFIXED_SEQUENCE = re.compile(
     r"^(?P<module>[A-Za-z0-9]+)\s*[·•]\s*(?P<sequence>\S+?)\s*$"
 )

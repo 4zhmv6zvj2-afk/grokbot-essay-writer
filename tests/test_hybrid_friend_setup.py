@@ -11,7 +11,10 @@ from essay_writer.first_run import (
     remember_mac_handoff_dir,
 )
 from essay_writer.first_run_cli import _parse
-from essay_writer.setup import CURSOR_SETUP_PROMPT, FIRST_RUN_MAC_SPEECH, SETUP_PROMPT
+from essay_writer.prompt_loader import text as prompt_text
+from essay_writer.setup import CURSOR_SETUP_PROMPT, SETUP_PROMPT
+
+FIRST_RUN_MAC_SPEECH = prompt_text("install/operator.md", "first_run_mac")
 
 
 def test_ac1_default_install_attach_includes_essay_reviewer(tmp_path, monkeypatch):

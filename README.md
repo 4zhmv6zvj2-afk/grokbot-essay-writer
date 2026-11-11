@@ -145,8 +145,11 @@ On the Grok Bot computer, setup will:
   falls back to an unpinned install. A zip checksum is optional: pass
   `--upload-sha256`, or put a matching `essay-writer.zip.sha256` / `SHA256SUMS`
   file beside the zip, and the installer verifies it; with no checksum it still
-  installs and the result says `upload_verified` is false. The zip's build
-  backend runs, so pass only a zip you produced or trust.
+  installs and the result says `upload_verified` is false. A `SHA256SUMS` file
+  that is present but lists no entry for the zip leaves the install unverified
+  the same way, and the result says the file does not list it rather than
+  treating the file as absent. The zip's build backend runs, so pass only a zip
+  you produced or trust.
 - Download a private Python 3.15.2 into that folder, only after you agree and only
   if no suitable Python is already there. It never changes the Python already
   installed on the computer.
@@ -225,21 +228,21 @@ shasum -a 256 -c SHA256SUMS        # macOS; Linux: sha256sum -c SHA256SUMS
 # is this repository's Release workflow on main, where the workflow is
 # dispatched from.
 cosign verify-blob \
-  --bundle essay_writer-0.8.0-py3-none-any.whl.sigstore.json \
+  --bundle essay_writer-0.8.1-py3-none-any.whl.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.8.0-py3-none-any.whl
+  essay_writer-0.8.1-py3-none-any.whl
 
 cosign verify-blob \
-  --bundle essay_writer-0.8.0.tar.gz.sigstore.json \
+  --bundle essay_writer-0.8.1.tar.gz.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.8.0.tar.gz
+  essay_writer-0.8.1.tar.gz
 
 # Check the build provenance GitHub recorded for the release workflow:
-gh attestation verify essay_writer-0.8.0-py3-none-any.whl \
+gh attestation verify essay_writer-0.8.1-py3-none-any.whl \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
-gh attestation verify essay_writer-0.8.0.tar.gz \
+gh attestation verify essay_writer-0.8.1.tar.gz \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
 ```
 
@@ -254,7 +257,7 @@ the same pinned toolchain, and fails if the SHA-256 set differs. You can do the
 same check yourself:
 
 ```bash
-git checkout v0.8.0
+git checkout v0.8.1
 python -m pip install --require-hashes -r requirements-build.txt
 SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
     python tools/reproducible_build.py --outdir dist-rebuild

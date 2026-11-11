@@ -160,14 +160,6 @@ def chat_leaks(text: str) -> bool:
     return any(token in text for token in _LEAKS)
 
 
-def quiet_chat(text: str) -> str:
-
-    spoken = say(text)
-    if not spoken or chat_leaks(spoken):
-        return QUIET_STEP
-    return spoken
-
-
 def completed_draft_chat(prose: str) -> str:
     """The finished first draft, or a short ready line when the prose would leak."""
 

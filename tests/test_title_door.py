@@ -22,15 +22,18 @@ from essay_writer.diary import title_page_spec
 from essay_writer.doors import DOORS
 from essay_writer.late_chain import _write_stage10_sequence, write_stage10
 from essay_writer.paths import essay_dir, work_dir
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office
-from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH, front_office_call
+from essay_writer.specialists.grok_bot import front_office_call
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_replies import _save_confirm
 from essay_writer.stage_state import TOOL, load_pointer
 from essay_writer.state import load_state, save_state
 from essay_writer.word import write_docx
+
+STAGE_CONFIRM_EACH = prompt_text("front_office/confirm.md", "stage_confirm_each")
 
 REPO = Path(__file__).resolve().parents[1]
 NUMBER = "445566"

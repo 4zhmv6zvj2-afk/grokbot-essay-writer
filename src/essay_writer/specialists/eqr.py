@@ -36,21 +36,10 @@ from essay_writer.prompt_loader import text
 from essay_writer.state import load_state
 from essay_writer.textutil import citation_tokens, count_words
 
-ROLE = "eqr"
-
 HIGHEST_BAND = text("review/eqr.md", "highest_band")
 
 # Stage prompt for the independent review. No house labels.
 REVIEW_PROMPT = text("review/eqr.md", "review_prompt")
-
-REVIEW_LIMIT = text("review/eqr.md", "review_limit")
-
-
-def review_limit_sha() -> str:
-    """Stable id for the reviewer voice limit. PR bodies cite this."""
-    import hashlib
-
-    return hashlib.sha256(REVIEW_LIMIT.encode("utf-8")).hexdigest()
 
 
 def finished_word_path(essay_id: str):
@@ -933,11 +922,6 @@ def opened_word_gate(essay_id: str, text: str) -> dict[str, Any] | None:
     if not missed:
         return None
     return refuse("engagement", _engagement_reason(missed), engagement=missed)
-
-
-def review_gate(essay_id: str, text: str) -> dict[str, Any] | None:
-    """Same check as opened_word_gate. Prefer opened_word_gate in new call sites."""
-    return opened_word_gate(essay_id, text)
 
 
 _REVIEW = {

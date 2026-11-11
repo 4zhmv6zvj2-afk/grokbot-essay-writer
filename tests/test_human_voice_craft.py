@@ -12,24 +12,26 @@ from pathlib import Path
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.prompt_content import (
-    ANTI_GLUE,
-    CRAFT_ANCHOR,
-    CRAFT_COMMITMENT,
-    CRAFT_REFUSAL,
-    CRAFT_REVISE,
-    CRAFT_SOURCES,
-    VOICE_LIMIT,
-)
+from essay_writer.prompt_loader import sections as prompt_sections
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.specialists.eqr import (
     CLAIM_CHECKS,
     NORTH_STAR,
-    REVIEW_LIMIT,
     REVIEW_PROMPT,
     findings_note_clears,
 )
 from essay_writer.stage7 import questions_for
 from essay_writer.stage_llm import stage_settings
+
+_CRAFT = prompt_sections("craft/voice.md")
+ANTI_GLUE = _CRAFT["anti_glue"]
+CRAFT_ANCHOR = _CRAFT["craft_anchor"]
+CRAFT_COMMITMENT = _CRAFT["craft_commitment"]
+CRAFT_REFUSAL = _CRAFT["craft_refusal"]
+CRAFT_REVISE = _CRAFT["craft_revise"]
+CRAFT_SOURCES = _CRAFT["craft_sources"]
+VOICE_LIMIT = _CRAFT["voice_limit"]
+REVIEW_LIMIT = prompt_text("review/eqr.md", "review_limit")
 
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
@@ -142,7 +144,8 @@ def test_ac3_stage8_tone_and_stage7_vague_lines_question():
     """AC3. Stage 8 keeps the writer's commitment and rewrites a chatbot paragraph. Stage 7 asks about vague lines."""
     tone = stage_settings("8")["rules"]
     assert "keeps the commitment the writer means" in tone
-    assert "If a chatbot produced a paragraph, rewrite it in the writer's sentences." in tone
+    assert "If a chatbot produced the paragraph, rewrite the ideas in the writer's sentences." in tone
+    assert tone.count("If a chatbot produced") == 1
     assert "Tone is formal, objective, and evidence-based" in tone
     assert CRAFT_REVISE in tone
     questions = questions_for("MOD1004AA-1")

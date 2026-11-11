@@ -16,14 +16,17 @@ from helpers import (
 
 from essay_writer.build_office import stage_launch
 from essay_writer.doors import DOORS
-from essay_writer.prompt_content import REVISIT_DOOR
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import INSTRUCTIONS, build_review_server, build_server
 from essay_writer.shells import front_office_call
-from essay_writer.specialists.grok_bot import CHECKLIST_WALK, DOOR_WALK
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage_llm import STAGE_ORDER, brief_genre, stage_settings, stage_title
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import CHECKLISTS, basics_lines
+
+REVISIT_DOOR = prompt_text("front_office/chat.md", "revisit_door")
+DOOR_WALK = prompt_text("front_office/chat.md", "door_walk")
 
 REPO_DOCS = Path(__file__).resolve().parents[1]
 
@@ -74,24 +77,26 @@ def test_cursor_briefing_and_tools_load_the_same_rules():
     assert CHECKLIST_WALK in INSTRUCTIONS
     assert "Stage 1 limiting conditions" in INSTRUCTIONS
     originals = _door("essay.originals")
-    assert "Apply stage 1 — Analyse the task guidance as rules" in originals
-    assert "tracking/1.md" in originals
-    assert "stage 2 — Essay: Establish a thesis. Report: Establish purpose and scope" in originals
-    assert DOOR_WALK in originals
-    assert "A report has no thesis." in originals
+    assert "quoted evidence" in originals
+    assert DOOR_WALK not in originals
+    assert "Basics checklist" not in originals
+    assert stage_settings("1")["tracking_file"] == "tracking/1.md"
+    assert "Analyse the task" in stage_settings("1")["rules"]
+    assert "A report has no thesis." in stage_settings("2")["rules"]
     summary = _door("essay.research.summary")
-    assert "tracking/4a.md" in summary
-    assert "stage 4b — Critical review" in summary
-    assert "as rules" in summary
+    assert "Basics checklist" not in summary
+    assert "tracking/4a.md" not in summary
+    assert stage_settings("4a")["tracking_file"] == "tracking/4a.md"
+    assert "Critical review" in stage_settings("4b")["rules"]
     stage = _door("essay.stage")
-    assert "Stage 3 — Essay: Write an essay plan. Report: Write a report plan." in stage
-    assert DOOR_WALK in stage
-    assert "central theme" in stage
-    assert "tracking/3.md" in stage
-    assert "Stage 7 — Ask for feedback." in stage
-    assert "tracking/7.md" in stage
-    assert "Stage 10 — Submit the final draft." in stage
+    assert DOOR_WALK not in stage
     assert "The tool does not submit." in stage
+    assert "tracking/<stage>.md" in stage
+    assert "central theme" in stage_settings("3")["rules"]
+    assert stage_settings("3")["tracking_file"] == "tracking/3.md"
+    assert "Ask for feedback" in stage_settings("7")["rules"]
+    assert stage_settings("7")["tracking_file"] == "tracking/7.md"
+    assert "Submit the final draft" in stage_settings("10")["rules"]
     assert "Apply stage 1" not in _door("essay.health")
     reviewer = build_review_server()
     tools = reviewer._tool_manager.list_tools()
@@ -382,10 +387,14 @@ def test_post_research_revisit_is_on_the_overlay_and_the_door():
         assert "Revisit the thesis only if the research breaks it." in essay
         assert "central theme" not in essay
         assert student_surface_hits(essay) == []
-    assert REVISIT_DOOR in _door("essay.research.summary")
-    assert REVISIT_DOOR in _door("essay.research.full")
-    assert REVISIT_DOOR in _door("essay.pack.validate")
-    assert "Do not silently rewrite the plan into the draft." in _door("essay.stage")
+    for tool in (
+        "essay.research.summary",
+        "essay.research.full",
+        "essay.pack.validate",
+        "essay.stage",
+    ):
+        assert REVISIT_DOOR not in _door(tool)
+        assert "Do not silently rewrite the plan into the draft." not in _door(tool)
     assert "After 4a and 4b Confirm" in INSTRUCTIONS
     router = (REPO_DOCS / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
     essay_help = (REPO_DOCS / "docs" / "essay-writing-helpers.md").read_text(encoding="utf-8")

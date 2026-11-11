@@ -9,13 +9,15 @@ from helpers import ESSAY, open_sequence, picked, plant_gathered_source
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.paths import essay_dir, work_dir
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office, front_office_call
-from essay_writer.specialists.grok_bot import BASICS_FIRST_LINES
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER, basics_lines
+
+BASICS_FIRST_LINES = prompt_text("front_office/chat.md", "basics_first_lines")
 
 QUESTION = "How should the firm manage the corridor?"
 SCHEME = "High Distinction (80-100): the question is answered with evidence\n"

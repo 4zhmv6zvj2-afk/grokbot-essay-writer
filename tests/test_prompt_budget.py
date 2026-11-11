@@ -43,7 +43,7 @@ KNOWN_SHARED_PREFIXES: tuple[str, ...] = ()
 
 # Approximate budget: instructions + every door description, measured on this
 # tree. One token is estimated at four characters; no tokenizer dependency.
-# 33,497 measured after the shared-rule editorial pass (was 34,000). The
+# 24,365 measured on this tree. The earlier figure here was 33,497. The
 # precedence block renders once in the combined briefing and once per stage
 # overlay, and the six inlined gloss copies are gone, so the cap is lowered to
 # lock that shrink in.

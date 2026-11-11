@@ -11,15 +11,17 @@ from helpers import OTHER, open_sequence, picked, plant_gathered_source
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.setup import SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
-from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH
 from essay_writer.spine import AUTO_START, advances_without_confirm
 from essay_writer.stage_llm import stage_settings, stage_tool_description
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
+
+STAGE_CONFIRM_EACH = prompt_text("front_office/confirm.md", "stage_confirm_each")
 
 REPO = Path(__file__).resolve().parents[1]
 LOOK = "Kept."
@@ -127,7 +129,7 @@ def test_ac1_stage_confirm_saves_only_that_stage(workspace):
         assert advances_without_confirm(stage) is None
 
     assert STAGE_CONFIRM_EACH in INSTRUCTIONS
-    assert STAGE_CONFIRM_EACH in stage_tool_description()
+    assert STAGE_CONFIRM_EACH not in stage_tool_description()
     sheet = (REPO / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
     assert STAGE_CONFIRM_EACH in sheet
     assert "does not save stage N+1" in STAGE_CONFIRM_EACH

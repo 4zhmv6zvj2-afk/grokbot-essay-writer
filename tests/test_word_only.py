@@ -25,9 +25,11 @@ from essay_writer.build_office import (
     write_stage_deliverables,
 )
 from essay_writer.first_run import DELIVERABLE_SUFFIXES, copy_deliverable_to_mac
+from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.research import essay_research_full
 from essay_writer.server import INSTRUCTIONS
-from essay_writer.specialists.grok_bot import STAGE_CONFIRM_EACH
+
+STAGE_CONFIRM_EACH = prompt_text("front_office/confirm.md", "stage_confirm_each")
 
 REPO = Path(__file__).resolve().parents[1]
 ANN = (

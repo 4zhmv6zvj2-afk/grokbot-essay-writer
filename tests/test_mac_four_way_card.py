@@ -15,7 +15,10 @@ from essay_writer.first_run import (
     package_root,
     visible_canonical_mac_handoff_dir,
 )
-from essay_writer.setup import CURSOR_SETUP_PROMPT, FIRST_RUN_MAC_SPEECH, SETUP_PROMPT
+from essay_writer.prompt_loader import text as prompt_text
+from essay_writer.setup import CURSOR_SETUP_PROMPT, SETUP_PROMPT
+
+FIRST_RUN_MAC_SPEECH = prompt_text("install/operator.md", "first_run_mac")
 
 
 def _bot_and_mac(tmp_path, monkeypatch):

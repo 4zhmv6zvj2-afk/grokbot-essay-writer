@@ -66,6 +66,7 @@ jobs:
           fetch_from_default MANIFEST.in
           fetch_from_default tools/normalize_sdist.py
           fetch_from_default tools/reproducible_build.py
+          fetch_from_default tools/check_release_version.py
 
       - name: Set up Python 3.12.13
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
@@ -96,16 +97,14 @@ jobs:
             exit 1
           fi
 
-      - name: Verify the tag matches the package version
+      - name: Verify the tag, the package version, and the changelog agree
         run: |
           set -euo pipefail
-          tag_version="${TAG#v}"
-          pyproject_version="$(python -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
-          if [ "${tag_version}" != "${pyproject_version}" ]; then
-            echo "::error::Tag ${TAG} does not match pyproject.toml version ${pyproject_version}."
-            exit 1
-          fi
-          echo "Tag ${TAG} matches pyproject.toml version ${pyproject_version}."
+          # pyproject.toml and CHANGELOG.md must name the same version, and the
+          # tag must match both. A tag cut from a tree whose changelog was not
+          # updated is a release the docs cannot describe, so it fails here
+          # before anything is built, signed, or uploaded.
+          python tools/check_release_version.py --tag "${TAG}"
 
       - name: Verify the release is a draft
         run: |
