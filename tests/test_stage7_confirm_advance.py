@@ -134,10 +134,12 @@ def test_ac1_room_agent_confirms_with_draft_fields(workspace):
 
     assert ROOM_CONFIRM_PATH in INSTRUCTIONS
     assert "Do not invent a digest." in ROOM_CONFIRM_PATH
-    assert ROOM_CONFIRM_PATH in stage_tool_description()
-    assert STAGE7_AFTER_ANSWERS in stage_tool_description()
+    assert STAGE7_AFTER_ANSWERS in INSTRUCTIONS
+    assert ROOM_CONFIRM_PATH not in stage_tool_description()
+    assert STAGE7_AFTER_ANSWERS not in stage_tool_description()
     door = next(item["description"] for item in DOORS if item["tool"] == "essay.stage")
-    assert "Do not invent a digest." in door
+    assert "cardDigest" in door
+    assert "Do not invent a digest." not in door
     sheet = (REPO / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
     assert "unable to tap the Confirm card" in sheet
     assert "Do not invent a digest." in sheet

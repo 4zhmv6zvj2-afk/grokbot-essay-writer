@@ -183,8 +183,11 @@ def test_ac6_stage9_save_names_title_opening_and_one_body_paragraph(workspace):
 
 
 def test_ac7_pack_render_and_revise_carry_the_overlay():
+    """Anti-glue stays on the stage-5 and stage-8 rules, not pasted onto the doors."""
     for tool in WORD_DOORS:
-        assert ANTI_GLUE in _door(tool)
+        assert ANTI_GLUE not in _door(tool)
+    assert ANTI_GLUE in stage_settings("5")["rules"]
+    assert ANTI_GLUE in stage_settings("8")["rules"]
     assert ANTI_GLUE in INSTRUCTIONS
 
 

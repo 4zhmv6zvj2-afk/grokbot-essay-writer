@@ -77,26 +77,28 @@ def test_writer_and_reviewer_briefings_carry_the_settings():
     assert "500000" not in reviewer
 
 
-def test_doors_with_stage_prompts_name_model_effort_and_context():
+def test_stage_settings_name_model_effort_and_context_not_the_doors():
+    """Model, effort, and context stay on stage settings. Doors do not paste them."""
     by_tool = {door["tool"]: door["description"] for door in DOORS}
-    full = by_tool["essay.research.full"]
-    summary = by_tool["essay.research.summary"]
-    validate = by_tool["essay.pack.validate"]
-    word = by_tool["essay.pack.render_word"]
-    assert "Stage LLM (no-fast)" in full
-    assert "Basics 4b:" in full
-    assert "context 256000" in full
-    assert "context 500000" not in full
-    assert "reasoning xhigh" in full
-    assert "context 500000" not in summary
-    assert "context 256000" in summary
-    assert "Basics 5:" in validate
-    assert "reasoning xhigh" in validate
-    assert "context 256000" in validate
-    assert "one markdown per paper" in validate.casefold()
-    assert "one markdown per paper" in word.casefold()
-    assert "Stage LLM" not in by_tool["essay.health"]
-    assert "Stage LLM" not in by_tool["essay.setup"]
+    for tool in (
+        "essay.research.full",
+        "essay.research.summary",
+        "essay.pack.validate",
+        "essay.pack.render_word",
+        "essay.health",
+        "essay.setup",
+    ):
+        assert "Stage LLM" not in by_tool[tool]
+        assert "context 256000" not in by_tool[tool]
+        assert "context 500000" not in by_tool[tool]
+    assert "one markdown per paper" in by_tool["essay.pack.validate"].casefold()
+    assert "one markdown per paper" in by_tool["essay.pack.render_word"].casefold()
+    assert stage_settings("4b")["reasoning"] == "xhigh"
+    assert stage_settings("4b")["context_window"] == 256_000
+    assert stage_settings("5")["reasoning"] == "xhigh"
+    assert stage_settings("5")["context_window"] == 256_000
+    assert "256000" in INSTRUCTIONS
+    assert "500000" not in INSTRUCTIONS
 
 
 def test_docs_record_the_same_locks():

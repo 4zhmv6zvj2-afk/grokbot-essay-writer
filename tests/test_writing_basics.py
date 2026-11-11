@@ -56,15 +56,11 @@ def test_helpers_has_basics_checklist_per_stage():
     assert "not apa" in text.casefold()
 
 
-def test_server_and_doors_carry_basics():
+def test_server_carries_basics_and_doors_do_not():
+    """The Basics checklist stays in the server instructions and the stage rules."""
     assert BASICS_MARKER in INSTRUCTIONS
     assert "stage 9" in INSTRUCTIONS.casefold()
-    wired = [d for d in DOORS if BASICS_MARKER in d["description"]]
-    assert {d["tool"] for d in wired} >= {
-        "essay.originals",
-        "essay.research.summary",
-        "essay.research.full",
-        "essay.pack.validate",
-        "essay.pack.render_word",
-        "essay.revise",
-    }
+    assert [d["tool"] for d in DOORS if BASICS_MARKER in d["description"]] == []
+    for stage in ("4a", "4b", "5", "6"):
+        assert CHECKLISTS[stage]
+        assert CHECKLISTS[stage][0] in INSTRUCTIONS

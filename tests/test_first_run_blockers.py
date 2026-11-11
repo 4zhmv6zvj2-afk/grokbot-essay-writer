@@ -359,7 +359,9 @@ def test_secret_card_speech_cites_the_provider_pages():
     assert "Cursor" not in SETUP_PROMPT
     assert "Grok Build" not in SETUP_PROMPT
     setup = next(door["description"] for door in DOORS if door["tool"] == "essay.setup")
-    assert CARD_RULES in setup
+    assert CARD_RULES not in setup
+    assert "secret card" in setup
+    assert "by hash" in setup
     assert "Grok Bot" not in setup
     assert ".env" in workflow_text()
 

@@ -85,7 +85,9 @@ def test_stage_prompt_bakes_the_harvard_line():
     assert "Walk this Basics checklist internally before the save." in overlay
     summary = next(door["description"] for door in DOORS if door["tool"] == "essay.research.summary")
     full = next(door["description"] for door in DOORS if door["tool"] == "essay.research.full")
-    assert JOURNAL_SHAPE in summary
+    assert JOURNAL_SHAPE in stage_settings("4a")["prompt_overlay"]
+    assert JOURNAL_SHAPE not in summary
+    assert JOURNAL_SHAPE not in full
     assert "annotation.docx" in summary
     assert "real PDFs only" in summary
     assert "either mid-office pick" in summary

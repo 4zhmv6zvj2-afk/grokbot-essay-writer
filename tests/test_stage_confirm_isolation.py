@@ -127,7 +127,7 @@ def test_ac1_stage_confirm_saves_only_that_stage(workspace):
         assert advances_without_confirm(stage) is None
 
     assert STAGE_CONFIRM_EACH in INSTRUCTIONS
-    assert STAGE_CONFIRM_EACH in stage_tool_description()
+    assert STAGE_CONFIRM_EACH not in stage_tool_description()
     sheet = (REPO / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
     assert STAGE_CONFIRM_EACH in sheet
     assert "does not save stage N+1" in STAGE_CONFIRM_EACH
