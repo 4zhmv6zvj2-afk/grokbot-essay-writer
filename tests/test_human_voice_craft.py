@@ -142,7 +142,8 @@ def test_ac3_stage8_tone_and_stage7_vague_lines_question():
     """AC3. Stage 8 keeps the writer's commitment and rewrites a chatbot paragraph. Stage 7 asks about vague lines."""
     tone = stage_settings("8")["rules"]
     assert "keeps the commitment the writer means" in tone
-    assert "If a chatbot produced a paragraph, rewrite it in the writer's sentences." in tone
+    assert "If a chatbot produced the paragraph, rewrite the ideas in the writer's sentences." in tone
+    assert tone.count("If a chatbot produced") == 1
     assert "Tone is formal, objective, and evidence-based" in tone
     assert CRAFT_REVISE in tone
     questions = questions_for("MOD1004AA-1")

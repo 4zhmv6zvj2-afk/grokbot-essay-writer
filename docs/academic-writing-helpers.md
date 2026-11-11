@@ -135,7 +135,7 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - Gathered sources only (do not invent sources). Choose sources that answer the question, cover more than one view, and include the key works.
 - Each annotation is a few full sentences after the citation, written so a student can read them aloud: what the paper did, what it found, and how it helps this assignment. Keep mark-scheme words the brief uses, and gloss each one in plain English the first time. Do not delete those words.
 - Evidence vs claim: what the source shows versus what you will argue.
-- Harvard Referencing 4a format: the citation line stays exact, then a few full sentences a student can read aloud. Those sentences say what the paper did, what it found, and how it helps this assignment. Keep mark-scheme words the brief uses, and gloss each one in plain English the first time. Do not delete those words. Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences. Journal: Surname, Initial. (Year) 'Article title', Journal Title, volume(issue), pp. start-end. Available at: doi:10.xxxx/xxxxx. Book: Surname, Initial. (Year) Title. Place: Publisher. Web page: Organisation (Year) Title. Available at: URL (Accessed: date). A missing page, DOI, volume, journal, place, publisher, or access date stays blank. Do not invent it. The full reference pass is stage 9.
+- Harvard Referencing 4a format: the citation line stays exact, then the annotation sentences (what the paper did, what it found, and how it helps this assignment). Do not delete those words. Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences. Journal: Surname, Initial. (Year) 'Article title', Journal Title, volume(issue), pp. start-end. Available at: doi:10.xxxx/xxxxx. Book: Surname, Initial. (Year) Title. Place: Publisher. Web page: Organisation (Year) Title. Available at: URL (Accessed: date). A missing page, DOI, volume, journal, place, publisher, or access date stays blank. Do not invent it. The full reference pass is stage 9.
 - download-list.docx is leftovers only: gathered sources not already in the papers zip, plus failed look-up addresses that are not saved PDFs. Do not repeat citation lines from annotation.docx.
 - When you name other gathered sources or free alternatives already found after this save, speech only. Do not open a new look-up or free-alt download in this step.
 - After this save is approved, a later download step can fetch leftover free alternatives already found. That step does not open a new look-up and does not invent an address.
@@ -177,8 +177,7 @@ The name is the same for both genres. Essay shape is in `docs/essay-writing-help
 - Opposing views only from gathered material. Do not invent sources. Approve the draft before treating it as locked for Word.
 - Do not set the conclusion label to noted or open on the Word cover. The person chooses that on validate before Word.
 - Do not write an independent re-review or mark your own essay passed. Only the separate reviewer records a pass.
-- The draft is model-assisted; the student owns what they submit. The person does not read or edit Word in this stage.
-- Chat for this step stays quiet. Do not paste this checklist into the chat, and do not name a file path. The person sees the finished first draft after the save. A middle pass stays quiet unless the draft is blocked.
+- Chat for this step stays quiet. Do not paste this checklist into the chat, and do not name a file path. The person does not read or edit Word in this stage. The person sees the finished first draft after the save. A middle pass stays quiet unless the draft is blocked.
 - When the critical-review notes are too long for this step, drop only a repeated model line, then take whole notes in groups that fit, then re-open a source only for a gap that note does not cover. Do not cut off the end of a note without saying so. Do not invent a quotation that is not in the full note. Keep going while a group or a re-opened passage still fits. Stop and tell the person only when none of those ways fits.
 - When the student supplied an outline or base prose, its headings and their order stay. Add no section and no body text around whatever was gathered, and weave a short cite only where a gathered paper supports the student's own sentence.
 
@@ -223,7 +222,7 @@ Read the helper the brief picked. An essay conclusion adds nothing new, and each
 **Guideline:** Academic skills, Editing your writing, plus the helper the brief picked.
 
 **Basics checklist:**
-- Clarity: say the idea outright. Do not leave it to assumed knowledge. Tone is formal, objective, and evidence-based, and it keeps the commitment the writer means. If a chatbot produced a paragraph, rewrite it in the writer's sentences. Academic style is the list in docs/academic-writing-helpers.md.
+- Clarity: say the idea outright. Do not leave it to assumed knowledge. Tone is formal, objective, and evidence-based, and it keeps the commitment the writer means. Academic style is the list in docs/academic-writing-helpers.md.
 - Paragraphs are in a logical order. Transitions vary. Grammar, spelling, tense, and punctuation are clean. No biased language.
 - Do not invent a word budget.
 - Word count: if under the band, the answer is complete and the evidence is enough. If over the band, cut repetition and detail that does not answer the question.

@@ -35,9 +35,9 @@ ANNOTATION_SENTENCES = (
 )
 
 FOUR_A_FORMAT = (
-    "Harvard Referencing 4a format: the citation line stays exact, then a few full sentences a student can read aloud. "
-    "Those sentences say what the paper did, what it found, and how it helps this assignment. "
-    "Keep mark-scheme words the brief uses, and gloss each one in plain English the first time. Do not delete those words. "
+    "Harvard Referencing 4a format: the citation line stays exact, then the annotation sentences "
+    "(what the paper did, what it found, and how it helps this assignment). "
+    "Do not delete those words. "
     "Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences. "
     f"Journal: {JOURNAL_SHAPE}. "
     f"Book: {BOOK_SHAPE} "

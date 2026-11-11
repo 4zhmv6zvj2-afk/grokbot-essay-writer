@@ -10,8 +10,8 @@
 - Outline the introduction, the body, and the conclusion.
 
 ## 5
-- Essay introduction follows this argument: a thesis that answers the question, and a road map of the main ideas. Do not open with a general sentence built only from the topic nouns.
-- Essay conclusion stays with this argument and adds no new information. Do not close with an automatic In conclusion that only restates the topic. End on an assignment-specific cited finding, a limit, or a figure.
+- Essay introduction follows this argument: a thesis that answers the question, and a road map of the main ideas.
+- Essay conclusion stays with this argument and adds no new information. End on an assignment-specific cited finding, a limit, or a figure.
 
 ## 8
 - Essay conclusion: no new information.
