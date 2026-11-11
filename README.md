@@ -223,21 +223,21 @@ shasum -a 256 -c SHA256SUMS        # macOS; Linux: sha256sum -c SHA256SUMS
 # is this repository's Release workflow on main, where the workflow is
 # dispatched from.
 cosign verify-blob \
-  --bundle essay_writer-0.6.3-py3-none-any.whl.sigstore.json \
+  --bundle essay_writer-0.7.0-py3-none-any.whl.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.6.3-py3-none-any.whl
+  essay_writer-0.7.0-py3-none-any.whl
 
 cosign verify-blob \
-  --bundle essay_writer-0.6.3.tar.gz.sigstore.json \
+  --bundle essay_writer-0.7.0.tar.gz.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.6.3.tar.gz
+  essay_writer-0.7.0.tar.gz
 
 # Check the build provenance GitHub recorded for the release workflow:
-gh attestation verify essay_writer-0.6.3-py3-none-any.whl \
+gh attestation verify essay_writer-0.7.0-py3-none-any.whl \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
-gh attestation verify essay_writer-0.6.3.tar.gz \
+gh attestation verify essay_writer-0.7.0.tar.gz \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
 ```
 
@@ -252,7 +252,7 @@ the same pinned toolchain, and fails if the SHA-256 set differs. You can do the
 same check yourself:
 
 ```bash
-git checkout v0.6.3
+git checkout v0.7.0
 python -m pip install --require-hashes -r requirements-build.txt
 SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
     python tools/reproducible_build.py --outdir dist-rebuild

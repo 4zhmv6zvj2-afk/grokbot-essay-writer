@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 — 2026-11-11
 
 Hardening round: bound confirm side effects, real launch/install branches under test, a verified release chain, and a typed Confirm fallback.
 
