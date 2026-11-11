@@ -19,6 +19,7 @@ from typing import Any
 from essay_writer.confirm import CONFIRM, confirm_ready, refuse, save_draft
 from essay_writer.paths import relative
 from essay_writer.stage_llm import brief_genre, next_stage, stage_title
+from essay_writer.stage_note import render_tracking
 from essay_writer.stage_state import (
     _INHERITED_KEEP,
     TOOL,
@@ -31,7 +32,6 @@ from essay_writer.stage_state import (
     _saved_after_confirm,
     _snapshot_stage_save,
     _stage5_held,
-    render_tracking,
 )
 from essay_writer.student_voice import student_surface_hits
 

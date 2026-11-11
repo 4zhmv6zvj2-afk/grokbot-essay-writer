@@ -19,6 +19,7 @@ from essay_writer.paths import relative
 from essay_writer.stage_context import StageContext
 from essay_writer.stage_landing import _attach_mid_run, _late_armed, _store_stage
 from essay_writer.stage_llm import next_stage, stage_title
+from essay_writer.stage_note import render_tracking
 from essay_writer.stage_state import (
     _INHERITED_KEEP,
     TOOL,
@@ -40,7 +41,6 @@ from essay_writer.stage_state import (
     _stale_confirm_body,
     _waiting_digest,
     _with_plan_encourage,
-    render_tracking,
 )
 
 

@@ -12,9 +12,11 @@ validation, and Word output.
   - `stage_track.py` — the orchestrator: `essay_stage`, the stage run branches,
     the injected card runner, and the draft/confirm entry points.
   - `stage_state.py` — the state layer: pointer and its commit journal, stage lock,
-    tracking-note renderer, and the held/refused reply bodies. It defines
-    `CardRun`, the card-only runner the orchestrator injects, and never imports
-    the orchestrator.
+    and the held/refused reply bodies. It defines `CardRun`, the card-only runner
+    the orchestrator injects, and never imports the orchestrator.
+  - `stage_note.py` — the tracking-note renderer. It returns the stage markdown
+    and does not write the pointer or the commit journal. It never imports the
+    orchestrator.
   - `stage_landing.py` — landing and report helpers: storing a saved stage,
     attaching report bodies, mid-run and missed-stage records, inherited-lock
     bookkeeping, and the stage 6 opener. The inherited-lock keep takes the
@@ -108,11 +110,12 @@ The module split is a real dependency boundary, not only a file split. The
 orchestrator (`stage_track.py`) imports `stage_state.py`, `stage_landing.py`,
 `stage_replies.py`, `stage_confirm.py`, and `stage_body.py` at module load and
 keeps `essay_stage` and the public entry points. It does not re-export the moved
-names. In the other direction, `stage_state.py`, `stage_landing.py`,
-`stage_replies.py`, `stage_confirm.py`, and `stage_body.py` do not import
-`stage_track`, either at module load or inside a function. Where a state helper
-needs a stage card, the orchestrator threads an injected `CardRun` through the
-commit path: the next-card mint and the reopening of an already-saved stage's
+names. In the other direction, `stage_state.py`, `stage_note.py`,
+`stage_landing.py`, `stage_replies.py`, `stage_confirm.py`, and `stage_body.py`
+do not import `stage_track`, either at module load or inside a function. Where a
+state helper needs a stage card, the orchestrator threads an injected `CardRun`
+through the commit path: the next-card mint and the reopening of an already-saved
+stage's
 card both call it. The inherited-lock keep receives the public confirm runner
 the same way. `spine.py` does not forward `essay_stage`. Other package imports
 still happen inside function bodies; that is a package-wide import-graph
@@ -132,8 +135,8 @@ contract depends on. The stage runner and its branch helpers keep that
 prompt-heavy path in one place, at the cost of a large decision tree.
 `Pointer` and `StageResult` name the intended state shapes rather than enforced
 schemas: many helpers still take a plain `pointer: dict`. The module split is
-enforced by the boundary test: the state, landing, reply, confirm, and body
-layers never import the orchestrator, and the orchestrator supplies the card
+enforced by the boundary test: the state, note, landing, reply, confirm, and
+body layers never import the orchestrator, and the orchestrator supplies the card
 and confirm runners explicitly. `StageArgs` and `StageContext` type the pipeline
 between the tool signature and the reply writers; no stage body travels as a
 string-keyed dict with a sentinel any more.
