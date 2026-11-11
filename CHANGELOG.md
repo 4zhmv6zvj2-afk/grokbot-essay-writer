@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.2 — 2026-11-11
+
+Formatting and gate-only patch. No runtime behaviour change; every Python file
+is AST-identical to 0.8.1.
+
+- Apply `ruff format` to `src`, `tests`, and `tools` (223 files: 217 Python plus
+  the CI workflow, pre-commit hook, README, CONTRIBUTING, docs/testing, and
+  pyproject). The vendored bootstrap is excluded from formatting and remains
+  byte-identical; `ruff check` still lints it.
+- Add `ruff format --check --force-exclude src tests tools` beside the existing
+  `ruff check` in CI, the local gates, the pre-commit hook, and the testing docs.
+- No prompt, catalogue, wording, architecture, dependency, or behaviour changes
+  in this release.
+
 ## 0.8.1 — 2026-11-11
 
 Prompt catalogue trim, with the release version guard and the omitted-checksum note.
