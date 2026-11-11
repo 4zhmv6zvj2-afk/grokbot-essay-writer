@@ -209,7 +209,9 @@ def test_both_removes_the_workspace_and_the_named_copies(workspace):
     assert copy.is_file()
     assert sequence_dir(MODULE, 1).is_dir()
 
-    deleted = essay_project_delete(MODULE, "confirm", where="both", localPaths=[str(copy)], **picked(draft))
+    deleted = essay_project_delete(
+        MODULE, "confirm", where="both", localPaths=[str(copy)], **picked(draft)
+    )
     assert deleted["wrote"] is True
     assert deleted["deleted"] is True
     assert deleted["deleted_local"] is True
@@ -243,7 +245,9 @@ def test_local_paths_that_are_not_safe_copies_are_refused(workspace):
     folder = mac / "packet.docx"
     folder.mkdir()
     inside = _file(workspace / "Documents", f"{MODULE}.docx")
-    volume = _file(workspace.parent / f"{workspace.name}-outside" / "ResearchDrive", f"{MODULE}.docx")
+    volume = _file(
+        workspace.parent / f"{workspace.name}-outside" / "ResearchDrive", f"{MODULE}.docx"
+    )
     pdf = _file(mac, f"{MODULE}.pdf")
     real = mac / "real"
     held = _file(real, f"{MODULE}-held.docx")
@@ -291,7 +295,9 @@ def test_local_delete_works_after_the_workspace_module_is_gone(workspace):
         not row.get("essay_id", "").startswith(f"{MODULE}-")
         for row in essay_projects("continue")["rows"]
     )
-    deleted = essay_project_delete(MODULE, "confirm", where="local", localPaths=[str(copy)], **picked(draft))
+    deleted = essay_project_delete(
+        MODULE, "confirm", where="local", localPaths=[str(copy)], **picked(draft)
+    )
     assert deleted["deleted_local"] is True
     assert deleted["deleted"] is False
     assert not copy.exists()

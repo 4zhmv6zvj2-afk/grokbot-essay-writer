@@ -241,7 +241,11 @@ def contract_for(
         row = _unmapped(writing_type)
         row["page_layout"] = {}
         return row
-    row = mapper(text, has_scheme=has_scheme, scheme=scheme) if writing_type == "report" else mapper(text, has_scheme=has_scheme)
+    row = (
+        mapper(text, has_scheme=has_scheme, scheme=scheme)
+        if writing_type == "report"
+        else mapper(text, has_scheme=has_scheme)
+    )
     if not isinstance(row, dict) or any(key not in row for key in REQUIRED_MAPPING_KEYS):
         missed = _unmapped(writing_type)
         missed["page_layout"] = {}
@@ -307,7 +311,11 @@ def stage_contract_refusal(essay_id: str, stage: str, text: str) -> dict[str, An
         # A report's named sections belong to the draft headings, not the
         # purpose-and-scope lock, so stage 2 is not refused on them.
         return None
-    names = [name for name in (record.get("named_entries") or []) if isinstance(name, str) and name.strip()]
+    names = [
+        name
+        for name in (record.get("named_entries") or [])
+        if isinstance(name, str) and name.strip()
+    ]
     if not names:
         return None
     body = text or ""
@@ -352,10 +360,16 @@ def named_heading_issues(essay_id: str, headings: list[str]) -> list[str]:
     record = _record(essay_id)
     if record.get("mapped") is False:
         return []
-    names = [name.strip() for name in (record.get("named_entries") or []) if isinstance(name, str) and name.strip()]
+    names = [
+        name.strip()
+        for name in (record.get("named_entries") or [])
+        if isinstance(name, str) and name.strip()
+    ]
     if not names:
         return []
-    clean = [heading.strip() for heading in headings if isinstance(heading, str) and heading.strip()]
+    clean = [
+        heading.strip() for heading in headings if isinstance(heading, str) and heading.strip()
+    ]
     shown = "; ".join(names)
     if any(_GENERIC_HEADING.fullmatch(heading) for heading in clean):
         return [f"The brief names these parts: {shown}. Entry numbers are not those names."]

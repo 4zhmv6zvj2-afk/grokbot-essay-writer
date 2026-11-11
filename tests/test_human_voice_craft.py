@@ -92,7 +92,9 @@ def test_ac1_stage5_carries_the_eight_craft_rules():
     """AC1. Stage 5 renders the eight rules once from craft/voice.md. No planted-error instruction."""
     rules = stage_settings("5")["rules"]
     overlay = stage_settings("5")["prompt_overlay"]
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     for phrase in EIGHT:
         assert phrase in rules
         assert phrase in overlay
@@ -100,7 +102,9 @@ def test_ac1_stage5_carries_the_eight_craft_rules():
     assert "Do not open with a general sentence built only from the topic nouns." in rules
     assert "Do not close with an automatic In conclusion that only restates the topic." in rules
     assert OLD_CLOSER not in rules
-    assert OLD_CLOSER not in (REPO / "docs" / "essay-writing-helpers.md").read_text(encoding="utf-8")
+    assert OLD_CLOSER not in (REPO / "docs" / "essay-writing-helpers.md").read_text(
+        encoding="utf-8"
+    )
     folded = rules.casefold()
     for banned in PLANTED:
         assert banned not in folded
@@ -144,7 +148,9 @@ def test_ac3_stage8_tone_and_stage7_vague_lines_question():
     """AC3. Stage 8 keeps the writer's commitment and rewrites a chatbot paragraph. Stage 7 asks about vague lines."""
     tone = stage_settings("8")["rules"]
     assert "keeps the commitment the writer means" in tone
-    assert "If a chatbot produced the paragraph, rewrite the ideas in the writer's sentences." in tone
+    assert (
+        "If a chatbot produced the paragraph, rewrite the ideas in the writer's sentences." in tone
+    )
     assert tone.count("If a chatbot produced") == 1
     assert "Tone is formal, objective, and evidence-based" in tone
     assert CRAFT_REVISE in tone
@@ -152,7 +158,9 @@ def test_ac3_stage8_tone_and_stage7_vague_lines_question():
     assert questions[-1] == STAGE7_QUESTION
     assert OLD_STAGE7_QUESTION not in questions
     assert len(questions) == 5
-    assert STAGE7_QUESTION in (REPO / "src" / "essay_writer" / "stage7.py").read_text(encoding="utf-8")
+    assert STAGE7_QUESTION in (REPO / "src" / "essay_writer" / "stage7.py").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_ac4_review_may_name_stock_lines_without_a_new_fail():

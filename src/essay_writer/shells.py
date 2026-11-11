@@ -44,7 +44,11 @@ def mcp_entry(*, reviewer: bool = False) -> dict[str, Any]:
         raise RuntimeError("essay-writer MCP stays local")
     command = entry.get("command")
     args = entry.get("args")
-    if command != CORE_COMMAND or not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+    if (
+        command != CORE_COMMAND
+        or not isinstance(args, list)
+        or not all(isinstance(arg, str) for arg in args)
+    ):
         raise RuntimeError("shells run the local essay-writer command")
     return {"name": name, "command": command, "args": list(args), "source": ENTRY_SOURCE}
 

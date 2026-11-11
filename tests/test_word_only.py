@@ -33,7 +33,7 @@ STAGE_CONFIRM_EACH = prompt_text("front_office/confirm.md", "stage_confirm_each"
 
 REPO = Path(__file__).resolve().parents[1]
 ANN = (
-    'Smith (2020) argues the corridor is narrow. The authors confirm the limit. '
+    "Smith (2020) argues the corridor is narrow. The authors confirm the limit. "
     'The paper says "The Strait handles a large share of flows."'
 )
 _STUDENT_MD = re.compile(
@@ -61,7 +61,9 @@ def test_ac1_stage_4b_zip_is_word_only_one_file_per_paper(workspace):
     write_upload(workspace)
     seq = open_sequence()
     reviews = [{"paper_id": "src-1", "markdown": ANN}]
-    essay_research_full(seq, TOPIC, "draft", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews)
+    essay_research_full(
+        seq, TOPIC, "draft", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews
+    )
     confirmed = essay_research_full(
         seq,
         TOPIC,
@@ -69,7 +71,7 @@ def test_ac1_stage_4b_zip_is_word_only_one_file_per_paper(workspace):
         [source()],
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
-        cardDigest=card_digest_for(seq, 'essay.research.full'),
+        cardDigest=card_digest_for(seq, "essay.research.full"),
     )
     assert confirmed["stored"] is True
     folder = _output(workspace) / "reviews"
@@ -112,7 +114,9 @@ def test_ac3_student_speech_never_points_at_markdown_critical_reviews(workspace)
     write_upload(workspace)
     seq = open_sequence()
     reviews = [{"paper_id": "src-1", "markdown": ANN}]
-    essay_research_full(seq, TOPIC, "draft", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews)
+    essay_research_full(
+        seq, TOPIC, "draft", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews
+    )
     confirmed = essay_research_full(
         seq,
         TOPIC,
@@ -120,7 +124,7 @@ def test_ac3_student_speech_never_points_at_markdown_critical_reviews(workspace)
         [source()],
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
-        cardDigest=card_digest_for(seq, 'essay.research.full'),
+        cardDigest=card_digest_for(seq, "essay.research.full"),
     )
     next_line = confirmed.get("next") or ""
     assert "word file per paper" in next_line.casefold()
@@ -137,7 +141,9 @@ def test_ac4_build_office_handoff_builds_4b_word_zip(workspace, tmp_path):
     write_upload(workspace)
     seq = open_sequence()
     reviews = [{"paper_id": "src-1", "markdown": ANN}]
-    essay_research_full(seq, TOPIC, "draft", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews)
+    essay_research_full(
+        seq, TOPIC, "draft", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews
+    )
     confirmed = essay_research_full(
         seq,
         TOPIC,
@@ -145,7 +151,7 @@ def test_ac4_build_office_handoff_builds_4b_word_zip(workspace, tmp_path):
         [source()],
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
-        cardDigest=card_digest_for(seq, 'essay.research.full'),
+        cardDigest=card_digest_for(seq, "essay.research.full"),
     )
     assert confirmed["stored"] is True
     mac = tmp_path / "mac"

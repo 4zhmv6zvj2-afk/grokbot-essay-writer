@@ -33,11 +33,7 @@ def _pdf(pages: list[str]) -> bytes:
         next_id += 2
         stream = f"BT /F1 12 Tf 72 720 Td ({_escape(text)}) Tj ET".encode()
         objects[content_id] = (
-            b"<< /Length "
-            + str(len(stream)).encode()
-            + b" >>\nstream\n"
-            + stream
-            + b"\nendstream"
+            b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
         )
         objects[page_id] = f"<< /Type /Page /Parent 2 0 R /Contents {content_id} 0 R >>".encode()
         kids.append(f"{page_id} 0 R")
@@ -87,11 +83,15 @@ def test_overlays_and_notes_record_citation_shape():
     note = (REPO / "docs" / "referencing-harvard.md").read_text(encoding="utf-8")
     assert "[online]" not in note
     assert "not under `Available at:`" not in note
-    printer = note.split("## What the Word file prints today", 1)[1].split("## Local subject notes", 1)[0]
+    printer = note.split("## What the Word file prints today", 1)[1].split(
+        "## Local subject notes", 1
+    )[0]
     assert "**References**" in printer
     assert "Available at: doi:" in printer
     assert "stays blank" in printer
-    assert "[online]" not in (REPO / "src" / "essay_writer" / "textutil.py").read_text(encoding="utf-8")
+    assert "[online]" not in (REPO / "src" / "essay_writer" / "textutil.py").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_citation_check_opens_a_large_pdf(workspace):
@@ -99,15 +99,7 @@ def test_citation_check_opens_a_large_pdf(workspace):
     folder.mkdir(parents=True)
     path = folder / "smith.pdf"
     path.write_bytes(
-        _pad_over_2mb(
-            _pdf(
-                [
-                    "Smith, J. (2020) Chokepoints and crude\n"
-                    + QUOTE
-                    + "\n32\n"
-                ]
-            )
-        )
+        _pad_over_2mb(_pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE + "\n32\n"]))
     )
     assert path.stat().st_size > 2_000_000
     assert "Chokepoints and crude" in read_gathered_text(path)
@@ -262,9 +254,13 @@ def test_compound_surname_stays_on_the_author_line(workspace):
     assert "Wamba, S.F." not in line
     assert "104567" in line
     assert "pp." not in line
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert confirmed["ok"] is True, confirmed
-    annotation = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx"
+    annotation = (
+        workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx"
+    )
     text = "\n".join(paragraph.text for paragraph in Document(str(annotation)).paragraphs)
     assert "Fosso Wamba, S." in text
     assert "Wamba, S.F." not in text
@@ -331,7 +327,9 @@ def test_stage9_printer_emits_tutorial_lines(tmp_path):
     assert "Available at: doi:10.1000/strait." in text
     assert "doi:10.1000/strait" in text
     italic = {run.text for paragraph in document.paragraphs for run in paragraph.runs if run.italic}
-    plain = {run.text for paragraph in document.paragraphs for run in paragraph.runs if not run.italic}
+    plain = {
+        run.text for paragraph in document.paragraphs for run in paragraph.runs if not run.italic
+    }
     assert any("Maritime Policy" in piece for piece in italic)
     assert any("Port emissions inventory" in piece for piece in italic)
     assert any("Chokepoints and crude" in piece for piece in plain)
@@ -344,9 +342,7 @@ def test_in_text_page_check_sees_each_source_in_one_bracket(workspace):
     (folder / "smith.pdf").write_bytes(
         _pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE + "\n32\n"])
     )
-    (folder / "jones.pdf").write_bytes(
-        _pdf(["Jones, K. (2019) Port limits\n" + FIRM + "\n4\n"])
-    )
+    (folder / "jones.pdf").write_bytes(_pdf(["Jones, K. (2019) Port limits\n" + FIRM + "\n4\n"]))
     (folder / "team.pdf").write_bytes(
         _pdf(["Smith, J., Lee, C., Patel, A., and Wu, B. (2020) Team work\n" + QUOTE + "\n7\n"])
     )
@@ -357,7 +353,15 @@ def test_in_text_page_check_sees_each_source_in_one_bracket(workspace):
         "draft",
         [
             _row("smith.pdf", pages="32"),
-            _row("jones.pdf", id="src-2", author="Jones, K.", year="2019", title="Port limits", pages="4", quote=FIRM),
+            _row(
+                "jones.pdf",
+                id="src-2",
+                author="Jones, K.",
+                year="2019",
+                title="Port limits",
+                pages="4",
+                quote=FIRM,
+            ),
             _row(
                 "team.pdf",
                 id="src-3",
@@ -398,9 +402,7 @@ def test_a_looked_up_single_page_is_not_dropped(workspace):
     """A single page from a matching look-up stays when the PDF prints no page line."""
     folder = workspace / "uploads" / ESSAY
     folder.mkdir(parents=True)
-    (folder / "single.pdf").write_bytes(
-        _pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE])
-    )
+    (folder / "single.pdf").write_bytes(_pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE]))
     source = _row(
         "single.pdf",
         container="Maritime Policy",
@@ -416,9 +418,7 @@ def test_an_in_text_page_from_a_matching_look_up_is_not_refused(workspace):
     """A looked-up page supports an in-text page when the file prints no page line."""
     folder = workspace / "uploads" / ESSAY
     folder.mkdir(parents=True)
-    (folder / "single.pdf").write_bytes(
-        _pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE])
-    )
+    (folder / "single.pdf").write_bytes(_pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE]))
     looked_up = _row(
         "single.pdf",
         container="Maritime Policy",
@@ -529,14 +529,10 @@ def test_printer_does_not_repeat_an_edition_full_stop():
         "publisher": "Harbour Press",
     }
     line = reference_line(book)
-    assert line == (
-        "Smith, J. (2020) Port economics. 2nd edn. Bristol: Harbour Press."
-    )
+    assert line == ("Smith, J. (2020) Port economics. 2nd edn. Bristol: Harbour Press.")
     assert ".." not in line
     unauthorised = harvard_4a_line({**book, "edition": "2nd edn"})
-    assert unauthorised == (
-        "Smith, J. (2020) Port economics. 2nd edn. Bristol: Harbour Press."
-    )
+    assert unauthorised == ("Smith, J. (2020) Port economics. 2nd edn. Bristol: Harbour Press.")
     with_url = harvard_4a_line({**book, "doi": "10.1000/port."})
     assert ".." not in with_url
 
@@ -584,9 +580,7 @@ def test_in_text_page_check_reads_a_joint_narrative_label(workspace):
     (folder / "smith.pdf").write_bytes(
         _pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE + "\n32\n"])
     )
-    (folder / "jones.pdf").write_bytes(
-        _pdf(["Jones, K. (2019) Port limits\n" + FIRM + "\n4\n"])
-    )
+    (folder / "jones.pdf").write_bytes(_pdf(["Jones, K. (2019) Port limits\n" + FIRM + "\n4\n"]))
     (folder / "team.pdf").write_bytes(
         _pdf(["Smith, J., Lee, C., Patel, A., and Wu, B. (2020) Team work\n" + QUOTE + "\n7\n"])
     )
@@ -636,9 +630,7 @@ def test_a_page_of_a_word_export_footer_is_a_printed_page(workspace):
     folder = workspace / "uploads" / ESSAY
     folder.mkdir(parents=True)
     path = folder / "footer.pdf"
-    path.write_bytes(
-        _pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE + "\nPage 32 of 40"])
-    )
+    path.write_bytes(_pdf(["Smith, J. (2020) Chokepoints and crude\n" + QUOTE + "\nPage 32 of 40"]))
     opened = open_for_citation(path)
     assert "32" in opened.printed_pages
     assert "40" not in opened.printed_pages
@@ -660,9 +652,7 @@ def test_printer_does_not_repeat_a_volume_or_issue_label():
         "pages": "2-9",
     }
     line = reference_line(journal)
-    assert line == (
-        "Qin, Y. (2021) 'Stakeholder mapping', Journal of Practice, 12(3), pp. 2-9."
-    )
+    assert line == ("Qin, Y. (2021) 'Stakeholder mapping', Journal of Practice, 12(3), pp. 2-9.")
     assert "vol." not in line
     assert "((" not in line
     named = harvard_4a_line({**journal, "volume": "12", "issue": "no. 3"})

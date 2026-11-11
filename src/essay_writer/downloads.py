@@ -130,7 +130,11 @@ def classify_download(status: int, content_type: str | None, body: bytes) -> str
         return "paper"
     if _paywall_text(raw):
         return "paywall"
-    if kind in _HTML_TYPES or _looks_like_html(raw) or (kind in _PDF_TYPES and _looks_like_html(raw)):
+    if (
+        kind in _HTML_TYPES
+        or _looks_like_html(raw)
+        or (kind in _PDF_TYPES and _looks_like_html(raw))
+    ):
         return "html-abstract"
     return "not-pdf"
 
@@ -195,7 +199,9 @@ def _load_state(essay_id: str) -> dict[str, Any]:
         state["seen_urls"] = [item for item in seen if isinstance(item, str)]
     failures = data.get("failures")
     if isinstance(failures, list):
-        state["failures"] = [item for item in failures if isinstance(item, dict) and item.get("url")]
+        state["failures"] = [
+            item for item in failures if isinstance(item, dict) and item.get("url")
+        ]
     papers = data.get("papers")
     if isinstance(papers, list):
         state["papers"] = [item for item in papers if isinstance(item, dict) and item.get("url")]
@@ -359,7 +365,9 @@ def _partition_download_list(
     waiting = [
         item
         for item in (leftovers or [])
-        if isinstance(item, dict) and keep(item) and not any(same_source(item, other) for other in blocked)
+        if isinstance(item, dict)
+        and keep(item)
+        and not any(same_source(item, other) for other in blocked)
     ]
     return waiting, failed, held
 
@@ -414,7 +422,9 @@ def _add_hyperlink(paragraph, url: str, text: str) -> None:
     paragraph._p.append(hyperlink)
 
 
-def _write_line(document, text: str, *, bold: bool = False, hang: bool = False, size: int = 12) -> None:
+def _write_line(
+    document, text: str, *, bold: bool = False, hang: bool = False, size: int = 12
+) -> None:
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Inches, Pt
 
@@ -775,7 +785,9 @@ def run_downloads(
                 saved = _save_pdf(essay_id, candidate, body, state["papers"])
                 if saved is None:
                     attempts[url] = attempts.get(url, 0) + 1
-                    _upsert_failure(state["failures"], _failure_row(candidate, "empty", attempts[url]))
+                    _upsert_failure(
+                        state["failures"], _failure_row(candidate, "empty", attempts[url])
+                    )
                 elif saved.get("gap_only"):
                     attempts[url] = attempts.get(url, 0) + 1
                     row = _failure_row(candidate, "read-gap", attempts[url])
@@ -784,7 +796,9 @@ def run_downloads(
                         row["read_gaps"] = gaps
                     _upsert_failure(state["failures"], row)
                 else:
-                    state["failures"] = [item for item in state["failures"] if item.get("url") != url]
+                    state["failures"] = [
+                        item for item in state["failures"] if item.get("url") != url
+                    ]
                     state["papers"].append(saved)
                     paper_urls.add(url)
                     state["last_useful_at"] = _stamp(moment)
@@ -863,7 +877,9 @@ def run_downloads(
     if idle:
         state["stopped"] = False
         state["stop_reason"] = None
-        known = {item["url"] for item in state["papers"]} | {item["url"] for item in state["failures"]}
+        known = {item["url"] for item in state["papers"]} | {
+            item["url"] for item in state["failures"]
+        }
         skipped = [item for item in rows if item["url"] not in known and item not in work]
 
     paper_urls = {item["url"] for item in state["papers"]}
@@ -883,7 +899,9 @@ def run_downloads(
             saved = _save_pdf(essay_id, candidate, body, state["papers"])
             if saved is None:
                 url_attempts[url] = url_attempts.get(url, 0) + 1
-                _upsert_failure(state["failures"], _failure_row(candidate, "empty", url_attempts[url]))
+                _upsert_failure(
+                    state["failures"], _failure_row(candidate, "empty", url_attempts[url])
+                )
             elif saved.get("gap_only"):
                 url_attempts[url] = url_attempts.get(url, 0) + 1
                 row = _failure_row(candidate, "read-gap", url_attempts[url])
@@ -1017,4 +1035,3 @@ def _ship(
     )
     noted = _write_annotation(essay_id, state["papers"])
     return listed, noted
-

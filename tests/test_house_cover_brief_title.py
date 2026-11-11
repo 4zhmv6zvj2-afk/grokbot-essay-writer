@@ -16,11 +16,7 @@ MODULE = ESSAY
 SEQ = f"{MODULE}-1"
 TOPIC = "How should the firm manage corridor risk?"
 BRIEF_TITLE = "How can a mid-size retailer manage supply risk?"
-REPORT_BRIEF = (
-    "Genre: report\n"
-    f"Question: {TOPIC}\n"
-    f"Title: {BRIEF_TITLE}\n"
-)
+REPORT_BRIEF = f"Genre: report\nQuestion: {TOPIC}\nTitle: {BRIEF_TITLE}\n"
 
 
 def _body_only_pack() -> dict:
@@ -46,9 +42,7 @@ def _gate_record() -> dict:
     }
 
 
-def test_ac1_house_cover_uses_brief_title_when_pack_is_body_only(
-    workspace, monkeypatch
-):
+def test_ac1_house_cover_uses_brief_title_when_pack_is_body_only(workspace, monkeypatch):
     """AC1. Body-only saved_pack still prints the brief Title line on the house cover."""
     saved = _body_only_pack()
     report = _report()

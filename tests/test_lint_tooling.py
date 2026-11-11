@@ -10,11 +10,13 @@ REPO = Path(__file__).resolve().parents[1]
 
 def _dev_dependency_names() -> set[str]:
     """Lowercased project names from the dev extra, independent of version floors."""
-    m = re.search(r'^dev = \[(.*?)\]', (REPO / "pyproject.toml").read_text(encoding="utf-8"), re.M | re.S)
+    m = re.search(
+        r"^dev = \[(.*?)\]", (REPO / "pyproject.toml").read_text(encoding="utf-8"), re.M | re.S
+    )
     assert m is not None, "dev extra missing from pyproject.toml"
     names = set()
     for item in m.group(1).split(","):
-        name = re.split(r'[<>=!~\[]', item.strip().strip('"').strip("'"), maxsplit=1)[0]
+        name = re.split(r"[<>=!~\[]", item.strip().strip('"').strip("'"), maxsplit=1)[0]
         if name:
             names.add(name.strip().lower())
     return names

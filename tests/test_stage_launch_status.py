@@ -224,7 +224,10 @@ def test_ac2_essay_dig_stays_the_shared_handler(workspace, monkeypatch):
     for path in package.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "essay_dig":
+            if (
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == "essay_dig"
+            ):
                 found += 1
     assert found == 1
     server = (package / "server.py").read_text(encoding="utf-8")
@@ -260,6 +263,7 @@ def test_ac2_essay_dig_stays_the_shared_handler(workspace, monkeypatch):
 
 def test_ac3_same_run_posts_start_milestone_and_heartbeat(workspace, monkeypatch):
     """Start, a real milestone, and the five-minute line. No watch card."""
+
     def _started(command):
         return {"started": True, "reason": "", "pid": 11, "command": list(command)}
 

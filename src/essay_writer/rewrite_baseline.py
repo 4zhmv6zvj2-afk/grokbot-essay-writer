@@ -191,7 +191,9 @@ def _draft_counts(
             continue
         body = section.get("body")
         if isinstance(body, str):
-            found[_key(heading)] = _count(body, counter=counter, exclude_citations=exclude_citations)
+            found[_key(heading)] = _count(
+                body, counter=counter, exclude_citations=exclude_citations
+            )
     return found
 
 
@@ -234,7 +236,9 @@ def waived_invented_sections(
     if not isinstance(plan, dict):
         return []
     draft = _draft_counts(sections, counter=counter, exclude_citations=exclude_citations)
-    baseline = _baseline_counts(baseline_sections, counter=counter, exclude_citations=exclude_citations)
+    baseline = _baseline_counts(
+        baseline_sections, counter=counter, exclude_citations=exclude_citations
+    )
     waived: list[str] = []
     for row in plan.get("sections") or []:
         if not isinstance(row, dict) or row.get("from_brief") is not False:
@@ -287,7 +291,9 @@ def rewrite_vs_opened_word(
     opened = _read_opened(essay_id, sections)
     baseline_words: int | None = None
     if opened is not None:
-        baseline_words = _count(opened["text"], counter=counter, exclude_citations=exclude_citations)
+        baseline_words = _count(
+            opened["text"], counter=counter, exclude_citations=exclude_citations
+        )
     waive_word = False
     if invented_high is not None and baseline_words is not None:
         waive_word = draft_words > invented_high and baseline_words > invented_high

@@ -29,10 +29,7 @@ from essay_writer.stage_llm import stage_settings
 from essay_writer.word import essay_pack_render_word, word_manifest, write_docx
 
 QUOTE = "The Strait handles a large share of flows."
-GATHERED = (
-    "Smith, J. (2020) Chokepoints and crude. Bristol: Harbour Press.\n"
-    f"{QUOTE}\n"
-)
+GATHERED = f"Smith, J. (2020) Chokepoints and crude. Bristol: Harbour Press.\n{QUOTE}\n"
 
 
 def _paragraphs(path: Path) -> list[str]:
@@ -86,7 +83,9 @@ def _confirm_full_source(seq: str) -> None:
     }
     draft = essay_research_summary(seq, TOPIC, "draft", [source])
     assert draft["ok"] is True, draft
-    saved = essay_research_summary(seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    saved = essay_research_summary(
+        seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert saved["ok"] is True, saved
 
 

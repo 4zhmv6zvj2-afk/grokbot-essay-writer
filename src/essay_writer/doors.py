@@ -12,4 +12,3 @@ DOORS = tuple(
 # The full notes stay on the writer instructions, once. Pasting them onto each
 # door made tools/list about 230KB, and the host catalog then kept an older
 # shorter list that omitted later doors.
-

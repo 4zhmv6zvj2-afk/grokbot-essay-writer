@@ -51,7 +51,10 @@ def test_ac1_gate_tip_phrases_are_not_cover_assignment_titles():
     """AC1. Gate and genre tip lines are rejected for the cover assignment title."""
     for tip in _GATE_TIPS:
         assert gate_tip_cover_title(tip) is True
-        assert assignment_on_cover({"title": tip, "assessment": tip}, {"title": tip}, BRIEF) == ASSIGNMENT
+        assert (
+            assignment_on_cover({"title": tip, "assessment": tip}, {"title": tip}, BRIEF)
+            == ASSIGNMENT
+        )
 
 
 def test_ac2_diary_cover_uses_brief_title_when_pack_carries_gate_tip(workspace, monkeypatch):

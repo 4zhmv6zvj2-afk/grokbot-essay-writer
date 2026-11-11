@@ -35,7 +35,9 @@ GROK_BUILD_SKIP = (
 )
 OLD_LOGIN_WINDOW = "A window will ask you to sign in to Cursor"
 MAC_CARD = "Word copies go to Documents/Essay Bot — OK, another folder, later, or skip."
-CONSENSUS_CARD = "Open Consensus → API keys → New key → paste once on the secret card. Ask Free or Pro."
+CONSENSUS_CARD = (
+    "Open Consensus → API keys → New key → paste once on the secret card. Ask Free or Pro."
+)
 
 
 def _both(name: str) -> tuple[str, str]:
@@ -113,7 +115,9 @@ def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
     monkeypatch.setattr("essay_writer.setup.cursor_cli_version", version)
     monkeypatch.setattr(
         "essay_writer.first_run_install.subprocess.run",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("grok or curl must not run here")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("grok or curl must not run here")
+        ),
     )
 
     needs_consent = ensure_cursor_agent(installer=fake)
@@ -182,7 +186,9 @@ def test_ac3_install_uploaded_copy_uses_the_same_installer(tmp_path, monkeypatch
     monkeypatch.setattr("essay_writer.setup.cursor_cli_version", lambda _path: "agent 1.2.3")
     source = tmp_path / "tree"
     source.mkdir()
-    (source / "pyproject.toml").write_text('[project]\nname = "essay-writer"\nversion = "0.1.0"\n', encoding="utf-8")
+    (source / "pyproject.toml").write_text(
+        '[project]\nname = "essay-writer"\nversion = "0.1.0"\n', encoding="utf-8"
+    )
     (source / "requirements-runtime.txt").write_text(
         "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
     )
@@ -376,9 +382,7 @@ def test_enable_build_mcp_runs_the_real_branch_with_a_fake_which_and_runner():
         ran.append(list(argv))
         return Completed()
 
-    enabled = enable_build_mcp(
-        "essay-writer", which=lambda name: "/opt/grok", runner=runner
-    )
+    enabled = enable_build_mcp("essay-writer", which=lambda name: "/opt/grok", runner=runner)
     assert enabled["enabled"] is True
     assert ran == [["/opt/grok", "mcp", "enable", "essay-writer"]]
     assert enable_build_mcp("x", which=lambda _name: None)["reason"] == "grok-cli-missing"

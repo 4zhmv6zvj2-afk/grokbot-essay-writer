@@ -23,7 +23,9 @@ def _note(seq: str, stage: str) -> str:
     return (work_dir(seq) / "tracking" / f"{stage}.md").read_text(encoding="utf-8")
 
 
-def _confirm(seq: str, stage: str, draft: dict, *, look: str | None = None, press: bool = False) -> dict:
+def _confirm(
+    seq: str, stage: str, draft: dict, *, look: str | None = None, press: bool = False
+) -> dict:
     text = look
     if press:
         text = f"Press Confirm for Stage {stage}"

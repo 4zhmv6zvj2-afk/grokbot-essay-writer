@@ -65,15 +65,9 @@ The name stays off the title page and the file.
 | --- | --- | --- | --- | --- | --- |
 | Clarity of the decisions | thin | partial | sound | clear | exact and evidenced |
 """
-ESSAY_BRIEF = (
-    "Genre: essay\n"
-    "Question: Should the council publish the figure?\n"
-)
+ESSAY_BRIEF = "Genre: essay\nQuestion: Should the council publish the figure?\n"
 ESSAY_SCHEME = "High Distinction (80-100): evidenced\nPass (50-59): adequate\n"
-REPORT_BRIEF = (
-    "Genre: report\n"
-    "Question: How should the firm report the corridor?\n"
-)
+REPORT_BRIEF = "Genre: report\nQuestion: How should the firm report the corridor?\n"
 REPORT_SCHEME = "Distinction (70-79): evidenced\nPass (50-59): adequate\n"
 FUTURE_BRIEF = """
 Genre: fieldnote
@@ -117,11 +111,7 @@ def _judgement(findings: str) -> str:
 
 
 def _diary_pack(seq: str) -> dict:
-    body = (
-        "Format reflective diary. "
-        + ASK
-        + " 70+."
-    )
+    body = "Format reflective diary. " + ASK + " 70+."
     return {
         "essay_id": seq,
         "title": "Individual reflective diary",
@@ -211,9 +201,7 @@ def test_ac3_one_line_pass_still_fails(workspace):
     seq = _open(DIARY)
     assert findings_note_clears("PASS", seq) is False
     state = load_state(seq)
-    state["eqr"] = {
-        "6": {"verdict": "PASS", "seat": "reviewer", "stage": "6", "findings": "PASS"}
-    }
+    state["eqr"] = {"6": {"verdict": "PASS", "seat": "reviewer", "stage": "6", "findings": "PASS"}}
     save_state(seq, state)
     assert eqr_verdict(seq, "6") is None
 

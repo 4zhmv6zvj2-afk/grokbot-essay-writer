@@ -110,9 +110,7 @@ _PART_NOUNS = (
 )
 _PART_LABEL = re.compile(rf"(?i)\b(?:{_PART_NOUNS})\b[\s:()\-–—]{{0,8}}$")
 # The same part as the subject of a sentence: "The abstract is limited to 150 words."
-_PART_SUBJECT = re.compile(
-    rf"(?i)^\s*(?:(?:the|a|an|your|its|this|that)\s+)?(?:{_PART_NOUNS})\b"
-)
+_PART_SUBJECT = re.compile(rf"(?i)^\s*(?:(?:the|a|an|your|its|this|that)\s+)?(?:{_PART_NOUNS})\b")
 # Words a sentence may put between that subject and the count. Anything else
 # means the count belongs to something other than the part.
 _PART_LIMIT_GAP = frozenset(
@@ -339,7 +337,11 @@ def _topic_words(chunk: str) -> set[str]:
         "would",
         "could",
     }
-    return {word.casefold() for word in re.findall(r"[A-Za-z]{5,}", chunk) if word.casefold() not in stop}
+    return {
+        word.casefold()
+        for word in re.findall(r"[A-Za-z]{5,}", chunk)
+        if word.casefold() not in stop
+    }
 
 
 def simulation_in_brief(text: str) -> bool:
@@ -360,7 +362,9 @@ def invented_simulation(
     gathered: list[str],
 ) -> list[dict[str, object]]:
     """A simulation sentence may appear only when the brief or a gathered file already has it."""
-    if not simulation_in_brief(brief) and not any(_SIMULATION.search(section.get("body", "")) for section in sections):
+    if not simulation_in_brief(brief) and not any(
+        _SIMULATION.search(section.get("body", "")) for section in sections
+    ):
         return []
     corpus = _corpus([brief, *gathered])
     issues: list[dict[str, object]] = []

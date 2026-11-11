@@ -48,21 +48,33 @@ def test_a_stage_draft_is_a_card_and_typed_words_do_not_save(workspace):
     assert draft["stored"] is False
     for action in ("ok", "yes", "Confirm", None):
         refused = essay_stage(
-            seq, "1", "confirm", "The task is a short report.",
-            cardAction=action, cardDigest=draft["digest"],
+            seq,
+            "1",
+            "confirm",
+            "The task is a short report.",
+            cardAction=action,
+            cardDigest=draft["digest"],
         )
         assert refused["ok"] is False
         assert refused["refused"] == "confirm-card"
         assert load_pointer(seq)["saved"] == []
     mismatch = essay_stage(
-        seq, "1", "confirm", "The task is a short report.",
-        cardAction="confirm", cardDigest="not-the-card",
+        seq,
+        "1",
+        "confirm",
+        "The task is a short report.",
+        cardAction="confirm",
+        cardDigest="not-the-card",
     )
     assert mismatch["refused"] == "confirm-card"
     assert mismatch["stored"] is not True
     held = essay_stage(
-        seq, "1", "confirm", "The task is a short report.",
-        cardAction="not_yet", cardDigest=draft["digest"],
+        seq,
+        "1",
+        "confirm",
+        "The task is a short report.",
+        cardAction="not_yet",
+        cardDigest=draft["digest"],
     )
     assert held["refused"] == "confirm-card"
     saved = essay_stage(seq, "1", "confirm", "The task is a short report.", **picked(draft))
@@ -75,7 +87,12 @@ def test_a_stage_draft_is_a_card_and_typed_words_do_not_save(workspace):
 
 def test_both_shells_speak_the_same_stage_card(workspace):
     seq = open_sequence()
-    arguments = {"essay_id": seq, "stage": "1", "confirmPhase": "draft", "look": "The task is a short report."}
+    arguments = {
+        "essay_id": seq,
+        "stage": "1",
+        "confirmPhase": "draft",
+        "look": "The task is a short report.",
+    }
     spoken = front_office_call("essay.stage", arguments)
     assert spoken["card"]["kind"] == "confirm"
     assert spoken["card"]["actions"][0]["label"] == "Confirm"
@@ -110,6 +127,7 @@ def test_stage5_starts_stage6_and_later_stages_keep_their_cards(workspace):
     assert done["checklist_in_chat"] is False
     assert "tracking/" not in done["next"]
     from essay_writer.paths import work_dir
+
     assert not (work_dir(seq) / "tracking" / "6.md").is_file()
     again = essay_stage(seq, "5", "confirm", "The first draft can start.", cardAction="confirm")
     assert again["ok"] is False

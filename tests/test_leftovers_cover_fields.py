@@ -184,7 +184,9 @@ def test_ac4_silent_mar_names_gaps_on_stage_doors_not_study_table(workspace):
         assert "Establish purpose and scope" in stage_one["confirm_line"]
 
         _advance_to_stage_three(seq, look)
-        stage_three = essay_stage(seq, "3", "draft", look + "\nPlan follows the brief when it names sections.")
+        stage_three = essay_stage(
+            seq, "3", "draft", look + "\nPlan follows the brief when it names sections."
+        )
         assert stage_three["ok"] is True, stage_three
         assert FORMAT_GAP in stage_three["basics_pass"]
         assert QUESTION_GAP in stage_three["basics_pass"]

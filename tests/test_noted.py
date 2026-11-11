@@ -19,7 +19,9 @@ def _confirm_summary(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     return seq
 
 
@@ -27,7 +29,14 @@ def _confirm_full(workspace, clarify=CLARIFY_OPEN):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_full(seq, TOPIC, "draft", [source()], clarify_context=clarify)
-    essay_research_full(seq, TOPIC, "confirm", [source()], clarify_context=clarify, cardDigest=card_digest_for(seq, 'essay.research.full'))
+    essay_research_full(
+        seq,
+        TOPIC,
+        "confirm",
+        [source()],
+        clarify_context=clarify,
+        cardDigest=card_digest_for(seq, "essay.research.full"),
+    )
     return seq
 
 
@@ -114,4 +123,7 @@ def test_memo_note_strips_firm_close_rules():
     lowered = text.casefold()
     assert "afrc" not in lowered
     assert "official accounting" not in lowered
-    assert "clarify enough is not evidence enough" in lowered or "enough to start is not enough" in lowered
+    assert (
+        "clarify enough is not evidence enough" in lowered
+        or "enough to start is not enough" in lowered
+    )

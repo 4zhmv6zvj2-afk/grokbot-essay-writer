@@ -142,7 +142,9 @@ def test_ac1_opened_word_does_not_fail_a_looser_invented_band(workspace):
     loose = essay_gates(stated, inside, body=_words(2000))
     assert _gate(loose, "word-band")["passed"] is False
     assert "720" in _gate(loose, "word-band")["reason"]
-    stated_only = essay_gates(stated, {"essay_id": stated, "genre": "report", "conclusion": "open"}, body=_words(2000))
+    stated_only = essay_gates(
+        stated, {"essay_id": stated, "genre": "report", "conclusion": "open"}, body=_words(2000)
+    )
     assert _gate(stated_only, "word-band")["passed"] is False
     over = QUESTION + " " + _words(2000)
     _docx(stated, [over])
@@ -157,7 +159,12 @@ def test_ac1_opened_word_does_not_fail_a_looser_invented_band(workspace):
         {"heading": "Introduction", "body": _words(80)},
         {"heading": "Analysis", "body": _words(80)},
     ]
-    budget_pack = {"essay_id": budget, "genre": "report", "conclusion": "open", "sections": sections}
+    budget_pack = {
+        "essay_id": budget,
+        "genre": "report",
+        "conclusion": "open",
+        "sections": sections,
+    }
     budget_gate = essay_gates(budget, budget_pack)
     assert _gate(budget_gate, "word-band")["passed"] is False
     assert "word budget" in _gate(budget_gate, "word-band")["reason"]
@@ -172,7 +179,9 @@ def test_ac1_opened_word_does_not_fail_a_looser_invented_band(workspace):
     long_entry = _words(high + 300)
     draft_sections = [{"heading": row["name"], "body": long_entry} for row in invented_rows]
     _docx_sections(diary, [(row["heading"], row["body"]) for row in draft_sections])
-    section_decision = rewrite_vs_opened_word(diary, long_entry, {}, sections=draft_sections, counter="words")
+    section_decision = rewrite_vs_opened_word(
+        diary, long_entry, {}, sections=draft_sections, counter="words"
+    )
     assert invented_rows[0]["name"] in section_decision["waived_sections"]
     diary_gate = essay_gates(
         diary,
@@ -212,7 +221,9 @@ def test_ac2_no_baseline_keeps_word_band_and_brief_gates(workspace):
         "Genre: report\nQuestion: How do chokepoints constrain the corridor?\nWord count: 800 words (720 to 880).\n",
     )
     stated = open_sequence(STATED)
-    short = essay_gates(stated, {"essay_id": stated, "genre": "report", "conclusion": "open"}, body=_words(40))
+    short = essay_gates(
+        stated, {"essay_id": stated, "genre": "report", "conclusion": "open"}, body=_words(40)
+    )
     assert _gate(short, "word-band")["passed"] is False
     assert "720" in _gate(short, "word-band")["reason"]
 
@@ -235,7 +246,9 @@ def test_ac2_no_baseline_keeps_word_band_and_brief_gates(workspace):
     invented_rows = [row for row in plan["sections"] if row.get("from_brief") is False]
     long_entry = _words(invented_rows[0]["max"] + 300)
     draft_sections = [{"heading": row["name"], "body": long_entry} for row in invented_rows]
-    no_file = rewrite_vs_opened_word(diary, long_entry, {}, sections=draft_sections, counter="words")
+    no_file = rewrite_vs_opened_word(
+        diary, long_entry, {}, sections=draft_sections, counter="words"
+    )
     assert no_file["baseline"] is False
     assert no_file["waived_sections"] == []
     diary_gate = essay_gates(
@@ -328,7 +341,10 @@ def test_ac4_build_covered_cursor_and_grok_build(workspace):
     build_rules = stage_launch("8")["settings"]["rules"]
     assert cursor_rules == build_rules
     assert "Do not tighten prose below what the opened Word file already says" in cursor_rules
-    assert "Do not tighten prose below what the opened Word file already says" in stage_launch("6")["settings"]["rules"]
+    assert (
+        "Do not tighten prose below what the opened Word file already says"
+        in stage_launch("6")["settings"]["rules"]
+    )
 
 
 def test_ac5_ready_line_build_covered():

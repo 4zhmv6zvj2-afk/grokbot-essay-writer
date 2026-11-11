@@ -281,7 +281,9 @@ def test_ac11_target_b_review_then_rewrite_clears_eighty_percent(workspace):
     assert KEY["targets"]["B"]["start_mark_fit_notes"] == len(start)
     # The review path names a weighted gap, and it names no invented band.
     assert "weighted section the draft does not carry" in REVIEW_PROMPT
-    assert all("weight" not in item["reason"].casefold() or "weights" in item["reason"] for item in start)
+    assert all(
+        "weight" not in item["reason"].casefold() or "weights" in item["reason"] for item in start
+    )
     lifted = lift_missing_sections(seq, weak)["pack"]
     remaining = mark_fit_notes(seq, lifted["sections"], [source])
     cleared = 1 - (len(remaining) / len(start))
@@ -354,7 +356,11 @@ def test_ac13_target_a_also_holds_on_the_locked_weak_fixture(workspace):
     seq = _plant(workspace)
     source = _with_gathered_source(workspace, seq)
     pack = {**_pack(seq, _sections("weak")), "sources": [source]}
-    before = [item for item in mark_fit_notes(seq, pack["sections"], [source]) if item["code"] == "mark-fit-section"]
+    before = [
+        item
+        for item in mark_fit_notes(seq, pack["sections"], [source])
+        if item["code"] == "mark-fit-section"
+    ]
     assert len(before) == 2
     lifted = lift_missing_sections(seq, pack)
     assert set(lifted["added"]) == {

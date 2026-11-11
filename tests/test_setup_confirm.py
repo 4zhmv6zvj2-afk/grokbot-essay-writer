@@ -234,7 +234,9 @@ def test_a_named_save_without_a_cloud_workspace_is_read_later(tmp_path, monkeypa
     )
     assert saved["ok"] is True, saved
     assert json.loads(record.read_text(encoding="utf-8"))["app_path"] == str(app.resolve())
-    assert json.loads((tmp_path / "setup.json").read_text(encoding="utf-8"))["app_path"] == str(app.resolve())
+    assert json.loads((tmp_path / "setup.json").read_text(encoding="utf-8"))["app_path"] == str(
+        app.resolve()
+    )
     loaded = load_saved_setup()
     assert loaded is not None
     assert loaded["app_path"] == str(app.resolve())

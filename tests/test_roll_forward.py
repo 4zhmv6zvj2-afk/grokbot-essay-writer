@@ -253,7 +253,9 @@ def test_ac2_stages_1_to_3_rerun_from_the_first_card(workspace):
     for stage in ("1", "2", "3"):
         note = sequence_dir(MODULE, 1) / "tracking" / f"{stage}.md"
         note.parent.mkdir(parents=True, exist_ok=True)
-        note.write_text(f"# Stage {stage}\n\nStatus: final\n\n## Final look\n\nSaved.\n", encoding="utf-8")
+        note.write_text(
+            f"# Stage {stage}\n\nStatus: final\n\n## Final look\n\nSaved.\n", encoding="utf-8"
+        )
     opened = _open(MODULE, sequence_id(MODULE, 1))
     child = opened["sequence_id"]
     for stage in ("1", "2", "3"):
@@ -300,7 +302,9 @@ def test_ac4_research_and_papers_stay_and_the_final_is_parked(workspace):
     _state(MODULE, 1, topic="ports")
     pdf = _plant_paper(MODULE, 1)
     _plant_final(MODULE, 1)
-    _write_pointer(MODULE, 1, {"current": "10", "saved": list(STAGE_ORDER), "files": {}, "closed": True})
+    _write_pointer(
+        MODULE, 1, {"current": "10", "saved": list(STAGE_ORDER), "files": {}, "closed": True}
+    )
     opened = _open(MODULE, sequence_id(MODULE, 1))
     child = opened["sequence_id"]
     state = json.loads((work_dir(child) / "state.json").read_text(encoding="utf-8"))
@@ -322,7 +326,9 @@ def test_ac5_stage_4a_researches_before_keep_drop_replace(workspace, monkeypatch
     calls = _watch(monkeypatch)
     _state(MODULE, 1)
     _plant_paper(MODULE, 1)
-    _write_pointer(MODULE, 1, {"current": "4a", "saved": ["1", "2", "3"], "files": {}, "closed": False})
+    _write_pointer(
+        MODULE, 1, {"current": "4a", "saved": ["1", "2", "3"], "files": {}, "closed": False}
+    )
     opened = _open(MODULE, sequence_id(MODULE, 1))
     child = opened["sequence_id"]
     _set_stage(child, "4a", ["1", "2", "3"])
@@ -401,13 +407,17 @@ def test_ac7_keepers_are_not_redug_or_relisted(workspace, monkeypatch):
     ]
     state_path.write_text(json.dumps(state), encoding="utf-8")
     run = json.loads((sequence_dir(MODULE, 1) / "download-run.json").read_text(encoding="utf-8"))
-    run["failures"] = [{"url": KEEPER_OA, "doi": KEEPER_DOI, "title": KEEPER_TITLE, "bucket": "leftover"}]
+    run["failures"] = [
+        {"url": KEEPER_OA, "doi": KEEPER_DOI, "title": KEEPER_TITLE, "bucket": "leftover"}
+    ]
     (sequence_dir(MODULE, 1) / "download-run.json").write_text(json.dumps(run), encoding="utf-8")
     _write_pointer(MODULE, 1, {"current": "1", "saved": [], "files": {}, "closed": False})
     child = _open(MODULE, sequence_id(MODULE, 1))["sequence_id"]
     before = json.loads((work_dir(child) / "roll-forward.json").read_text(encoding="utf-8"))
     essay_stage(child, "4a", paperChoice={"paper": KEEPER_DOI, "choice": "keep"})
-    kept = json.loads((work_dir(child) / "roll-forward.json").read_text(encoding="utf-8"))["papers"][0]
+    kept = json.loads((work_dir(child) / "roll-forward.json").read_text(encoding="utf-8"))[
+        "papers"
+    ][0]
     assert kept["doi"] == before["papers"][0]["doi"] == KEEPER_DOI
     assert kept["title"] == KEEPER_TITLE
     assert kept["url"] == KEEPER_URL
@@ -447,7 +457,9 @@ def test_ac7_keepers_are_not_redug_or_relisted(workspace, monkeypatch):
     assert all(item.get("doi") != KEEPER_DOI for item in card["card"]["unpaywall"])
     rows = leftover_addresses(child)
     assert all(item.get("doi") != KEEPER_DOI and item.get("url") != KEEPER_OA for item in rows)
-    after = json.loads((work_dir(child) / "roll-forward.json").read_text(encoding="utf-8"))["papers"][0]
+    after = json.loads((work_dir(child) / "roll-forward.json").read_text(encoding="utf-8"))[
+        "papers"
+    ][0]
     assert after["doi"] == KEEPER_DOI
     assert after["title"] == KEEPER_TITLE
     assert after["url"] == KEEPER_URL
@@ -478,7 +490,10 @@ def test_ac8_engagement_and_marking_table_stay(workspace):
 
 def test_ac9_build_covered_cursor_and_grok_build_share_roll_forward():
     """AC9. One roll-forward path. Cursor and Grok Build do not keep a second copy."""
-    assert cursor_shell()["handlers"]["essay.sequence.new"] is front_office()["handlers"]["essay.sequence.new"]
+    assert (
+        cursor_shell()["handlers"]["essay.sequence.new"]
+        is front_office()["handlers"]["essay.sequence.new"]
+    )
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     from essay_writer.projects import clone_sequence as clone
     from essay_writer.stage_landing import _attach_mid_run

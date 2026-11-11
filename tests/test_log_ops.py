@@ -39,7 +39,9 @@ def _rows(essay_id: str | None = None) -> list[dict]:
     path = ml_events_path(essay_id)
     if not path.is_file():
         return []
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def test_ac5_debug_export_zips_present_logs(workspace, monkeypatch, capsys):
@@ -53,11 +55,21 @@ def test_ac5_debug_export_zips_present_logs(workspace, monkeypatch, capsys):
     exported = front_office_call("essay.debug.export", {})
     assert exported["ok"] is True
     assert exported["name"] == EXPORT_FILENAME
-    assert exported["entries"] == [LOG_FILENAME, ML_EVENTS_FILENAME, SNAPSHOT_FILENAME, FERRY_FILENAME]
+    assert exported["entries"] == [
+        LOG_FILENAME,
+        ML_EVENTS_FILENAME,
+        SNAPSHOT_FILENAME,
+        FERRY_FILENAME,
+    ]
     assert "debug.log" not in (exported.get("next") or "")
     archive_path = workspace / EXPORT_FILENAME
     with zipfile.ZipFile(archive_path) as archive:
-        assert archive.namelist() == [LOG_FILENAME, ML_EVENTS_FILENAME, SNAPSHOT_FILENAME, FERRY_FILENAME]
+        assert archive.namelist() == [
+            LOG_FILENAME,
+            ML_EVENTS_FILENAME,
+            SNAPSHOT_FILENAME,
+            FERRY_FILENAME,
+        ]
         assert b"essay.health" in archive.read(LOG_FILENAME)
         assert b"essay.health" in archive.read(ML_EVENTS_FILENAME)
         snapshot = json.loads(archive.read(SNAPSHOT_FILENAME))
@@ -136,11 +148,13 @@ def test_ac8_build_covered_debug_export_cli_and_mcp():
     server_src = inspect.getsource(server_main)
     assert "--debug-export" in server_src
     assert "essay_debug_export" in server_src
-    assert "note_cli_handoff" in inspect.getsource(first_run_main) or "_record_copy_handoff" in inspect.getsource(
+    assert "note_cli_handoff" in inspect.getsource(
         first_run_main
-    )
+    ) or "_record_copy_handoff" in inspect.getsource(first_run_main)
     assert "note_cli_handoff" in inspect.getsource(_record_source())
-    assert '"copy_only"' in inspect.getsource(handoff_outcome) or "copy_only" in inspect.getsource(handoff_outcome)
+    assert '"copy_only"' in inspect.getsource(handoff_outcome) or "copy_only" in inspect.getsource(
+        handoff_outcome
+    )
     assert "rebuilt" in inspect.getsource(handoff_outcome)
     assert "refused" in inspect.getsource(handoff_outcome)
     assert "events_enabled()" in inspect.getsource(note_cli_handoff)
@@ -150,8 +164,6 @@ def test_ac8_build_covered_debug_export_cli_and_mcp():
     assert "def essay_debug_export" not in build_src
     assert "def note_cli_handoff" not in cursor_src
     assert "def note_cli_handoff" not in build_src
-
-
 
 
 def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
@@ -202,11 +214,22 @@ def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
         build_on = start_stage_mid(sequence, "6", launch=_GROK)
         assert cursor_on["started"] is True and cursor_on["shell"] == "cursor"
         assert build_on["started"] is True and build_on["shell"] == "grok"
-        starts = [row for row in _rows(sequence) if row.get("kind") == "shell" and row.get("event") == "start"]
-        assert [(row["shell"], row["stage"]) for row in starts] == [("Cursor", "4b"), ("Build", "6")]
+        starts = [
+            row
+            for row in _rows(sequence)
+            if row.get("kind") == "shell" and row.get("event") == "start"
+        ]
+        assert [(row["shell"], row["stage"]) for row in starts] == [
+            ("Cursor", "4b"),
+            ("Build", "6"),
+        ]
         _assert_launch_fields(starts[0], "4b", sequence)
         _assert_launch_fields(starts[1], "6", sequence)
-        assert starts[0]["context_window"] == starts[1]["context_window"] == stage_settings("4b")["context_window"]
+        assert (
+            starts[0]["context_window"]
+            == starts[1]["context_window"]
+            == stage_settings("4b")["context_window"]
+        )
         assert starts[0]["reasoning"] != starts[1]["reasoning"]
 
         raw = ml_events_path(sequence).read_text(encoding="utf-8")
@@ -225,10 +248,22 @@ def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
             assert "rules" not in row
 
         finish_mid_process(sequence)
-        done = [row for row in _rows(sequence) if row.get("kind") == "shell" and row.get("event") == "done"]
+        done = [
+            row
+            for row in _rows(sequence)
+            if row.get("kind") == "shell" and row.get("event") == "done"
+        ]
         assert len(done) == 1
         assert done[0]["shell"] == "Build"
-        for key in ("stage", "model", "reasoning", "fast", "context_window", "prompt_overlay", "rules"):
+        for key in (
+            "stage",
+            "model",
+            "reasoning",
+            "fast",
+            "context_window",
+            "prompt_overlay",
+            "rules",
+        ):
             assert key not in done[0]
 
         start_src = inspect.getsource(start_stage_mid)
@@ -239,9 +274,9 @@ def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
         assert "prompt_overlay" not in inspect.getsource(_shell_event)
         assert "prompt_overlay" not in inspect.getsource(_start_launch_fields)
         assert "rules" not in inspect.getsource(_start_launch_fields)
-        assert "debug_enabled()" in inspect.getsource(note_mid_office) or "note_call" in inspect.getsource(
+        assert "debug_enabled()" in inspect.getsource(
             note_mid_office
-        )
+        ) or "note_call" in inspect.getsource(note_mid_office)
     finally:
         reset_status()
 

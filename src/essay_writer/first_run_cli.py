@@ -168,7 +168,9 @@ def main(argv: list[str] | None = None) -> int:
         upload = Path(parsed["upload"]) if parsed["upload"] else None
         dest = Path(parsed["dest"]) if parsed["dest"] else None
         if isinstance(parsed["upload"], str) and first_run_common._clone_url(parsed["upload"]):
-            result = first_run_common._fail("Nothing is cloned. Pass the uploaded zip, not a git URL.")
+            result = first_run_common._fail(
+                "Nothing is cloned. Pass the uploaded zip, not a git URL."
+            )
         else:
             result = first_run_install.install_uploaded_copy(
                 upload,

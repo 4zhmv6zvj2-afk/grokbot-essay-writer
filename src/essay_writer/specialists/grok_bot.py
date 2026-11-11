@@ -310,10 +310,7 @@ def confirm_line(stage: str, genre: str | None, *, revisit: bool = False) -> str
             f"(**Stage 3 — {stage_title('3', genre)}**) before the first draft."
         )
     if revisit and stage == "3":
-        return (
-            "Confirm to save the plan, then go to "
-            f"**Stage 5 — {stage_title('5', genre)}**."
-        )
+        return f"Confirm to save the plan, then go to **Stage 5 — {stage_title('5', genre)}**."
     item = stage_settings(stage, genre)
     following = item["next_stage"]
     if following:
@@ -327,7 +324,6 @@ def confirm_line(stage: str, genre: str | None, *, revisit: bool = False) -> str
 def basics_pass_lines(essay_id: str) -> tuple[str, str, str]:
     """The three lines chat shows before a save. The question stays in the student's words."""
     import re
-
 
     record = essay_assignment_gate.read_assignment(essay_id)
     scheme = mark_scheme_text(essay_id)
@@ -574,9 +570,7 @@ def sequence_delete_speech(sequence_id: str, *, computer: bool) -> str:
 
 # Standing chat heading. Sequence id alone. There is no host call that renames
 # the Grok chat or the agent, so FO posts this line from the reply field.
-_PREFIXED_SEQUENCE = re.compile(
-    r"^(?P<module>[A-Za-z0-9]+)\s*[·•]\s*(?P<sequence>\S+?)\s*$"
-)
+_PREFIXED_SEQUENCE = re.compile(r"^(?P<module>[A-Za-z0-9]+)\s*[·•]\s*(?P<sequence>\S+?)\s*$")
 _HEADING_SKIP = frozenset(
     {
         "essay.debug.wipe",

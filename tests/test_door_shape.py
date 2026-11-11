@@ -99,7 +99,7 @@ def test_industry_change_needs_a_fresh_draft(workspace):
         sources=kwargs["sources"],
         clarify_context=CLARIFY_OPEN,
         industry={"lane": "containers"},
-        cardDigest=card_digest_for(seq, 'essay.research.full'),
+        cardDigest=card_digest_for(seq, "essay.research.full"),
     )
     assert moved["refused"] == "confirm"
     assert moved["stored"] is False

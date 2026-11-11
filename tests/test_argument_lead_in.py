@@ -48,11 +48,7 @@ def test_ac2_the_fallback_lead_in_names_no_source_type():
 def test_ac3_the_stretch_names_no_source_type_it_cannot_see():
     """AC3. The module's rewrite table holds no identity claim of its own."""
     source = (
-        Path(__file__).resolve().parents[1]
-        / "src"
-        / "essay_writer"
-        / "specialists"
-        / "writer.py"
+        Path(__file__).resolve().parents[1] / "src" / "essay_writer" / "specialists" / "writer.py"
     ).read_text(encoding="utf-8")
     assert "gathered study" not in source.casefold()
     assert "gathered account" not in source.casefold()

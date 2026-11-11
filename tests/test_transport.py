@@ -76,9 +76,7 @@ def test_host_catalog_keeps_stage_and_leftovers():
     assert names == set(HANDLERS)
     assert "essay.stage" in names
     assert "essay.download.leftovers" in names
-    payload = [
-        tool.model_dump(mode="json", by_alias=True, exclude_none=True) for tool in tools
-    ]
+    payload = [tool.model_dump(mode="json", by_alias=True, exclude_none=True) for tool in tools]
     assert len(json.dumps(payload).encode()) < _HOST_CATALOG_BUDGET
     files = [_HOST_FILE.sub("_", name) for name in names]
     assert len(files) == len(set(files))

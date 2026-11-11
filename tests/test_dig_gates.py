@@ -47,7 +47,9 @@ def _ready(workspace):
     )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     return seq
@@ -63,7 +65,12 @@ def _lookup(monkeypatch, calls):
             return {
                 "plan": "pro",
                 "results": [
-                    {"title": "Returned by Consensus", "publish_year": 2021, "doi": "10.1/cs", "authors": ["Ada"]}
+                    {
+                        "title": "Returned by Consensus",
+                        "publish_year": 2021,
+                        "doi": "10.1/cs",
+                        "authors": ["Ada"],
+                    }
                 ],
             }
         if "api.openalex.org" in url:
@@ -100,7 +107,9 @@ def test_dig_card_is_local_and_does_not_invent(workspace, monkeypatch):
     assert "Invented Journal" not in json.dumps(draft)
     assert draft["card"]["consensus"]["tier"] == "pro"
     assert draft["card"]["unpaywall"][0]["skipped"] == "no-email"
-    confirmed = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
+    confirmed = essay_dig(
+        seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, "essay.dig")
+    )
     assert confirmed["wrote"] is True
     card = json.loads((folder / "dig-card.json").read_text(encoding="utf-8"))
     text = (folder / "dig-card.md").read_text(encoding="utf-8")
@@ -142,7 +151,9 @@ def test_openalex_abstract_is_saved_when_there_is_no_pdf(workspace, monkeypatch)
     hit = draft["card"]["openalex"]["hits"][0]
     assert hit["abstract"] == "Supply chains collaborate."
     assert _save_openalex_abstracts(seq, draft["card"], {"10.1/oa"}) == []
-    confirmed = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
+    confirmed = essay_dig(
+        seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, "essay.dig")
+    )
     assert confirmed["wrote"] is True
     saved = confirmed["abstract_files"]
     assert len(saved) == 1
@@ -197,7 +208,9 @@ def test_key_present_turns_consensus_on_for_dig(workspace, monkeypatch):
     assert "key-not-echoed" not in json.dumps(draft)
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1"
     assert not (folder / "dig-card.json").exists()
-    confirmed = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
+    confirmed = essay_dig(
+        seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, "essay.dig")
+    )
     assert confirmed["wrote"] is True
     assert confirmed["stored"] is True
     card = json.loads((folder / "dig-card.json").read_text(encoding="utf-8"))
@@ -236,7 +249,7 @@ def test_missing_key_leaves_consensus_off_for_dig(workspace, monkeypatch):
     assert draft["card"]["openalex"]["hits"][0]["title"] == "Returned by OpenAlex"
     assert "Returned by Consensus" not in json.dumps(draft)
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1"
-    confirmed = essay_dig(seq, "ports", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
+    confirmed = essay_dig(seq, "ports", "confirm", cardDigest=card_digest_for(seq, "essay.dig"))
     assert confirmed["wrote"] is True
     text = (folder / "dig-card.md").read_text(encoding="utf-8")
     assert "Consensus was not called." in text
@@ -255,7 +268,7 @@ def test_confirm_without_draft_writes_nothing_when_consensus_is_on(workspace, mo
     _lookup(monkeypatch, calls)
     monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
     monkeypatch.setenv("CONSENSUS_API_KEY", "key-not-echoed")
-    blocked = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
+    blocked = essay_dig(seq, "chokepoints", "confirm", cardDigest=card_digest_for(seq, "essay.dig"))
     assert blocked["ok"] is False
     assert blocked["wrote"] is False
     assert blocked["stored"] is False
@@ -334,7 +347,11 @@ def test_consensus_rule_is_shared_by_settings_briefings_and_both_shells():
     for path in root.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in tree.body:
-            if isinstance(node, ast.FunctionDef) and node.name in {"essay_dig", "consensus_search", "consensus_status_for"}:
+            if isinstance(node, ast.FunctionDef) and node.name in {
+                "essay_dig",
+                "consensus_search",
+                "consensus_status_for",
+            }:
                 found.setdefault(node.name, []).append(path.name)
     assert found["essay_dig"] == ["dig.py"]
     assert found["consensus_search"] == ["dig.py"]
@@ -367,8 +384,14 @@ def test_gates_block_an_unquoted_exact_sentence(workspace):
     copied = pack()
     copied["sections"] = [
         {"heading": "Introduction", "body": LONG},
-        {"heading": "Supply chain context", "body": "One named supply chain on the corridor is in scope (Smith, 2020)."},
-        {"heading": "Analysis and findings", "body": "The evidence is the gathered line (Smith, 2020)."},
+        {
+            "heading": "Supply chain context",
+            "body": "One named supply chain on the corridor is in scope (Smith, 2020).",
+        },
+        {
+            "heading": "Analysis and findings",
+            "body": "The evidence is the gathered line (Smith, 2020).",
+        },
         {"heading": "Conclusion", "body": "The corridor stays narrow (Smith, 2020)."},
     ]
     report = essay_gates(seq, copied)
@@ -381,8 +404,14 @@ def test_gates_block_an_unquoted_exact_sentence(workspace):
     quoted = pack()
     quoted["sections"] = [
         {"heading": "Introduction", "body": f'A gathered line says "{LONG}" (Smith, 2020).'},
-        {"heading": "Supply chain context", "body": "One named supply chain on the corridor is in scope (Smith, 2020)."},
-        {"heading": "Analysis and findings", "body": "The evidence is tied to that line (Smith, 2020)."},
+        {
+            "heading": "Supply chain context",
+            "body": "One named supply chain on the corridor is in scope (Smith, 2020).",
+        },
+        {
+            "heading": "Analysis and findings",
+            "body": "The evidence is tied to that line (Smith, 2020).",
+        },
         {"heading": "Conclusion", "body": "The corridor stays narrow (Smith, 2020)."},
     ]
     clean = essay_gates(seq, quoted)

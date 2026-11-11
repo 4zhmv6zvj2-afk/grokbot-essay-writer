@@ -87,7 +87,12 @@ def test_citation_year_comes_from_the_page_header_not_mtime(workspace, tmp_path)
     os.utime(dated, (stamped, stamped))
     assert citation_year(dated) == "2018"
     cited = apply_citation_year(
-        {"author": "Smith, J.", "year": "2024", "title": "Chokepoints and crude", "locator": f"uploads/{ESSAY}/smith-2018.pdf"},
+        {
+            "author": "Smith, J.",
+            "year": "2024",
+            "title": "Chokepoints and crude",
+            "locator": f"uploads/{ESSAY}/smith-2018.pdf",
+        },
         dated,
     )
     assert cited["year"] == "2018"
@@ -95,7 +100,9 @@ def test_citation_year_comes_from_the_page_header_not_mtime(workspace, tmp_path)
     undated.write_bytes(_pdf_with("Smith, J. Chokepoints and crude"))
     os.utime(undated, (stamped, stamped))
     assert citation_year(undated) is None
-    dropped = apply_citation_year({"author": "Smith, J.", "year": "2024", "title": "Chokepoints and crude"}, undated)
+    dropped = apply_citation_year(
+        {"author": "Smith, J.", "year": "2024", "title": "Chokepoints and crude"}, undated
+    )
     assert "year" not in dropped
     seq = open_sequence()
     ship_4a(
@@ -287,7 +294,11 @@ def test_pdf_read_chop_keeps_bytes_on_machine(workspace):
     assert over["gaps"]
     assert over["gaps"][0]["bytes_on_machine"] is True
     assert huge.read_bytes() == payload
-    assert not any("part-" in path.name and path.suffix == ".pdf" for path in huge.parent.rglob("part-*.pdf") if "huge" in str(path.parent))
+    assert not any(
+        "part-" in path.name and path.suffix == ".pdf"
+        for path in huge.parent.rglob("part-*.pdf")
+        if "huge" in str(path.parent)
+    )
     truncated = folder / "cut.pdf"
     truncated.write_bytes(b"%PDF-1.4\ntruncated-without-end")
     missing = chop_pdf(truncated, limit=PART_LIMIT)
@@ -302,7 +313,9 @@ def test_pdf_read_chop_keeps_bytes_on_machine(workspace):
     def fake_fetch(_url: str):
         return 200, "application/pdf", b"%PDF-1.4\nno-eof"
 
-    saved = run_downloads(seq, [{"url": "https://example.test/big", "title": "Cut paper"}], fetch=fake_fetch)
+    saved = run_downloads(
+        seq, [{"url": "https://example.test/big", "title": "Cut paper"}], fetch=fake_fetch
+    )
     assert saved["papers"] == []
     assert saved["failures"][0]["bucket"] == "read-gap"
     uploads = list((workspace / "uploads" / ESSAY).glob("*.pdf"))

@@ -15,7 +15,9 @@ def chat_word_file(path: Path) -> dict[str, object]:
     return chat_docx(path)
 
 
-def attach_word_chat(body: dict[str, object], path: Path, *, key: str = "word") -> dict[str, object]:
+def attach_word_chat(
+    body: dict[str, object], path: Path, *, key: str = "word"
+) -> dict[str, object]:
     """Record a student Word file for chat delivery on this tool result."""
     chat = chat_word_file(path)
     body["chat_docx"] = chat
@@ -27,7 +29,9 @@ def attach_word_chat(body: dict[str, object], path: Path, *, key: str = "word") 
     return chat
 
 
-def papers_zip_pointer(name: str, path: str, *, entries: list[str] | None = None) -> dict[str, object]:
+def papers_zip_pointer(
+    name: str, path: str, *, entries: list[str] | None = None
+) -> dict[str, object]:
     """Path-only handoff for papers.zip. No zip_base64 in chat."""
     row: dict[str, object] = {
         "name": name,

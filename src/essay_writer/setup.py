@@ -313,7 +313,9 @@ def _check_path(path: Path) -> str | None:
             "Save on a folder you name on this computer, or on the cloud computer."
         )
     if not path.is_absolute():
-        return "That path is not absolute. Name a full path, or omit both paths on the cloud computer."
+        return (
+            "That path is not absolute. Name a full path, or omit both paths on the cloud computer."
+        )
     if path.exists() and not path.is_dir():
         return "That path is a file, so the folder was not created."
     if path.name.casefold() == "open":
@@ -350,7 +352,9 @@ def search_warning(has_key: bool, has_email: bool) -> str | None:
     if not has_key:
         parts.append("Consensus dig will not run, because no Consensus key was given.")
     if not has_email:
-        parts.append("Unpaywall free PDF lookup will not run, because no Unpaywall email was given.")
+        parts.append(
+            "Unpaywall free PDF lookup will not run, because no Unpaywall email was given."
+        )
     parts.append("OpenAlex still runs.")
     parts.append("Skip is saved only after this warning is confirmed.")
     return " ".join(parts)
@@ -404,12 +408,18 @@ def essay_setup(
                 "Documents is not used, and it is not labelled as the cloud computer.",
             )
         app, kb1 = recommended
-    elif isinstance(app_path, str) and app_path.strip() and isinstance(kb1_path, str) and kb1_path.strip():
+    elif (
+        isinstance(app_path, str)
+        and app_path.strip()
+        and isinstance(kb1_path, str)
+        and kb1_path.strip()
+    ):
         app = Path(app_path).expanduser()
         kb1 = Path(kb1_path).expanduser()
     else:
-        return refuse("setup", "Give both app_path and kb1_path, or omit both to use the cloud computer.")
-
+        return refuse(
+            "setup", "Give both app_path and kb1_path, or omit both to use the cloud computer."
+        )
 
     for path in (app, kb1):
         if essay_known_paths.repo_save_refused(path):
@@ -447,7 +457,11 @@ def essay_setup(
             needs_consensus_plan=True,
         )
     warning = search_warning(bool(key), bool(email))
-    skipped = [name for name, present in (("consensus", bool(key)), ("unpaywall", bool(email))) if not present]
+    skipped = [
+        name
+        for name, present in (("consensus", bool(key)), ("unpaywall", bool(email)))
+        if not present
+    ]
     acked = acknowledge_skipped_searches is True
     if warning and confirmPhase == CONFIRM and not acked:
         return refuse(
@@ -527,9 +541,7 @@ def essay_setup(
             extra += " Show search_warning. The skip is not kept until that warning is confirmed."
         body["next"] = (
             "Nothing has been written. Say yes to create these folders. "
-            "A Consensus key and an Unpaywall email are not repeated."
-            + consensus_line
-            + extra
+            "A Consensus key and an Unpaywall email are not repeated." + consensus_line + extra
         )
         return speak(body)
     ready = confirm_ready("setup", TOOL, payload, fingerprint)
@@ -596,7 +608,11 @@ def essay_setup(
         os.replace(temporary, record_path)
     except OSError as exc:
         rollback()
-        return refuse("setup", f"Folders were not kept because the setup record was not written: {exc}", wrote=False)
+        return refuse(
+            "setup",
+            f"Folders were not kept because the setup record was not written: {exc}",
+            wrote=False,
+        )
 
     if key or email:
         secrets: dict[str, str] = {}

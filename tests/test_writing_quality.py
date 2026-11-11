@@ -78,7 +78,9 @@ def test_stage5_and_stage8_carry_the_content_check_and_stay_quiet():
         assert "Chat for this step stays quiet." in stage5
         assert student_surface_hits(stage5) == []
         assert student_surface_hits(stage8) == []
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert CONTENT in craft
     assert PHRASEBANK in craft
     assert PHRASE_HOST in craft
@@ -168,7 +170,9 @@ def test_both_shells_read_the_same_content_check():
     assert cursor_stage_launch("eqr")["settings"]["rules"] == review
     for stage in ("5", "6", "8", "eqr"):
         assert remote_cloud_argv(stage_launch(stage)["command"]) is False
-    prose = stage_launch("5")["command"] + ["Read https://www.phrasebank.manchester.ac.uk/ before the draft."]
+    prose = stage_launch("5")["command"] + [
+        "Read https://www.phrasebank.manchester.ac.uk/ before the draft."
+    ]
     assert remote_cloud_argv(prose) is False
     assert remote_cloud_argv(["agent", "https://cursor.com/agents/bc-1"]) is True
     assert remote_cloud_argv(["agent", "--cloud-agent=true"]) is True

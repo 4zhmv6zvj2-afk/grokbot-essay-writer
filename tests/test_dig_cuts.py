@@ -52,30 +52,16 @@ REPO = Path(__file__).resolve().parents[1]
 SIMILARLY_FIXTURE = REPO / "tests" / "fixtures" / "dig_cuts_similarly_cite_v1.json"
 
 # Pinned dig-cut surfaces. A silent rewrite fails here before behaviour drifts.
-CITATION_TOKENS_SHA = (
-    "a4504c0d2d9adf3af44882a74d5060e3ca350ab5baa9efd43ffd941723bc9475"
-)
-CITE_REFERENCE_GAPS_SHA = (
-    "30c9a4f08715e0d726b8cdde1028adeeb97e66a786aae243ffe3811c871ace38"
-)
-LOG_WORD_STEP_REFS_SHA = (
-    "7542c3c50ebcbaeebdb85cd7a47369b9afa12e215bee62344c07c1ff182e56ae"
-)
+CITATION_TOKENS_SHA = "a4504c0d2d9adf3af44882a74d5060e3ca350ab5baa9efd43ffd941723bc9475"
+CITE_REFERENCE_GAPS_SHA = "30c9a4f08715e0d726b8cdde1028adeeb97e66a786aae243ffe3811c871ace38"
+LOG_WORD_STEP_REFS_SHA = "7542c3c50ebcbaeebdb85cd7a47369b9afa12e215bee62344c07c1ff182e56ae"
 
 QUESTION = "How do chokepoints constrain the corridor?"
 YULIUS_QUOTE = "The Strait handles a large share of flows."
 SHIU_QUOTE = "One named supply chain on the corridor is in scope."
 SAVED_LINE = "Yulius, A. (2024) 'Saved reference text', Practice Journal, 1(1), pp. 1-4."
-BAND_BRIEF = (
-    "Genre: report\n"
-    f"Question: {QUESTION}\n"
-    "Word count: 2000 words.\n"
-)
-NARROW_BRIEF = (
-    "Genre: report\n"
-    f"Question: {QUESTION}\n"
-    "Word count: 800 words (720 to 880).\n"
-)
+BAND_BRIEF = f"Genre: report\nQuestion: {QUESTION}\nWord count: 2000 words.\n"
+NARROW_BRIEF = f"Genre: report\nQuestion: {QUESTION}\nWord count: 800 words (720 to 880).\n"
 
 
 def _codes(items: list[dict]) -> list[str]:
@@ -119,11 +105,17 @@ def _rows(essay_id: str | None = None) -> list[dict]:
     path = ml_events_path(essay_id)
     if not path.is_file():
         return []
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def _reference_paragraphs(path: Path) -> list[str]:
-    texts = [paragraph.text.strip() for paragraph in Document(str(path)).paragraphs if paragraph.text.strip()]
+    texts = [
+        paragraph.text.strip()
+        for paragraph in Document(str(path)).paragraphs
+        if paragraph.text.strip()
+    ]
     if "References" not in texts:
         return []
     return texts[texts.index("References") + 1 :]
@@ -157,10 +149,13 @@ def test_ac1_leading_transition_is_not_the_author(workspace):
     yulius_line = "Yulius, A. (2024) 'Choice', Practice Journal, 1(1), pp. 1-2."
     yulius_sentence = f"Similarly, Yulius (2024) shows {YULIUS_QUOTE}"
     shiu_sentence = f"Similarly, Shiu (2023) shows {SHIU_QUOTE}"
-    assert cite_reference_gaps(
-        [yulius_line],
-        [{"heading": "Analysis", "body": yulius_sentence}],
-    ) == []
+    assert (
+        cite_reference_gaps(
+            [yulius_line],
+            [{"heading": "Analysis", "body": yulius_sentence}],
+        )
+        == []
+    )
     missing = cite_reference_gaps(
         [yulius_line],
         [{"heading": "Analysis", "body": "Similarly, Patel (2019) shows a gap in the corridor."}],
@@ -185,7 +180,13 @@ def test_ac1_leading_transition_is_not_the_author(workspace):
         [yulius, shiu],
     )
     essay_research_summary(seq, TOPIC, "draft", [yulius, shiu])
-    essay_research_summary(seq, TOPIC, "confirm", [yulius, shiu], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        [yulius, shiu],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     passed = essay_pack_validate(seq, gathered, "draft")
     assert passed["ok"] is True, passed
     assert passed.get("refused") != "invent-forbid"
@@ -235,7 +236,9 @@ def test_ac2_sibling_cite_sites_share_citation_tokens(workspace):
         [yulius],
     )
     essay_research_summary(seq, TOPIC, "draft", [yulius])
-    essay_research_summary(seq, TOPIC, "confirm", [yulius], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [yulius], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     flagged = essay_pack_validate(seq, body, "draft")
     assert flagged.get("refused") != "invent-forbid"
     assert "patel, 2019" not in (flagged.get("reason") or "")
@@ -279,7 +282,9 @@ def test_ac3_word_band_refuse_names_the_counted_number(workspace):
     narrow_gate = opened_word_gate(narrow, narrow_text)
     assert narrow_gate is not None
     narrow_count = narrow_gate["engagement"]["word_band"]["counted"]
-    assert re.search(rf"{narrow_count} counted,\s*720.880", narrow_gate["reason"]), narrow_gate["reason"]
+    assert re.search(rf"{narrow_count} counted,\s*720.880", narrow_gate["reason"]), narrow_gate[
+        "reason"
+    ]
 
 
 def test_ac4_stage6_to_stage10_word_journey_smoke(workspace, monkeypatch):
@@ -312,7 +317,9 @@ def test_ac4_stage6_to_stage10_word_journey_smoke(workspace, monkeypatch):
         [yulius],
     )
     essay_research_summary(seq, TOPIC, "draft", [yulius])
-    essay_research_summary(seq, TOPIC, "confirm", [yulius], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [yulius], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     validated = essay_pack_validate(seq, gathered, "draft")
     assert validated["ok"] is True, validated
 
@@ -360,8 +367,26 @@ def test_ac4_stage6_to_stage10_word_journey_smoke(workspace, monkeypatch):
     assert len(refused) == 1
     assert refused[0]["reason"] == "unmounted"
     assert refused[0]["reason"].strip()
-    assert handoff_outcome({"ok": True, "copied": False, "files": [{"ok": True, "copied": False, "reason": "mac-not-mounted"}]}) == "refused"
-    assert handoff_refuse_reason({"ok": True, "copied": False, "files": [{"ok": True, "copied": False, "reason": "mac-not-mounted"}]}) == "unmounted"
+    assert (
+        handoff_outcome(
+            {
+                "ok": True,
+                "copied": False,
+                "files": [{"ok": True, "copied": False, "reason": "mac-not-mounted"}],
+            }
+        )
+        == "refused"
+    )
+    assert (
+        handoff_refuse_reason(
+            {
+                "ok": True,
+                "copied": False,
+                "files": [{"ok": True, "copied": False, "reason": "mac-not-mounted"}],
+            }
+        )
+        == "unmounted"
+    )
 
 
 def test_ac5_build_covered_cursor_and_grok_build(workspace):

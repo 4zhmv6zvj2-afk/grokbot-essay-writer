@@ -241,9 +241,7 @@ def harvard_4a_parts(source: dict[str, Any]) -> list[tuple[str, bool]]:
     if parts or extras:
         # A gathered edition already carries its own full stop ("2nd edn.").
         # The separator supplies the stop, so the value does not add a second.
-        cleaned_extras = [
-            text.rstrip().rstrip(".") for text in extras if text.rstrip().rstrip(".")
-        ]
+        cleaned_extras = [text.rstrip().rstrip(".") for text in extras if text.rstrip().rstrip(".")]
         tail = ". " + ". ".join(cleaned_extras) if cleaned_extras else "."
         if locator:
             # A place or publisher needs its own stop before the locator.
@@ -448,8 +446,7 @@ def prose_issues(
             {
                 "code": "house-jargon",
                 "reason": (
-                    f"{label} uses wording that is left out of the "
-                    "annotation and the paper notes."
+                    f"{label} uses wording that is left out of the annotation and the paper notes."
                 ),
                 "words": words,
             }
@@ -502,9 +499,7 @@ def prose_issues(
             issues.append(
                 {
                     "code": "invent-forbid",
-                    "reason": (
-                        f"{label} page {page} is not in the gathered text. Omit the page."
-                    ),
+                    "reason": (f"{label} page {page} is not in the gathered text. Omit the page."),
                 }
             )
     if annotation:
@@ -584,7 +579,10 @@ def review_markdowns(
         label = f"reviews[{index}]"
         if not isinstance(item, dict):
             issues.append(
-                {"code": "critical-review", "reason": f"{label} must be one paper and its markdown."}
+                {
+                    "code": "critical-review",
+                    "reason": f"{label} must be one paper and its markdown.",
+                }
             )
             continue
         paper_id = _clean(item.get("paper_id"))
@@ -634,11 +632,7 @@ def review_markdowns(
         return None, [
             {
                 "code": "critical-review",
-                "reason": (
-                    "4b needs one markdown per paper. Missing "
-                    + ", ".join(missing)
-                    + "."
-                ),
+                "reason": ("4b needs one markdown per paper. Missing " + ", ".join(missing) + "."),
             }
         ]
     return found, []

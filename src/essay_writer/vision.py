@@ -99,7 +99,12 @@ def photo_problem(path: Path) -> str | None:
 def prepare_photo(path: Path) -> dict[str, object]:
     """Payload the model sees. Intake and Grok Build both call this."""
     if not path.is_file():
-        return {"ok": False, "reason": "That photo isn't there.", "source": SOURCE, "name": path.name}
+        return {
+            "ok": False,
+            "reason": "That photo isn't there.",
+            "source": SOURCE,
+            "name": path.name,
+        }
     reason = photo_problem(path)
     if reason:
         return {"ok": False, "reason": reason, "source": SOURCE, "name": path.name}

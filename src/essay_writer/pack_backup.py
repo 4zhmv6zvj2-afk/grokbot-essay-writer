@@ -333,7 +333,9 @@ def _write_snapshot(
     }
     files: dict[str, bytes] = {
         "pack.json": (json.dumps(pack, indent=2, ensure_ascii=False) + "\n").encode("utf-8"),
-        "manifest.json": (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode("utf-8"),
+        "manifest.json": (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode(
+            "utf-8"
+        ),
     }
     for rel, data in reviews:
         files[rel] = data
@@ -350,7 +352,11 @@ def _snapshot_ids(essay_id: str) -> list[str]:
         return []
     names: list[str] = []
     for path in sorted(root.iterdir()):
-        if path.is_dir() and _snapshot_child(root, path.name) is not None and (path / "pack.json").is_file():
+        if (
+            path.is_dir()
+            and _snapshot_child(root, path.name) is not None
+            and (path / "pack.json").is_file()
+        ):
             names.append(path.name)
     return names
 
@@ -486,7 +492,9 @@ def _read_snapshot(essay_id: str, snapshot_id: str) -> dict[str, Any]:
             return _corrupt("That snapshot is damaged. Nothing was written.")
         for item in from_pack:
             data = item["markdown"].encode("utf-8")
-            reviews.append({"paper_id": item["paper_id"], "markdown": item["markdown"], "bytes": data})
+            reviews.append(
+                {"paper_id": item["paper_id"], "markdown": item["markdown"], "bytes": data}
+            )
             review_bytes.append(data)
     ann_name = manifest.get("annotation_report")
     annotation: tuple[str, bytes] | None = None

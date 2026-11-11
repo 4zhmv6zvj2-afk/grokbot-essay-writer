@@ -99,6 +99,11 @@ ignore = ["E501", "S603", "S606", "S607"]
 "src/essay_writer/server.py" = ["S112"]
 "src/essay_writer/student_voice.py" = ["S105"]
 
+[tool.ruff.format]
+# The vendored bootstrap is upstream code, byte-identical to its release.
+# Formatting skips it. Ruff check still lints it.
+exclude = ["src/essay_writer/_vendor/**"]
+
 [tool.mypy]
 python_version = "3.12"
 packages = ["essay_writer"]

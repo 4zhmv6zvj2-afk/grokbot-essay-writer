@@ -139,7 +139,9 @@ def _abstract_from_index(index: object) -> str:
     return " ".join(word for _spot, word in placed).strip()
 
 
-def _hit(title: object, year: object, doi: object, authors: object, source: str) -> dict[str, Any] | None:
+def _hit(
+    title: object, year: object, doi: object, authors: object, source: str
+) -> dict[str, Any] | None:
     if not isinstance(title, str) or not title.strip():
         return None
     item: dict[str, Any] = {"title": title.strip(), "source": source}
@@ -180,7 +182,9 @@ def openalex_search(query: str) -> dict[str, Any]:
             for item in authorships:
                 if isinstance(item, dict):
                     authors.append(item.get("author") or {})
-        hit = _hit(work.get("title"), work.get("publication_year"), work.get("doi"), authors, "openalex")
+        hit = _hit(
+            work.get("title"), work.get("publication_year"), work.get("doi"), authors, "openalex"
+        )
         if hit:
             abstract = _abstract_from_index(work.get("abstract_inverted_index"))
             if abstract:
@@ -253,14 +257,18 @@ def _card_markdown(query: str, essay_id: str, card: dict[str, Any]) -> str:
         "",
         "## OpenAlex",
     ]
-    lines.extend(_hit_lines(card["openalex"]["hits"]) or ["- No OpenAlex hits. None were invented."])
+    lines.extend(
+        _hit_lines(card["openalex"]["hits"]) or ["- No OpenAlex hits. None were invented."]
+    )
     lines.extend(["", "## Consensus"])
     tier = card["consensus"].get("tier")
     if card["consensus"].get("called"):
         lines.append(f"Tier: {tier or 'unspecified'}")
     else:
         lines.append("Consensus was not called.")
-    lines.extend(_hit_lines(card["consensus"]["hits"]) or ["- No Consensus hits. None were invented."])
+    lines.extend(
+        _hit_lines(card["consensus"]["hits"]) or ["- No Consensus hits. None were invented."]
+    )
     lines.extend(["", "## Unpaywall"])
     if not card["unpaywall"]:
         lines.append("- Skipped. An email is optional, and none is stored.")
@@ -485,7 +493,9 @@ def _stored_dig_card(record: dict[str, Any]) -> dict[str, Any] | None:
     return card
 
 
-def _dig_reply(essay_id: str, query: str, confirmPhase: str, card: dict[str, Any]) -> dict[str, Any]:
+def _dig_reply(
+    essay_id: str, query: str, confirmPhase: str, card: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "ok": True,
         "essay_id": essay_id,

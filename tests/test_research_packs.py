@@ -35,7 +35,7 @@ JOURNAL_TEXT = (
     "The authors confirm the limit in the gathered file.\n"
 )
 ANN = (
-    'Smith (2020) argues the corridor is narrow. The authors confirm the limit. '
+    "Smith (2020) argues the corridor is narrow. The authors confirm the limit. "
     'The paper says "The Strait handles a large share of flows."'
 )
 REPO = Path(__file__).resolve().parents[1]
@@ -83,7 +83,9 @@ def test_stage_prompt_bakes_the_harvard_line():
     assert bullets in overlay
     assert overlay.startswith("Before the save, the chat opens with a short Basics pass.")
     assert "Walk this Basics checklist internally before the save." in overlay
-    summary = next(door["description"] for door in DOORS if door["tool"] == "essay.research.summary")
+    summary = next(
+        door["description"] for door in DOORS if door["tool"] == "essay.research.summary"
+    )
     full = next(door["description"] for door in DOORS if door["tool"] == "essay.research.full")
     assert JOURNAL_SHAPE in stage_settings("4a")["prompt_overlay"]
     assert JOURNAL_SHAPE not in summary
@@ -150,7 +152,13 @@ def test_summary_confirm_delivers_word_in_chat_and_a_pdf_zip(workspace):
     assert draft["wrote"] is False
     assert "delivery" not in draft
     assert not (_output(workspace) / "annotation.docx").exists()
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [_journal(annotation=ANN)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        [_journal(annotation=ANN)],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     assert confirmed["ok"] is True
     assert confirmed["stored"] is True
     assert confirmed["wrote"] is False
@@ -221,13 +229,19 @@ def test_confirm_without_the_same_draft_writes_no_pack(workspace):
         TOPIC,
         "confirm",
         [_journal(annotation="Smith (2020) argues a different paragraph.")],
-        cardDigest=card_digest_for(seq, 'essay.research.summary'),
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
     )
     assert changed["ok"] is False
     assert changed["refused"] == "confirm"
     assert changed["wrote"] is False
     assert not (_output(workspace) / "annotation.docx").exists()
-    silent = essay_research_summary(seq, TOPIC, "confirm", [_journal()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    silent = essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        [_journal()],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     assert silent["ok"] is False
     assert not (_output(workspace) / "papers.zip").exists()
 
@@ -274,7 +288,7 @@ def test_full_confirm_zips_one_word_file_per_paper(workspace):
         [_journal(), second],
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
-        cardDigest=card_digest_for(seq, 'essay.research.full'),
+        cardDigest=card_digest_for(seq, "essay.research.full"),
     )
     assert confirmed["stored"] is True
     delivery = confirmed["delivery"]
@@ -330,7 +344,14 @@ def test_full_without_reviews_still_writes_one_note_per_paper(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_full(seq, TOPIC, "draft", [source()], clarify_context=CLARIFY_OPEN)
-    confirmed = essay_research_full(seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN, cardDigest=card_digest_for(seq, 'essay.research.full'))
+    confirmed = essay_research_full(
+        seq,
+        TOPIC,
+        "confirm",
+        [source()],
+        clarify_context=CLARIFY_OPEN,
+        cardDigest=card_digest_for(seq, "essay.research.full"),
+    )
     assert (_output(workspace) / "reviews" / "src-1.md").is_file()
     archive = zipfile.ZipFile(_output(workspace) / "critical-reviews.zip")
     assert archive.namelist() == ["src-1.docx"]

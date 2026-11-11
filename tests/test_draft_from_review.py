@@ -37,7 +37,9 @@ def _confirmed(workspace):
     seq = open_sequence()
     draft = essay_research_summary(seq, TOPIC, "draft", [source()])
     assert draft["ok"] is True
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert confirmed["stored"] is True
     return seq
 
@@ -50,9 +52,7 @@ def test_one_markdown_per_paper_and_quote_comes_from_it():
     assert result["ok"] is True
     assert result["wrote"] is False
     assert result["stored"] is False
-    assert result["sources"] == [
-        {"paper_id": "src-1", "quote": QUOTE, "from": "critical-review"}
-    ]
+    assert result["sources"] == [{"paper_id": "src-1", "quote": QUOTE, "from": "critical-review"}]
 
 
 def test_a_second_markdown_for_the_same_paper_is_refused():

@@ -9,6 +9,7 @@ results, files on disk, Word XML) rather than implementation details.
 ```bash
 ./.venv/bin/python -m pytest -q          # or: uv run pytest
 ./.venv/bin/python -m ruff check src tests tools
+./.venv/bin/python -m ruff format --check --force-exclude src tests tools
 ./.venv/bin/python -m mypy src
 ./.venv/bin/python tools/generate_docs.py --check
 ./.venv/bin/python tools/update_prompt_snapshot.py --check

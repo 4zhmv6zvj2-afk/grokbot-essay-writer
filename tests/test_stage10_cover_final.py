@@ -135,7 +135,9 @@ def _kick(parent: str | None = None) -> str:
     assert draft["ok"] is True, draft
     opened = front_office_call(
         "essay.sequence.new",
-        {"module": MODULE, "confirmPhase": "confirm", "parent": parent} if parent else {
+        {"module": MODULE, "confirmPhase": "confirm", "parent": parent}
+        if parent
+        else {
             "module": MODULE,
             "confirmPhase": "confirm",
         },
@@ -311,7 +313,10 @@ def test_ac1_ac2_ac4_polluted_rewrite_has_one_cover(workspace):
     digest = _assert_clean(stage)
     sequence_final = stage.parent / f"{MODULE}-10" / f"{MODULE}-final.docx"
     assert sequence_final.is_file()
-    assert hashlib.sha256(sequence_final.read_bytes()).hexdigest() == hashlib.sha256(stage.read_bytes()).hexdigest()
+    assert (
+        hashlib.sha256(sequence_final.read_bytes()).hexdigest()
+        == hashlib.sha256(stage.read_bytes()).hexdigest()
+    )
     again = write_stage10(seq)
     assert again["ok"] is True, again
     assert _texts(stage) == _texts(sequence_final)
@@ -440,14 +445,19 @@ def test_ac5_stage10_confirm_refreshes_the_sequence_final(workspace):
     parent = _kick()
     pack = _confirm_pack(parent)
     parent_docx = work_dir(parent) / "output" / f"{parent}.docx"
-    write_docx(parent, pack, {
-        "title": "Individual reflective diary",
-        "word_count": {"counted": 12, "stated": 2000},
-        "sections": pack["sections"],
-        "figures": [],
-        "tables": [],
-        "sources": [],
-    }, parent_docx)
+    write_docx(
+        parent,
+        pack,
+        {
+            "title": "Individual reflective diary",
+            "word_count": {"counted": 12, "stated": 2000},
+            "sections": pack["sections"],
+            "figures": [],
+            "tables": [],
+            "sources": [],
+        },
+        parent_docx,
+    )
     state = load_state(parent)
     state["saved_pack"] = with_word_references(pack)
     save_state(parent, state)

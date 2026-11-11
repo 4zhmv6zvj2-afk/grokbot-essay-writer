@@ -65,9 +65,7 @@ def _closed(fd: int) -> bool:
     return False
 
 
-def test_ac1_child_gets_the_terminal_slave_as_stdin_and_stdout(
-    monkeypatch, fake_terminal
-):
+def test_ac1_child_gets_the_terminal_slave_as_stdin_and_stdout(monkeypatch, fake_terminal):
     """AC1. The start passes the slave to both stdio slots and closes its copy."""
     master, slave = fake_terminal
     calls: list[tuple[list[str], dict]] = []

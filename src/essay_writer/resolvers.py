@@ -142,9 +142,13 @@ def _record_from_crossref_message(message: dict[str, Any]) -> LookupRecord:
     return record
 
 
-def crossref_lookup(query: str, *, fetch: Callable[[str], dict[str, Any]] | None = None) -> LookupRecord | None:
+def crossref_lookup(
+    query: str, *, fetch: Callable[[str], dict[str, Any]] | None = None
+) -> LookupRecord | None:
     if fetch is None:
-        url = "https://api.crossref.org/works?" + urllib.parse.urlencode({"query.bibliographic": query, "rows": 3})
+        url = "https://api.crossref.org/works?" + urllib.parse.urlencode(
+            {"query.bibliographic": query, "rows": 3}
+        )
         payload = _lookup_json(url)
         if payload is None:
             return None
@@ -188,7 +192,9 @@ def openalex_lookup(query: str) -> LookupRecord | None:
     # OpenAlex is optional enrichment; fixture mode returns nothing (Crossref carries tests).
     if resolver_mode() == "fixture":
         return None
-    url = "https://api.openalex.org/works?" + urllib.parse.urlencode({"search": query, "per_page": 3})
+    url = "https://api.openalex.org/works?" + urllib.parse.urlencode(
+        {"search": query, "per_page": 3}
+    )
     payload = _lookup_json(url)
     if payload is None:
         return None
@@ -290,7 +296,9 @@ def _merge_record(target: LookupRecord, incoming: LookupRecord) -> None:
                 target[key] = value.strip()
 
 
-def _lookup_chain(title: str | None, doi_in_file: str | None) -> tuple[LookupRecord | None, list[ResolverCall]]:
+def _lookup_chain(
+    title: str | None, doi_in_file: str | None
+) -> tuple[LookupRecord | None, list[ResolverCall]]:
     calls: list[ResolverCall] = []
     merged: LookupRecord = {}
     mode = resolver_mode()
@@ -393,9 +401,7 @@ def apply_lookup_fields(
     return updated, calls, provenance
 
 
-def enrich_sources(
-    sources: list[dict[str, Any]], texts: dict[str, str]
-) -> EnrichResult:
+def enrich_sources(sources: list[dict[str, Any]], texts: dict[str, str]) -> EnrichResult:
     """Fill blank resolver fields. The third value is what this pass showed.
 
     Those fills belong on the draft card. They are not a confirm fingerprint.
@@ -410,9 +416,7 @@ def enrich_sources(
         enriched.append(updated)
         all_calls.extend(calls)
         resolver_digest[source["id"]] = {
-            field: updated[field]
-            for field in RESOLVER_FILLABLE
-            if field in updated
+            field: updated[field] for field in RESOLVER_FILLABLE if field in updated
         }
     return enriched, all_calls, resolver_digest
 

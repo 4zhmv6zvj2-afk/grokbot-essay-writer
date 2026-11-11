@@ -182,7 +182,13 @@ def _as_source(row: dict[str, Any]) -> dict[str, Any]:
 def _match_paper(papers: list[dict[str, Any]], which: object) -> dict[str, Any] | None:
     if not isinstance(which, str) or not which.strip():
         return None
-    probe = {"id": which.strip(), "doi": which.strip(), "url": which.strip(), "title": which.strip(), "path": which.strip()}
+    probe = {
+        "id": which.strip(),
+        "doi": which.strip(),
+        "url": which.strip(),
+        "title": which.strip(),
+        "path": which.strip(),
+    }
     for paper in papers:
         if paper.get("id") == which.strip() or _same(paper, probe):
             return paper
@@ -399,10 +405,10 @@ def omit_keepers_from_card(essay_id: str, card: dict[str, Any]) -> dict[str, Any
     for bucket in ("openalex", "consensus"):
         block = card.get(bucket)
         if isinstance(block, dict) and isinstance(block.get("hits"), list):
-            block["hits"] = [hit for hit in block["hits"] if not (isinstance(hit, dict) and held(hit))]
+            block["hits"] = [
+                hit for hit in block["hits"] if not (isinstance(hit, dict) and held(hit))
+            ]
     unpaywall = card.get("unpaywall")
     if isinstance(unpaywall, list):
-        card["unpaywall"] = [
-            row for row in unpaywall if not (isinstance(row, dict) and held(row))
-        ]
+        card["unpaywall"] = [row for row in unpaywall if not (isinstance(row, dict) and held(row))]
     return card

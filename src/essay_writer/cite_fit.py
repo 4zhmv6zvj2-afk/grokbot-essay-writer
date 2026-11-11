@@ -127,7 +127,9 @@ def load_record(essay_id: str) -> dict[str, Any]:
     for key in ("ok", "rejected", "withheld"):
         raw = data.get(key)
         if isinstance(raw, list):
-            record[key] = [item.strip().casefold() for item in raw if isinstance(item, str) and item.strip()]
+            record[key] = [
+                item.strip().casefold() for item in raw if isinstance(item, str) and item.strip()
+            ]
     return record
 
 

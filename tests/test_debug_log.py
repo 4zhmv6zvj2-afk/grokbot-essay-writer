@@ -85,7 +85,11 @@ def test_debug_log_on_writes_lines_for_delete_dig_and_setup(workspace, monkeypat
     from essay_writer.debug_log import debug_log_path
 
     global_text = debug_log_path().read_text(encoding="utf-8") if debug_log_path().is_file() else ""
-    seq_text = debug_log_path(sequence).read_text(encoding="utf-8") if debug_log_path(sequence).is_file() else ""
+    seq_text = (
+        debug_log_path(sequence).read_text(encoding="utf-8")
+        if debug_log_path(sequence).is_file()
+        else ""
+    )
     text = f"{global_text}\n{seq_text}"
     assert "essay.project.delete" in text
     assert "draft" in text
@@ -163,7 +167,9 @@ def test_mounted_door_logs_once_without_consecutive_duplicate(workspace, monkeyp
 
     asyncio.run(run())
     debug_text = _log(workspace).read_text(encoding="utf-8")
-    prose = [line for line in debug_text.splitlines() if line.startswith("20") and " essay." in line]
+    prose = [
+        line for line in debug_text.splitlines() if line.startswith("20") and " essay." in line
+    ]
     assert len(prose) == 1
     _no_consecutive_duplicate_lines(debug_text)
 
@@ -221,11 +227,17 @@ def test_setup_keeps_an_operator_flag_out_of_the_reply(workspace, monkeypatch):
     app = workspace / "app"
     kb1 = workspace / "KB1"
     draft = essay_setup(
-        app_path=str(app), kb1_path=str(kb1), confirmPhase="draft", acknowledge_skipped_searches=True
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        acknowledge_skipped_searches=True,
     )
     assert draft["ok"] is True
     confirmed = essay_setup(
-        app_path=str(app), kb1_path=str(kb1), confirmPhase="confirm", acknowledge_skipped_searches=True
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        acknowledge_skipped_searches=True,
     )
     assert confirmed["wrote"] is True
     record_path = workspace / "setup.json"
@@ -233,10 +245,16 @@ def test_setup_keeps_an_operator_flag_out_of_the_reply(workspace, monkeypatch):
     record["debug"] = True
     record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     again = essay_setup(
-        app_path=str(app), kb1_path=str(kb1), confirmPhase="draft", acknowledge_skipped_searches=True
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        acknowledge_skipped_searches=True,
     )
     saved = essay_setup(
-        app_path=str(app), kb1_path=str(kb1), confirmPhase="confirm", acknowledge_skipped_searches=True
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        acknowledge_skipped_searches=True,
     )
     assert saved["wrote"] is True
     kept = json.loads(record_path.read_text(encoding="utf-8"))
@@ -331,7 +349,12 @@ def test_health_and_confirm_lines_name_the_card_and_the_land(workspace, monkeypa
     front_office_call("essay.health", {})
     draft = front_office_call(
         "essay.stage",
-        {"essay_id": sequence, "stage": "1", "confirmPhase": "draft", "look": "The task is a short report."},
+        {
+            "essay_id": sequence,
+            "stage": "1",
+            "confirmPhase": "draft",
+            "look": "The task is a short report.",
+        },
     )
     assert draft["ok"] is True, draft
     saved = front_office_call(
@@ -348,7 +371,11 @@ def test_health_and_confirm_lines_name_the_card_and_the_land(workspace, monkeypa
     from essay_writer.debug_log import debug_log_path
 
     global_text = debug_log_path().read_text(encoding="utf-8") if debug_log_path().is_file() else ""
-    seq_text = debug_log_path(sequence).read_text(encoding="utf-8") if debug_log_path(sequence).is_file() else ""
+    seq_text = (
+        debug_log_path(sequence).read_text(encoding="utf-8")
+        if debug_log_path(sequence).is_file()
+        else ""
+    )
     text = f"{global_text}\n{seq_text}"
     land = subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip()
     assert f"Land {land} pid {os.getpid()} tools {len(DOORS)}." in text
@@ -367,8 +394,10 @@ def test_mid_office_logs_start_and_done_only_when_the_process_did(workspace, mon
 
     monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
     sequence = open_sequence()
+
     def seq_log() -> Path:
         return debug_log_path(sequence)
+
     monkeypatch.setattr(
         "essay_writer.cursor_office.spawn_agent",
         lambda command: {"started": False, "reason": "agent-cli-missing", "command": command},
@@ -379,7 +408,13 @@ def test_mid_office_logs_start_and_done_only_when_the_process_did(workspace, mon
 
     monkeypatch.setattr(
         "essay_writer.cursor_office.spawn_agent",
-        lambda command: {"started": True, "reason": "", "pid": os.getpid(), "command": command, "stdout": None},
+        lambda command: {
+            "started": True,
+            "reason": "",
+            "pid": os.getpid(),
+            "command": command,
+            "stdout": None,
+        },
     )
     started = start_stage_mid(sequence, "6")
     assert started["started"] is True
@@ -391,7 +426,13 @@ def test_mid_office_logs_start_and_done_only_when_the_process_did(workspace, mon
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: "grok_build")
     monkeypatch.setattr(
         "essay_writer.build_office.spawn_grok",
-        lambda command: {"started": True, "reason": "", "pid": os.getpid(), "command": command, "stdout": None},
+        lambda command: {
+            "started": True,
+            "reason": "",
+            "pid": os.getpid(),
+            "command": command,
+            "stdout": None,
+        },
     )
     built = start_stage_mid(sequence, "8")
     assert built["started"] is True

@@ -140,7 +140,9 @@ def _lookup_kept(essay_id: str, locator: str) -> dict[str, str]:
     return kept
 
 
-def gather_source(essay_id: str, raw: object, index: int) -> tuple[dict[str, Any] | None, list[dict[str, str]]]:
+def gather_source(
+    essay_id: str, raw: object, index: int
+) -> tuple[dict[str, Any] | None, list[dict[str, str]]]:
     label = f"sources[{index}]"
     if not isinstance(raw, dict):
         return None, [{"code": "invent-forbid", "reason": f"{label} must be an object"}]
@@ -201,11 +203,17 @@ def gather_source(essay_id: str, raw: object, index: int) -> tuple[dict[str, Any
             }
         ]
     if origin == "kb1" and kind not in {"kb1", "kb1-file"}:
-        return None, [{"code": "invent-forbid", "reason": f"{label} origin kb1 does not match the locator"}]
+        return None, [
+            {"code": "invent-forbid", "reason": f"{label} origin kb1 does not match the locator"}
+        ]
     if origin == "upload" and kind != "upload":
-        return None, [{"code": "invent-forbid", "reason": f"{label} origin upload does not match the locator"}]
+        return None, [
+            {"code": "invent-forbid", "reason": f"{label} origin upload does not match the locator"}
+        ]
     if origin == "brief" and kind != "brief":
-        return None, [{"code": "invent-forbid", "reason": f"{label} origin brief does not match the locator"}]
+        return None, [
+            {"code": "invent-forbid", "reason": f"{label} origin brief does not match the locator"}
+        ]
 
     if kind == "kb1-file":
         if path is None:

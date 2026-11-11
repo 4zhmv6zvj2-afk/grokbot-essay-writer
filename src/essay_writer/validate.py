@@ -90,7 +90,9 @@ def pack_identity(essay_id: str, pack: dict[str, Any]) -> str:
     return digest({"essay_id": essay_id, "pack": pack})
 
 
-def research_index(state: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], dict[str, str | None]]:
+def research_index(
+    state: dict[str, Any],
+) -> tuple[dict[str, dict[str, Any]], dict[str, str | None]]:
     allowed: dict[str, dict[str, Any]] = {}
     digests: dict[str, str | None] = {"summary": None, "full": None}
     for depth in ("summary", "full"):
@@ -361,7 +363,11 @@ def _validate_formed_views(
             )
             continue
         quote = item.get("quote")
-        if isinstance(quote, str) and quote.strip() and quote not in texts.get(source["locator"], ""):
+        if (
+            isinstance(quote, str)
+            and quote.strip()
+            and quote not in texts.get(source["locator"], "")
+        ):
             blockers.append(
                 {
                     "code": "invent-forbid",
@@ -411,7 +417,9 @@ def inspect_pack(essay_id: str, pack: object) -> dict[str, Any]:
         )
     output = pack.get("format", "docx")
     if output != "docx":
-        blockers.append({"code": "word-only", "reason": "Word .docx is the only output. PDF is refused."})
+        blockers.append(
+            {"code": "word-only", "reason": "Word .docx is the only output. PDF is refused."}
+        )
     if pack.get("referencing") != STYLE_ID:
         blockers.append(
             {
@@ -610,8 +618,7 @@ def inspect_pack(essay_id: str, pack: object) -> dict[str, Any]:
                 "code": "decorative-citation",
                 "reason": (
                     "A citation is parked on a general sentence. "
-                    "Tie it to a specific result from a gathered source, or remove it. "
-                    + sentence
+                    "Tie it to a specific result from a gathered source, or remove it. " + sentence
                 ),
             }
         )
@@ -834,8 +841,7 @@ def _lock_claim_excerpts(
                 {
                     "code": "invent-forbid",
                     "reason": (
-                        f"excerpts[{index}] is not in the gathered file. "
-                        "Do not invent an excerpt."
+                        f"excerpts[{index}] is not in the gathered file. Do not invent an excerpt."
                     ),
                 }
             )
@@ -870,11 +876,15 @@ def _visuals(
     blockers: list[dict[str, str]] = []
     for index, item in enumerate(items):
         if not isinstance(item, dict):
-            blockers.append({"code": "pack", "reason": f"{kind.lower()}s[{index}] must be an object"})
+            blockers.append(
+                {"code": "pack", "reason": f"{kind.lower()}s[{index}] must be an object"}
+            )
             continue
         title = item.get("title")
         if not isinstance(title, str) or not title.strip():
-            blockers.append({"code": "pack", "reason": f"{kind.lower()}s[{index}].title is required"})
+            blockers.append(
+                {"code": "pack", "reason": f"{kind.lower()}s[{index}].title is required"}
+            )
             title = ""
         source = by_id.get(item.get("source_id"))
         if source is None:
@@ -951,7 +961,8 @@ def essay_pack_validate(
     hard = [
         item
         for item in report["blockers"]
-        if item["code"] in {"invent-forbid", "cross-essay", "measurement", CRITICAL_REVIEW, ARGUMENT}
+        if item["code"]
+        in {"invent-forbid", "cross-essay", "measurement", CRITICAL_REVIEW, ARGUMENT}
     ]
     payload = {"essay_id": essay_id, "pack": pack}
     fingerprint = {"files": report["files"], "research": report["research"]}

@@ -58,7 +58,9 @@ def test_narrative_three_author_cite_is_one_citation():
     assert citation_tokens("Smith & Jones (2020) argue.") == ["smith & jones, 2020"]
     assert citation_tokens("Smith et al. (2020) argue.") == ["smith et al., 2020"]
     assert citation_tokens("Smith et al., (2020) argue.") == ["smith et al., 2020"]
-    assert citation_tokens("Smith, Jones, and Brown (2020) argue.") == ["smith, jones, and brown, 2020"]
+    assert citation_tokens("Smith, Jones, and Brown (2020) argue.") == [
+        "smith, jones, and brown, 2020"
+    ]
     assert citation_tokens("John Smith (2019) writes.") == ["john smith, 2019"]
     assert citation_tokens("Dr Smith (2020) writes.") == ["dr smith, 2020"]
     assert citation_tokens("SMITH (2020) writes.") == ["smith, 2020"]
@@ -116,12 +118,18 @@ def test_setup_does_not_clone_or_store_open(tmp_path, monkeypatch):
     assert not opened.exists()
     app = tmp_path / "app"
     draft = essay_setup(
-        app_path=str(app), kb1_path=str(vault), confirmPhase="draft", acknowledge_skipped_searches=True
+        app_path=str(app),
+        kb1_path=str(vault),
+        confirmPhase="draft",
+        acknowledge_skipped_searches=True,
     )
     assert draft["wrote"] is False
     assert "clone" not in draft
     result = essay_setup(
-        app_path=str(app), kb1_path=str(vault), confirmPhase="confirm", acknowledge_skipped_searches=True
+        app_path=str(app),
+        kb1_path=str(vault),
+        confirmPhase="confirm",
+        acknowledge_skipped_searches=True,
     )
     assert result["ok"] is True
     assert result["wrote"] is True
@@ -136,13 +144,26 @@ def test_setup_does_not_clone_or_store_open(tmp_path, monkeypatch):
 def test_student_chat_and_word_omit_house_jargon(workspace):
     assert "invent-forbid" in INSTRUCTIONS
     assert "look-up" in HONESTY or "source card" in HONESTY
-    for banned in ("dig", "door", "house", "Confirm", "EQR", "Grok Build", "Grok Bot", "SuperGrok", "Cursor", "PASS"):
+    for banned in (
+        "dig",
+        "door",
+        "house",
+        "Confirm",
+        "EQR",
+        "Grok Build",
+        "Grok Bot",
+        "SuperGrok",
+        "Cursor",
+        "PASS",
+    ):
         assert banned not in HONESTY
 
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     payload = pack(conclusion="open")
     payload["sections"][0]["body"] += (
         " Keep essay.dig and dig-card.json."
@@ -306,13 +327,19 @@ def test_setup_pick_persists_and_branches_the_prompt(tmp_path, monkeypatch):
     assert not (tmp_path / "setup.json").exists()
 
     draft = essay_setup(
-        app_path=str(app), kb1_path=str(kb1), confirmPhase="draft", acknowledge_skipped_searches=True
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        acknowledge_skipped_searches=True,
     )
     assert draft["ok"] is True
     assert draft["mid_office_shell"] == "cursor"
     assert draft["wrote"] is False
     confirmed = essay_setup(
-        app_path=str(app), kb1_path=str(kb1), confirmPhase="confirm", acknowledge_skipped_searches=True
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        acknowledge_skipped_searches=True,
     )
     assert confirmed["ok"] is True
     assert confirmed["grokbuild"]["ran_install"] is False
@@ -384,7 +411,9 @@ def test_fail_demo_writer_cannot_clear_a_review(workspace):
     )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
 
@@ -406,7 +435,9 @@ def test_fail_demo_writer_cannot_clear_a_review(workspace):
     assert blocked["wrote"] is False
     assert blocked["writer_clears_left"] == 0
     assert PERSON_BLOCK in blocked["reason"]
-    assert not (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / f"{seq}.docx").exists()
+    assert not (
+        workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / f"{seq}.docx"
+    ).exists()
 
     writer = essay_review(seq, "6", "PASS", "confirm", seat="writer")
     assert writer["ok"] is False
@@ -434,7 +465,9 @@ def test_write_seat_reads_the_notes_and_reviewer_does_not():
     assert HARVARD_MARK not in helpers
     assert HELPERS_MARK in INSTRUCTIONS
     assert HARVARD_MARK in INSTRUCTIONS
-    research = next(door["description"] for door in DOORS if door["tool"] == "essay.research.summary")
+    research = next(
+        door["description"] for door in DOORS if door["tool"] == "essay.research.summary"
+    )
     full = next(door["description"] for door in DOORS if door["tool"] == "essay.research.full")
     write = next(door["description"] for door in DOORS if door["tool"] == "essay.pack.render_word")
     validate = next(door["description"] for door in DOORS if door["tool"] == "essay.pack.validate")
@@ -458,7 +491,9 @@ def test_missing_excerpt_list_is_measurement_not_invent_forbid(workspace):
     bare = source()
     bare.pop("quote")
     essay_research_summary(seq, TOPIC, "draft", [bare])
-    essay_research_summary(seq, TOPIC, "confirm", [bare], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [bare], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     payload = pack()
     payload["sources"] = [bare]
     result = essay_pack_validate(seq, payload, "draft")
@@ -474,7 +509,9 @@ def test_excerpt_not_in_the_file_is_invent_forbid(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     payload = pack()
     payload["excerpts"] = ["This excerpt was never in the gathered file."]
     result = essay_pack_validate(seq, payload, "draft")

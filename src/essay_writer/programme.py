@@ -32,9 +32,8 @@ def referencing_record() -> dict[str, object]:
     record["handbook_checked"] = checked["checked"]
     return record
 
-STUDENT_KEYS = frozenset(
-    {"student_name", "student_number", "student_id", "student_no", "student"}
-)
+
+STUDENT_KEYS = frozenset({"student_name", "student_number", "student_id", "student_no", "student"})
 
 PAID_RESOLVERS = frozenset(
     {

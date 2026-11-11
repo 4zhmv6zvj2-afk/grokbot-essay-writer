@@ -279,9 +279,7 @@ def test_classify_download_does_not_save_html_or_a_paywall_as_pdf():
 
 
 def test_links_card_does_not_invent_a_doi_url():
-    card = links_card(
-        [{"doi": "10.1000/strait", "title": "Chokepoints", "bucket": "leftover"}]
-    )
+    card = links_card([{"doi": "10.1000/strait", "title": "Chokepoints", "bucket": "leftover"}])
     assert card["items"]
     assert "url" not in card["items"][0]
     given = links_card(

@@ -31,10 +31,22 @@ def test_stage_save_speech_comes_from_grok_bot():
     )
     stage_pair = stage + state
     # The landing and reply writers moved, so the save-gate check reads all three.
-    landing = Path(stage_track.__file__).resolve().parent.joinpath("stage_landing.py").read_text(encoding="utf-8")
-    replies = Path(stage_track.__file__).resolve().parent.joinpath("stage_replies.py").read_text(encoding="utf-8")
+    landing = (
+        Path(stage_track.__file__)
+        .resolve()
+        .parent.joinpath("stage_landing.py")
+        .read_text(encoding="utf-8")
+    )
+    replies = (
+        Path(stage_track.__file__)
+        .resolve()
+        .parent.joinpath("stage_replies.py")
+        .read_text(encoding="utf-8")
+    )
     trio = stage + landing + replies
-    spine = Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+    spine = (
+        Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+    )
     assert stage_pair.count("essay_writer.spine import save_line") == 1
     assert "def save_line" not in stage_pair
     assert trio.count("essay_writer.spine import gate_save") == 1
@@ -46,11 +58,23 @@ def test_stage_save_speech_comes_from_grok_bot():
 
 def test_stored_sources_have_one_researcher_writer():
     # The landing and reply writers moved, so the door check reads all three.
-    landing = Path(stage_track.__file__).resolve().parent.joinpath("stage_landing.py").read_text(encoding="utf-8")
-    replies = Path(stage_track.__file__).resolve().parent.joinpath("stage_replies.py").read_text(encoding="utf-8")
+    landing = (
+        Path(stage_track.__file__)
+        .resolve()
+        .parent.joinpath("stage_landing.py")
+        .read_text(encoding="utf-8")
+    )
+    replies = (
+        Path(stage_track.__file__)
+        .resolve()
+        .parent.joinpath("stage_replies.py")
+        .read_text(encoding="utf-8")
+    )
     stage = Path(stage_track.__file__).read_text(encoding="utf-8")
     trio = stage + landing + replies
-    spine = Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+    spine = (
+        Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+    )
     office = Path(build_office.__file__).read_text(encoding="utf-8")
     leftovers = Path(free_alt.__file__).read_text(encoding="utf-8")
     assert trio.count("essay_writer.spine import stage_bibliography") == 1

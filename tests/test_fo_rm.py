@@ -42,7 +42,9 @@ def test_role_note_is_a_bespoke_private_banking_relationship_manager():
     assert "Not sales." in INSTRUCTIONS
     assert "satisfaction" in INSTRUCTIONS
     assert "Not a thin script." in INSTRUCTIONS
-    sheet = (Path(__file__).resolve().parents[1] / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
+    sheet = (Path(__file__).resolve().parents[1] / "docs" / "templates" / "bot.md").read_text(
+        encoding="utf-8"
+    )
     assert "private banking Relationship Manager" in sheet
     assert "Not sales." in sheet
     assert "generic script" in sheet.casefold()
@@ -59,7 +61,9 @@ def test_stage6_and_quiet_lines_are_a_verb_and_a_destination():
     assert quiet_next("8", armed=True, blocked=False, place="Documents/x") is None
     assert quiet_next("9", armed=True, blocked=False, place="Documents/x") is None
     assert "Say yes" not in card_next("8", "Edit and redraft")
-    assert card_next("4a", "Annotated bibliography").startswith("Open the Confirm card to save Stage 4a")
+    assert card_next("4a", "Annotated bibliography").startswith(
+        "Open the Confirm card to save Stage 4a"
+    )
     assert "Confirm card" in say(card_next("4a", "Annotated bibliography"))
     assert AUTO_START == {"5": "6"}
 
@@ -91,7 +95,9 @@ def test_idle_clock_posts_a_heartbeat_without_a_door_reply(monkeypatch):
     build = Path(stage_launch.__code__.co_filename).read_text(encoding="utf-8")
     assert "attach_launch_status" in cursor
     assert "attach_launch_status" in build
-    assert "pump_idle" in Path(attach_launch_status.__code__.co_filename).read_text(encoding="utf-8")
+    assert "pump_idle" in Path(attach_launch_status.__code__.co_filename).read_text(
+        encoding="utf-8"
+    )
     reset_status()
 
 
@@ -101,7 +107,12 @@ def test_front_office_hides_the_launch_and_curtain_echoes(workspace):
     assert "command" in raw["mid_office_launch"]
     spoken = front_office_call(
         "essay.stage",
-        {"essay_id": seq, "stage": "1", "confirmPhase": "draft", "look": "The task is a short report."},
+        {
+            "essay_id": seq,
+            "stage": "1",
+            "confirmPhase": "draft",
+            "look": "The task is a short report.",
+        },
     )
     assert spoken["ok"] is True
     assert "mid_office_launch" not in spoken

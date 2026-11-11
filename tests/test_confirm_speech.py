@@ -72,7 +72,12 @@ def test_ac1_upload_success_names_the_file_without_confirm(workspace, monkeypatc
     _assert_no_confirm_speech(spoken["next"])
     _assert_no_confirm_speech(" ".join(spoken.get("status") or []))
     shaped = shape_student_reply(
-        {"stage": "4b", "download_check": check, "card": {"kind": "confirm", "digest": digest}, "cardDigest": digest},
+        {
+            "stage": "4b",
+            "download_check": check,
+            "card": {"kind": "confirm", "digest": digest},
+            "cardDigest": digest,
+        },
         tool="essay.stage",
         mid_started=False,
         status_lines=[f"{ESSAY} is ready. Open the Confirm card to save this step."],
@@ -93,7 +98,9 @@ def test_ac2_mid_run_4b_start_is_notes_not_gathering(workspace, monkeypatch):
     line = started["status"][0]
     assert "notes" in line.casefold()
     assert "gathering" not in line.casefold()
-    assert start_sentence("notes", "your assignment").split(" for ")[0].casefold() in line.casefold()
+    assert (
+        start_sentence("notes", "your assignment").split(" for ")[0].casefold() in line.casefold()
+    )
 
 
 def test_ac3_mid_run_without_card_does_not_phantom_confirm(workspace, monkeypatch):
@@ -125,7 +132,12 @@ def test_ac4_ready_draft_still_offers_confirm_card(workspace):
     seq = open_sequence()
     spoken = front_office_call(
         "essay.stage",
-        {"essay_id": seq, "stage": "1", "confirmPhase": "draft", "look": "The task is a short report."},
+        {
+            "essay_id": seq,
+            "stage": "1",
+            "confirmPhase": "draft",
+            "look": "The task is a short report.",
+        },
     )
     assert spoken["card"]["kind"] == "confirm"
     assert spoken["next"].startswith("Open the Confirm card to save Stage 1")
@@ -134,14 +146,17 @@ def test_ac4_ready_draft_still_offers_confirm_card(workspace):
 
 def test_ac5_briefing_and_mid_status_build_covered():
     """AC4 docs. Operator rules stay in briefing; mid sheet splits ready vs ready_confirm."""
-    bot = (pytest.importorskip("pathlib").Path(__file__).resolve().parents[1] / "docs/templates/bot.md").read_text(
-        encoding="utf-8"
-    )
-    mid = (pytest.importorskip("pathlib").Path(__file__).resolve().parents[1] / "docs/templates/mid-status.md").read_text(
-        encoding="utf-8"
-    )
+    bot = (
+        pytest.importorskip("pathlib").Path(__file__).resolve().parents[1] / "docs/templates/bot.md"
+    ).read_text(encoding="utf-8")
+    mid = (
+        pytest.importorskip("pathlib").Path(__file__).resolve().parents[1]
+        / "docs/templates/mid-status.md"
+    ).read_text(encoding="utf-8")
     assert STAGE_CONFIRM_EACH.startswith("Operator only.")
-    assert "Operator only." in INSTRUCTIONS or "Never read operator-only Confirm rules" in INSTRUCTIONS
+    assert (
+        "Operator only." in INSTRUCTIONS or "Never read operator-only Confirm rules" in INSTRUCTIONS
+    )
     assert "ready_confirm" in mid
     assert "name the file" in bot.casefold() or "pdf upload" in bot.casefold()
     assert card_next("4a", "Annotated bibliography").startswith("Open the Confirm card")

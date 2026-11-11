@@ -30,10 +30,7 @@ def test_crossref_sample_does_not_match_other_titles():
 
 def test_matched_lookup_stores_doi_and_lists_crossref(workspace, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "fixture")
-    text = (
-        f"Smith, J. (2020) {FIXTURE_TITLE}.\n"
-        "The Strait handles a large share of flows.\n"
-    )
+    text = f"Smith, J. (2020) {FIXTURE_TITLE}.\nThe Strait handles a large share of flows.\n"
     write_upload(workspace, text=text)
     seq = open_sequence()
     payload = source()
@@ -46,10 +43,14 @@ def test_matched_lookup_stores_doi_and_lists_crossref(workspace, monkeypatch):
         item["name"] == "crossref" and item["result"] == "matched"
         for item in draft["resolvers_called"]
     )
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq, TOPIC, "confirm", [payload], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert confirmed["stored"] is True
     state = json.loads(
-        (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "state.json").read_text(encoding="utf-8")
+        (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "state.json").read_text(
+            encoding="utf-8"
+        )
     )
     pack = state["research"]["summary"]["research_pack"]
     assert pack["topic"] == TOPIC
@@ -97,10 +98,7 @@ def test_scopus_name_still_refused(workspace):
 def test_resolver_flip_keeps_the_draft_fields(workspace, monkeypatch):
     """A second enrich that misses is not a confirm failure. The draft fields stay."""
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "fixture")
-    text = (
-        f"Smith, J. (2020) {FIXTURE_TITLE}.\n"
-        "The Strait handles a large share of flows.\n"
-    )
+    text = f"Smith, J. (2020) {FIXTURE_TITLE}.\nThe Strait handles a large share of flows.\n"
     write_upload(workspace, text=text)
     seq = open_sequence()
     payload = source()
@@ -109,12 +107,16 @@ def test_resolver_flip_keeps_the_draft_fields(workspace, monkeypatch):
     draft = essay_research_summary(seq, TOPIC, "draft", [payload])
     assert draft["sources"][0]["doi"] == "10.5555/fixture-chokepoint"
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "off")
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [payload], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq, TOPIC, "confirm", [payload], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert confirmed["stored"] is True
     assert confirmed.get("refused") is None
     assert "saved files changed" not in confirmed.get("reason", "")
     assert confirmed["sources"][0]["doi"] == "10.5555/fixture-chokepoint"
     state = json.loads(
-        (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "state.json").read_text(encoding="utf-8")
+        (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "state.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert state["research"]["summary"]["sources"][0]["doi"] == "10.5555/fixture-chokepoint"

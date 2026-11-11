@@ -41,13 +41,10 @@ def compare(project: str, changelog: str | None, tag: str | None) -> list[str]:
     """Every disagreement between the three sources, in a stable order."""
     problems: list[str] = []
     if changelog is None:
-        problems.append(
-            "CHANGELOG.md has no release heading, so its version cannot be checked."
-        )
+        problems.append("CHANGELOG.md has no release heading, so its version cannot be checked.")
     elif changelog != project:
         problems.append(
-            f"CHANGELOG.md version {changelog} does not match "
-            f"pyproject.toml version {project}."
+            f"CHANGELOG.md version {changelog} does not match pyproject.toml version {project}."
         )
     if tag is not None and tag.removeprefix("v") != project:
         problems.append(f"Tag {tag} does not match pyproject.toml version {project}.")

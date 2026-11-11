@@ -235,7 +235,11 @@ def test_a_cross_host_redirect_drops_sensitive_headers(monkeypatch):
     handler = safe_url._GuardedRedirectHandler()
     request = urllib.request.Request(
         "https://api.example.org/a",
-        headers={"Authorization": "Bearer secret", "X-Api-Key": "key", "User-Agent": "essay-writer"},
+        headers={
+            "Authorization": "Bearer secret",
+            "X-Api-Key": "key",
+            "User-Agent": "essay-writer",
+        },
     )
     new = handler.redirect_request(request, None, 302, "Found", {}, "https://cdn.example.org/b")
     assert new is not None
@@ -248,7 +252,11 @@ def test_a_cross_host_redirect_drops_sensitive_headers(monkeypatch):
 def test_the_private_opener_carries_the_guarded_redirect_handler(monkeypatch):
     monkeypatch.setattr(safe_url, "_DEFAULT_OPENER", None)
     opener = safe_url._opener()
-    guarded = [handler for handler in opener.handlers if isinstance(handler, safe_url._GuardedRedirectHandler)]
+    guarded = [
+        handler
+        for handler in opener.handlers
+        if isinstance(handler, safe_url._GuardedRedirectHandler)
+    ]
     assert guarded
 
 

@@ -69,7 +69,9 @@ def _read_docx(path) -> dict[str, Any]:
         from docx import Document
 
         document = Document(str(path))
-        texts = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
+        texts = [
+            paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()
+        ]
     except (OSError, ValueError, KeyError, BadZipFile, PackageNotFoundError):
         return {
             "exists": True,
@@ -199,7 +201,11 @@ def claim_check_opened(essay_id: str, text: str) -> dict[str, Any]:
                 pdfs.append(path.name)
     if not gathered:
         return {"ran": False, "matches": [], "pdfs": pdfs}
-    return {"ran": True, "matches": unquoted_exact(_body_without_references(text), gathered), "pdfs": pdfs}
+    return {
+        "ran": True,
+        "matches": unquoted_exact(_body_without_references(text), gathered),
+        "pdfs": pdfs,
+    }
 
 
 NORTH_STAR = text("review/eqr.md", "north_star")
@@ -252,7 +258,9 @@ def build_findings(essay_id: str, opened: dict[str, Any], claim: dict[str, Any])
     ]
     copies_raw = opened.get("copies")
     copies: list[object] = copies_raw if isinstance(copies_raw, list) else []
-    student_opened = any(isinstance(item, dict) and item.get("role") == "student" for item in copies)
+    student_opened = any(
+        isinstance(item, dict) and item.get("role") == "student" for item in copies
+    )
     if opened.get("opened") and (student_opened or not copies):
         lines.append(f"Opened the saved Word file ({opened['paragraphs']} paragraphs).")
         if opened.get("excerpt"):
@@ -357,7 +365,9 @@ def with_opened_places(findings: str, opened: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _findings_refused(*, chat_docx: dict[str, Any] | None = None, mac_copy: dict[str, Any] | None = None) -> dict[str, Any]:
+def _findings_refused(
+    *, chat_docx: dict[str, Any] | None = None, mac_copy: dict[str, Any] | None = None
+) -> dict[str, Any]:
     body = {
         "ok": False,
         "wrote": False,

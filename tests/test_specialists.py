@@ -67,7 +67,9 @@ def test_personality_has_one_source():
 
 
 def test_spine_and_build_call_the_specialists():
-    spine = Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+    spine = (
+        Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+    )
     assert "essay_writer.specialists.researcher" in spine
     assert "essay_writer.specialists.eqr" in spine
     assert "def assignment_gate" not in spine

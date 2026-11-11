@@ -71,9 +71,7 @@ def _open_stage6(
     return body
 
 
-def _attach_outline_report(
-    body: dict[str, object], essay_id: str, stage: str
-) -> None:
+def _attach_outline_report(body: dict[str, object], essay_id: str, stage: str) -> None:
     """Name the student outline the draft follows. Stages 3 to 6 only."""
     if stage not in {"3", "4a", "4b", "5", "6"}:
         return

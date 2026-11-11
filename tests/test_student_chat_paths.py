@@ -34,7 +34,10 @@ def test_student_chat_path_never_shows_tilde_internal_volume_or_ssd(monkeypatch)
     assert student_chat_path("/Users/student/Documents/work") == "Documents/work"
     assert student_chat_path("/Users/student/my-app") == "/Users/student/my-app"
     assert "ResearchDrive" not in student_chat_path("/Volumes/ResearchDrive/out/essay.docx")
-    assert student_chat_path("/Volumes/ResearchDrive/out/essay.docx") == "a folder you named on this computer"
+    assert (
+        student_chat_path("/Volumes/ResearchDrive/out/essay.docx")
+        == "a folder you named on this computer"
+    )
     assert student_chat_path("/Volumes/ArchiveDrive/app") == "a folder you named on this computer"
     spoken = say("Save copies under ~/Documents/zips and /Volumes/ResearchDrive/out.zip")
     assert "~/" not in spoken
@@ -68,7 +71,9 @@ def test_checklist_walk_and_instructions_carry_path_speech():
     overlay_5 = stage_settings("5")["prompt_overlay"]
     assert "Do not set the conclusion label" in overlay_5
     assert "independent re-review" in overlay_5.casefold()
-    summary = next(door["description"] for door in DOORS if door["tool"] == "essay.research.summary")
+    summary = next(
+        door["description"] for door in DOORS if door["tool"] == "essay.research.summary"
+    )
     assert "leftovers only" in summary.casefold()
 
 
@@ -82,7 +87,9 @@ def test_4a_download_list_is_leftovers_not_annotation_repeat(workspace):
     row = source()
     row["annotation"] = ann
     essay_research_summary(seq, TOPIC, "draft", [row])
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert confirmed["stored"] is True
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output"
     listed = _docx(folder / "download-list.docx")

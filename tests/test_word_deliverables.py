@@ -24,13 +24,7 @@ def _zip_xml(path) -> str:
 def _essay_output_path(workspace, essay_id: str, seq: str):
     number = sequence_number(seq) or 1
     return (
-        workspace
-        / "Essay-writer"
-        / essay_id
-        / "sequences"
-        / str(number)
-        / "output"
-        / f"{seq}.docx"
+        workspace / "Essay-writer" / essay_id / "sequences" / str(number) / "output" / f"{seq}.docx"
     )
 
 
@@ -39,7 +33,13 @@ def _write_essay_docx(workspace, payload=None, essay_id=ESSAY, *, seq=None, setu
         write_upload(workspace, essay_id=essay_id)
         seq = open_sequence(essay_id)
         essay_research_summary(seq, "chokepoints", "draft", [source(essay_id)])
-        essay_research_summary(seq, "chokepoints", "confirm", [source(essay_id)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+        essay_research_summary(
+            seq,
+            "chokepoints",
+            "confirm",
+            [source(essay_id)],
+            cardDigest=card_digest_for(seq, "essay.research.summary"),
+        )
     if seq is None:
         raise ValueError("seq is required when setup is false")
     body = payload or pack(essay_id)
@@ -62,7 +62,11 @@ def test_ac1_word_deliverables_use_heading_styles_not_markdown_hashes(workspace,
     written, essay_path, _seq = _write_essay_docx(workspace, payload)
     assert written["wrote"] is True
     document = Document(str(essay_path))
-    headings = [paragraph.text for paragraph in document.paragraphs if paragraph.style.name.startswith("Heading")]
+    headings = [
+        paragraph.text
+        for paragraph in document.paragraphs
+        if paragraph.style.name.startswith("Heading")
+    ]
     assert "Supply chain context" in headings
     assert "Evidence" in headings
     joined = "\n".join(paragraph.text for paragraph in document.paragraphs)

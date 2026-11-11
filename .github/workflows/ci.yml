@@ -80,7 +80,9 @@ jobs:
           python tools/generate_docs.py --check
           python tools/update_prompt_snapshot.py --check
       - name: Ruff
-        run: python -m ruff check src tests tools
+        run: |
+          python -m ruff check src tests tools
+          python -m ruff format --check --force-exclude src tests tools
       - name: Mypy
         run: python -m mypy src
       # Coverage is measured once, on the lowest supported interpreter and one

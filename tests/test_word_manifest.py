@@ -27,11 +27,7 @@ from essay_writer.word import (
 MODULE = ESSAY
 TOPIC = "How should the firm manage corridor risk?"
 BRIEF_TITLE = "How can a mid-size retailer manage supply risk?"
-REPORT_BRIEF = (
-    "Genre: report\n"
-    f"Question: {TOPIC}\n"
-    f"Title: {BRIEF_TITLE}\n"
-)
+REPORT_BRIEF = f"Genre: report\nQuestion: {TOPIC}\nTitle: {BRIEF_TITLE}\n"
 SCHEME = "High Distinction (80-100): the question is answered with evidence.\n"
 
 
@@ -104,7 +100,9 @@ def _confirm_research(seq: str, body: dict) -> None:
     sources = body["sources"]
     draft = essay_research_summary(seq, TOPIC, "draft", sources)
     assert draft["ok"] is True, draft
-    essay_research_summary(seq, TOPIC, "confirm", sources, cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", sources, cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
 
 
 def _spy(monkeypatch):

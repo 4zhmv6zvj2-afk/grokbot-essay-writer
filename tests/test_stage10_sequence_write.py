@@ -66,7 +66,9 @@ def _kick(parent: str | None = None) -> dict:
     assert draft["ok"] is True, draft
     opened = front_office_call(
         "essay.sequence.new",
-        {"module": MODULE, "confirmPhase": "confirm", "parent": parent} if parent else {
+        {"module": MODULE, "confirmPhase": "confirm", "parent": parent}
+        if parent
+        else {
             "module": MODULE,
             "confirmPhase": "confirm",
         },
@@ -256,7 +258,9 @@ def test_ac1_ac2_ac3_clone_then_stage10_confirm_writes_the_child_and_documents(
             matches = [line for line in candidates if sid in line]
         assert matches, f"missing sequence.new confirm log for {opened.get('sequence_id')}"
         _assert_sequence_log(opened, matches[-1])
-    stage_line = next(line for line in log.splitlines() if "essay.stage confirm" in line and child in line)
+    stage_line = next(
+        line for line in log.splitlines() if "essay.stage confirm" in line and child in line
+    )
     assert "Confirm store yes advance no next-card none." in stage_line
     assert "Card absent." in stage_line
     assert f"Essay-writer/{MODULE}/sequences/2/output/{child}.docx mtime " in stage_line
@@ -311,7 +315,9 @@ def test_ac4_missing_registration_does_not_close_or_record_the_sequence_final(
     assert note.read_bytes() == draft_note
     assert not (mac_handoff_sequence_dir(documents, child) / f"{MODULE}-final.docx").exists()
     log = debug_log_path(child).read_text(encoding="utf-8")
-    stage_line = next(line for line in log.splitlines() if "essay.stage confirm" in line and child in line)
+    stage_line = next(
+        line for line in log.splitlines() if "essay.stage confirm" in line and child in line
+    )
     assert "Confirm store no advance no next-card" in stage_line
     assert f"Essay-writer/{MODULE}/sequences/2/output/{child}.docx mtime " in stage_line
 
@@ -319,7 +325,10 @@ def test_ac4_missing_registration_does_not_close_or_record_the_sequence_final(
 def test_build_covered_both_shells_share_the_write_and_the_log(monkeypatch):
     """Build covered. Cursor and Grok Build share the stage door, write_docx, and the log."""
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
-    assert cursor_shell()["handlers"]["essay.sequence.new"] is front_office()["handlers"]["essay.sequence.new"]
+    assert (
+        cursor_shell()["handlers"]["essay.sequence.new"]
+        is front_office()["handlers"]["essay.sequence.new"]
+    )
     assert cursor_shell()["handlers"]["essay.health"] is front_office()["handlers"]["essay.health"]
     from essay_writer.late_chain import (
         _deliver_stage10,

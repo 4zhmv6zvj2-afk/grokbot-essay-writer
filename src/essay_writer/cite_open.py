@@ -29,9 +29,7 @@ _PLEASE_CITE = re.compile(
     r"please\s+cite(?:\s+this\s+article)?\s+as:\s*([^\n]+)",
     re.IGNORECASE,
 )
-_PLEASE_AUTHOR = re.compile(
-    r"^([A-Z][A-Za-z'’\-]+),\s*([A-Z](?:\s*\.?\s*[A-Z])*\.?)"
-)
+_PLEASE_AUTHOR = re.compile(r"^([A-Z][A-Za-z'’\-]+),\s*([A-Z](?:\s*\.?\s*[A-Z])*\.?)")
 _SURNAME_FIRST = re.compile(
     r"^([A-Z][A-Za-z'’\-]+(?:\s+[A-Z][A-Za-z'’\-]+)+),\s+([A-Z](?:\.[A-Z])*\.?|[A-Z][A-Za-z.\-]+(?:\s+[A-Z][A-Za-z.\-]+)*)\.?$"
 )
@@ -49,13 +47,9 @@ _NARRATIVE_PAGE = re.compile(
 )
 _YEAR_TOKEN = re.compile(r"^(?:1[6-9]\d{2}|20\d{2})$")
 _BRACKET_WITH_YEAR = re.compile(r"\(([^()\n]*\d{4}[^()\n]*)\)")
-_PAGE_ITEM = re.compile(
-    r"\s*([^,;()\n]+),\s*(\d{4}[a-z]?),\s*pp?\.\s*(\d+(?:\s*[–-]\s*\d+)?)\s*"
-)
+_PAGE_ITEM = re.compile(r"\s*([^,;()\n]+),\s*(\d{4}[a-z]?),\s*pp?\.\s*(\d+(?:\s*[–-]\s*\d+)?)\s*")
 _ET_AL_LABEL = re.compile(r"\s+et\s+al\.?", re.IGNORECASE)
-_UNQUOTED = (
-    " A page with no extractable text is recorded in pdf-read-gaps.json and is not quoted."
-)
+_UNQUOTED = " A page with no extractable text is recorded in pdf-read-gaps.json and is not quoted."
 
 
 @dataclass(frozen=True)
@@ -271,7 +265,9 @@ def _gap_key(gap: dict[str, Any]) -> tuple[object, ...]:
     return (gap.get("source"), gap.get("part"), gap.get("reason"))
 
 
-def _record_blank_pages(path: Path, page_texts: list[str], existing: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _record_blank_pages(
+    path: Path, page_texts: list[str], existing: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     known = {_gap_key(gap) for gap in existing}
     fresh: list[dict[str, Any]] = []
     for index, text in enumerate(page_texts, start=1):
@@ -368,7 +364,9 @@ def pdf_from_source(source: dict[str, Any], essay_id: str | None = None) -> Path
     return None
 
 
-def printed_pages_for(source: dict[str, Any], essay_id: str | None = None) -> tuple[str, ...] | None:
+def printed_pages_for(
+    source: dict[str, Any], essay_id: str | None = None
+) -> tuple[str, ...] | None:
     """Printed page numbers, or None when the source is not a PDF."""
     path = pdf_from_source(source, essay_id)
     if path is None:
@@ -515,7 +513,9 @@ def _year_for(names: set[str], rows: list[tuple[set[str], str]]) -> str | None:
     return None
 
 
-def _rewrite_cites(text: str, rows: list[tuple[set[str], str]], pattern: re.Pattern[str], *, paren: bool) -> str:
+def _rewrite_cites(
+    text: str, rows: list[tuple[set[str], str]], pattern: re.Pattern[str], *, paren: bool
+) -> str:
     def replace(match: re.Match[str]) -> str:
         names = match.group("names")
         year = match.group("year")
@@ -617,7 +617,9 @@ def apply_opened_citation(source: dict[str, Any], essay_id: str | None = None) -
     corrected = opened.author
     claimed = updated.get("author")
     if isinstance(corrected, str) and isinstance(claimed, str):
-        if claimed.strip().casefold() == corrected.casefold() or _is_inverted_claim(claimed, corrected):
+        if claimed.strip().casefold() == corrected.casefold() or _is_inverted_claim(
+            claimed, corrected
+        ):
             updated["author"] = corrected
     pages = updated.get("pages")
     page_text = str(pages).strip() if pages is not None and not isinstance(pages, bool) else ""

@@ -84,14 +84,18 @@ def _codes(items):
     return [item["code"] for item in items]
 
 
-def _ready(workspace, brief="Genre: report\nQuestion: How do chokepoints constrain the corridor?\n"):
+def _ready(
+    workspace, brief="Genre: report\nQuestion: How do chokepoints constrain the corridor?\n"
+):
     write_upload(workspace)
     folder = workspace / "Essay-writer" / ESSAY
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "brief.md").write_text(brief, encoding="utf-8")
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    saved = essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    saved = essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert saved["stored"] is True
     return seq
 
@@ -303,7 +307,9 @@ def test_repo_save_is_refused_on_write_doors(workspace, monkeypatch):
         essay_revise(seq, "A note.", "draft"),
         essay_shelf_put(seq, pack(), "draft"),
         essay_shelf_get(seq, "local", "draft"),
-        essay_setup(app_path=str(workspace / "app"), kb1_path=str(workspace / "KB1"), confirmPhase="draft"),
+        essay_setup(
+            app_path=str(workspace / "app"), kb1_path=str(workspace / "KB1"), confirmPhase="draft"
+        ),
         essay_project_archive(ESSAY, "draft"),
         essay_project_unarchive(ESSAY, "draft"),
         essay_sequence_new(ESSAY, "draft"),
@@ -343,11 +349,15 @@ def test_endnote_and_csl_come_from_the_handbook_file(tmp_path, monkeypatch):
     assert checked["checked"] is True
     assert checked["endnote"] == "Harvard"
     assert checked["csl"] is None
-    assert "invent" in checked["csl_reason"].casefold() or "no csl" in checked["csl_reason"].casefold()
+    assert (
+        "invent" in checked["csl_reason"].casefold() or "no csl" in checked["csl_reason"].casefold()
+    )
     record = referencing_record()
     assert record["endnote"] == checked["endnote"]
     assert record["csl"] is None
-    source_text = (repo_root() / "src" / "essay_writer" / "programme.py").read_text(encoding="utf-8")
+    source_text = (repo_root() / "src" / "essay_writer" / "programme.py").read_text(
+        encoding="utf-8"
+    )
     assert "Harvard Referencing 13th Edition" not in source_text
     missing = read_handbook(tmp_path / "missing.md")
     assert missing["checked"] is False

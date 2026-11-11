@@ -107,5 +107,8 @@ def test_docs_record_the_same_locks():
     assert "256000" in workflow
     assert "500000" not in workflow
     assert "critical-reviews.zip" in workflow.casefold()
-    assert "word file per paper" in workflow.casefold() or "one word file per paper" in workflow.casefold()
+    assert (
+        "word file per paper" in workflow.casefold()
+        or "one word file per paper" in workflow.casefold()
+    )
     assert "fast is off" in workflow.casefold()

@@ -108,7 +108,9 @@ def test_committed_configs_share_the_local_command():
     review = mcp_entry(reviewer=True)
     assert review["args"] == ["--reviewer"]
     assert review["command"] == entry["command"] == "essay-writer"
-    rendered = render_server_table(entry["name"], {"command": entry["command"], "args": entry["args"]})
+    rendered = render_server_table(
+        entry["name"], {"command": entry["command"], "args": entry["args"]}
+    )
     cursor = json.loads((package_root() / ".cursor" / "mcp.json").read_text(encoding="utf-8"))
     writer = cursor["mcpServers"]["essay-writer"]
     assert writer["command"] == entry["command"]
@@ -162,7 +164,13 @@ def test_install_writes_both_configs_from_that_template(tmp_path):
 
 def test_hosted_template_is_refused(monkeypatch):
     def hosted():
-        return {"essay-writer": {"command": "essay-writer", "args": [], "url": "https://example.test/mcp"}}
+        return {
+            "essay-writer": {
+                "command": "essay-writer",
+                "args": [],
+                "url": "https://example.test/mcp",
+            }
+        }
 
     monkeypatch.setattr("essay_writer.first_run.mcp_template", hosted)
     with pytest.raises(RuntimeError, match="local"):

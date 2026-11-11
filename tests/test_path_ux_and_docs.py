@@ -111,6 +111,8 @@ def test_docs_batch_d_index_and_cites():
     assert "FIRST-RUN.txt" in readme
     samples = (REPO / "docs" / "samples-study.md").read_text(encoding="utf-8")
     assert "scaffold" not in samples.casefold()
-    assert "out of scope" in samples.casefold() or "out of product scope" in (
-        REPO / "docs" / "report-writing-helpers.md"
-    ).read_text(encoding="utf-8").casefold()
+    assert (
+        "out of scope" in samples.casefold()
+        or "out of product scope"
+        in (REPO / "docs" / "report-writing-helpers.md").read_text(encoding="utf-8").casefold()
+    )

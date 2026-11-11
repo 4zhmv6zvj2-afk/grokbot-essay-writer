@@ -84,7 +84,9 @@ def _footer(path: Path) -> str:
     return zipfile.ZipFile(path).read("word/footer1.xml").decode("utf-8")
 
 
-def test_ac1_ac2_ac5_registration_on_the_title_page_without_the_name(workspace, monkeypatch, tmp_path):
+def test_ac1_ac2_ac5_registration_on_the_title_page_without_the_name(
+    workspace, monkeypatch, tmp_path
+):
     """AC1, AC2, AC5. Student ID is a registration ask. The name stays off. The page number stays right."""
     asked = title_page_spec(BRIEF)
     assert asked["registration"] is True
@@ -189,13 +191,7 @@ Assignment task: Write four entries. Each entry names one decision and criticall
 
 
 def _diary(module: str, title_page: str, extra: str = "") -> str:
-    return (
-        _DIARY_BODY.format(module=module)
-        + "\n"
-        + title_page.strip()
-        + "\n"
-        + extra
-    )
+    return _DIARY_BODY.format(module=module) + "\n" + title_page.strip() + "\n" + extra
 
 
 def _write(module: str, text: str) -> None:
@@ -240,9 +236,7 @@ def _paragraphs(path: Path) -> list[str]:
 
 def test_ac1_do_not_include_your_name_is_forbidden(workspace, monkeypatch, tmp_path):
     """AC1. 'DO NOT include your name' forbids the name. A stored registration is enough."""
-    one_line = (
-        "Title page: module title, registration number. DO NOT include your name."
-    )
+    one_line = "Title page: module title, registration number. DO NOT include your name."
     asked = title_page_spec(one_line)
     assert asked["name"] == "forbidden"
     assert asked["name"] != "required"
@@ -365,9 +359,7 @@ def test_ac2_asked_address_is_a_blank_label(workspace, monkeypatch, tmp_path):
     paragraphs = _paragraphs(path)
     assert "Student address:" in paragraphs
     assert all(
-        item == "Student address:"
-        for item in paragraphs
-        if item.startswith("Student address:")
+        item == "Student address:" for item in paragraphs if item.startswith("Student address:")
     )
     assert NUMBER not in "\n".join(
         item for item in paragraphs if item.startswith("Student address:")
@@ -378,9 +370,7 @@ def test_ac2_asked_address_is_a_blank_label(workspace, monkeypatch, tmp_path):
     table_lines = diary_cover_lines(seq, pack_with_registration(seq, pack), report)
     assert "Student address:" in table_lines
     assert all(
-        item == "Student address:"
-        for item in table_lines
-        if item.startswith("Student address:")
+        item == "Student address:" for item in table_lines if item.startswith("Student address:")
     )
 
 

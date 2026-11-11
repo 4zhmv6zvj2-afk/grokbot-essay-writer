@@ -78,7 +78,9 @@ def _ready(workspace) -> str:
     (folder / "mark-scheme.md").write_text(TABLE, encoding="utf-8")
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     return seq
@@ -308,7 +310,9 @@ def test_stage6_answers_the_question_and_does_not_mark_rows(workspace):
     assert "mark_top_band_rows" not in inspect.getsource(answers_assignment_question)
     for row in ("argument", "evidence", "critical thinking"):
         assert row not in HIGHEST_BAND.casefold()
-    assert "Stage 6 answers only whether the draft answers the assignment question." in REVIEW_PROMPT
+    assert (
+        "Stage 6 answers only whether the draft answers the assignment question." in REVIEW_PROMPT
+    )
     assert "Stage 6 does not mark those rows." in REVIEW_PROMPT
     assert student_surface_hits(REVIEW_PROMPT) == []
 
@@ -378,7 +382,7 @@ def test_cursor_and_grok_build_share_the_top_band_mark(workspace):
         'if verdict == "PASS" and stage == "6":'
     )
     top_band_block = review_source.split("top_band = mark_top_band_rows", 1)[0]
-    assert "if verdict == \"PASS\" and stage == \"9\":" in top_band_block
+    assert 'if verdict == "PASS" and stage == "9":' in top_band_block
     stage6 = review_source.split('if verdict == "PASS" and stage == "6":', 1)[1].split(
         "top_band = None", 1
     )[0]

@@ -105,14 +105,18 @@ def essay_review(
             "A gathered sentence appears in the saved Word file without quotation marks. Nothing was recorded.",
             matches=claim["matches"],
         )
-    judged_word = opened.get("text") if opened.get("opened") and isinstance(opened.get("text"), str) else ""
+    judged_word = (
+        opened.get("text") if opened.get("opened") and isinstance(opened.get("text"), str) else ""
+    )
     if verdict == "PASS" and stage == "9":
         if opened.get("opened") is not True:
             return refuse(
                 "review",
                 "Stage 9 checks the opened Word file. Nothing was recorded.",
             )
-        blocked_gate = opened_word_gate(essay_id, judged_word if isinstance(judged_word, str) else "")
+        blocked_gate = opened_word_gate(
+            essay_id, judged_word if isinstance(judged_word, str) else ""
+        )
         if blocked_gate:
             return blocked_gate
     if verdict == "PASS" and stage == "6":
@@ -260,8 +264,7 @@ def essay_review(
         places = [place for place in (opened.get("places") or []) if isinstance(place, str)]
         if len(places) >= 2:
             body["next"] = say(
-                "The review opened the saved Word file and "
-                f"{places[-1]}. Opened from both places."
+                f"The review opened the saved Word file and {places[-1]}. Opened from both places."
             )
         else:
             body["next"] = say("The review opened the saved Word file.")

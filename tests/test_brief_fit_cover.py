@@ -55,10 +55,6 @@ def test_ac3_a_missing_named_field_blocks_word_until_supplied(workspace):
     missing = missing_cover_fields(ESSAY, {}, {"word_count": {}})
     assert "registration number" in missing
     supplied = {"registration_number": "102938"}
-    assert "registration number" not in missing_cover_fields(
-        ESSAY, supplied, {"word_count": {}}
-    )
+    assert "registration number" not in missing_cover_fields(ESSAY, supplied, {"word_count": {}})
     student = {"student_number": "102938"}
-    assert "registration number" not in missing_cover_fields(
-        ESSAY, student, {"word_count": {}}
-    )
+    assert "registration number" not in missing_cover_fields(ESSAY, student, {"word_count": {}})

@@ -19,7 +19,9 @@ from essay_writer.word import essay_pack_render_word
 
 def _research(seq):
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    confirmed = essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert confirmed["stored"] is True
     return confirmed
 
@@ -93,7 +95,9 @@ def test_file_change_after_draft_blocks_confirm(workspace):
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
     path.write_text(path.read_text(encoding="utf-8") + "\nA later sentence.\n", encoding="utf-8")
-    result = essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    result = essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert result["ok"] is False
     assert result["refused"] == "confirm"
     assert result["stored"] is False

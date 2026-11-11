@@ -55,7 +55,9 @@ def test_ac1_plain_words_bullet_on_stages_5_to_8_and_the_diary():
 def test_ac2_craft_source_and_launchers_carry_the_same_bullet():
     """AC2. The craft source, Cursor, and Grok Build read one bullet, not a second copy."""
     helpers = HELPERS.read_text(encoding="utf-8")
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert craft.count(PLAIN_WORDS) == 1
     assert helpers.count(PLAIN_WORDS) == len(STAGES)
     for stage in STAGES:
@@ -98,7 +100,9 @@ def test_ac3_bullet_names_the_three_classes_and_stays_prompt_only():
 
 def test_ac4_no_assistant_voice_bullet_on_stages_5_to_8_and_the_diary():
     """AC4. Every stage 5–8 genre tells the writer to speak as the student, not a tool."""
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert craft.count(STUDENT_VOICE) == 1
     for stage in STAGES:
         for genre in GENRES:
@@ -123,9 +127,7 @@ def test_ac5_model_self_reference_is_dropped_from_chat_and_word():
     assert say(leaky) == "I can only suggest a plan."
     assert for_word(leaky) == "I can only suggest a plan."
     assert strip_word_labels(leaky) == "I can only suggest a plan."
-    assert say("I am an AI. I can only help with the draft.") == (
-        "I can only help with the draft."
-    )
+    assert say("I am an AI. I can only help with the draft.") == ("I can only help with the draft.")
     assert strip_word_labels("I'm an AI. This section needs one more source.") == (
         "This section needs one more source."
     )
@@ -161,7 +163,9 @@ def test_ac6_word_band_stretch_adds_no_padding_and_no_stock_opening():
 
 def test_ac7_template_openers_are_named_and_repeating_a_key_term_stays_allowed():
     """AC7. One paragraph opener, not a repeated one. Repeating a key term is not the rule."""
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert craft.count(TEMPLATE_OPENERS) == 1
     for stage in STAGES:
         for genre in GENRES:

@@ -150,7 +150,9 @@ def essay_download_leftovers(essay_id: str, confirmPhase: str | None = None) -> 
     body["digest"] = ready["digest"]
     saved = fetched.get("papers") or []
     if saved:
-        body["next"] = say("Leftover free alternatives already found were fetched. Only a real PDF is kept.")
+        body["next"] = say(
+            "Leftover free alternatives already found were fetched. Only a real PDF is kept."
+        )
     else:
         body["next"] = say(
             "The stored leftover addresses were fetched. No new PDF was saved. Do not invent an address."

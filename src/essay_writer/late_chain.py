@@ -354,9 +354,7 @@ def _word_pack(essay_id: str, pack: dict[str, Any]) -> dict[str, Any]:
     return filled
 
 
-_STACK_MARK = re.compile(
-    r"(?i)^(?:registration number|counted words|stated word count)\s*:"
-)
+_STACK_MARK = re.compile(r"(?i)^(?:registration number|counted words|stated word count)\s*:")
 
 
 def _wrapped_draft(lines: list[str], cover: list[str]) -> bool:
@@ -683,7 +681,9 @@ def _pack_from_docx(essay_id: str, source: Path) -> dict[str, Any] | None:
             continue
         lines_raw = item.get("lines")
         body_lines: list[object] = lines_raw if isinstance(lines_raw, list) else []
-        body = "\n".join(line.strip() for line in body_lines if isinstance(line, str) and line.strip())
+        body = "\n".join(
+            line.strip() for line in body_lines if isinstance(line, str) and line.strip()
+        )
         packed.append({"heading": heading, "body": body})
     if not packed:
         return None
@@ -701,7 +701,6 @@ def _pack_from_docx(essay_id: str, source: Path) -> dict[str, Any] | None:
 def _refresh_sequence_final(source: Path, project: str) -> None:
     """Write output/<module>-10/<module>-final.docx from the sequence Word file just saved."""
     import os
-
 
     folder = source.parent / f"{project}-10"
     folder.mkdir(parents=True, exist_ok=True)
@@ -762,7 +761,9 @@ def _remember_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) 
     path.write_text(json.dumps(record) + "\n", encoding="utf-8")
 
 
-def _reuse_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) -> dict[str, Any] | None:
+def _reuse_stage10(
+    source: Path, pack: dict[str, Any], body: dict[str, Any]
+) -> dict[str, Any] | None:
     """Return the previous stage 10 result when this pack was already written."""
     import json
 
@@ -1088,8 +1089,7 @@ def _write_stage10_sequence(
     if _reference_lines_in_docx(pending) == 0:
         pending.unlink(missing_ok=True)
         reason = (
-            "The References section has no entries. Add reference lines before "
-            "this step can close."
+            "The References section has no entries. Add reference lines before this step can close."
         )
         _log_stage10_word(
             essay_id,

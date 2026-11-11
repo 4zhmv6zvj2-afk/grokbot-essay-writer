@@ -29,9 +29,7 @@ _NOTE_LABEL = re.compile(
     r"limitations?|findings|critical review|"
     r"what (?:the text|it) adds|what (?:the text|it) leaves out)\s*:"
 )
-_PAPER_HEAD = re.compile(
-    r"(?im)^\s*(?:#{1,3}\s*)?(?:paper\s+\d+\b|critical review\s*(?:of\b|:))"
-)
+_PAPER_HEAD = re.compile(r"(?im)^\s*(?:#{1,3}\s*)?(?:paper\s+\d+\b|critical review\s*(?:of\b|:))")
 _CITE_HEAD = re.compile(
     r"(?m)^\s*(?:#{1,3}\s*)?[A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+)?\s+\(\d{4}\)\s*$"
 )
@@ -52,9 +50,7 @@ def reviews_by_paper(
 ) -> tuple[dict[str, str] | None, list[dict[str, str]]]:
     """One non-empty markdown per paper id. A second markdown is refused."""
     if not isinstance(reviews, list) or not reviews:
-        return None, [
-            _issue(CRITICAL_REVIEW, "4b needs one critical-review markdown per paper.")
-        ]
+        return None, [_issue(CRITICAL_REVIEW, "4b needs one critical-review markdown per paper.")]
     found: dict[str, str] = {}
     issues: list[dict[str, str]] = []
     for index, item in enumerate(reviews):

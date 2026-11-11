@@ -234,11 +234,7 @@ def _output_path(module: str, number: int) -> Path | None:
     named = folder / f"{sequence_id(module, number)}.docx"
     if named.is_file():
         return named
-    matches = [
-        path
-        for path in folder.glob("*.docx")
-        if path.name.casefold() not in _NOT_THE_ESSAY
-    ]
+    matches = [path for path in folder.glob("*.docx") if path.name.casefold() not in _NOT_THE_ESSAY]
     if not matches:
         return None
     return sorted(matches)[-1]
@@ -362,7 +358,9 @@ def _title_usable(source: dict[str, Any], title: str) -> bool:
     return True
 
 
-def _match_references(lines: list[str], sources: list[dict[str, Any]]) -> tuple[list[dict[str, str]], list[str]]:
+def _match_references(
+    lines: list[str], sources: list[dict[str, Any]]
+) -> tuple[list[dict[str, str]], list[str]]:
     """Link a reference line only when its title is a gathered source. Surnames stay unresolved."""
     matched: list[dict[str, str]] = []
     unresolved: list[str] = []
@@ -568,7 +566,9 @@ def _place_word(
     return state, dest
 
 
-def _unchanged(module: str, path: Path, confirm_phase: str, summary: dict[str, Any], sha: str) -> dict[str, Any]:
+def _unchanged(
+    module: str, path: Path, confirm_phase: str, summary: dict[str, Any], sha: str
+) -> dict[str, Any]:
     payload = {
         "name": path.name,
         "module": module,
@@ -813,7 +813,9 @@ def _file_photo(
     body["text_path"] = f"uploads/{module}/{text_path.name}"
     body["digest"] = ready["digest"]
     body.pop("show_image", None)
-    body["next"] = say(f"I've filed this photo and the words from it on {module} for every sequence.")
+    body["next"] = say(
+        f"I've filed this photo and the words from it on {module} for every sequence."
+    )
     return body
 
 
@@ -839,7 +841,10 @@ def essay_intake(
         return phase
     confirm_phase = confirmPhase if isinstance(confirmPhase, str) else ""
 
-    targets = [unassigned_dir(), uploads_dir(module) if isinstance(module, str) and module.strip() else unassigned_dir()]
+    targets = [
+        unassigned_dir(),
+        uploads_dir(module) if isinstance(module, str) and module.strip() else unassigned_dir(),
+    ]
     if isinstance(module, str) and module.strip():
         targets.append(essay_dir(module))
     blocked = guard_write_door(*targets)
@@ -994,7 +999,11 @@ def _file_named(
                 f"I'll file this on {module} so every sequence can use it. "
                 "Say yes and I'll move it. Nothing is written until then."
             )
-        elif parent_id and parent is not None and _research_trail(load_sequence_state(module, parent)):
+        elif (
+            parent_id
+            and parent is not None
+            and _research_trail(load_sequence_state(module, parent))
+        ):
             next_text = (
                 f"This Word file belongs with {module}. "
                 f"I'll leave {parent_id} as it is and roll forward onto {child_id}. "
@@ -1017,7 +1026,11 @@ def _file_named(
     latest_path = classified.get("latest_path")
     if not isinstance(latest_path, Path) and parent is not None:
         latest_path = _output_path(module, parent)
-    latest_sha = file_sha256(latest_path) if isinstance(latest_path, Path) and latest_path.is_file() else None
+    latest_sha = (
+        file_sha256(latest_path)
+        if isinstance(latest_path, Path) and latest_path.is_file()
+        else None
+    )
     fingerprint = {
         "sha256": sha,
         "sequences": [sequence_id(module, number) for number in sequence_numbers(module)],
@@ -1100,5 +1113,7 @@ def _file_named(
     else:
         body.pop("stage", None)
         body.pop("first_draft", None)
-        body["next"] = say(f"I've rolled this forward onto {child_id} and left {parent_id} as it is.")
+        body["next"] = say(
+            f"I've rolled this forward onto {child_id} and left {parent_id} as it is."
+        )
     return body

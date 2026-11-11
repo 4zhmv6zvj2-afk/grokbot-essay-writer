@@ -64,7 +64,10 @@ def test_intake_locks_the_latest_docx_used_for_comparison(workspace):
             "essay_id": MODULE,
             "sequence": 1,
             "sequence_id": f"{MODULE}-1",
-            "research": {"summary": {"sources": [{"id": "src-1", "title": "Port pricing"}]}, "full": None},
+            "research": {
+                "summary": {"sources": [{"id": "src-1", "title": "Port pricing"}]},
+                "full": None,
+            },
             "validations": {},
             "word": {},
             "revisions": [],

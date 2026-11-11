@@ -41,8 +41,14 @@ def test_sniff_rejects_html_and_accepts_pdf_magic():
     assert classify_download(200, None, b"\xef\xbb\xbf%PDF-1.4\n") == "paper"
     assert classify_download(404, "text/html", b"<html>subscribe to read</html>") == "404"
     assert classify_download(402, "text/html", b"") == "paywall"
-    assert classify_download(403, "text/html", b"<html>Please subscribe to read this article</html>") == "paywall"
-    assert classify_download(200, "text/html", b"<html>subscription required for this article</html>") == "paywall"
+    assert (
+        classify_download(403, "text/html", b"<html>Please subscribe to read this article</html>")
+        == "paywall"
+    )
+    assert (
+        classify_download(200, "text/html", b"<html>subscription required for this article</html>")
+        == "paywall"
+    )
     assert classify_download(200, "application/pdf", b"") == "empty"
     assert classify_download(200, "application/pdf", b" \n\t") == "empty"
     assert classify_download(0, None, b"") == "empty"
@@ -171,7 +177,10 @@ def test_third_failure_stops_and_the_same_address_is_not_fetched_again(workspace
 
     followed = run_downloads(
         seq,
-        [{"url": BAD_URL, "doi": "10.1/bad"}, {"url": "https://publisher.example/other.pdf", "doi": "10.1/other"}],
+        [
+            {"url": BAD_URL, "doi": "10.1/bad"},
+            {"url": "https://publisher.example/other.pdf", "doi": "10.1/other"},
+        ],
         fetch=fetch_new,
         now=T0,
     )
@@ -273,9 +282,13 @@ def test_dig_confirm_saves_only_real_pdfs_and_lists_the_html_page(workspace, mon
     draft = essay_dig(seq, "zara supply chain", "draft")
     assert draft["wrote"] is False
     assert "downloads" not in draft
-    assert not (workspace / "uploads" / ESSAY).exists() or not list((workspace / "uploads" / ESSAY).glob("*"))
+    assert not (workspace / "uploads" / ESSAY).exists() or not list(
+        (workspace / "uploads" / ESSAY).glob("*")
+    )
     assert not (_output(workspace) / "download-list.docx").exists()
-    confirmed = essay_dig(seq, "zara supply chain", "confirm", cardDigest=card_digest_for(seq, 'essay.dig'))
+    confirmed = essay_dig(
+        seq, "zara supply chain", "confirm", cardDigest=card_digest_for(seq, "essay.dig")
+    )
     assert confirmed["wrote"] is True
     assert confirmed["downloads"]["stopped"] is False
     assert [item["doi"] for item in confirmed["downloads"]["papers"]] == ["10.1/good"]

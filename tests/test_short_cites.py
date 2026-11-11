@@ -28,9 +28,7 @@ from essay_writer.writing_basics import STAGE_ORDER
 
 STUDENT = "Privacy risk reduces willingness to disclose personal data."
 TOPIC_ONLY = "Surveys of privacy and personal data on government websites discuss trust."
-FITS = (
-    "Privacy risk reduces willingness to disclose personal data when people use a public site."
-)
+FITS = "Privacy risk reduces willingness to disclose personal data when people use a public site."
 QUESTION = "Which public website?"
 
 MINI_REVIEW = (
@@ -190,7 +188,7 @@ def test_ac3_one_cite_per_paper_is_left_alone_and_the_cut_is_said(workspace):
     assert report["cut"] == []
 
     quoted = (
-        'Privacy risk reduces willingness to disclose personal data (Beldad, 2019). '
+        "Privacy risk reduces willingness to disclose personal data (Beldad, 2019). "
         'The student notes "I would not enter my address" on the same form (Beldad, 2019). '
         "Privacy risk also reduces willingness to disclose personal data (Beldad, 2019). "
         "Willingness to disclose personal data falls when privacy risk is high (Beldad, 2019)."

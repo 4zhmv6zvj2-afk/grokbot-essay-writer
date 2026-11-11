@@ -393,7 +393,9 @@ def _kept_paragraph(source: dict[str, Any], notes: dict[str, str]) -> str | None
     return note.strip()
 
 
-def _entries(essay_id: str, sources: list[dict[str, Any]], notes: dict[str, str]) -> list[dict[str, Any]]:
+def _entries(
+    essay_id: str, sources: list[dict[str, Any]], notes: dict[str, str]
+) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for source in sources:
         cited = _with_pdf_year(essay_id, source)
@@ -517,9 +519,7 @@ def ship_annotation_issues(
         if stub:
             issues.append(stub)
             continue
-        issues.extend(
-            prose_issues(label, source, gathered, prose.strip(), annotation=True)
-        )
+        issues.extend(prose_issues(label, source, gathered, prose.strip(), annotation=True))
     return issues
 
 
@@ -592,7 +592,7 @@ def _review_body(essay_id: str, source: dict[str, Any], supplied: str | None) ->
     else:
         quote = source.get("quote")
         if isinstance(quote, str) and quote.strip():
-            text = f"{line}\n\n\"{quote.strip()}\"\n"
+            text = f'{line}\n\n"{quote.strip()}"\n'
         else:
             text = f"{line}\n"
     text = prose_for_surface(text, "review")
@@ -744,7 +744,9 @@ def _append_citation(essay_id: str, annotation: Path, paper: dict[str, Any]) -> 
     _save_docx(annotation, document)
 
 
-def _refresh_4a(essay_id: str, sources: list[dict[str, Any]], papers: list[dict[str, Any]]) -> dict[str, Any]:
+def _refresh_4a(
+    essay_id: str, sources: list[dict[str, Any]], papers: list[dict[str, Any]]
+) -> dict[str, Any]:
     from essay_writer.downloads import _write_download_list
 
     pdfs = gathered_pdfs(essay_id, sources)
@@ -793,7 +795,8 @@ def _refresh_4a(essay_id: str, sources: list[dict[str, Any]], papers: list[dict[
         "papers_zip": relative(archive),
         "download_list": listed,
         "zip_entries": names,
-        "still_listed": [_cite_row(item) for item in leftovers] + [_cite_row(item) for item in failures],
+        "still_listed": [_cite_row(item) for item in leftovers]
+        + [_cite_row(item) for item in failures],
     }
 
 
@@ -930,7 +933,9 @@ def reconcile_before_4b(
     }
 
 
-def download_annotation(path: Path, papers: list[dict[str, Any]], essay_id: str | None = None) -> None:
+def download_annotation(
+    path: Path, papers: list[dict[str, Any]], essay_id: str | None = None
+) -> None:
     """Stop-path Word file. Same citation line. Failed downloads are not entries."""
     cited = [_with_pdf_year(essay_id or "", item) for item in papers]
     entries = [{"parts": harvard_4a_parts(item), "paragraph": None} for item in cited]

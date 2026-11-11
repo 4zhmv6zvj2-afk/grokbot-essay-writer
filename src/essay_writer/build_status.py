@@ -258,7 +258,9 @@ _SPAWN_EXIT_KEYS = {
 }
 
 
-def exit_reason_sentence(subject: str, *, spawn_reason: str | None = None, exit_code: int | None = None) -> str:
+def exit_reason_sentence(
+    subject: str, *, spawn_reason: str | None = None, exit_code: int | None = None
+) -> str:
     """Plain-English line when mid-office file work stops before the step is saved."""
     subject = _usable_subject(subject, "your assignment")
     if isinstance(spawn_reason, str) and spawn_reason.strip():
@@ -728,7 +730,9 @@ def _stderr_tail(stderr: Any, sink: list[str]) -> None:
             raw = stderr.readline()
             if not raw:
                 break
-            text = raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw)
+            text = (
+                raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw)
+            )
             text = " ".join(text.split())
             if text:
                 sink.append(text)
@@ -770,7 +774,11 @@ def follow_mid_process(
                     raw = stdout.readline()
                     if not raw:
                         break
-                    text = raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw)
+                    text = (
+                        raw.decode("utf-8", "replace")
+                        if isinstance(raw, (bytes, bytearray))
+                        else str(raw)
+                    )
                     parsed = parse_phase_line(text)
                     if parsed is None:
                         continue
@@ -831,7 +839,9 @@ def forget_process_memory() -> None:
         _known.clear()
 
 
-def _finished_draft(stage: str, phase: str, arguments: dict[str, Any], result: dict[str, Any]) -> bool:
+def _finished_draft(
+    stage: str, phase: str, arguments: dict[str, Any], result: dict[str, Any]
+) -> bool:
     """True when this reply stores the first draft.
 
     Stage 5 stores on the draft and starts stage 6. The finished sentence
@@ -925,7 +935,11 @@ def reply_status(name: str, arguments: dict[str, Any], result: dict[str, Any]) -
         else:
             lines.extend(_signaled_lines(essay_id, result))
             lines.extend(due_lines(essay_id))
-    elif name in {"essay.revise", "essay.review"} and result.get("stored") is True and result.get("quiet") is not True:
+    elif (
+        name in {"essay.revise", "essay.review"}
+        and result.get("stored") is True
+        and result.get("quiet") is not True
+    ):
         prior = result.get("status")
         if isinstance(prior, list) and any(isinstance(line, str) and line for line in prior):
             lines.extend(line for line in prior if isinstance(line, str) and line)
@@ -1077,7 +1091,9 @@ def _load_payload(essay_id: str) -> dict[str, Any] | None:
         "subject": data.get("subject") or "your assignment",
         "last": _now() - age,
         "wall": wall if isinstance(wall, (int, float)) else _wall(),
-        "done": set(item for item in done if isinstance(item, str)) if isinstance(done, list) else set(),
+        "done": set(item for item in done if isinstance(item, str))
+        if isinstance(done, list)
+        else set(),
         "started": bool(data.get("started")),
         "stale_said": bool(data.get("stale_said")),
         "pid": pid if isinstance(pid, int) else None,

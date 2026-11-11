@@ -149,7 +149,9 @@ def test_word_writes_a_possible_citation_and_refuses_a_hard_miss(workspace):
     brief.write_text(f"Genre: report\nQuestion: {QUESTION}\n", encoding="utf-8")
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     constitution = f"This is a report. {QUESTION}"
     essay_review(seq, "6", "PASS", "draft", constitution=constitution)
     essay_review(seq, "6", "PASS", "confirm", constitution=constitution)
@@ -157,7 +159,8 @@ def test_word_writes_a_possible_citation_and_refuses_a_hard_miss(workspace):
     possible = pack()
     possible["sections"][1] = {
         "heading": possible["sections"][1]["heading"],
-        "body": possible["sections"][1]["body"] + " Patel (2019) names one corridor beside the strait.",
+        "body": possible["sections"][1]["body"]
+        + " Patel (2019) names one corridor beside the strait.",
     }
     essay_pack_validate(seq, possible, "draft")
     essay_pack_validate(seq, possible, "confirm")
@@ -171,7 +174,8 @@ def test_word_writes_a_possible_citation_and_refuses_a_hard_miss(workspace):
     hard = pack()
     hard["sections"][1] = {
         "heading": hard["sections"][1]["heading"],
-        "body": hard["sections"][1]["body"] + " Dr Patel (2019) names one corridor beside the strait.",
+        "body": hard["sections"][1]["body"]
+        + " Dr Patel (2019) names one corridor beside the strait.",
     }
     essay_pack_validate(seq, hard, "draft")
     essay_pack_validate(seq, hard, "confirm")

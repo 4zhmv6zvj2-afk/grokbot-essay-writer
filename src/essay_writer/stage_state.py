@@ -116,7 +116,11 @@ def _apply_commit(root, record: dict[str, object]) -> None:
     note_rel = record.get("note")
     note_text = record.get("note_text")
     if note_rel is not None or note_text is not None:
-        if not isinstance(note_rel, str) or note_rel not in _STAGE_NOTE_RELS or not isinstance(note_text, str):
+        if (
+            not isinstance(note_rel, str)
+            or note_rel not in _STAGE_NOTE_RELS
+            or not isinstance(note_text, str)
+        ):
             raise ValueError("stage commit note is not a tracking note")
         _atomic(root / note_rel, note_text)
     pointer = record.get("pointer")
@@ -375,7 +379,9 @@ def rebind_cloned_confirms(folder, essay_id: str) -> None:
     _atomic(pointer_path, _pointer_text(cast(Pointer, data)))
 
 
-def _own_door_card(opened: dict[str, object] | None, essay_id: str, stage: str) -> dict[str, object] | None:
+def _own_door_card(
+    opened: dict[str, object] | None, essay_id: str, stage: str
+) -> dict[str, object] | None:
     """The door card when it names this sequence and this stage."""
     if not isinstance(opened, dict) or opened.get("ok") is False:
         return None
@@ -453,7 +459,9 @@ def _normalize_pointer(data: dict[str, Any]) -> dict[str, Any]:
     saved = [item for item in data.get("saved") or [] if item in STAGE_ORDER]
     files_raw = data.get("files")
     files: dict[str, object] = files_raw if isinstance(files_raw, dict) else {}
-    kept = {key: value for key, value in files.items() if key in STAGE_ORDER and isinstance(value, str)}
+    kept = {
+        key: value for key, value in files.items() if key in STAGE_ORDER and isinstance(value, str)
+    }
     reopen = data.get("revisit_open")
     if reopen not in {"2", "3"}:
         reopen = None
@@ -705,8 +713,7 @@ def _confirm_blocked(
     saved = pointer.get("saved") or []
     if pointer.get("closed") is True or current in saved:
         blocked["next"] = str(
-            blocked.get("reason")
-            or "The last stage is already saved. This tool does not submit."
+            blocked.get("reason") or "The last stage is already saved. This tool does not submit."
         )
         return blocked
     opened = None
@@ -733,8 +740,10 @@ def _confirm_blocked(
         if opened_reply.get("cardDigest"):
             blocked["cardDigest"] = opened_reply["cardDigest"]
         nxt = opened_reply.get("next")
-        blocked["next"] = nxt if isinstance(nxt, str) and nxt.strip() else missing_confirm_next(
-            current, stage_title(current, genre)
+        blocked["next"] = (
+            nxt
+            if isinstance(nxt, str) and nxt.strip()
+            else missing_confirm_next(current, stage_title(current, genre))
         )
     else:
         blocked["next"] = missing_confirm_next(current, stage_title(current, genre))
@@ -792,7 +801,9 @@ def _draft_next_card(
     )
 
 
-def _next_card_fields(opened: dict[str, object], essay_id: str, following: str) -> dict[str, object] | None:
+def _next_card_fields(
+    opened: dict[str, object], essay_id: str, following: str
+) -> dict[str, object] | None:
     """card, cardAction, and cardDigest for this sequence's next stage, or nothing."""
     card = opened.get("card")
     if not isinstance(card, dict):
@@ -992,7 +1003,9 @@ def _cache_approved_look(essay_id: str, stage: str, look: str) -> None:
     remember_approved_look(essay_id, look)
 
 
-def _snapshot_stage_save(essay_id: str, stage: str, look: str | None, body: dict[str, object]) -> None:
+def _snapshot_stage_save(
+    essay_id: str, stage: str, look: str | None, body: dict[str, object]
+) -> None:
     """Auto-snapshot after a stage save that stored. A refusal writes no snapshot."""
     if body.get("stored") is not True:
         return

@@ -253,8 +253,12 @@ def test_upload_zip_verifies_a_checksum_only_when_one_is_available(tmp_path):
     # No checksum is supplied: the zip is trusted operator input and installs,
     # but the result says it was not verified.
     no_pin = install_uploaded_copy(
-        upload, dest=tmp_path / "dest-none", pip_runner=_runner(calls), attach=False,
-        path_exposer=_no_path_expose, allow_cursor_install=False,
+        upload,
+        dest=tmp_path / "dest-none",
+        pip_runner=_runner(calls),
+        attach=False,
+        path_exposer=_no_path_expose,
+        allow_cursor_install=False,
     )
     assert no_pin["ok"] is True, no_pin
     assert no_pin["upload_verified"] is False
@@ -264,8 +268,12 @@ def test_upload_zip_verifies_a_checksum_only_when_one_is_available(tmp_path):
 
     # An explicit pin that does not match refuses before unpacking.
     wrong = install_uploaded_copy(
-        upload, dest=tmp_path / "dest-wrong", pip_runner=_runner(calls), attach=False,
-        upload_sha256="0" * 64, path_exposer=_no_path_expose,
+        upload,
+        dest=tmp_path / "dest-wrong",
+        pip_runner=_runner(calls),
+        attach=False,
+        upload_sha256="0" * 64,
+        path_exposer=_no_path_expose,
         allow_cursor_install=False,
     )
     assert wrong["ok"] is False
@@ -276,8 +284,12 @@ def test_upload_zip_verifies_a_checksum_only_when_one_is_available(tmp_path):
 
     # An explicit matching pin verifies.
     accepted = install_uploaded_copy(
-        upload, dest=tmp_path / "dest-pin", pip_runner=_runner(calls), attach=False,
-        upload_sha256=_sha(upload), path_exposer=_no_path_expose,
+        upload,
+        dest=tmp_path / "dest-pin",
+        pip_runner=_runner(calls),
+        attach=False,
+        upload_sha256=_sha(upload),
+        path_exposer=_no_path_expose,
         allow_cursor_install=False,
     )
     assert accepted["ok"] is True
@@ -303,8 +315,12 @@ def test_upload_zip_reads_a_sidecar_checksum(tmp_path):
 
     upload.with_name(upload.name + ".sha256").write_text(f"{digest}\n", encoding="utf-8")
     verified = install_uploaded_copy(
-        upload, dest=tmp_path / "dest-sidecar", pip_runner=_runner(calls), attach=False,
-        path_exposer=_no_path_expose, allow_cursor_install=False,
+        upload,
+        dest=tmp_path / "dest-sidecar",
+        pip_runner=_runner(calls),
+        attach=False,
+        path_exposer=_no_path_expose,
+        allow_cursor_install=False,
     )
     assert verified["ok"] is True, verified
     assert verified["upload_verified"] is True
@@ -320,8 +336,12 @@ def test_upload_zip_reads_a_sidecar_checksum(tmp_path):
     )
     (tmp_path / "SHA256SUMS").write_text(f"{_sha(other)}  {other.name}\n", encoding="utf-8")
     verified_sums = install_uploaded_copy(
-        other, dest=tmp_path / "dest-sums", pip_runner=_runner(calls), attach=False,
-        path_exposer=_no_path_expose, allow_cursor_install=False,
+        other,
+        dest=tmp_path / "dest-sums",
+        pip_runner=_runner(calls),
+        attach=False,
+        path_exposer=_no_path_expose,
+        allow_cursor_install=False,
     )
     assert verified_sums["ok"] is True, verified_sums
     assert verified_sums["upload_verified"] is True
@@ -469,7 +489,9 @@ def test_copy_to_mac_takes_word_and_zip_only(tmp_path, monkeypatch):
     assert missing["reason"] == "mac-not-mounted"
     assert "residual" in missing
 
-    volume = copy_deliverable_to_mac(folder / "essay.docx", mac_dir=tmp_path / "ResearchDrive" / "out")
+    volume = copy_deliverable_to_mac(
+        folder / "essay.docx", mac_dir=tmp_path / "ResearchDrive" / "out"
+    )
     assert volume["ok"] is False
     assert "not a copy path on this computer" in volume["reason"]
 
@@ -478,9 +500,7 @@ def test_reviewer_flag_alone_is_the_review_server():
     assert first_run_request(["--reviewer"]) is False
     assert first_run_request(["--install-upload", "copy.zip"]) is True
     assert first_run_request(["--install-upload", "copy.zip", "--reviewer"]) is True
-    assert first_run_request(
-        ["--install-upload", "copy.zip", "--upload-sha256", "a" * 64]
-    ) is True
+    assert first_run_request(["--install-upload", "copy.zip", "--upload-sha256", "a" * 64]) is True
     assert first_run_request(["--attach-mcp", "--reviewer"]) is True
     assert first_run_request(["--copy-to-mac", "essay.docx"]) is True
 
@@ -529,7 +549,9 @@ def _upload_with_requirements(tmp_path: Path) -> Path:
         {
             "essay-writer-main/pyproject.toml": _pyproject().encode(),
             "essay-writer-main/FIRST-RUN.txt": b"pip install -e .\n",
-            "essay-writer-main/requirements-runtime.txt": b"mcp==2.3.0 --hash=sha256:" + b"0" * 64 + b"\n",
+            "essay-writer-main/requirements-runtime.txt": b"mcp==2.3.0 --hash=sha256:"
+            + b"0" * 64
+            + b"\n",
             "essay-writer-main/src/essay_writer/__init__.py": b"",
         },
     )
@@ -557,7 +579,9 @@ def test_upload_with_runtime_requirements_installs_hashes_first(tmp_path, monkey
         ["-m", "pip", "install", "--require-hashes", "-r", "requirements-runtime.txt"],
         ["-m", "pip", "install", "--no-deps", "-e", "."],
     ]
-    assert [step["command"][1:] for step in result["pip_steps"]] == [command[1:] for command, _cwd in calls]
+    assert [step["command"][1:] for step in result["pip_steps"]] == [
+        command[1:] for command, _cwd in calls
+    ]
 
 
 def test_upload_stops_when_the_hash_pinned_install_fails(tmp_path, monkeypatch):
@@ -617,9 +641,7 @@ def test_expose_writer_on_path_handles_the_already_on_path_and_missing_script_ca
     assert expose_writer_on_path(search_dirs=[str(search)], which=lambda _name: None) is None
 
 
-def test_resolve_user_and_build_config_take_an_explicit_include_user_policy(
-    tmp_path, monkeypatch
-):
+def test_resolve_user_and_build_config_take_an_explicit_include_user_policy(tmp_path, monkeypatch):
     home = tmp_path / "home"
     (home / ".cursor").mkdir(parents=True)
     monkeypatch.setattr(Path, "home", lambda: home)
@@ -664,7 +686,9 @@ def test_mac_deliverables_dir_takes_an_explicit_remembered_read_policy(tmp_path,
     canonical = tmp_path / "canonical"
     canonical.mkdir()
     monkeypatch.setattr("essay_writer.first_run_mac.read_mac_handoff_dir", lambda: remembered)
-    monkeypatch.setattr("essay_writer.first_run_mac.visible_canonical_mac_handoff_dir", lambda: canonical)
+    monkeypatch.setattr(
+        "essay_writer.first_run_mac.visible_canonical_mac_handoff_dir", lambda: canonical
+    )
 
     assert mac_deliverables_dir() == remembered
     assert mac_deliverables_dir(read_remembered=False) == canonical
@@ -680,10 +704,17 @@ def test_quarantine_clearing_is_scoped_to_app_generated_deliverables(tmp_path, m
 
     def fake_clear(path):
         calls.append(Path(path))
-        return {"ok": True, "cleared": [], "absent": list(quarantine.QUARANTINE_ATTRS), "noop": True}
+        return {
+            "ok": True,
+            "cleared": [],
+            "absent": list(quarantine.QUARANTINE_ATTRS),
+            "noop": True,
+        }
 
     monkeypatch.setattr(quarantine, "clear_mac_quarantine", fake_clear)
-    monkeypatch.setattr("essay_writer.first_run_mac.remember_mac_deliverable", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        "essay_writer.first_run_mac.remember_mac_deliverable", lambda *_a, **_k: None
+    )
     mac = tmp_path / "mac"
 
     output = tmp_path / "Essay-writer" / "MOD1011AA" / "sequences" / "1" / "output"

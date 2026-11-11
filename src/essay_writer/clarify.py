@@ -13,7 +13,7 @@ def parse_clarify(value: object) -> tuple[dict[str, object] | None, list[str]]:
     if not isinstance(value, dict):
         return None, [
             "clarify_context is required. Give objective, background, issues, and "
-            "guidance. Each one is a non-empty answer or {\"leave_open\": true}. "
+            'guidance. Each one is a non-empty answer or {"leave_open": true}. '
             "leave_open is the human's choice and is not filled in by the door."
         ]
     unknown = sorted(set(value) - set(KEYS))
@@ -25,14 +25,18 @@ def parse_clarify(value: object) -> tuple[dict[str, object] | None, list[str]]:
         if key not in value:
             errors.append(
                 f"{key} is missing. leave_open is not assumed; a person must answer "
-                f"or set {key} to {{\"leave_open\": true}}."
+                f'or set {key} to {{"leave_open": true}}.'
             )
             continue
         item = value[key]
         if isinstance(item, str) and item.strip():
             parsed[key] = {"answer": item.strip()}
             continue
-        if isinstance(item, dict) and set(item) == {"leave_open"} and item.get("leave_open") is True:
+        if (
+            isinstance(item, dict)
+            and set(item) == {"leave_open"}
+            and item.get("leave_open") is True
+        ):
             parsed[key] = {"leave_open": True}
             continue
         if (
@@ -44,7 +48,7 @@ def parse_clarify(value: object) -> tuple[dict[str, object] | None, list[str]]:
             parsed[key] = {"answer": item["answer"].strip()}
             continue
         errors.append(
-            f"{key} needs a non-empty answer or {{\"leave_open\": true}}. "
+            f'{key} needs a non-empty answer or {{"leave_open": true}}. '
             "A false or blank leave_open is not an answer."
         )
     if errors:

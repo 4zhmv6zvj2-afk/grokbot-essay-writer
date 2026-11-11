@@ -57,7 +57,9 @@ def _ready(workspace) -> str:
     )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     return seq
@@ -94,7 +96,9 @@ def test_false_and_stale_pass_cannot_unlock_the_submit_file(workspace):
     _docx(path, ["This is a report. How do chokepoints constrain the corridor?"])
     refused_review = essay_review(seq, "9", "PASS", "draft", constitution=CONSTITUTION)
     assert refused_review["ok"] is False
-    assert refused_review["reason"] == "The opened Word file has no citations. Nothing was recorded."
+    assert (
+        refused_review["reason"] == "The opened Word file has no citations. Nothing was recorded."
+    )
     assert refused_review.get("stored") is not True
     bare = submit_pass_unlocked(seq)
     assert bare["unlocked"] is False
@@ -237,7 +241,10 @@ def test_cursor_and_grok_build_share_the_unlock(workspace):
     cursor = cursor_stage_launch("eqr")
     build = stage_launch("eqr")
     assert cursor["settings"]["prompt_overlay"] == build["settings"]["prompt_overlay"]
-    assert "Stage 6 answers only whether the draft answers the assignment question." in cursor["settings"]["rules"]
+    assert (
+        "Stage 6 answers only whether the draft answers the assignment question."
+        in cursor["settings"]["rules"]
+    )
     assert cursor["settings"]["rules"] == build["settings"]["rules"]
     assert cursor_unlock(seq) == build_unlock(seq) == submit_pass_unlocked(seq)
     assert "submit_pass_unlocked" in cursor_unlock.__code__.co_names

@@ -34,10 +34,7 @@ MODULE = ESSAY
 SEQ3 = f"{MODULE}-3"
 TOPIC = "How should the firm manage corridor risk?"
 ASSIGNMENT = "Individual supply chain report"
-REPORT_BRIEF = (
-    f"Question: {TOPIC}\n"
-    f"Assignment title: {ASSIGNMENT}\n"
-)
+REPORT_BRIEF = f"Question: {TOPIC}\nAssignment title: {ASSIGNMENT}\n"
 SCHEME = "High Distinction (80-100): the question is answered with evidence.\n"
 
 FAIL_SAMPLE = Path(__file__).parent / "fixtures" / "stage10_fail_log_sample.txt"
@@ -84,7 +81,11 @@ def _cover(path: Path) -> list[str]:
 
 
 def _references_body(path: Path) -> list[str]:
-    texts = [paragraph.text.strip() for paragraph in Document(str(path)).paragraphs if paragraph.text.strip()]
+    texts = [
+        paragraph.text.strip()
+        for paragraph in Document(str(path)).paragraphs
+        if paragraph.text.strip()
+    ]
     if "References" not in texts:
         return []
     return texts[texts.index("References") + 1 :]
@@ -186,7 +187,13 @@ def test_ac4_operator_log_names_pack_from_docx_path_and_cover_audit(
     seq = open_sequence(MODULE)
     body = _report_pack(seq)
     essay_research_summary(seq, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        body["sources"],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     essay_pack_validate(seq, body, "confirm")
     _write_good_word(seq, body)
     _null_saved_pack(seq)
@@ -245,7 +252,13 @@ def test_ac6_write_stage10_recovery_refreshes_ml_paths_sha(
     seq = open_sequence(MODULE)
     body = _report_pack(seq)
     essay_research_summary(seq, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        body["sources"],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     essay_pack_validate(seq, body, "confirm")
     stage_path = _write_good_word(seq, body)
     stale_sha = "a0763b9f" + ("0" * 56)
@@ -276,7 +289,11 @@ def test_ac6_write_stage10_recovery_refreshes_ml_paths_sha(
     log_text = log_path.read_text(encoding="utf-8")
     assert f"sha={current_sha}" in log_text
 
-    rows = [json.loads(line) for line in ml_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    rows = [
+        json.loads(line)
+        for line in ml_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     paths = [row for row in rows if row.get("kind") == "paths" and row.get("essay_id") == seq]
     assert paths
     latest = paths[-1]["files"]
@@ -289,12 +306,28 @@ def test_ac1_null_saved_pack_keeps_house_cover(workspace, monkeypatch, tmp_path)
     documents = tmp_path / "Documents"
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(documents))
     _brief()
-    write_upload(workspace, MODULE, "hasan.md", "Hasan and Sarker (2023) Corridor risk is material for the chain.\n")
-    write_upload(workspace, MODULE, "immadisetty.md", "Immadisetty (2022) One named chain is in scope for the report.\n")
+    write_upload(
+        workspace,
+        MODULE,
+        "hasan.md",
+        "Hasan and Sarker (2023) Corridor risk is material for the chain.\n",
+    )
+    write_upload(
+        workspace,
+        MODULE,
+        "immadisetty.md",
+        "Immadisetty (2022) One named chain is in scope for the report.\n",
+    )
     seq = open_sequence(MODULE)
     body = _report_pack(seq)
     essay_research_summary(seq, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        body["sources"],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     essay_pack_validate(seq, body, "confirm")
     stage = _write_good_word(seq, body)
     _null_saved_pack(seq)
@@ -334,7 +367,13 @@ def test_ac2_null_saved_pack_keeps_references_from_word_and_uploads(
     seq = open_sequence(MODULE)
     body = _report_pack(seq)
     essay_research_summary(seq, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        body["sources"],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     essay_pack_validate(seq, body, "confirm")
     stage = _write_good_word(seq, body)
     _null_saved_pack(seq)
@@ -354,8 +393,18 @@ def test_ac3_module_seq_null_saved_pack_matches_clear_cover_and_refs(
     documents = tmp_path / "Documents"
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(documents))
     _brief()
-    write_upload(workspace, MODULE, "hasan.md", "Hasan and Sarker (2023) Corridor risk is material for the chain.\n")
-    write_upload(workspace, MODULE, "immadisetty.md", "Immadisetty (2022) One named chain is in scope for the report.\n")
+    write_upload(
+        workspace,
+        MODULE,
+        "hasan.md",
+        "Hasan and Sarker (2023) Corridor risk is material for the chain.\n",
+    )
+    write_upload(
+        workspace,
+        MODULE,
+        "immadisetty.md",
+        "Immadisetty (2022) One named chain is in scope for the report.\n",
+    )
     open_sequence(MODULE)
     parent = f"{MODULE}-1"
     essay_sequence_new(MODULE, "draft", parent=parent)
@@ -365,7 +414,13 @@ def test_ac3_module_seq_null_saved_pack_matches_clear_cover_and_refs(
     assert seq3.endswith("-3")
     body = _report_pack(seq3)
     essay_research_summary(seq3, TOPIC, "draft", body["sources"])
-    essay_research_summary(seq3, TOPIC, "confirm", body["sources"], cardDigest=card_digest_for(seq3, 'essay.research.summary'))
+    essay_research_summary(
+        seq3,
+        TOPIC,
+        "confirm",
+        body["sources"],
+        cardDigest=card_digest_for(seq3, "essay.research.summary"),
+    )
     essay_pack_validate(seq3, body, "confirm")
     stage = _write_good_word(seq3, body)
     _null_saved_pack(seq3)
@@ -423,8 +478,7 @@ def test_build_covered_shared_word_product_log_doors():
 
     assert "log_word_step(" in inspect.getsource(_log_stage10_word)
     assert "note_stage10_rewrite_paths(" in (
-        inspect.getsource(_deliver_stage10)
-        + inspect.getsource(_remember_stage10_result)
+        inspect.getsource(_deliver_stage10) + inspect.getsource(_remember_stage10_result)
     )
     assert log_word_manifest.__module__ == "essay_writer.late_chain"
     assert log_word_docx_written.__module__ == "essay_writer.late_chain"

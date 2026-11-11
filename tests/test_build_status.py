@@ -180,7 +180,9 @@ def test_cursor_and_build_share_the_same_sentences(workspace):
     assert start_sentence("drafting", "MOD1004AA-2") not in stored_draft
     assert "card" not in stored_draft
     assert due_lines("MOD1004AA-2") == []
-    assert all(isinstance(line, str) for line in spoken + ready + stored_draft + pack + launch["status"])
+    assert all(
+        isinstance(line, str) for line in spoken + ready + stored_draft + pack + launch["status"]
+    )
 
 
 def test_front_office_posts_start_milestone_and_five_minute_line(workspace, monkeypatch):

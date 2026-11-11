@@ -323,7 +323,6 @@ def test_ac3_mid_build_status_is_wired_for_both_shells(workspace, monkeypatch):
         assert "status" not in cursor_stage_launch(stage)
         assert "status" not in stage_launch(stage)
 
-
     clock = {"t": 0.0}
     monkeypatch.setattr("essay_writer.build_status._now", lambda: clock["t"])
     seq = open_sequence()

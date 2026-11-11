@@ -77,9 +77,7 @@ def test_ac2_stage_1_confirm_creates_module_shared_folder(workspace, tmp_path, m
     assert (bot / ESSAY).is_dir()
 
 
-def test_ac3_handoff_copies_into_sequence_folder_not_flat_bot(
-    workspace, tmp_path, monkeypatch
-):
+def test_ac3_handoff_copies_into_sequence_folder_not_flat_bot(workspace, tmp_path, monkeypatch):
     """AC3. Student Word and zip handoff copies into <module>/<essay_id>, not flat Essay Bot."""
     bot = _essay_bot(tmp_path)
     bot.mkdir(parents=True)
@@ -145,4 +143,6 @@ def test_ac5_build_covered_mac_copy_and_stage_1_confirm_path():
         source = inspect.getsource(fn)
         assert "ensure_sequence_mac_folder" not in source
         assert "choose_mac_handoff" not in source
-    assert "module_mac_deliverables_dir" in inspect.getsource(first_run.sequence_mac_deliverables_dir)
+    assert "module_mac_deliverables_dir" in inspect.getsource(
+        first_run.sequence_mac_deliverables_dir
+    )

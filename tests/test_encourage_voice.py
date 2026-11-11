@@ -39,7 +39,9 @@ REVIEW_LIMIT = prompt_text("review/eqr.md", "review_limit")
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE_ID = "encourage-plan-v1"
 PLAN = (REPO / "tests" / "fixtures" / "encourage-plan-v1.txt").read_text(encoding="utf-8")
-BRIEF = (REPO / "tests" / "fixtures" / "encourage-brief-reflection-v1.txt").read_text(encoding="utf-8")
+BRIEF = (REPO / "tests" / "fixtures" / "encourage-brief-reflection-v1.txt").read_text(
+    encoding="utf-8"
+)
 STAGES = ("5", "6", "7", "8")
 GENRES = (None, "diary", "essay", "report")
 POISON = (
@@ -259,7 +261,9 @@ def test_ac4_options_do_not_contradict_the_locked_plan(workspace):
 
 def test_ac5_writer_voice_limits_on_stages_5_to_8():
     """AC5. Rhythm, connectors, diary opening, no planted-error instruction. Prompt text only."""
-    source = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    source = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     helpers = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
     for sentence in (
         "Vary the sentence rhythm.",
@@ -301,13 +305,20 @@ def test_ac5_writer_voice_limits_on_stages_5_to_8():
 
 def test_ac6_reviewer_limits_facts_structure_and_citations():
     """AC6. Reviewer prompt stays on facts, structure, and citations. No elegance polish."""
-    source = (REPO / "src" / "essay_writer" / "prompts" / "review" / "eqr.md").read_text(encoding="utf-8")
+    source = (REPO / "src" / "essay_writer" / "prompts" / "review" / "eqr.md").read_text(
+        encoding="utf-8"
+    )
     assert REVIEW_LIMIT in REVIEW_PROMPT
     assert REVIEW_LIMIT in source
     assert "Do not polish voice, elegance, or parallelism." in REVIEW_PROMPT
     assert "Keep the student's voice and the writer's voice." in REVIEW_PROMPT
     folded = REVIEW_PROMPT.casefold()
-    for banned in ("improve the elegance", "more elegant", "smooth the voice", "fix the parallelism"):
+    for banned in (
+        "improve the elegance",
+        "more elegant",
+        "smooth the voice",
+        "fix the parallelism",
+    ):
         assert banned not in folded
     assert "It does not check format." in REVIEW_PROMPT
     assert "Format and citations stay with the writer." in REVIEW_PROMPT

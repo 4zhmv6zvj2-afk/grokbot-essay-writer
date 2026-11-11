@@ -16,7 +16,13 @@ def test_fabricated_source_is_refused(workspace):
     assert result["refused"] == "invent-forbid"
     assert result["stored"] is False
     research = (
-        workspace / "Essay-writer" / ESSAY / "sequences" / "1" / ".drafts" / "essay.research.summary"
+        workspace
+        / "Essay-writer"
+        / ESSAY
+        / "sequences"
+        / "1"
+        / ".drafts"
+        / "essay.research.summary"
     )
     assert not research.exists()
 
@@ -197,10 +203,7 @@ def test_matched_crossref_sample_adds_doi(workspace, monkeypatch):
     from essay_writer.resolvers import FIXTURE_TITLE
 
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "fixture")
-    text = (
-        f"Patel, A. (2019) {FIXTURE_TITLE}.\n"
-        "Evidence line for the corridor.\n"
-    )
+    text = f"Patel, A. (2019) {FIXTURE_TITLE}.\nEvidence line for the corridor.\n"
     write_upload(workspace, text=text)
     seq = open_sequence()
     item = {

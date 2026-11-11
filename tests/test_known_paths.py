@@ -113,7 +113,12 @@ def test_allowlist_accepts_known_paths_and_refuses_the_rest(workspace, tmp_path)
     invented.write_bytes(PDF)
     assert allow_research_path(seq, str(invented))["kind"] == "invented"
 
-    for raw in (Path.home(), Path.home() / "Documents", Path("/Volumes"), Path("/Volumes/ResearchDrive")):
+    for raw in (
+        Path.home(),
+        Path.home() / "Documents",
+        Path("/Volumes"),
+        Path("/Volumes/ResearchDrive"),
+    ):
         assert is_roam_root(raw) is True
         refused = allow_research_path(seq, str(raw))
         assert refused["allowed"] is False

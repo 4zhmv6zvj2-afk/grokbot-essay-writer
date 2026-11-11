@@ -34,6 +34,8 @@ def _stage_look(seq: str) -> str:
     from essay_writer.specialists.grok_bot import basics_pass_lines
 
     return "\n".join(basics_pass_lines(seq)) + "\n" + LOOK
+
+
 BOLD_BRIEF = (
     "**Genre:** report\n"
     "Supply chain context and warehouse analysis that must not become the status line.\n"

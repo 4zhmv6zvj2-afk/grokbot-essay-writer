@@ -201,7 +201,13 @@ def test_ac3_verdict_only_pass_does_not_clear(workspace):
     from essay_writer.research import essay_research_summary
 
     essay_research_summary(seq, "chokepoints", "draft", [source()])
-    essay_research_summary(seq, "chokepoints", "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        "chokepoints",
+        "confirm",
+        [source()],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     body = pack()
     assert essay_pack_validate(seq, body, "draft")["ok"] is True
     assert essay_pack_validate(seq, body, "confirm")["stored"] is True

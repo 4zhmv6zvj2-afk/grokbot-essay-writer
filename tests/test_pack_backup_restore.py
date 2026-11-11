@@ -54,7 +54,9 @@ def _snapshots(seq: str) -> list[Path]:
     root = backups_dir(seq)
     if not root.is_dir():
         return []
-    return sorted(path for path in root.iterdir() if path.is_dir() and not path.name.startswith("."))
+    return sorted(
+        path for path in root.iterdir() if path.is_dir() and not path.name.startswith(".")
+    )
 
 
 def _plant_reports(seq: str) -> None:
@@ -121,7 +123,9 @@ def test_ac2_pack_validate_snapshots_same_shape(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     _plant_reports(seq)
     refused = essay_pack_validate(seq, "nope", "draft")
     assert refused["ok"] is False

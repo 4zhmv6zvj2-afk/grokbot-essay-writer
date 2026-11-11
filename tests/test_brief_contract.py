@@ -339,9 +339,9 @@ def test_ac_nt2_named_entries_shapes(workspace, monkeypatch):
     assert named_entries(
         "Occasions\n- Quay watch\n- Tide log\n- Crane turn\n- Gate count\n"
     ) == list(TITLES)
-    assert named_entries(
-        "Entries\n* Quay watch\n* Tide log\n* Crane turn\n* Gate count\n"
-    ) == list(TITLES)
+    assert named_entries("Entries\n* Quay watch\n* Tide log\n* Crane turn\n* Gate count\n") == list(
+        TITLES
+    )
     assert named_entries(
         "Sections:\n1) Quay watch\n2) Tide log\n3) Crane turn\n4) Gate count\n"
     ) == list(TITLES)
@@ -440,7 +440,9 @@ def test_ac_nt4_title_page_identity(workspace, monkeypatch):
     """Missing registration is refused. One cover for 6, 7, and final."""
     monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _quiet_spawn)
     monkeypatch.setattr("essay_writer.build_office.spawn_grok", _quiet_spawn)
-    assert "102938" not in (REPO / "src" / "essay_writer" / "brief_contract.py").read_text(encoding="utf-8")
+    assert "102938" not in (REPO / "src" / "essay_writer" / "brief_contract.py").read_text(
+        encoding="utf-8"
+    )
     assert "102938" not in (REPO / "src" / "essay_writer" / "diary.py").read_text(encoding="utf-8")
     assert "cover_lines(" in inspect.getsource(write_docx)
     assert "cover_lines(" in inspect.getsource(essay_pack_render_word)
@@ -525,7 +527,9 @@ def test_ac_nt4_title_page_identity(workspace, monkeypatch):
     assert "Teaching partner" not in text
     assert text.count(NUMBER) == 1
 
-    _write_brief("ESS9001HK", "Genre: essay\nQuestion: How do chokepoints constrain the corridor?\n")
+    _write_brief(
+        "ESS9001HK", "Genre: essay\nQuestion: How do chokepoints constrain the corridor?\n"
+    )
     essay = _open("ESS9001HK")
     essay_pack = pack("ESS9001HK")
     essay_pack["essay_id"] = essay

@@ -130,7 +130,9 @@ def inherited_locks(essay_id: str) -> list[dict[str, Any]]:
         shown.append(
             {
                 "stage": stage,
-                "title": row.get("title") if isinstance(row.get("title"), str) else stage_title(stage),
+                "title": row.get("title")
+                if isinstance(row.get("title"), str)
+                else stage_title(stage),
                 "essay_id": row.get("essay_id") if isinstance(row.get("essay_id"), str) else "",
                 "look": look.strip(),
                 "resolved": row.get("resolved") is True,
@@ -161,9 +163,7 @@ def _mark_lock_resolved(essay_id: str, stage: str) -> None:
 
 def prior_saved_lock_line(row: dict[str, Any]) -> str:
     parent = row.get("essay_id") or "the parent sequence"
-    return (
-        f"Stage {row['stage']} — {row['title']} was already saved on {parent}."
-    )
+    return f"Stage {row['stage']} — {row['title']} was already saved on {parent}."
 
 
 def prior_saved_lock_ask(essay_id: str, stage: str, row: dict[str, Any]) -> dict[str, Any]:

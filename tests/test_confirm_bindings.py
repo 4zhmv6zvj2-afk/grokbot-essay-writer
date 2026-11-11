@@ -151,9 +151,7 @@ def test_dig_card_digest_is_returned_and_a_confirm_without_it_is_refused(workspa
     seq = open_sequence()
     draft = essay_dig(seq, "corridor", "draft")
     assert draft["ok"] is True, draft
-    assert draft["cardDigest"] == card_digest(
-        {"essay_id": seq, "query": "corridor"}, draft["card"]
-    )
+    assert draft["cardDigest"] == card_digest({"essay_id": seq, "query": "corridor"}, draft["card"])
     record = _read_draft(seq, DIG_TOOL_DIR, draft["digest"])
     assert record["cardDigest"] == draft["cardDigest"]
     assert "card digest" in draft["next"].casefold()
@@ -267,9 +265,7 @@ def test_research_full_card_is_bound(workspace):
     record = _read_draft(seq, FULL_TOOL_DIR, draft["digest"])
     assert record["cardDigest"] == draft["cardDigest"]
 
-    missing = essay_research_full(
-        seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN
-    )
+    missing = essay_research_full(seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN)
     assert missing["ok"] is False, missing
     assert "show this step again" in missing["reason"].casefold()
 

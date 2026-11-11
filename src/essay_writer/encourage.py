@@ -139,7 +139,9 @@ def load_encourage(essay_id: str) -> dict[str, Any] | None:
         }
     own = data.get("own")
     if isinstance(own, dict):
-        record["own"] = {key: True for key, value in own.items() if key in _PROMPTS and value is True}
+        record["own"] = {
+            key: True for key, value in own.items() if key in _PROMPTS and value is True
+        }
     return record
 
 
@@ -254,7 +256,9 @@ def _research_locks(essay_id: str) -> list[str]:
 def _materials(essay_id: str, plan_text: str) -> tuple[list[str], list[str], list[str]]:
 
     plan_sections, plan_examples, plan_locks = _collect(plan_text)
-    brief_sections, brief_examples, brief_locks = _collect(essay_textutil.module_brief_text(essay_id))
+    brief_sections, brief_examples, brief_locks = _collect(
+        essay_textutil.module_brief_text(essay_id)
+    )
     sections = _dedupe(plan_sections + brief_sections)
     examples = _dedupe(plan_examples + brief_examples)
     locks = _dedupe(plan_locks + brief_locks + _research_locks(essay_id))

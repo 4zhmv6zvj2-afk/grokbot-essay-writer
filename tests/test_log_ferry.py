@@ -149,8 +149,7 @@ def test_ac2_zip_contents_are_complete_not_a_truncated_stub(workspace, monkeypat
     """AC2. Zip members are the whole logs. A write clipped at the paste ceiling is refused."""
     monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
     line = (
-        b"ferry-pad essay_id=MOD1004AA-1 "
-        b"pack_path=Essay-writer/MOD1004AA/sequences/1/pack.json\n"
+        b"ferry-pad essay_id=MOD1004AA-1 pack_path=Essay-writer/MOD1004AA/sequences/1/pack.json\n"
     )
     blob = HEAD + (line * 800) + TAIL
     assert len(blob) > CHAT_PASTE_CEILING
@@ -361,7 +360,9 @@ def test_ac5_mid_office_export_zip_opens_both_logs(workspace, monkeypatch):
         assert cursor_shell()["handlers"]["essay.debug.export"] is essay_debug_export
         assert front_office()["handlers"]["essay.debug.export"] is essay_debug_export
         build_src = (REPO / "src" / "essay_writer" / "build_office.py").read_text(encoding="utf-8")
-        cursor_src = (REPO / "src" / "essay_writer" / "cursor_office.py").read_text(encoding="utf-8")
+        cursor_src = (REPO / "src" / "essay_writer" / "cursor_office.py").read_text(
+            encoding="utf-8"
+        )
         assert "def essay_debug_export" not in build_src
         assert "def essay_debug_export" not in cursor_src
     finally:

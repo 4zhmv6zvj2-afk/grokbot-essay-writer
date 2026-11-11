@@ -88,19 +88,32 @@ def test_ac1_confirm_is_a_clickable_card_and_typed_yes_saves(workspace):
     look2 = _look(seq2)
     draft2 = essay_stage(seq2, "1", "draft", look2)
     refused = essay_stage(
-        seq2, "1", "confirm", look2, cardAction="yes", cardDigest=draft2["digest"],
+        seq2,
+        "1",
+        "confirm",
+        look2,
+        cardAction="yes",
+        cardDigest=draft2["digest"],
     )
     assert refused["refused"] == "confirm-card"
     assert load_pointer(seq2)["saved"] == []
 
     mismatch = essay_stage(
-        seq2, "1", "confirm", cardAction="confirm", cardDigest="not-the-card",
+        seq2,
+        "1",
+        "confirm",
+        cardAction="confirm",
+        cardDigest="not-the-card",
     )
     assert mismatch["refused"] == "confirm-card"
     assert load_pointer(seq2)["saved"] == []
 
     held = essay_stage(
-        seq2, "1", "confirm", cardAction="not_yet", cardDigest=draft2["digest"],
+        seq2,
+        "1",
+        "confirm",
+        cardAction="not_yet",
+        cardDigest=draft2["digest"],
     )
     assert held["refused"] == "confirm-card"
     assert load_pointer(seq2)["saved"] == []
@@ -153,7 +166,9 @@ def test_ac2_rest_of_basics_walk_before_confirm(workspace):
             assert bullet not in speech
             assert bullet not in "\n".join(draft["basics_pass"])
         assert "Walk this Basics checklist" not in speech
-        typed = essay_stage(seq, stage, "confirm", "yes", cardAction="yes", cardDigest=draft["digest"])
+        typed = essay_stage(
+            seq, stage, "confirm", "yes", cardAction="yes", cardDigest=draft["digest"]
+        )
         assert typed["refused"] == "confirm-card"
         assert stage not in load_pointer(seq)["saved"]
         assert "Status: draft" in _tracking(seq, stage)

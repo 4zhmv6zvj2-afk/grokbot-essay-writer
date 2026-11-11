@@ -147,10 +147,7 @@ def _cover(path: Path) -> list[str]:
 
 
 def _stable(lines: list[str]) -> str:
-    shown = [
-        "Counted words:" if line.startswith("Counted words:") else line
-        for line in lines
-    ]
+    shown = ["Counted words:" if line.startswith("Counted words:") else line for line in lines]
     return "\n".join(shown)
 
 

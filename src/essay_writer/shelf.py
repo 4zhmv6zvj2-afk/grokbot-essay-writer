@@ -79,7 +79,11 @@ def essay_shelf_put(
         return refuse("pack", "pack must be an object")
     if pack_id is not None and _clean_id(pack_id) is None:
         return refuse("shelf", "pack_id has characters the local shelf will not store")
-    if isinstance(topic, str) and topic.strip() and topic.strip() != str(pack.get("title", "")).strip():
+    if (
+        isinstance(topic, str)
+        and topic.strip()
+        and topic.strip() != str(pack.get("title", "")).strip()
+    ):
         return refuse("shelf", "topic does not match the pack title. Confirm one title, not two.")
     report = inspect_pack(essay_id, pack)
     hard = [item for item in report["blockers"] if item["code"] in {"invent-forbid", "cross-essay"}]
@@ -194,7 +198,9 @@ def essay_shelf_get(
     }
     if confirmPhase == DRAFT:
         body["digest"] = save_draft(essay_id, GET, payload, fingerprint)
-        body["next"] = say("The draft shows the label only. Saying yes with the same pack_id returns it.")
+        body["next"] = say(
+            "The draft shows the label only. Saying yes with the same pack_id returns it."
+        )
         return body
     ready = confirm_ready(essay_id, GET, payload, fingerprint)
     if ready.get("ok") is False:

@@ -98,7 +98,9 @@ def _qin_source(**extra):
     return row
 
 
-def _diary_pack(seq: str, *, references_markdown: str | None = None, body: str | None = None) -> dict:
+def _diary_pack(
+    seq: str, *, references_markdown: str | None = None, body: str | None = None
+) -> dict:
     pack = {
         "essay_id": seq,
         "title": "Individual reflective diary",
@@ -166,7 +168,9 @@ def test_ac1_stage10_word_references_match_markdown(workspace, monkeypatch, tmp_
     remember_registration(seq, NUMBER)
     source = _qin_source(annotation=GOOD)
     essay_research_summary(seq, TOPIC, "draft", [source])
-    saved = essay_research_summary(seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    saved = essay_research_summary(
+        seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert saved["ok"] is True, saved
     pack = _diary_pack(seq, references_markdown=MARKDOWN)
     pack["sources"] = [source]
@@ -187,7 +191,9 @@ def test_ac2_stage10_close_refuses_empty_or_unmatched_references(workspace, monk
     seq = open_sequence(MODULE)
     remember_registration(seq, NUMBER)
     _park_stage10(seq)
-    _plant_stage10_pack(seq, _diary_pack(seq, body="A decision, with theory, on the practice the brief names."))
+    _plant_stage10_pack(
+        seq, _diary_pack(seq, body="A decision, with theory, on the practice the brief names.")
+    )
 
     draft = essay_stage(seq, "10", "draft", LOOK)
     assert draft["ok"] is True, draft
@@ -312,15 +318,9 @@ def test_ac4_basics_4a_confirm_stage10_word_journey(workspace, monkeypatch, tmp_
     assert refs == _markdown_lines()
 
 
-SAVED_QUESTION_TITLE = (
-    "Smith, J. (2020) Is the strait safe? Bristol: Harbour Press."
-)
-SAVED_ABBREVIATION_TITLE = (
-    "Smith, J. (2020) U.S. maritime policy. Bristol: Harbour Press."
-)
-SAVED_JOURNAL_LINE = (
-    "Smith, J. (2020) 'Chokepoints and crude', Maritime Policy, 12(3), pp. 4-9."
-)
+SAVED_QUESTION_TITLE = "Smith, J. (2020) Is the strait safe? Bristol: Harbour Press."
+SAVED_ABBREVIATION_TITLE = "Smith, J. (2020) U.S. maritime policy. Bristol: Harbour Press."
+SAVED_JOURNAL_LINE = "Smith, J. (2020) 'Chokepoints and crude', Maritime Policy, 12(3), pp. 4-9."
 
 
 def _saved_runs(line: str) -> list[tuple[str, bool]]:
@@ -372,9 +372,7 @@ def test_ac5_saved_title_italic_span_stops_at_the_title_end(workspace, tmp_path)
         target,
     )
     paragraphs = [
-        paragraph
-        for paragraph in Document(str(target)).paragraphs
-        if paragraph.text.strip()
+        paragraph for paragraph in Document(str(target)).paragraphs if paragraph.text.strip()
     ]
     printed = {paragraph.text.strip(): paragraph for paragraph in paragraphs}
     assert SAVED_QUESTION_TITLE in printed
@@ -420,13 +418,17 @@ def test_ac7_cite_year_has_to_sit_with_its_name_in_the_list(workspace):
     assert gaps("Smith (2020) writes.") == []
 
     two = "Smith, J. and Jones, K. (2020) 'Joint work', Practice, 1, pp. 1-2."
-    assert cite_reference_gaps(
-        [two], [{"heading": "Body", "body": "Both agree (Smith and Jones, 2020)."}]
-    ) == []
+    assert (
+        cite_reference_gaps(
+            [two], [{"heading": "Body", "body": "Both agree (Smith and Jones, 2020)."}]
+        )
+        == []
+    )
     lettered = "Smith, J. (2020a) 'First', Practice, 1, pp. 1-2."
-    assert cite_reference_gaps(
-        [lettered], [{"heading": "Body", "body": "One point (Smith, 2020a)."}]
-    ) == []
+    assert (
+        cite_reference_gaps([lettered], [{"heading": "Body", "body": "One point (Smith, 2020a)."}])
+        == []
+    )
 
 
 def test_ac8_withheld_line_is_matched_on_the_family_name(workspace):
@@ -468,7 +470,6 @@ def test_ac9_a_cite_with_a_page_still_needs_its_reference_line(workspace):
     assert gaps("Two points (Patel, 2019, p. 4; Smith, 2020, p. 5).") == ["(patel, 2019)"]
 
 
-
 def test_ac10_a_narrative_et_al_cite_needs_its_reference_line(workspace):
     """AC10. `Smith et al. (2020)` is read as the same author-date pair."""
     from essay_writer.word_references import cite_reference_gaps
@@ -478,9 +479,12 @@ def test_ac10_a_narrative_et_al_cite_needs_its_reference_line(workspace):
         [line], [{"heading": "Body", "body": "Smith et al. (2020) argue this."}]
     ) == ["(smith, 2020)"]
     smith = "Smith, J., Lee, C., Patel, A., and Wu, B. (2020) 'Team', Practice, 2, pp. 3-4."
-    assert cite_reference_gaps(
-        [smith], [{"heading": "Body", "body": "Smith et al. (2020) argue this."}]
-    ) == []
+    assert (
+        cite_reference_gaps(
+            [smith], [{"heading": "Body", "body": "Smith et al. (2020) argue this."}]
+        )
+        == []
+    )
 
 
 JOINT_CITE_LINE = "Smith, J., Jones, A. and Brown, B. (2020) 'Team work', Practice, 2, pp. 3-4."
@@ -504,8 +508,7 @@ def test_ac11_a_joint_cite_is_read_on_its_first_named_author(workspace):
 
 
 SAVED_ABBREVIATION_JOURNAL = (
-    "Smith, J. (2021) 'Article title', Journal of A.I. Research. "
-    "Available at: doi:10.1/example"
+    "Smith, J. (2021) 'Article title', Journal of A.I. Research. Available at: doi:10.1/example"
 )
 
 
@@ -564,6 +567,7 @@ def test_ac14_a_curly_apostrophe_is_the_same_name(workspace):
     assert gaps([CURLY_LINE], "The point (O'Brien, 2019) stands.") == ["(o'brien, 2019)"]
     assert gaps([CURLY_LINE], "The point (Brown, 2020) stands.") == ["(brown, 2020)"]
 
+
 def test_ac15_a_name_in_a_title_is_not_the_entry_author(workspace):
     """AC15. A surname printed in a title does not cover that citation."""
     from essay_writer.word_references import cite_reference_gaps
@@ -576,4 +580,3 @@ def test_ac15_a_name_in_a_title_is_not_the_entry_author(workspace):
     assert gaps([title_name], "The point (Jones, 2020) stands.") == []
     own = "Smith, J. (2020) 'Own work', Practice, 1, pp. 1-2."
     assert gaps([own], "The point (Smith, 2020) stands.") == []
-

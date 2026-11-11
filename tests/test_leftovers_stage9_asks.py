@@ -73,7 +73,9 @@ def _ready(workspace) -> str:
     (folder / "mark-scheme.md").write_text(TABLE, encoding="utf-8")
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     return seq
@@ -123,7 +125,11 @@ def test_ac2_top_band_rows_still_mark_format_and_citations_skip(workspace):
     _docx(path, [LOWER])
     refused = essay_review(seq, "9", "PASS", "draft", constitution=CONSTITUTION)
     assert refused["ok"] is False
-    assert refused.get("top_band", {}).get("missed") == ["argument", "evidence", "critical thinking"]
+    assert refused.get("top_band", {}).get("missed") == [
+        "argument",
+        "evidence",
+        "critical thinking",
+    ]
     assert "format" not in refused["reason"].casefold()
     assert "citation" not in refused["reason"].casefold()
 

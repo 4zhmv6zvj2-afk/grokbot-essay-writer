@@ -26,6 +26,5 @@ def test_no_pytest_env_branch_under_src():
     hits = _hits()
     assert not hits, (
         f"{TOKEN} must not appear under src/essay_writer. "
-        "Inject the opener or pass an explicit policy instead:\n"
-        + "\n".join(hits)
+        "Inject the opener or pass an explicit policy instead:\n" + "\n".join(hits)
     )

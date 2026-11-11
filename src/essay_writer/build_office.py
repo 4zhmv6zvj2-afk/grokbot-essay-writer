@@ -286,7 +286,9 @@ def build_deliverable_handoff(source: Path, *, mac_dir: Path | None = None) -> d
         result["residual_ids"] = ids
         extra = " ".join(notes)
         prior = result.get("residual")
-        result["residual"] = f"{prior} {extra}".strip() if isinstance(prior, str) and prior else extra
+        result["residual"] = (
+            f"{prior} {extra}".strip() if isinstance(prior, str) and prior else extra
+        )
         return result
 
     result = dict(copy_deliverable_to_mac(source, mac_dir=mac_dir))

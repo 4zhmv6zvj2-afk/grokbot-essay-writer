@@ -45,7 +45,9 @@ def test_ac1_default_install_attach_includes_essay_reviewer(tmp_path, monkeypatc
 
     source = tmp_path / "tree"
     source.mkdir()
-    (source / "pyproject.toml").write_text('[project]\nname = "essay-writer"\nversion = "0.1.0"\n', encoding="utf-8")
+    (source / "pyproject.toml").write_text(
+        '[project]\nname = "essay-writer"\nversion = "0.1.0"\n', encoding="utf-8"
+    )
     (source / "requirements-runtime.txt").write_text(
         "mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n", encoding="utf-8"
     )
@@ -98,7 +100,9 @@ def test_remember_mac_handoff_dir_uses_setup_secrets(tmp_path, monkeypatch):
     folder = tmp_path / "Documents" / "Essay Bot"
     remembered = remember_mac_handoff_dir(folder)
     assert remembered["ok"] is True
-    assert recommended_mac_handoff_dir() is None or recommended_mac_handoff_dir().name == "Essay Bot"
+    assert (
+        recommended_mac_handoff_dir() is None or recommended_mac_handoff_dir().name == "Essay Bot"
+    )
     secret = cloud / "Essay-writer" / "setup.secrets.json"
     assert secret.is_file()
     data = json.loads(secret.read_text(encoding="utf-8"))

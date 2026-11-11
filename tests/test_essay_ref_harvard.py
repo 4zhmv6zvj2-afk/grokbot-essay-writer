@@ -43,7 +43,9 @@ def _escape(text: str) -> str:
 
 def _pdf(text: str) -> bytes:
     stream = f"BT /F1 12 Tf 72 720 Td ({_escape(text)}) Tj ET".encode()
-    content = b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
+    content = (
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
+    )
     objects = {
         1: b"<< /Type /Catalog /Pages 2 0 R >>",
         2: b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -127,14 +129,17 @@ def _write(seq: str, path, sources: list, *, markdown: str | None = None) -> Non
 
 
 def _paragraph(path, needle: str):
-    return next(paragraph for paragraph in Document(str(path)).paragraphs if needle in paragraph.text)
+    return next(
+        paragraph for paragraph in Document(str(path)).paragraphs if needle in paragraph.text
+    )
 
 
 def _italic_journal(path, journal: str, *, marker: str | None = None) -> list[str]:
     paragraph = _paragraph(path, marker or journal)
     assert len(paragraph.runs) > 1
     assert not any(
-        not run.italic and (run.text or "").strip() == paragraph.text.strip() for run in paragraph.runs
+        not run.italic and (run.text or "").strip() == paragraph.text.strip()
+        for run in paragraph.runs
     )
     return [run.text for run in paragraph.runs if run.italic and (run.text or "") == journal]
 

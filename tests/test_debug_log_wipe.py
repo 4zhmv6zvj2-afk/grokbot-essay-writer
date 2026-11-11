@@ -89,7 +89,10 @@ def test_refused_speech_does_not_touch_the_logs(workspace, monkeypatch):
 
 
 def test_cursor_and_grok_build_share_the_wipe_handler():
-    assert cursor_shell()["handlers"]["essay.debug.wipe"] is front_office()["handlers"]["essay.debug.wipe"]
+    assert (
+        cursor_shell()["handlers"]["essay.debug.wipe"]
+        is front_office()["handlers"]["essay.debug.wipe"]
+    )
     assert cursor_shell()["handlers"]["essay.debug.wipe"] is HANDLERS["essay.debug.wipe"]
     assert cursor_shell()["handlers"]["essay.debug.wipe"] is essay_debug_wipe
 

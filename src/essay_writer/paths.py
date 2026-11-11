@@ -302,10 +302,13 @@ def read_last_saved(module: str) -> int | None:
 def write_last_saved(module: str, number: int) -> None:
     path = last_saved_path(module)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(
-        {"sequence": number, "sequence_id": f"{module}-{number}"},
-        indent=2,
-    ) + "\n"
+    payload = (
+        json.dumps(
+            {"sequence": number, "sequence_id": f"{module}-{number}"},
+            indent=2,
+        )
+        + "\n"
+    )
     temporary = path.with_suffix(".json.tmp")
     temporary.write_text(payload, encoding="utf-8")
     os.replace(temporary, path)
@@ -415,7 +418,9 @@ def local_pack_index() -> list[dict[str, str]]:
     found: list[dict[str, str]] = []
     if not root.is_dir():
         return found
-    for essay in sorted(path for path in root.iterdir() if path.is_dir() and ESSAY_ID.fullmatch(path.name)):
+    for essay in sorted(
+        path for path in root.iterdir() if path.is_dir() and ESSAY_ID.fullmatch(path.name)
+    ):
         if (essay / "archived.json").is_file():
             continue
         kb1 = essay / "kb1"
@@ -464,7 +469,9 @@ def student_chat_path(raw: object) -> str:
         return text
     try:
         expanded = Path(text).expanduser()
-        resolved = expanded.resolve() if expanded.is_absolute() or text.startswith("~") else expanded
+        resolved = (
+            expanded.resolve() if expanded.is_absolute() or text.startswith("~") else expanded
+        )
     except OSError:
         resolved = Path(text).expanduser()
     if _refuse_internal_volume(resolved):
@@ -527,7 +534,9 @@ def locator_target(essay_id: str, locator: str) -> tuple[str, Path | None]:
     if "samples-study" in lowered or lowered.startswith("docs/"):
         raise ValueError("sample-reference")
     if len(parts) < 3 or parts[0] not in {"uploads", "Essay-writer", "kb1"}:
-        raise ValueError("locator must start with uploads/, Essay-writer/, or kb1/ for this essay id")
+        raise ValueError(
+            "locator must start with uploads/, Essay-writer/, or kb1/ for this essay id"
+        )
     if parts[1] != module_code(essay_id):
         raise ValueError("cross-essay")
     if parts[0] == "uploads":
@@ -541,7 +550,9 @@ def locator_target(essay_id: str, locator: str) -> tuple[str, Path | None]:
         return "kb1-file", confine(essay_dir(essay_id) / "kb1", "/".join(parts[3:]))
     filename = parts[-1].lower()
     if filename not in BRIEF_NAMES or len(parts) != 3:
-        raise ValueError("Essay-writer locators can only be the brief or a kb1 markdown note for this essay")
+        raise ValueError(
+            "Essay-writer locators can only be the brief or a kb1 markdown note for this essay"
+        )
     if parts[2] in {"state.json"}:
         raise ValueError("that file is not a source")
     return "brief", confine(essay_dir(essay_id), parts[2])

@@ -88,9 +88,7 @@ def test_ac3_stage1_gate_accepts_title_and_assignment_ask(workspace):
     """Title or assignment ask is the question. The brief file is not rewritten."""
     assert _question_of("The corridor is the topic of this unlabeled brief.\n") is None
     assert (
-        _question_of(
-            "Title: Weekly notes\nQuestion: How do chokepoints constrain the corridor?\n"
-        )
+        _question_of("Title: Weekly notes\nQuestion: How do chokepoints constrain the corridor?\n")
         == "How do chokepoints constrain the corridor?"
     )
 
@@ -185,7 +183,9 @@ def test_ac4_plan_revisit_cites_the_opened_year_only(workspace):
     assert cite_look(seq, f"The plan still holds. {gloss} shows the risk.") == (
         "The plan still holds. Hasan and Sarker (2023) shows the risk."
     )
-    assert cite_look(seq, "(Hasan and Sarker, 2025... treated as 2023)") == "(Hasan and Sarker, 2023)"
+    assert (
+        cite_look(seq, "(Hasan and Sarker, 2025... treated as 2023)") == "(Hasan and Sarker, 2023)"
+    )
     assert "treated as" not in cite_look(seq, gloss).casefold()
 
     look = f"The plan still holds. {gloss} shows the corridor risk."

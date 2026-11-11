@@ -82,7 +82,9 @@ def _confirm(workspace, annotation: str):
     row = _journal(annotation=annotation)
     draft = essay_research_summary(seq, TOPIC, "draft", [row])
     assert draft["ok"] is True, draft
-    saved = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    saved = essay_research_summary(
+        seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert saved["ok"] is True, saved
     return seq, saved
 
@@ -130,15 +132,17 @@ def test_ac2_citation_line_unchanged(workspace):
     seq, _saved = _confirm(workspace, GOOD)
     path = _annotation(workspace, seq)
     document = Document(str(path))
-    citation = next(paragraph for paragraph in document.paragraphs if "Maritime Policy" in paragraph.text)
+    citation = next(
+        paragraph for paragraph in document.paragraphs if "Maritime Policy" in paragraph.text
+    )
     assert citation.text == CITATION
     italic = [
-        run.text
-        for run in citation.runs
-        if run.italic and "Maritime Policy" in (run.text or "")
+        run.text for run in citation.runs if run.italic and "Maritime Policy" in (run.text or "")
     ]
     assert italic == ["Maritime Policy"]
-    body = next(paragraph for paragraph in document.paragraphs if "helps this assignment" in paragraph.text)
+    body = next(
+        paragraph for paragraph in document.paragraphs if "helps this assignment" in paragraph.text
+    )
     assert CITATION not in body.text
     assert harvard_4a_line(source) == CITATION
 
@@ -208,8 +212,12 @@ def test_ac4_build_covered_shared_annotation_path():
     assert ANNOTATION_SENTENCES in rules
     assert FOUR_A_FORMAT in rules
     assert HANDLERS["essay.research.summary"] is essay_research_summary
-    assert cursor_shell()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]
-    assert front_office()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]
+    assert (
+        cursor_shell()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]
+    )
+    assert (
+        front_office()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]
+    )
     assert researcher.ship_4a is ship_4a
     assert "write_annotation_docx" in inspect.getsource(ship_4a)
     assert "deliver_saved_sources" in inspect.getsource(write_stage_deliverables)

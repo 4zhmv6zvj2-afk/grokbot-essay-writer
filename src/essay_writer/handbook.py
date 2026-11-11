@@ -28,12 +28,16 @@ def read_handbook(path: Path | None = None) -> dict[str, object]:
         "csl_reason": "No checked CSL file is named in the handbook.",
     }
     if not target.is_file():
-        record["csl_reason"] = "The handbook file is not on disk. EndNote and CSL were not taken from memory."
+        record["csl_reason"] = (
+            "The handbook file is not on disk. EndNote and CSL were not taken from memory."
+        )
         return record
     try:
         text = target.read_text(encoding="utf-8")
     except OSError:
-        record["csl_reason"] = "The handbook file could not be read. EndNote and CSL were not taken from memory."
+        record["csl_reason"] = (
+            "The handbook file could not be read. EndNote and CSL were not taken from memory."
+        )
         return record
     record["checked"] = True
     endnote = _ENDNOTE.search(text)
@@ -41,7 +45,9 @@ def read_handbook(path: Path | None = None) -> dict[str, object]:
         name = endnote.group(1).strip()
         record["endnote"] = name or None
     else:
-        record["csl_reason"] = "The handbook file does not name an EndNote style. None was invented."
+        record["csl_reason"] = (
+            "The handbook file does not name an EndNote style. None was invented."
+        )
     named = _CSL.search(text)
     if named is None:
         return record

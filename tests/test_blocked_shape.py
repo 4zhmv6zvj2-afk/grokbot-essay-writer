@@ -129,8 +129,7 @@ def test_brief_named_database_and_student_file_slot(workspace):
     folder = workspace / "Essay-writer" / ESSAY
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "brief.md").write_text(
-        "Databases: Statista, Lloyd's List, and Clarksons.\n"
-        "The library list also names scopus.\n",
+        "Databases: Statista, Lloyd's List, and Clarksons.\nThe library list also names scopus.\n",
         encoding="utf-8",
     )
     assert names_from_brief((folder / "brief.md").read_text(encoding="utf-8")) == [
@@ -148,9 +147,9 @@ def test_brief_named_database_and_student_file_slot(workspace):
     assert remembered["held_file"] == "statista.csv"
     assert remembered["path_stored"] is False
     stored = json.loads(
-        (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "tracking" / "databases.json").read_text(
-            encoding="utf-8"
-        )
+        (
+            workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "tracking" / "databases.json"
+        ).read_text(encoding="utf-8")
     )
     dumped = json.dumps(stored)
     assert "ResearchDrive" not in dumped
@@ -268,7 +267,9 @@ def test_split_chain_shows_blocked_review_then_final_word(workspace, monkeypatch
     _write_docx(output, BEFORE + " Smith (2020) supports the corridor.")
     essay_stage(seq, "7", "draft", "Kept.")
     web = {"currency": True, "clarity": True}
-    edited = essay_stage(seq, "7", "draft", "Kept.", answers="Use 2023 and one site.", edited=AFTER, webCheck=web)
+    edited = essay_stage(
+        seq, "7", "draft", "Kept.", answers="Use 2023 and one site.", edited=AFTER, webCheck=web
+    )
     saved7 = essay_stage(
         seq,
         "7",
@@ -324,7 +325,9 @@ def test_split_chain_shows_blocked_review_then_final_word(workspace, monkeypatch
     assert (folder / f"{ESSAY}-final.docx").is_file()
     assert (folder / f"{ESSAY}-comments.docx").is_file()
     assert f"{seq}.docx" != f"{ESSAY}-final.docx"
-    comments = "\n".join(paragraph.text for paragraph in Document(str(folder / f"{ESSAY}-comments.docx")).paragraphs)
+    comments = "\n".join(
+        paragraph.text for paragraph in Document(str(folder / f"{ESSAY}-comments.docx")).paragraphs
+    )
     assert "independent review" in comments.casefold()
     assert "2024" in comments or "sample year" in comments
 
@@ -341,7 +344,9 @@ def test_word_save_rewrites_sequence_draft_note(workspace):
     )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     payload = pack()
     essay_pack_validate(seq, payload, "draft")
     essay_pack_validate(seq, payload, "confirm")
@@ -375,7 +380,9 @@ def test_word_save_rewrites_sequence_draft_note(workspace):
     note.write_text("stale\n", encoding="utf-8")
     essay_pack_render_word(seq, payload, "draft", stage="9")
     written9 = essay_pack_render_word(seq, payload, "confirm", stage="9")
-    assert written9["wrote"] is True, {key: written9.get(key) for key in ("refused", "reason", "eqr", "ok")}
+    assert written9["wrote"] is True, {
+        key: written9.get(key) for key in ("refused", "reason", "eqr", "ok")
+    }
     assert written9["draft_note_rewritten"] is True
     assert "stale" not in note.read_text(encoding="utf-8")
     assert "first-draft.md" not in written9["next"]

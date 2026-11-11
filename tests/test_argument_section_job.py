@@ -50,11 +50,7 @@ def test_ac3_a_pack_with_only_fixed_job_sections_is_left_alone():
     assert _append_target(INTRO_ONLY) == 0
     assert _append_target([]) is None
     source = (
-        Path(__file__).resolve().parents[1]
-        / "src"
-        / "essay_writer"
-        / "specialists"
-        / "writer.py"
+        Path(__file__).resolve().parents[1] / "src" / "essay_writer" / "specialists" / "writer.py"
     ).read_text(encoding="utf-8")
     for heading in ("methodology", "methods", "recommendations", "executive summary"):
         assert f'"{heading}"' in source

@@ -230,9 +230,7 @@ def test_blank_registration_does_not_record_the_final(workspace):
         "conclusion": "noted",
         "registration_number": "   ",
         "references_markdown": ALDEN_LINE,
-        "sections": [
-            {"heading": "Notes", "body": "The corridor depends on a narrow strait."}
-        ],
+        "sections": [{"heading": "Notes", "body": "The corridor depends on a narrow strait."}],
     }
     _save(seq, pack)
     source = work_dir(seq) / "output" / f"{seq}.docx"
@@ -262,9 +260,7 @@ def test_unmounted_documents_is_not_created(workspace):
         "conclusion": "noted",
         "word_count_acknowledged": True,
         "references_markdown": ALDEN_LINE,
-        "sections": [
-            {"heading": "Notes", "body": "The corridor depends on a narrow strait."}
-        ],
+        "sections": [{"heading": "Notes", "body": "The corridor depends on a narrow strait."}],
     }
     _save(seq, pack)
     missing = workspace / "Documents"
@@ -279,9 +275,7 @@ def test_diary_column_keeps_the_printed_name(workspace):
     """The quote uses the column header printed on the diary table."""
     del workspace
     table = (
-        "| Clarity of the decisions | 70 + |\n"
-        "| --- | --- |\n"
-        "| Reflection | exact and evidenced |\n"
+        "| Clarity of the decisions | 70 + |\n| --- | --- |\n| Reflection | exact and evidenced |\n"
     )
     quoted = top_column_quote(table, "70+")
     assert quoted.startswith("70 +")
@@ -304,9 +298,7 @@ def test_rewritten_sequence_file_refreshes_the_final(workspace):
         "referencing": "harvard",
         "conclusion": "noted",
         "references_markdown": ALDEN_LINE,
-        "sections": [
-            {"heading": "Notes", "body": "The corridor depends on a narrow strait."}
-        ],
+        "sections": [{"heading": "Notes", "body": "The corridor depends on a narrow strait."}],
     }
     _save(seq, pack)
     source = work_dir(seq) / "output" / f"{seq}.docx"
@@ -338,9 +330,7 @@ def test_empty_footer_does_not_record_the_sequence_final(workspace, monkeypatch)
         "referencing": "harvard",
         "conclusion": "noted",
         "references_markdown": ALDEN_LINE,
-        "sections": [
-            {"heading": "Notes", "body": "The corridor depends on a narrow strait."}
-        ],
+        "sections": [{"heading": "Notes", "body": "The corridor depends on a narrow strait."}],
     }
     _save(seq, pack)
     source = work_dir(seq) / "output" / f"{seq}.docx"

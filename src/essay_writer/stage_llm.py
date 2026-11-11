@@ -277,8 +277,6 @@ def all_stage_settings() -> dict[str, dict[str, Any]]:
     return {stage: stage_settings(stage) for stage in STAGE_KEYS}
 
 
-
-
 def stage_llm_note() -> str:
     return text("front_office/briefing.md", "stage_llm_note")
 
@@ -298,8 +296,6 @@ def eqr_llm_note() -> str:
         "Apply these reviewer instructions as rules. Follow every line.\n"
         f"{item['rules']}"
     )
-
-
 
 
 def stage_tool_description() -> str:
@@ -330,10 +326,7 @@ def stage_rules_briefing() -> str:
         item = stage_settings(stage)
         following = item["next_stage"]
         if following:
-            hop = (
-                f"Next stage after the approved save: {following} — "
-                f"{item['next_stage_title']}."
-            )
+            hop = f"Next stage after the approved save: {following} — {item['next_stage_title']}."
         else:
             hop = "No next stage. The tool does not submit."
         chunks.append(

@@ -130,7 +130,13 @@ def test_ac2_findings_first_section_is_north_star(workspace, monkeypatch, tmp_pa
     from essay_writer.research import essay_research_summary
 
     essay_research_summary(seq, "chokepoints", "draft", [source()])
-    essay_research_summary(seq, "chokepoints", "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        "chokepoints",
+        "confirm",
+        [source()],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     body = pack()
     assert essay_pack_validate(seq, body, "draft")["ok"] is True
     assert essay_pack_validate(seq, body, "confirm")["stored"] is True
@@ -140,9 +146,7 @@ def test_ac2_findings_first_section_is_north_star(workspace, monkeypatch, tmp_pa
     assert writer["stored"] is not True
 
     state = load_state(seq)
-    state["eqr"] = {
-        "6": {"verdict": "PASS", "seat": "reviewer", "stage": "6", "findings": ""}
-    }
+    state["eqr"] = {"6": {"verdict": "PASS", "seat": "reviewer", "stage": "6", "findings": ""}}
     save_state(seq, state)
     assert findings_note_clears("") is False
     assert findings_note_clears("North-star judgement\n") is False
@@ -186,7 +190,11 @@ def test_ac2_findings_first_section_is_north_star(workspace, monkeypatch, tmp_pa
     assert eqr_verdict(seq, "9") == "PASS"
     note = documents / ESSAY / f"{ESSAY}-findings.docx"
     assert note.is_file()
-    texts = [paragraph.text.strip() for paragraph in Document(str(note)).paragraphs if paragraph.text.strip()]
+    texts = [
+        paragraph.text.strip()
+        for paragraph in Document(str(note)).paragraphs
+        if paragraph.text.strip()
+    ]
     assert texts[0] == "Findings"
     assert texts[1] == NORTH_STAR
     assert texts[2].strip()
@@ -208,11 +216,7 @@ def test_ac3_stage5_argument_not_paper_digest(workspace):
     write_upload(
         workspace,
         OTHER,
-        text=(
-            "Smith, J. (2020) Chokepoints and crude.\n"
-            f"{QUOTE}\n"
-            "Publish the recycling figure.\n"
-        ),
+        text=(f"Smith, J. (2020) Chokepoints and crude.\n{QUOTE}\nPublish the recycling figure.\n"),
     )
     _brief(OTHER, f"Genre: report\nQuestion: {OTHER_QUESTION}\n")
     scheme = essay_dir(OTHER) / "mark-scheme.md"
@@ -233,7 +237,13 @@ def test_ac3_stage5_argument_not_paper_digest(workspace):
     from essay_writer.research import essay_research_summary
 
     essay_research_summary(seq, "recycling", "draft", [source(OTHER)])
-    essay_research_summary(seq, "recycling", "confirm", [source(OTHER)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        "recycling",
+        "confirm",
+        [source(OTHER)],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
 
     def reviewed(**extra):
         body = pack(OTHER)

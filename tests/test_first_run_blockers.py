@@ -23,15 +23,18 @@ from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 
 MODULE = "RPT6001AA"
-BRIEF = "\n".join(
-    [
-        "Genre: report",
-        "Database: council published spreadsheet",
-        "Word count: 800 words (720 to 880).",
-        "In-text citations count.",
-        "A public annual report should include the recycling figure an opened source states.",
-    ]
-) + "\n"
+BRIEF = (
+    "\n".join(
+        [
+            "Genre: report",
+            "Database: council published spreadsheet",
+            "Word count: 800 words (720 to 880).",
+            "In-text citations count.",
+            "A public annual report should include the recycling figure an opened source states.",
+        ]
+    )
+    + "\n"
+)
 
 
 def _gate(report: dict, number: int) -> dict:
@@ -65,8 +68,10 @@ def test_mcp_command_is_absolute_when_the_bare_name_is_off_path(tmp_path, monkey
 
     project = tmp_path / "project"
     project.mkdir()
+
     def enable(name):
         return {"identifier": name, "enabled": False}
+
     cursor = attach_custom_mcp(project, enable=enable, include_user=False)
     assert cursor["ok"] is True
     written = json.loads((project / ".cursor" / "mcp.json").read_text(encoding="utf-8"))
@@ -172,7 +177,8 @@ def test_brief_genre_and_word_band_set_one_label_and_gates(workspace):
         seq,
         "2",
         "draft",
-        prefix + "\nPurpose is the recycling report. Scope is household figures an opened source states.",
+        prefix
+        + "\nPurpose is the recycling report. Scope is household figures an opened source states.",
     )
     assert stage_two["stage_title"] == "Establish purpose and scope"
     assert "Write an essay plan" not in stage_two["stage_title"]
@@ -180,7 +186,8 @@ def test_brief_genre_and_word_band_set_one_label_and_gates(workspace):
         seq,
         "2",
         "confirm",
-        prefix + "\nPurpose is the recycling report. Scope is household figures an opened source states.",
+        prefix
+        + "\nPurpose is the recycling report. Scope is household figures an opened source states.",
         **picked(stage_two),
     )
     stage_three = essay_stage(
@@ -215,12 +222,18 @@ def test_stage_4a_confirm_needs_sources_and_4b_does_not_invent_a_download_run(wo
         ("3", "The plan names the brief sections."),
     ):
         _save(seq, stage, look)
-    drafted = essay_stage(seq, "4a", "draft", "No source has been opened. The annotated list is empty.")
+    drafted = essay_stage(
+        seq, "4a", "draft", "No source has been opened. The annotated list is empty."
+    )
     assert drafted["ok"] is True
     folder = workspace / "Essay-writer" / MODULE / "sequences" / "1"
     assert not (folder / "download-run.json").exists()
     refused = essay_stage(
-        seq, "4a", "confirm", "No source has been opened. The annotated list is empty.", **picked(drafted)
+        seq,
+        "4a",
+        "confirm",
+        "No source has been opened. The annotated list is empty.",
+        **picked(drafted),
     )
     assert refused["ok"] is False
     assert refused.get("advanced") is False
@@ -342,7 +355,10 @@ def test_secret_card_speech_cites_the_provider_pages():
         assert "?email=YOUR_EMAIL" in text
         assert "problems with your scripts" in text
         assert "https://github.com/CrossRef/rest-api-doc/blob/master/README.md" in text
-        assert "https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md" in text
+        assert (
+            "https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md"
+            in text
+        )
         assert "Do not ask the user to edit a .env file." in text
         assert "LHS" not in text
         assert "never to email" in text
@@ -367,7 +383,9 @@ def test_secret_card_speech_cites_the_provider_pages():
 def workflow_text() -> str:
     from pathlib import Path
 
-    return (Path(__file__).resolve().parents[1] / "docs" / "workflow.md").read_text(encoding="utf-8")
+    return (Path(__file__).resolve().parents[1] / "docs" / "workflow.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, monkeypatch):
@@ -414,7 +432,13 @@ def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, 
     assert missing_plan["needs_consensus_plan"] is True
     assert key not in json.dumps(missing_plan)
 
-    for plan, flag in (("free", "0"), ("Pro", "1"), ("teams", "1"), ("Deep", "1"), ("enterprise", "1")):
+    for plan, flag in (
+        ("free", "0"),
+        ("Pro", "1"),
+        ("teams", "1"),
+        ("Deep", "1"),
+        ("enterprise", "1"),
+    ):
         essay_setup(
             app_path=str(app),
             kb1_path=str(kb1),
@@ -467,7 +491,10 @@ def test_free_pdf_lookup_uses_the_doi_endpoint_and_openalex_best_oa_location():
     assert "email=reader%40example.com" in url
     pdf = openalex_oa_url(
         {
-            "best_oa_location": {"pdf_url": "https://example.org/paper.pdf", "landing_page_url": "https://example.org/abs"},
+            "best_oa_location": {
+                "pdf_url": "https://example.org/paper.pdf",
+                "landing_page_url": "https://example.org/abs",
+            },
             "primary_location": {"landing_page_url": "https://example.org/primary"},
         }
     )

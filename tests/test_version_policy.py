@@ -32,9 +32,7 @@ def _job(workflow: str, name: str) -> str:
 
 
 def _matrix_versions(job: str) -> list[str]:
-    match = re.search(
-        r"(?m)^\s*matrix:\s*$\n(?:\s*#.*\n)*\s*python-version:\s*\[(.*?)\]", job
-    )
+    match = re.search(r"(?m)^\s*matrix:\s*$\n(?:\s*#.*\n)*\s*python-version:\s*\[(.*?)\]", job)
     assert match, "no Python matrix"
     return [item.strip().strip("\"'") for item in match.group(1).split(",")]
 

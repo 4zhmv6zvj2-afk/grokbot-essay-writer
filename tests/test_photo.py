@@ -36,7 +36,12 @@ def _chunk(tag: bytes, payload: bytes) -> bytes:
 def _png(width: int = 1, height: int = 1) -> bytes:
     header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
     rows = b"".join(b"\x00" + (b"\xff\x00\x00" * width) for _ in range(height))
-    return b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", header) + _chunk(b"IDAT", zlib.compress(rows)) + _chunk(b"IEND", b"")
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + _chunk(b"IHDR", header)
+        + _chunk(b"IDAT", zlib.compress(rows))
+        + _chunk(b"IEND", b"")
+    )
 
 
 def _jpeg(width: int = 1, height: int = 1) -> bytes:
@@ -209,4 +214,3 @@ def test_build_photo_vision_is_the_shared_helper(tmp_path, capsys):
     refused = json.loads(capsys.readouterr().out)
     assert refused["ok"] is False
     assert refused["source"] == SOURCE
-

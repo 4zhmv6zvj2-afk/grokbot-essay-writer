@@ -47,7 +47,11 @@ def _brief() -> None:
 
 
 def _paragraphs(path: Path) -> list[str]:
-    return [paragraph.text.strip() for paragraph in Document(str(path)).paragraphs if paragraph.text.strip()]
+    return [
+        paragraph.text.strip()
+        for paragraph in Document(str(path)).paragraphs
+        if paragraph.text.strip()
+    ]
 
 
 def _cover(path: Path) -> list[str]:
@@ -109,7 +113,9 @@ def _confirm_research(seq: str, body: dict) -> None:
     sources = body["sources"]
     draft = essay_research_summary(seq, TOPIC, "draft", sources)
     assert draft["ok"] is True, draft
-    essay_research_summary(seq, TOPIC, "confirm", sources, cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", sources, cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
 
 
 def test_ac1_report_stage10_cover_has_house_fields(workspace, monkeypatch, tmp_path):
@@ -236,9 +242,7 @@ def test_ac3_build_covered_on_shared_stage10_path():
     from essay_writer.late_chain import _stage10_manifest, _write_stage10_sequence
     from essay_writer.word import word_manifest
 
-    source = inspect.getsource(_stage10_manifest) + inspect.getsource(
-        _write_stage10_sequence
-    )
+    source = inspect.getsource(_stage10_manifest) + inspect.getsource(_write_stage10_sequence)
     assert "write_docx(" in source
     assert "word_manifest(" in source
     manifest = inspect.getsource(word_manifest)

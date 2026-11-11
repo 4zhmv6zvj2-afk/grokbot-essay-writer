@@ -33,7 +33,11 @@ def _writer_script_candidates() -> list[Path]:
     found: list[Path] = []
     for scheme in ("posix_user", "nt_user", None):
         try:
-            scripts = sysconfig.get_path("scripts") if scheme is None else sysconfig.get_path("scripts", scheme)
+            scripts = (
+                sysconfig.get_path("scripts")
+                if scheme is None
+                else sysconfig.get_path("scripts", scheme)
+            )
         except (KeyError, TypeError):
             scripts = None
         if scripts:
@@ -117,7 +121,9 @@ def expose_writer_on_path(
     resolved = script if script is not None else writer_script()
     if resolved is None:
         return None
-    dirs = os.environ.get("PATH", "").split(os.pathsep) if search_dirs is None else list(search_dirs)
+    dirs = (
+        os.environ.get("PATH", "").split(os.pathsep) if search_dirs is None else list(search_dirs)
+    )
     for folder in dirs:
         if not folder:
             continue
@@ -192,7 +198,12 @@ def enable_mcp_server(
     if not agent:
         return {"identifier": identifier, "enabled": False, "reason": "agent-cli-missing"}
     if not find_version(agent):
-        return {"identifier": identifier, "enabled": False, "reason": "agent-version-missing", "path": agent}
+        return {
+            "identifier": identifier,
+            "enabled": False,
+            "reason": "agent-version-missing",
+            "path": agent,
+        }
     run = runner or subprocess.run
     try:
         completed = run(
@@ -244,7 +255,9 @@ def enable_build_mcp(
     }
 
 
-def resolve_user_config(user_config: Path | None = None, *, include_user: bool = True) -> Path | None:
+def resolve_user_config(
+    user_config: Path | None = None, *, include_user: bool = True
+) -> Path | None:
     """The user's ``~/.cursor/mcp.json`` unless excluded or an explicit file is given.
 
     ``include_user`` is an explicit policy: production leaves it True, and a
@@ -363,7 +376,11 @@ def render_server_table(name: str, entry: dict[str, Any]) -> str:
     """One [mcp_servers.<name>] table. Command and args come from the shared template."""
     command = entry.get("command")
     args = entry.get("args") if isinstance(entry.get("args"), list) else None
-    if not isinstance(command, str) or args is None or not all(isinstance(arg, str) for arg in args):
+    if (
+        not isinstance(command, str)
+        or args is None
+        or not all(isinstance(arg, str) for arg in args)
+    ):
         raise ValueError(name)
     rendered_args = "[" + ", ".join(_toml_string(arg) for arg in args) + "]"
     return (
@@ -415,7 +432,9 @@ def _merge_build_toml(path: Path, reviewer: bool) -> None:
     os.replace(temporary, path)
 
 
-def resolve_build_config(user_config: Path | None = None, *, include_user: bool = True) -> Path | None:
+def resolve_build_config(
+    user_config: Path | None = None, *, include_user: bool = True
+) -> Path | None:
     """User grok config. Project .grok/config.toml is always written separately.
 
     ``include_user`` is an explicit policy: production leaves it True, and a

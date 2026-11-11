@@ -22,7 +22,13 @@ def _confirm_pipeline(workspace, essay_id=ESSAY, body=None):
     write_upload(workspace, essay_id=essay_id)
     seq = open_sequence(essay_id)
     essay_research_summary(seq, TOPIC, "draft", [source(essay_id)])
-    essay_research_summary(seq, TOPIC, "confirm", [source(essay_id)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        [source(essay_id)],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     payload = body or pack(essay_id)
     essay_pack_validate(seq, payload, "draft")
     essay_pack_validate(seq, payload, "confirm")
@@ -73,11 +79,19 @@ def test_report_refuses_essay_only_headings(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_only = pack(
         sections=[
-            {"heading": "Introduction", "body": "The corridor depends on a narrow strait (Smith, 2020)."},
-            {"heading": "Conclusion", "body": "The Strait handles a large share of flows (Smith, 2020)."},
+            {
+                "heading": "Introduction",
+                "body": "The corridor depends on a narrow strait (Smith, 2020).",
+            },
+            {
+                "heading": "Conclusion",
+                "body": "The Strait handles a large share of flows (Smith, 2020).",
+            },
         ],
     )
     result = essay_pack_validate(seq, essay_only, "draft")
@@ -91,14 +105,19 @@ def test_section_plan_from_brief_is_enforced(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     plan = ["Introduction", "Custom brief section", "Conclusion"]
     payload = pack(
         section_plan=plan,
         sections=[
             {"heading": "Introduction", "body": "Scope (Smith, 2020)."},
             {"heading": "Wrong heading", "body": "Detail (Smith, 2020)."},
-            {"heading": "Conclusion", "body": "The Strait handles a large share of flows (Smith, 2020)."},
+            {
+                "heading": "Conclusion",
+                "body": "The Strait handles a large share of flows (Smith, 2020).",
+            },
         ],
     )
     result = essay_pack_validate(seq, payload, "draft")
@@ -125,7 +144,10 @@ def test_word_count_uses_brief_citation_rule(workspace):
         "sections": [
             {"heading": "Introduction", "body": "Flows matter (Smith, 2020)."},
             {"heading": "Market analysis", "body": "Trade shifts matter (Smith, 2020)."},
-            {"heading": "Conclusion", "body": "The Strait handles a large share of flows (Smith, 2020)."},
+            {
+                "heading": "Conclusion",
+                "body": "The Strait handles a large share of flows (Smith, 2020).",
+            },
         ],
     }
     for essay_id, expected, sections in (
@@ -134,7 +156,13 @@ def test_word_count_uses_brief_citation_rule(workspace):
     ):
         seq = open_sequence(essay_id)
         essay_research_summary(seq, TOPIC, "draft", [source(essay_id)])
-        essay_research_summary(seq, TOPIC, "confirm", [source(essay_id)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+        essay_research_summary(
+            seq,
+            TOPIC,
+            "confirm",
+            [source(essay_id)],
+            cardDigest=card_digest_for(seq, "essay.research.summary"),
+        )
         payload = pack(essay_id, conclusion="open", **sections)
         report = essay_pack_validate(seq, payload, "draft")
         assert report["word_count"]["counted"] == expected
@@ -144,7 +172,9 @@ def test_cross_essay_pack_refused_on_word(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     foreign = pack(OTHER)
     result = essay_pack_render_word(seq, foreign, "draft")
     assert result["ok"] is False
@@ -155,7 +185,9 @@ def test_pdf_request_writes_nothing(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     result = essay_pack_render_word(seq, pack(format="pdf"), "draft")
     assert result["refused"] == "word-only"
     assert result["wrote"] is False

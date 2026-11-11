@@ -228,9 +228,7 @@ def test_essay_ref_ctl_a1_writer_checks_before_stage10_done(workspace, monkeypat
     assert saved["ok"] is True, saved
     assert saved.get("closed") is True
     assert load_pointer(seq)["closed"] is True
-    stage_source = inspect.getsource(_write_stage10_sequence) + inspect.getsource(
-        _deliver_stage10
-    )
+    stage_source = inspect.getsource(_write_stage10_sequence) + inspect.getsource(_deliver_stage10)
     assert stage_source.index("writer_reference_block(") < stage_source.index(
         '["sequence_written"] = True'
     )
@@ -274,9 +272,7 @@ def test_essay_ref_ctl_a2_misses_block_and_writer_cannot_mark_pass(
     assert reviewer_mark["checked"] is False
 
 
-def test_essay_ref_ctl_a3_reviewer_reruns_and_writer_cannot_clear(
-    workspace, monkeypatch, tmp_path
-):
+def test_essay_ref_ctl_a3_reviewer_reruns_and_writer_cannot_clear(workspace, monkeypatch, tmp_path):
     """essay-ref-ctl-a3. The reviewer clears only when the same check is green."""
     documents = tmp_path / "Documents"
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(documents))
@@ -432,10 +428,7 @@ def test_harvard_check_reads_a_single_page_label(tmp_path):
 def test_harvard_check_refuses_the_wrong_page_label(tmp_path):
     """A single page needs p.; a range needs pp. The first pass names the gap."""
     single = {**_source(), "pages": "32"}
-    parts = [
-        (text.replace("p. 32", "pp. 32"), italic)
-        for text, italic in reference_parts(single)
-    ]
+    parts = [(text.replace("p. 32", "pp. 32"), italic) for text, italic in reference_parts(single)]
     path = tmp_path / "wrong-single.docx"
     _save(path, "The corridor is narrow (Qin, 2021).", reference_line(single), parts=parts)
     misses = compliance_misses(path, [single])
@@ -445,8 +438,7 @@ def test_harvard_check_refuses_the_wrong_page_label(tmp_path):
 
     ranged = {**_source(), "pages": "32-40"}
     ranged_parts = [
-        (text.replace("pp. 32-40", "p. 32-40"), italic)
-        for text, italic in reference_parts(ranged)
+        (text.replace("pp. 32-40", "p. 32-40"), italic) for text, italic in reference_parts(ranged)
     ]
     ranged_path = tmp_path / "wrong-range.docx"
     _save(
@@ -479,8 +471,7 @@ def test_harvard_check_refuses_a_bare_edition(tmp_path):
     assert compliance_misses(correct, [book]) == []
 
     wrong_parts = [
-        (text.replace("2nd edn.", "2nd"), italic)
-        for text, italic in reference_parts(book)
+        (text.replace("2nd edn.", "2nd"), italic) for text, italic in reference_parts(book)
     ]
     wrong = tmp_path / "edition-wrong.docx"
     _save(wrong, body, reference_line(book), parts=wrong_parts)
@@ -493,12 +484,16 @@ def test_harvard_check_refuses_a_wrong_volume_or_issue(tmp_path):
     """A journal line with the wrong volume or issue is a first-pass miss."""
     source = _source()
     correct = tmp_path / "volume-correct.docx"
-    _save(correct, "The corridor is narrow (Qin, 2021).", reference_line(source), parts=reference_parts(source))
+    _save(
+        correct,
+        "The corridor is narrow (Qin, 2021).",
+        reference_line(source),
+        parts=reference_parts(source),
+    )
     assert compliance_misses(correct, [source]) == []
 
     wrong_parts = [
-        (text.replace("8(1)", "9(1)"), italic)
-        for text, italic in reference_parts(source)
+        (text.replace("8(1)", "9(1)"), italic) for text, italic in reference_parts(source)
     ]
     wrong = tmp_path / "volume-wrong.docx"
     _save(wrong, "The corridor is narrow (Qin, 2021).", reference_line(source), parts=wrong_parts)
@@ -666,8 +661,7 @@ def test_harvard_check_refuses_a_wrong_place_or_publisher(tmp_path):
 
     wrong_place = tmp_path / "place-wrong.docx"
     wrong_place_parts = [
-        (text.replace("Bristol", "Leeds"), italic)
-        for text, italic in reference_parts(book)
+        (text.replace("Bristol", "Leeds"), italic) for text, italic in reference_parts(book)
     ]
     _save(wrong_place, body, line.replace("Bristol", "Leeds"), parts=wrong_place_parts)
     place_misses = compliance_misses(wrong_place, [book])
@@ -696,8 +690,7 @@ def test_harvard_check_refuses_a_surname_stub(tmp_path):
     source = _source()
     body = "The corridor is narrow (Qin, 2021)."
     stub_parts = [
-        (text.replace("Qin, Y.", "Qin"), italic)
-        for text, italic in reference_parts(source)
+        (text.replace("Qin, Y.", "Qin"), italic) for text, italic in reference_parts(source)
     ]
     stub = tmp_path / "author-stub.docx"
     _save(stub, body, reference_line(source), parts=stub_parts)

@@ -268,7 +268,9 @@ def test_ac4_cursor_and_grok_build_share_confirm(monkeypatch):
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_GROK_BUILD)
     grok = stage_host_launch("1")
     assert cursor["settings"]["rules"] == grok["settings"]["rules"]
-    assert cursor_shell()["entry"]["command"] == front_office()["entry"]["command"] == "essay-writer"
+    assert (
+        cursor_shell()["entry"]["command"] == front_office()["entry"]["command"] == "essay-writer"
+    )
 
 
 def test_ac5_closed_or_wrong_sequence_does_not_mint_a_card(workspace):

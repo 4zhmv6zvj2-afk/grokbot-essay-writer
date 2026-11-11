@@ -295,7 +295,9 @@ def _add_heading(document: DocumentType, text: str, *, level: int = 1, size: int
     return heading
 
 
-def _write_body(document: DocumentType, text: str, *, justify: bool, heading_size: int = 14) -> None:
+def _write_body(
+    document: DocumentType, text: str, *, justify: bool, heading_size: int = 14
+) -> None:
     cleaned = prose_for_surface(text, "word")
     if not cleaned:
         return
@@ -572,9 +574,7 @@ def essay_pack_render_word(
         if stage in {"6", "9"} and body.get("eqr") != "PASS":
             which = "first" if stage == "6" else "final"
             body["writer_clears_left"] = writer_clears_left()
-            body["next"] = say(
-                f"The {which} Word file is not written yet. {PERSON_BLOCK}"
-            )
+            body["next"] = say(f"The {which} Word file is not written yet. {PERSON_BLOCK}")
             from essay_writer.specialists.grok_bot import attach_eqr_first_run_speech
 
             attach_eqr_first_run_speech(body)
@@ -660,9 +660,7 @@ def essay_pack_render_word(
         from essay_writer.mark_fit import final_specialist_lookup
 
         lookup_state = load_state(essay_id)
-        attempt = final_specialist_lookup(
-            essay_id, pack, identity=identity, state=lookup_state
-        )
+        attempt = final_specialist_lookup(essay_id, pack, identity=identity, state=lookup_state)
         if attempt.get("attempted"):
             if not attempt.get("reused"):
                 save_state(essay_id, lookup_state)
@@ -706,7 +704,9 @@ def essay_pack_render_word(
     from essay_writer.assignment_handoff import attach_word_chat
 
     attach_word_chat(body, target)
-    body["next"] = say("Word is written. A later change goes through revise, then validation and Word again.")
+    body["next"] = say(
+        "Word is written. A later change goes through revise, then validation and Word again."
+    )
     if stage is None:
         from essay_writer.late_chain import quiet_word_step
 

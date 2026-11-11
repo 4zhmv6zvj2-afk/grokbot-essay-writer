@@ -68,15 +68,22 @@ CRAFT_BY_STAGE = {
 }
 
 _STAGE_FILES = {
-    "1": "01.md", "2": "02.md", "3": "03.md", "4a": "04a.md", "4b": "04b.md",
-    "5": "05.md", "6": "06.md", "7": "07.md", "8": "08.md", "9": "09.md", "10": "10.md",
+    "1": "01.md",
+    "2": "02.md",
+    "3": "03.md",
+    "4a": "04a.md",
+    "4b": "04b.md",
+    "5": "05.md",
+    "6": "06.md",
+    "7": "07.md",
+    "8": "08.md",
+    "9": "09.md",
+    "10": "10.md",
 }
 SHARED_STAGES = frozenset({"1", "2", "3", "4a", "4b", "5", "6", "7", "8", "9", "10"})
 
 
-CHECKLISTS = {
-    stage: bullets(f"stages/{name}", "shared") for stage, name in _STAGE_FILES.items()
-}
+CHECKLISTS = {stage: bullets(f"stages/{name}", "shared") for stage, name in _STAGE_FILES.items()}
 
 
 def _genre_additions(genre: str, stage: str) -> tuple[str, ...]:
@@ -124,9 +131,18 @@ SHARED_STAGE_LINES: dict[str, tuple[str, ...]] = {
 }
 
 __all__ = [
-    "CRAFT_SECTIONS", "CRAFT_BY_STAGE",
-    "CHECKLISTS", "SHARED_STAGES", "GENRE_ADDITIONS",
+    "CRAFT_SECTIONS",
+    "CRAFT_BY_STAGE",
+    "CHECKLISTS",
+    "SHARED_STAGES",
+    "GENRE_ADDITIONS",
     "STAGE7_AGENT",
-    "SHARED_REVISIT", "REPORT_REVISIT", "ESSAY_REVISIT", "DIARY_REVISIT",
-    "PRECEDENCE", "SHARED_STAGE_SECTIONS", "SHARED_STAGE_RULES", "SHARED_STAGE_LINES",
+    "SHARED_REVISIT",
+    "REPORT_REVISIT",
+    "ESSAY_REVISIT",
+    "DIARY_REVISIT",
+    "PRECEDENCE",
+    "SHARED_STAGE_SECTIONS",
+    "SHARED_STAGE_RULES",
+    "SHARED_STAGE_LINES",
 ]

@@ -76,17 +76,25 @@ def test_narrative_citations_ignore_events_and_accept_joint_authors(workspace):
     assert token_allowed("smith et al., 2020", forms)
     assert token_allowed("smith and jones, 2020", forms)
     assert token_allowed("smith & jones, 2020", forms)
-    assert token_allowed("(smith & jones, 2020)".strip("()"), forms) or token_allowed("smith & jones, 2020", forms)
+    assert token_allowed("(smith & jones, 2020)".strip("()"), forms) or token_allowed(
+        "smith & jones, 2020", forms
+    )
     parenthetical = essay_gates(seq, pack, body="The corridor stays narrow (Smith & Jones, 2020).")
     assert _gate(parenthetical, "citations")["passed"] is True
     narrative = "one two three four five six seven eight nine Smith (2020)"
     paren = "one two three four five six seven eight nine (Smith, 2020)"
-    assert count_words(narrative, exclude_citations=True) == count_words(paren, exclude_citations=True)
+    assert count_words(narrative, exclude_citations=True) == count_words(
+        paren, exclude_citations=True
+    )
     shouted = "one two three four five six seven eight nine SMITH (2020)"
     accented = "one two three four five six seven eight nine Pérez (2019)"
     accented_paren = "one two three four five six seven eight nine (Pérez, 2019)"
-    assert count_words(shouted, exclude_citations=True) == count_words(paren, exclude_citations=True)
-    assert count_words(accented, exclude_citations=True) == count_words(accented_paren, exclude_citations=True)
+    assert count_words(shouted, exclude_citations=True) == count_words(
+        paren, exclude_citations=True
+    )
+    assert count_words(accented, exclude_citations=True) == count_words(
+        accented_paren, exclude_citations=True
+    )
 
 
 def test_narrative_citations_cover_names_and_skip_periods(workspace):
@@ -104,7 +112,9 @@ def test_narrative_citations_cover_names_and_skip_periods(workspace):
             {"author": "Brown, C.", "year": "2020"},
         ],
     }
-    periods = "Renaissance (1400), Enlightenment (1700), Brexit (2016), and Holocaust (1945) are events."
+    periods = (
+        "Renaissance (1400), Enlightenment (1700), Brexit (2016), and Holocaust (1945) are events."
+    )
     assert citation_tokens(periods) == []
     clear = essay_gates(seq, pack, body=periods)
     reason = _gate(clear, "citations")["reason"]
@@ -124,7 +134,9 @@ def test_narrative_citations_cover_names_and_skip_periods(workspace):
     assert _gate(shouted, "citations")["passed"] is True
     titled = essay_gates(seq, pack, body="Dr Smith (2020) names the corridor in one sentence.")
     assert _gate(titled, "citations")["passed"] is True
-    narrative_et = essay_gates(seq, pack, body="Smith et al. (2020) report one corridor in the study.")
+    narrative_et = essay_gates(
+        seq, pack, body="Smith et al. (2020) report one corridor in the study."
+    )
     assert _gate(narrative_et, "citations")["passed"] is True, narrative_et
     parenthetical_et = essay_gates(
         seq,

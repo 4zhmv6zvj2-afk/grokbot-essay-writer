@@ -234,4 +234,6 @@ def test_ac4_build_covered_shares_the_confirm_next_card_path(monkeypatch):
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_GROK_BUILD)
     grok = stage_host_launch("1")
     assert cursor["settings"]["rules"] == grok["settings"]["rules"]
-    assert cursor_shell()["entry"]["command"] == front_office()["entry"]["command"] == "essay-writer"
+    assert (
+        cursor_shell()["entry"]["command"] == front_office()["entry"]["command"] == "essay-writer"
+    )

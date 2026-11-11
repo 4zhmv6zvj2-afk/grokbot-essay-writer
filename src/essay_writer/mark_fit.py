@@ -21,12 +21,41 @@ _PLAIN_WEIGHT = re.compile(
     r"^\s*(?:[-*]\s*)?(?P<name>[A-Za-z][^|%]{2,64}?)\s*(?:—|-|:)?\s*(?P<pct>\d{1,3})\s*%\s*$"
 )
 _HEADER_WORDS = frozenset(
-    {"section", "sections", "part", "parts", "criterion", "criteria", "weight", "weights", "mark", "marks"}
+    {
+        "section",
+        "sections",
+        "part",
+        "parts",
+        "criterion",
+        "criteria",
+        "weight",
+        "weights",
+        "mark",
+        "marks",
+    }
 )
 # A weight row that is not a body section a draft can carry.
 _NON_BODY = ("presentation", "referencing", "references", "bibliography", "overall", "total")
 _STOP = frozenset(
-    {"the", "and", "for", "with", "into", "from", "that", "this", "its", "their", "of", "to", "in", "on", "or", "a", "an"}
+    {
+        "the",
+        "and",
+        "for",
+        "with",
+        "into",
+        "from",
+        "that",
+        "this",
+        "its",
+        "their",
+        "of",
+        "to",
+        "in",
+        "on",
+        "or",
+        "a",
+        "an",
+    }
 )
 _CHAIN_ASK = re.compile(r"(?i)named\s+(?:supply\s+)?chain|one\s+named\s+chain")
 _CHAIN_LIST = re.compile(r"(?i)(?:allow-?list(?:\s+is)?|such as|e\.g\.|for example)\s*:?\s*")
@@ -56,7 +85,30 @@ _CASE_KINDS = (
 _SOURCE_ASK = re.compile(r"(?i)specialist\s+(?:industry\s+)?source")
 _SOURCE_PAREN = re.compile(r"\(([^)]{3,200})\)")
 _GENERIC_HEADS = frozenset(
-    {"the", "this", "that", "these", "those", "a", "an", "one", "it", "its", "in", "on", "for", "when", "if", "and", "but", "however", "there", "each", "every", "our"}
+    {
+        "the",
+        "this",
+        "that",
+        "these",
+        "those",
+        "a",
+        "an",
+        "one",
+        "it",
+        "its",
+        "in",
+        "on",
+        "for",
+        "when",
+        "if",
+        "and",
+        "but",
+        "however",
+        "there",
+        "each",
+        "every",
+        "our",
+    }
 )
 
 
@@ -135,9 +187,7 @@ def missing_weighted_sections(
 ) -> list[dict[str, Any]]:
     """Body sections the brief weights that the draft heading list does not carry."""
     headings = [
-        str(section.get("heading") or "")
-        for section in sections
-        if isinstance(section, dict)
+        str(section.get("heading") or "") for section in sections if isinstance(section, dict)
     ]
     missing: list[dict[str, Any]] = []
     for row in weights:
@@ -149,9 +199,7 @@ def missing_weighted_sections(
     return missing
 
 
-def unweighted_headings(
-    sections: list[dict[str, Any]], weights: list[dict[str, Any]]
-) -> list[str]:
+def unweighted_headings(sections: list[dict[str, Any]], weights: list[dict[str, Any]]) -> list[str]:
     """Draft headings that are not a weighted section and not a reference part."""
     if not weights:
         return []
@@ -304,7 +352,10 @@ def specialist_source_classes(brief: str) -> list[str]:
 
 def _mentions(haystack: str, name: str) -> bool:
     if len(name) <= 3:
-        return re.search(rf"(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", haystack, re.IGNORECASE) is not None
+        return (
+            re.search(rf"(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", haystack, re.IGNORECASE)
+            is not None
+        )
     return name.casefold() in haystack.casefold()
 
 
@@ -347,7 +398,10 @@ def mark_fit_notes(
 
     brief = essay_textutil.module_brief_text(essay_id)
     genre = (genre_from_brief_text(brief) or "").casefold()
-    if genre in {"reflective", "reflective diary", "diary"} or "reflective diary" in brief.casefold():
+    if (
+        genre in {"reflective", "reflective diary", "diary"}
+        or "reflective diary" in brief.casefold()
+    ):
         # A diary keeps its own entry parts. The weight table is not its shape.
         return []
     weights = weighted_sections(brief)

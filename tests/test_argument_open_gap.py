@@ -39,7 +39,9 @@ def test_ac1_writing_stages_carry_the_open_gap_bullet():
 def test_ac2_the_craft_source_and_both_launchers_read_the_same_bullet():
     """AC2. One copy in the craft source, read by both launchers."""
     helpers = HELPERS.read_text(encoding="utf-8")
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert craft.count(OPEN_GAP) == 1
     for stage in WRITING:
         assert stage_settings(stage)["prompt_overlay"].count(OPEN_GAP) == 1
@@ -71,5 +73,7 @@ def test_ac3_the_bullet_keeps_the_gap_open_and_stays_prompt_only():
     validate = (REPO / "src" / "essay_writer" / "validate.py").read_text(encoding="utf-8")
     assert "OPEN_GAP" not in gates
     assert "OPEN_GAP" not in validate
-    voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
-    assert 'say that the evidence is mixed or thin' in voice
+    voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
+    assert "say that the evidence is mixed or thin" in voice

@@ -181,7 +181,9 @@ def test_draft_writes_the_tracking_note_and_confirm_advances(workspace):
     assert pointer["current"] == "1"
     assert pointer["saved"] == []
 
-    saved = essay_stage(seq, "1", "confirm", "The task is a report on one named chain.", **picked(draft))
+    saved = essay_stage(
+        seq, "1", "confirm", "The task is a report on one named chain.", **picked(draft)
+    )
     assert saved["ok"] is True
     assert saved["stored"] is True
     assert saved["advanced"] is True
@@ -207,7 +209,12 @@ def test_confirm_keeps_the_card_look_and_refuses_a_skipped_stage(workspace):
     seq = open_sequence()
     opened = essay_stage(seq, "1", "draft", "Thesis is still open.")
     changed = essay_stage(
-        seq, "1", "confirm", "A different thesis.", cardAction="confirm", cardDigest=opened["digest"]
+        seq,
+        "1",
+        "confirm",
+        "A different thesis.",
+        cardAction="confirm",
+        cardDigest=opened["digest"],
     )
     assert changed["ok"] is True, changed
     assert changed["stored"] is True
@@ -345,7 +352,13 @@ def test_essay_sequence_keeps_the_thesis_label(workspace):
     assert stage_two["stage_title"] == "Establish a thesis"
     assert "locked thesis" in stage_two["rules"]
     assert "Establish purpose and scope" not in stage_two["stage_title"]
-    essay_stage(seq, "2", "confirm", "The thesis is that chokepoints constrain the corridor.", **picked(stage_two))
+    essay_stage(
+        seq,
+        "2",
+        "confirm",
+        "The thesis is that chokepoints constrain the corridor.",
+        **picked(stage_two),
+    )
     stage_three = essay_stage(seq, "3", "draft", "Three points support the thesis.")
     assert stage_three["stage_title"] == "Write an essay plan"
     assert "thesis" in stage_three["rules"]
@@ -489,7 +502,11 @@ def test_workflow_records_stage_tracking_for_both_shells():
     for path in root.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in tree.body:
-            if isinstance(node, ast.FunctionDef) and node.name in {"stage_settings", "stage_rules", "essay_stage"}:
+            if isinstance(node, ast.FunctionDef) and node.name in {
+                "stage_settings",
+                "stage_rules",
+                "essay_stage",
+            }:
                 found.setdefault(node.name, []).append(path.name)
     assert found["stage_settings"] == ["stage_llm.py"]
     assert found["stage_rules"] == ["stage_llm.py"]

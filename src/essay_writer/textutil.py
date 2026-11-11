@@ -152,8 +152,12 @@ def _count_role(text: str, start: int, end: int) -> str:
 
 def _matches_for(text: str, pattern: re.Pattern[str], role: str) -> list[re.Match[str]]:
     matches = list(pattern.finditer(text))
-    sectionish = [match for match in matches if _count_role(text, match.start(), match.end()) == "section"]
-    plain = [match for match in matches if _count_role(text, match.start(), match.end()) != "section"]
+    sectionish = [
+        match for match in matches if _count_role(text, match.start(), match.end()) == "section"
+    ]
+    plain = [
+        match for match in matches if _count_role(text, match.start(), match.end()) != "section"
+    ]
     if role == "section":
         return sectionish
     if sectionish and plain:
@@ -328,6 +332,7 @@ def word_rules_for(essay_id: str, pack: dict[str, Any]) -> dict[str, Any]:
     if isinstance(override, dict):
         base.update(override)
     return base
+
 
 YEAR = r"\d{4}[a-z]?"
 PAREN = re.compile(r"\(([^)]*\d{4}[^)]*)\)")
@@ -659,7 +664,9 @@ def _split_sentences(text: str, *, track_quotes: bool) -> list[str]:
                 if chunk:
                     found.append(chunk)
                 start = index + 1
-        elif closing is None and char in ".!?" and (index + 1 >= length or text[index + 1].isspace()):
+        elif (
+            closing is None and char in ".!?" and (index + 1 >= length or text[index + 1].isspace())
+        ):
             if not (char == "." and _abbreviation_before(text, index)):
                 chunk = text[start : index + 1].strip()
                 if chunk:
@@ -1015,7 +1022,9 @@ def same_author_initials(left: str, right: str) -> bool:
     return long[: len(short)] == short
 
 
-def _research_for(source: dict[str, Any], research_by_locator: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+def _research_for(
+    source: dict[str, Any], research_by_locator: dict[str, dict[str, Any]]
+) -> dict[str, Any] | None:
     locator = _field_text(source.get("locator"))
     if locator and isinstance(research_by_locator.get(locator), dict):
         return research_by_locator[locator]
@@ -1066,7 +1075,9 @@ def complete_citation_sources(
         if not isinstance(source, dict):
             completed.append(source)
             continue
-        completed.append(complete_citation_source(source, _research_for(source, research_by_locator)))
+        completed.append(
+            complete_citation_source(source, _research_for(source, research_by_locator))
+        )
     return completed
 
 

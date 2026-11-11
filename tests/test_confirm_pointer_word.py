@@ -58,6 +58,8 @@ The name stays off the title page and the file.
 
 Pages: Arial, size 12. 2.5 cm margins on all sides. Page numbers in the lower right.
 """
+
+
 def _open(module: str) -> str:
     draft = essay_sequence_new(module, "draft")
     assert draft["ok"] is True, draft

@@ -56,7 +56,13 @@ def test_ac1_start_tip_on_cursor_cli_kickoff(workspace, monkeypatch):
     """AC1. Start tip fires when Cursor CLI mid-office kicks off."""
     monkeypatch.setattr(
         "essay_writer.cursor_office.spawn_agent",
-        lambda command: {"started": True, "reason": "", "pid": 12, "command": list(command), "stdout": None},
+        lambda command: {
+            "started": True,
+            "reason": "",
+            "pid": 12,
+            "command": list(command),
+            "stdout": None,
+        },
     )
     seq = open_sequence()
     run = start_stage_mid(seq, "4a")
@@ -192,7 +198,10 @@ def test_ac4_early_exit_surfaces_exit_reason_to_fo_and_logs(workspace, monkeypat
     reset_status()
     begin_mid_build(seq, "notes", subject=QUESTION)
     finish_mid_process(seq, exit_code=3)
-    assert exit_reason_sentence(QUESTION, exit_code=3).casefold() in " ".join(student_inbox(seq)).casefold()
+    assert (
+        exit_reason_sentence(QUESTION, exit_code=3).casefold()
+        in " ".join(student_inbox(seq)).casefold()
+    )
 
     note_mid_office("exit", seq, "Cursor", reason="File work stopped.", exit_code=2)
     text = log_path.read_text(encoding="utf-8")

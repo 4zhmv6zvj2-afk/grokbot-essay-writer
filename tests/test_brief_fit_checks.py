@@ -17,10 +17,7 @@ from essay_writer.brief_checks import (
     word_total_clash,
 )
 
-BRIEF = (
-    "Genre: report\n"
-    "Section budgets: Introduction 400, Analysis 400, Conclusion 200\n"
-)
+BRIEF = "Genre: report\nSection budgets: Introduction 400, Analysis 400, Conclusion 200\n"
 
 
 def _plant(workspace: Path, text: str = BRIEF) -> None:

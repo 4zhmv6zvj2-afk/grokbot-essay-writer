@@ -108,7 +108,9 @@ def master_word(
     }
 
 
-def finished_word_copies(essay_id: str, *, documents: Path | None = None) -> list[dict[str, object]]:
+def finished_word_copies(
+    essay_id: str, *, documents: Path | None = None
+) -> list[dict[str, object]]:
     """The Word file the student receives, and the Documents copy when that file is already there.
 
     Known paths only. This does not search Documents.

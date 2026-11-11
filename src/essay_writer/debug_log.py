@@ -77,9 +77,7 @@ _SLACK_TOKEN = re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b")
 _SECRET_KV = re.compile(
     r"(?im)^(\s*(?:export\s+)?(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL)\s*[:=]\s*).+$"
 )
-_SECRET_JSON = re.compile(
-    r'("(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL)"\s*:\s*")[^"]*(")'
-)
+_SECRET_JSON = re.compile(r'("(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL)"\s*:\s*")[^"]*(")')
 _X_API_KEY = re.compile(r"(?i)(x-api-key\s*[:=]\s*)\S+")
 _DEBUG_WIPE_SPEECH = re.compile(
     r"^(?:please\s+)?(?:"
@@ -136,7 +134,9 @@ def call_essay_id(
             return found
     body = _body(result)
     if isinstance(body, dict):
-        return _valid_log_essay_id(body.get("essay_id")) or _valid_log_essay_id(body.get("sequence_id"))
+        return _valid_log_essay_id(body.get("essay_id")) or _valid_log_essay_id(
+            body.get("sequence_id")
+        )
     return None
 
 
@@ -579,7 +579,9 @@ def _setup_record_requests_debug() -> bool:
 def scrub(text: str, secrets: list[str] | None = None) -> str:
     """Drop keys, emails, and tokens. The rest of the line stays."""
     cleaned = text
-    for secret in sorted({item for item in (secrets or []) if len(item) >= 8}, key=len, reverse=True):
+    for secret in sorted(
+        {item for item in (secrets or []) if len(item) >= 8}, key=len, reverse=True
+    ):
         cleaned = cleaned.replace(secret, "[redacted]")
     cleaned = _BEARER.sub("[redacted]", cleaned)
     cleaned = _TOKEN.sub("[redacted]", cleaned)
@@ -820,9 +822,7 @@ def _write_product_kv_lines(event: str, essay_id: str, facts: dict[str, object])
         found = _valid_log_essay_id(essay_id.strip())
         path = debug_log_path(found)
         path.parent.mkdir(parents=True, exist_ok=True)
-        base = (
-            f"t={when} event={event} essay_id={_kv_token(essay_id.strip())}"
-        )
+        base = f"t={when} event={event} essay_id={_kv_token(essay_id.strip())}"
         with path.open("a", encoding="utf-8") as handle:
             for key, value in facts.items():
                 if value is None:
@@ -884,9 +884,7 @@ def _product_tool_extras(
 def pack_log_title(pack: dict[str, Any]) -> str:
     """Cover-facing title for operator logs. Draft is not logged as the title."""
 
-    text = _cover_stored_title(pack.get("assessment")) or _cover_stored_title(
-        pack.get("title")
-    )
+    text = _cover_stored_title(pack.get("assessment")) or _cover_stored_title(pack.get("title"))
     return text or "empty"
 
 
@@ -1036,7 +1034,9 @@ def _stage10_stamp(arguments: dict[str, Any], body: dict[str, Any] | None) -> st
     elif root is None:
         documents = "unmounted"
     else:
-        documents = _file_stamp(root / f"{module}-10" / f"{module}-final.docx", final_place(essay_id))
+        documents = _file_stamp(
+            root / f"{module}-10" / f"{module}-final.docx", final_place(essay_id)
+        )
     return f"Sequence output {sequence}. Documents {documents}."
 
 
@@ -1173,11 +1173,15 @@ def _format(tool: str, arguments: dict[str, Any], result: Any, error: BaseExcept
             extras.append("Consensus key absent.")
     if "consensus_api_key" in arguments and not reported_key:
         extras.append(
-            "Consensus key present." if _present(arguments.get("consensus_api_key")) else "Consensus key absent."
+            "Consensus key present."
+            if _present(arguments.get("consensus_api_key"))
+            else "Consensus key absent."
         )
     if "unpaywall_email" in arguments:
         extras.append(
-            "Unpaywall email present." if _present(arguments.get("unpaywall_email")) else "Unpaywall email absent."
+            "Unpaywall email present."
+            if _present(arguments.get("unpaywall_email"))
+            else "Unpaywall email absent."
         )
     query = arguments.get("query")
     if isinstance(query, str) and query.strip():
@@ -1258,7 +1262,9 @@ def note_call(
         return
 
 
-def _bound(handler: Callable[..., object], args: tuple[object, ...], kwargs: dict[str, Any]) -> dict[str, Any]:
+def _bound(
+    handler: Callable[..., object], args: tuple[object, ...], kwargs: dict[str, Any]
+) -> dict[str, Any]:
     try:
         bound = inspect.signature(handler).bind_partial(*args, **kwargs)
     except TypeError:

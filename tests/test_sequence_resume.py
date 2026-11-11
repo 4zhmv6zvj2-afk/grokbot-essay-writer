@@ -284,7 +284,9 @@ def test_intake_roll_forward_does_not_leave_the_parent_id_on_the_child_cover(wor
     opened = Document(str(child))
     assert opened.core_properties.title == f"{MODULE}-2"
     assert opened.core_properties.subject == f"{MODULE}-10"
-    assert [paragraph.text for paragraph in opened.paragraphs if paragraph.text.strip()][1] == f"{MODULE}-2"
+    assert [paragraph.text for paragraph in opened.paragraphs if paragraph.text.strip()][
+        1
+    ] == f"{MODULE}-2"
     assert opened.tables[0].cell(0, 0).text.startswith(f"{MODULE}-2 ")
     assert f"{MODULE}-10" in opened.tables[0].cell(0, 0).text
     assert f"{MODULE}-1 " not in opened.tables[0].cell(0, 0).text
@@ -318,7 +320,9 @@ def test_shelf_draft_names_the_sequence_shelf(workspace):
     write_upload(workspace, ESSAY)
     seq = open_sequence(ESSAY)
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     essay_pack_render_word(seq, pack(), "draft")

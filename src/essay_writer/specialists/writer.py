@@ -151,10 +151,7 @@ def _source_texts(essay_id: str, pack: dict[str, Any]) -> list[str]:
     return texts
 
 
-
-def _source_texts_with_cite(
-    essay_id: str, pack: dict[str, Any]
-) -> list[tuple[str, str | None]]:
+def _source_texts_with_cite(essay_id: str, pack: dict[str, Any]) -> list[tuple[str, str | None]]:
     """Each gathered source text with the in-text citation its author-year gives.
 
     A source with no stored author or year has no citation, and the stretch does
@@ -386,7 +383,6 @@ def recover_short_word_band(essay_id: str, pack: dict[str, Any]) -> dict[str, An
     return _shortfall(filled if added else pack, low, min(split_now, token_now))
 
 
-
 def _with_citation(line: str, citation: str) -> str:
     """Put an in-text citation inside the closing punctuation."""
     if not citation or citation in line:
@@ -398,9 +394,32 @@ def _with_citation(line: str, citation: str) -> str:
 
 _TOPIC_STOP = frozenset(
     {
-        "with", "that", "this", "from", "into", "their", "than", "then", "also",
-        "only", "both", "each", "more", "most", "such", "when", "what", "which",
-        "whose", "section", "should", "could", "would", "about", "after", "before",
+        "with",
+        "that",
+        "this",
+        "from",
+        "into",
+        "their",
+        "than",
+        "then",
+        "also",
+        "only",
+        "both",
+        "each",
+        "more",
+        "most",
+        "such",
+        "when",
+        "what",
+        "which",
+        "whose",
+        "section",
+        "should",
+        "could",
+        "would",
+        "about",
+        "after",
+        "before",
     }
 )
 
@@ -452,9 +471,7 @@ def lift_missing_sections(
     if not missing:
         return {"pack": pack, "added": [], "skipped": []}
     pairs = [
-        (text, citation)
-        for text, citation in _source_texts_with_cite(essay_id, pack)
-        if citation
+        (text, citation) for text, citation in _source_texts_with_cite(essay_id, pack) if citation
     ]
     if not pairs:
         return {"pack": pack, "added": [], "skipped": [str(row["name"]) for row in missing]}

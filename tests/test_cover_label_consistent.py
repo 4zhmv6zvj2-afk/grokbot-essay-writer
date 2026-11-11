@@ -9,7 +9,6 @@ Build covered: assignment_requirements and cover_label_kept are shared; Cursor a
 Grok Build delegate to assignment_gate.assignment_requirements.
 """
 
-
 from helpers import open_sequence
 
 from essay_writer.assignment_gate import read_assignment

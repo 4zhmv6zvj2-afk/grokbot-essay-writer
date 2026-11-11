@@ -17,7 +17,9 @@ from essay_writer.specialists.grok_bot import EQR_FIRST_RUN_SPEECH
 from essay_writer.validate import essay_pack_validate
 
 REPO = Path(__file__).resolve().parents[1]
-_CONFIRM = re.compile(r"\bconfirm\b|\bbutton above\b|carddigest|cardaction|not yet to keep", re.IGNORECASE)
+_CONFIRM = re.compile(
+    r"\bconfirm\b|\bbutton above\b|carddigest|cardaction|not yet to keep", re.IGNORECASE
+)
 _PHANTOM = re.compile(r"don't click|do not click", re.IGNORECASE)
 
 
@@ -39,7 +41,9 @@ def _ready(workspace) -> str:
     )
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     return seq

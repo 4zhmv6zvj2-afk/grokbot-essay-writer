@@ -39,8 +39,7 @@ def test_cursor_launch_puts_model_and_effort_on_the_model_flag():
 
 def test_cursor_effort_ids_match_the_stage_locks():
     effort = {
-        stage: cursor_stage_launch(stage)["command"][-1].rsplit("-", 1)[-1]
-        for stage in STAGE_KEYS
+        stage: cursor_stage_launch(stage)["command"][-1].rsplit("-", 1)[-1] for stage in STAGE_KEYS
     }
     assert effort["4b"] == "xhigh"
     assert effort["5"] == "xhigh"

@@ -37,9 +37,7 @@ from essay_writer.writing_basics import STAGE_ORDER
 REPO = Path(__file__).resolve().parents[1]
 STUDENT = "Privacy risk reduces willingness to disclose personal data."
 TOPIC_ONLY = "Surveys of privacy and personal data on government websites discuss trust."
-FITS = (
-    "Privacy risk reduces willingness to disclose personal data when people use a public site."
-)
+FITS = "Privacy risk reduces willingness to disclose personal data when people use a public site."
 
 
 def _source(seq: str, ident: str, author: str, year: str, quote: str) -> dict:
@@ -279,9 +277,7 @@ def test_ac4_gate_is_shared_writer_path_not_stage6_only(workspace):
     assert "9" not in BODY_CITE_STAGES
     gate_source = inspect.getsource(apply_body_cites)
     role_source = inspect.getsource(land_body_cites)
-    stage_source = inspect.getsource(_prepare_stage_text) + inspect.getsource(
-        _stage7_draft_body
-    )
+    stage_source = inspect.getsource(_prepare_stage_text) + inspect.getsource(_stage7_draft_body)
     assert '== "6"' not in gate_source
     assert '== "6"' not in role_source
     assert "stage in BODY_CITE_STAGES" in stage_source

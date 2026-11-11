@@ -126,7 +126,11 @@ def intake_with_image(
     return [body, Image(path=shown, format=image_format)]
 
 
-def _mount(server: MCPServer, doors: tuple[dict[str, Any], ...] | list[dict[str, Any]], handlers: dict[str, Any]) -> None:
+def _mount(
+    server: MCPServer,
+    doors: tuple[dict[str, Any], ...] | list[dict[str, Any]],
+    handlers: dict[str, Any],
+) -> None:
     """Mount the writer doors. The map is HANDLERS. Shells do not pass another."""
     from essay_writer.shells import mount_handler
 

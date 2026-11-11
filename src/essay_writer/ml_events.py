@@ -128,7 +128,9 @@ def _essay_id(arguments: dict[str, object], body: dict[str, object] | None) -> s
     return None
 
 
-def _file_record(path: Path, display: str, *, mounted: bool | None = None) -> dict[str, object] | None:
+def _file_record(
+    path: Path, display: str, *, mounted: bool | None = None
+) -> dict[str, object] | None:
     if ".." in display:
         return None
     if not (_RELATIVE.fullmatch(display) or _DOCUMENTS.fullmatch(display)):
@@ -195,7 +197,9 @@ def _suffix(value: str) -> str:
     return "other"
 
 
-def _local_summary(arguments: dict[str, object], body: dict[str, object] | None) -> tuple[int, list[str]]:
+def _local_summary(
+    arguments: dict[str, object], body: dict[str, object] | None
+) -> tuple[int, list[str]]:
     raw = arguments.get("localPaths")
     if raw is None and isinstance(body, dict):
         raw = body.get("local")
@@ -373,7 +377,9 @@ def _confirm_event(
     return event
 
 
-def _digest_sources(arguments: dict[str, object], body: dict[str, object] | None) -> list[tuple[str, object]]:
+def _digest_sources(
+    arguments: dict[str, object], body: dict[str, object] | None
+) -> list[tuple[str, object]]:
     sources: list[tuple[str, object]] = [("card_digest", arguments.get("cardDigest"))]
     if isinstance(body, dict):
         sources.append(("card_digest", body.get("cardDigest")))
@@ -597,9 +603,7 @@ def handoff_refuse_reason(result: dict[str, object] | None) -> str:
     return ""
 
 
-def note_cli_handoff(
-    flag: str, essay_id: str | None, outcome: str, reason: str = ""
-) -> None:
+def note_cli_handoff(flag: str, essay_id: str | None, outcome: str, reason: str = "") -> None:
     """One ml-events row for an off-door CLI handoff. Off when the stream is off."""
     if outcome not in {"copy_only", "rebuilt", "refused"}:
         return

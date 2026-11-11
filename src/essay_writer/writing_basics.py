@@ -31,6 +31,8 @@ STAGE_ORDER: tuple[str, ...] = (
     "9",
     "10",
 )
+
+
 def basics_lines(stage: str, genre: str | None = None) -> tuple[str, ...]:
     """Shared stage bullets plus the additive genre section."""
     shared = CHECKLISTS.get(stage, ())

@@ -96,7 +96,11 @@ def database_view(essay_id: str) -> dict[str, Any]:
         held = ""
     else:
         saved = stored.get("names")
-        names = [item for item in saved if isinstance(item, str) and item.strip()] if isinstance(saved, list) else live
+        names = (
+            [item for item in saved if isinstance(item, str) and item.strip()]
+            if isinstance(saved, list)
+            else live
+        )
         if not names:
             names = live
         held = held_filename(stored.get("held_file"))

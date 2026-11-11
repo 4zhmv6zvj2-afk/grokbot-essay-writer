@@ -87,9 +87,7 @@ def plant_renderable_pack(seq: str) -> None:
             "title": "Kept draft",
             "referencing": "harvard",
             "conclusion": "noted",
-            "sections": [
-                {"heading": "Draft", "body": "A short draft stays on this sequence."}
-            ],
+            "sections": [{"heading": "Draft", "body": "A short draft stays on this sequence."}],
         }
     )
     save_state(seq, state)
@@ -121,10 +119,7 @@ def mac_handoff_sequence_dir(handoff_root, seq: str):
 ESSAY = "MOD1004AA"
 OTHER = "MOD1011AA"
 TOPIC = "How do chokepoints constrain the corridor?"
-TEXT = (
-    "Smith, J. (2020) Chokepoints and crude.\n"
-    "The Strait handles a large share of flows.\n"
-)
+TEXT = "Smith, J. (2020) Chokepoints and crude.\nThe Strait handles a large share of flows.\n"
 
 REPORT_HEADINGS = (
     "Introduction",

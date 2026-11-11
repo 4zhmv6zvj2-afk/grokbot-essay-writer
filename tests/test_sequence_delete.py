@@ -187,7 +187,9 @@ def test_sequence_both_reuses_a_saved_mac_path(workspace):
     saved = _store_mac_copy(2, mac, f"{MODULE}-2.docx", b"saved-copy")
     stray = mac / "notes.docx"
     stray.write_bytes(b"stray")
-    record = json.loads((sequence_dir(MODULE, 2) / MAC_DELIVERABLES_NAME).read_text(encoding="utf-8"))
+    record = json.loads(
+        (sequence_dir(MODULE, 2) / MAC_DELIVERABLES_NAME).read_text(encoding="utf-8")
+    )
     assert saved.resolve().as_posix() in record["paths"]
     target = f"{MODULE}-2"
 
@@ -203,7 +205,9 @@ def test_sequence_both_reuses_a_saved_mac_path(workspace):
     assert saved.is_file()
     assert sequence_dir(MODULE, 2).is_dir()
 
-    deleted = essay_project_delete(MODULE, "confirm", where="both", sequence=target, **picked(draft))
+    deleted = essay_project_delete(
+        MODULE, "confirm", where="both", sequence=target, **picked(draft)
+    )
     assert deleted["deleted"] is True
     assert deleted["deleted_local"] is True
     assert deleted["mac_paths_reused"] is True
@@ -243,7 +247,9 @@ def test_sequence_both_reuses_default_mac_names_without_a_record(workspace, monk
     assert stray.resolve() not in listed
     assert decoy.resolve() not in listed
 
-    deleted = essay_project_delete(MODULE, "confirm", where="both", sequence=f"{MODULE}-2", **picked(draft))
+    deleted = essay_project_delete(
+        MODULE, "confirm", where="both", sequence=f"{MODULE}-2", **picked(draft)
+    )
     assert deleted["deleted_local"] is True
     assert not essay.exists()
     assert not annotation.exists()
@@ -294,7 +300,9 @@ def test_sequence_both_does_not_reuse_paths_the_caller_left_out(workspace):
     named.write_bytes(b"named")
     target = f"{MODULE}-2"
 
-    draft = essay_project_delete(MODULE, "draft", where="both", sequence=target, localPaths=[str(named)])
+    draft = essay_project_delete(
+        MODULE, "draft", where="both", sequence=target, localPaths=[str(named)]
+    )
     assert draft["mac_paths_reused"] is False
     assert _paths(draft) == {named.resolve()}
 
@@ -448,7 +456,9 @@ def test_module_both_caller_paths_win(workspace):
     assert draft["mac_paths_reused"] is False
     assert _paths(draft) == {named.resolve()}
 
-    deleted = essay_project_delete(MODULE, "confirm", where="both", localPaths=[str(named)], **picked(draft))
+    deleted = essay_project_delete(
+        MODULE, "confirm", where="both", localPaths=[str(named)], **picked(draft)
+    )
     assert deleted["deleted_local"] is True
     assert not named.exists()
     assert saved.is_file()
@@ -476,7 +486,9 @@ def test_module_local_still_asks_and_sequence_local_stays_refused(workspace):
     workspace_only = essay_project_delete(MODULE, "draft", sequence=f"{MODULE}-2")
     assert workspace_only["ok"] is True
     assert workspace_only["computer_list"] == []
-    deleted = essay_project_delete(MODULE, "confirm", sequence=f"{MODULE}-2", **picked(workspace_only))
+    deleted = essay_project_delete(
+        MODULE, "confirm", sequence=f"{MODULE}-2", **picked(workspace_only)
+    )
     assert deleted["deleted"] is True
     assert deleted["deleted_local"] is False
     assert saved.is_file()

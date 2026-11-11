@@ -14,9 +14,7 @@ from essay_writer import textutil as essay_textutil
 from essay_writer.paths import essay_dir, module_code, sequence_number
 from essay_writer.textutil import section_word_band, unmarked_labels, word_band_from_brief_text
 
-_DIARY_NAME = re.compile(
-    r"(?i)\b(?:reflective diary|learning diary|reflective journal)\b"
-)
+_DIARY_NAME = re.compile(r"(?i)\b(?:reflective diary|learning diary|reflective journal)\b")
 _TITLE_DIARY = re.compile(
     r"(?i)(?:assignment(?:\s+title)?(?:\s+\d+)?|title)\s*:\s*[^\n]{0,180}"
     r"\b(?:individual\s+)?(?:reflective diary|learning diary|reflective journal)\b"
@@ -24,37 +22,25 @@ _TITLE_DIARY = re.compile(
 _ENTRIES = re.compile(
     r"(?i)\b(?:entries|each entry|one entry|per entry|weekly entries|workshop entries)\b"
 )
-_OWN = re.compile(
-    r"(?i)\b(?:decisions?|learning events?|own practice|first person)\b"
-)
+_OWN = re.compile(r"(?i)\b(?:decisions?|learning events?|own practice|first person)\b")
 _ANALYSIS = re.compile(r"(?i)\b(?:analys\w*|theory|evidence)\b")
 _SECTION_ONLY = re.compile(
     r"(?i)\b(?:reflective section|reflection section|section (?:on|of) reflection)\b"
 )
 _GENRE_LINE = re.compile(r"(?im)^\s*genre\s*:\s*(essay|report)\b")
-_TITLE_OTHER = re.compile(
-    r"(?im)^(?:assignment(?:\s+title)?(?:\s+\d+)?|title)\s*:\s*([^\n]+)$"
-)
+_TITLE_OTHER = re.compile(r"(?im)^(?:assignment(?:\s+title)?(?:\s+\d+)?|title)\s*:\s*([^\n]+)$")
 
-_MODULE_CODE = re.compile(
-    r"(?i)\bmodule\s+code\b\s*[:\-]?\s*([A-Z]{2,6}\d{3,4}[A-Z]{2,8})\b"
-)
+_MODULE_CODE = re.compile(r"(?i)\bmodule\s+code\b\s*[:\-]?\s*([A-Z]{2,6}\d{3,4}[A-Z]{2,8})\b")
 _MODULE_TITLE = re.compile(r"(?im)^\s*module\s+title\s*:\s*(.+)$")
 _TITLE_PAGE = re.compile(r"(?im)^\s*title\s+page\s*:\s*(.+)$")
-_TITLE_PAGE_SAYS = re.compile(
-    r"(?im)^\s*title\s+page\s+(?:should|must|needs to|needs)\s+(.+)$"
-)
-_MINT_STOP = frozenset(
-    {"the", "a", "an", "of", "and", "for", "module", "assignment", "individual"}
-)
+_TITLE_PAGE_SAYS = re.compile(r"(?im)^\s*title\s+page\s+(?:should|must|needs to|needs)\s+(.+)$")
+_MINT_STOP = frozenset({"the", "a", "an", "of", "and", "for", "module", "assignment", "individual"})
 
 _TABLE_HEADING = re.compile(
     r"(?i)^#{0,3}\s*(?:marking criteria(?:\s*/\s*feedback form)?|"
     r"assessment criteria|grade descriptors|marking table|feedback form)\b"
 )
-_KNOWN_SCHEME = re.compile(
-    r"(?i)^#{0,3}\s*(?:mark scheme|marking guidelines?|rubric)\b"
-)
+_KNOWN_SCHEME = re.compile(r"(?i)^#{0,3}\s*(?:mark scheme|marking guidelines?|rubric)\b")
 _FORM_FIELD = re.compile(
     r"(?i)^(?:#{0,3}\s*)?(?:participant number|comments|strengths|"
     r"areas for improvement|marker(?:'s|s)? comments)\b"
@@ -64,12 +50,8 @@ _HAS_BAND = re.compile(
     r"\b(?:high distinction|distinction|merit|credit)\b)"
 )
 
-_OCCASION = re.compile(
-    r"(?i)one entry for each [^:\n]{0,60}:\s*([^\n.]+)"
-)
-_ENTRY_COUNT = re.compile(
-    r"(?i)\b(\d+|two|three|four|five|six|seven|eight)\s+entries\b"
-)
+_OCCASION = re.compile(r"(?i)one entry for each [^:\n]{0,60}:\s*([^\n.]+)")
+_ENTRY_COUNT = re.compile(r"(?i)\b(\d+|two|three|four|five|six|seven|eight)\s+entries\b")
 _WORD_NUM = {
     "two": 2,
     "three": 3,
@@ -122,9 +104,7 @@ _REG_ASK = re.compile(
     r"student numbers?|student nos?\.?|student ids?|"
     r"candidate numbers?|enrolment numbers?|enrollment numbers?|matriculation numbers?)\b"
 )
-_REG_NEG = re.compile(
-    r"(?i)\b(?:do not|don't|must not|should not|without|no)\b"
-)
+_REG_NEG = re.compile(r"(?i)\b(?:do not|don't|must not|should not|without|no)\b")
 _TITLE_HEADING = re.compile(r"(?i)^\s*#{0,3}\s*title\s+page\s*:?\s*$")
 _TITLE_BULLET = re.compile(r"^\s*(?:[-*]|\d{1,2}[.)])\s+")
 _TITLE_NEXT = re.compile(
@@ -156,9 +136,7 @@ _TITLE_LABELS = (
     ("word count", "word_count"),
     ("name", "name"),
 )
-_PROGRAMME_ASK = re.compile(
-    r"(?i)\b(?:programme name|programme code|partner institution)\b"
-)
+_PROGRAMME_ASK = re.compile(r"(?i)\b(?:programme name|programme code|partner institution)\b")
 _BANDISH = re.compile(
     r"(?i)\b(?:thin|partial|sound|clear|exact|consistent|coherent|competent|"
     r"satisfactory|appropriate|relevant|poor|good|excellent|adequate|"
@@ -166,9 +144,7 @@ _BANDISH = re.compile(
 )
 # A thousands separator is part of a number. It is not a new field.
 _ASK_SPLIT = re.compile(r"\s*(?:(?<!\d),(?!\d)|;|\band\b)\s*")
-_ASK_LEAD = re.compile(
-    r"(?i)^(?:please\s+)?(?:include|show|print|state|list|give|with)\s+"
-)
+_ASK_LEAD = re.compile(r"(?i)^(?:please\s+)?(?:include|show|print|state|list|give|with)\s+")
 # "It should specify the module title, ..." is a list of fields, not one field.
 _FIELD_CUE = re.compile(
     r"(?i)^(?:please\s+)?"
@@ -247,15 +223,9 @@ _NOT_A_FIELD = frozenset(
         "relevant",
     }
 )
-_ASSIGNMENT_LINE = re.compile(
-    r"(?im)^[ \t>*_-]*assignment(?:\s+title)?(?:\s+\d+)?\s*:\s*(.+?)\s*$"
-)
-_BRIEF_TITLE_LINE = re.compile(
-    r"(?im)^[ \t>*_-]*(?!module\s)title\s*:\s*(.+?)\s*$"
-)
-_PLACEHOLDER_TITLE = re.compile(
-    r"(?i)^(?:draft|final|final draft|first draft|the draft)$"
-)
+_ASSIGNMENT_LINE = re.compile(r"(?im)^[ \t>*_-]*assignment(?:\s+title)?(?:\s+\d+)?\s*:\s*(.+?)\s*$")
+_BRIEF_TITLE_LINE = re.compile(r"(?im)^[ \t>*_-]*(?!module\s)title\s*:\s*(.+?)\s*$")
+_PLACEHOLDER_TITLE = re.compile(r"(?i)^(?:draft|final|final draft|first draft|the draft)$")
 _GATE_TIP_TITLE = re.compile(
     r"(?i)^(?:"
     r"how to score(?:\s+high)?\b|"
@@ -264,9 +234,7 @@ _GATE_TIP_TITLE = re.compile(
     r"the mark scheme is on this module\b"
     r")"
 )
-_BAND_ONLY_TITLE = re.compile(
-    r"^(?:\d{1,3}\s*\+|\d{1,3}\s*[-–]\s*\d{1,3})$"
-)
+_BAND_ONLY_TITLE = re.compile(r"^(?:\d{1,3}\s*\+|\d{1,3}\s*[-–]\s*\d{1,3})$")
 _ASK_ARTICLE = re.compile(r"(?i)^(?:the|a|an|your)\s+")
 _ASK_TRAIL = re.compile(
     r"(?i)\s+(?:are|is|must be|should be)\s+(?:present|shown|included|stated|given)\s*$"
@@ -285,9 +253,7 @@ _HEADING_LARGER = re.compile(r"(?i)heading[^\n]{0,40}\b(?:14|16|18|larger)\b")
 _JUSTIFY = re.compile(r"(?i)fully justified|body text[^\n]{0,40}justif")
 
 NAME_KEYS = frozenset({"student_name", "student"})
-NUMBER_KEYS = frozenset(
-    {"student_number", "student_id", "student_no", "registration_number"}
-)
+NUMBER_KEYS = frozenset({"student_number", "student_id", "student_no", "registration_number"})
 
 
 def diary_signals(text: str) -> bool:
@@ -332,9 +298,7 @@ def _title_is_other(labels: str) -> bool:
 def mint_module_id(title: str) -> str:
     """A short id from the module title. It is not forced to end in HK."""
     words = [
-        word
-        for word in re.findall(r"[A-Za-z]+", title or "")
-        if word.casefold() not in _MINT_STOP
+        word for word in re.findall(r"[A-Za-z]+", title or "") if word.casefold() not in _MINT_STOP
     ]
     if not words:
         words = ["Module"]
@@ -416,7 +380,10 @@ def top_column_quote(scheme: str, label: str) -> str:
     header = [cell.strip() for cell in rows[0].strip().strip("|").split("|")]
     index = None
     for place, cell in enumerate(header):
-        if label.casefold() in re.sub(r"\s+", "", cell).casefold() or label.casefold() in cell.casefold():
+        if (
+            label.casefold() in re.sub(r"\s+", "", cell).casefold()
+            or label.casefold() in cell.casefold()
+        ):
             index = place
             break
     if index is None:
@@ -564,13 +531,16 @@ def section_word_plan(
     sections: list[dict[str, Any]] = []
     if section and names:
         for name in names:
-            sections.append(
-                {**section, "name": name, "from_brief": True, "named_by_brief": True}
-            )
+            sections.append({**section, "name": name, "from_brief": True, "named_by_brief": True})
     elif section and count:
         for index in range(count):
             sections.append(
-                {**section, "name": f"Entry {index + 1}", "from_brief": True, "named_by_brief": False}
+                {
+                    **section,
+                    "name": f"Entry {index + 1}",
+                    "from_brief": True,
+                    "named_by_brief": False,
+                }
             )
     elif total and (names or count) and not section:
         plan_not_brief_rule = True
@@ -606,8 +576,10 @@ def section_word_plan(
             product = per * len(sections)
             total_min = total.get("min")
             total_max = total.get("max")
-            if isinstance(total_min, int) and isinstance(total_max, int) and not (
-                total_min <= product <= total_max
+            if (
+                isinstance(total_min, int)
+                and isinstance(total_max, int)
+                and not (total_min <= product <= total_max)
             ):
                 clash = (
                     "The per-entry lengths and the total do not add up. "
@@ -652,7 +624,9 @@ def section_plan_for(essay_id: str) -> dict[str, Any]:
         count = record["part_count"]
     else:
         count = len(names)
-    plan = section_word_plan(essay_textutil.module_brief_text(essay_id), names=names, part_count=count)
+    plan = section_word_plan(
+        essay_textutil.module_brief_text(essay_id), names=names, part_count=count
+    )
     plan["unnamed_note"] = record.get("unnamed_note")
     plan["named_by_brief"] = record.get("named_by_brief") is True
     plan["mapped"] = True
@@ -710,9 +684,7 @@ def _title_page_blob(labels: str) -> str:
 
 def _has_label(blob: str, label: str) -> bool:
     """True when label is its own words. A shorter label does not match inside a longer one."""
-    return (
-        re.search(r"(?i)(?<![a-z])" + re.escape(label) + r"(?![a-z])", blob) is not None
-    )
+    return re.search(r"(?i)(?<![a-z])" + re.escape(label) + r"(?![a-z])", blob) is not None
 
 
 def _marking_title_asks(labels: str) -> str:
@@ -802,11 +774,14 @@ def _known_phrase(phrase: str) -> bool:
         remainder = re.sub(r"\s+", " ", remainder).strip(" .:-")
         if not remainder:
             return True
-    if _PROGRAMME_ASK.search(folded) and not re.sub(
-        r"(?i)\b(?:programme name|programme code|partner institution)\b",
-        " ",
-        folded,
-    ).strip():
+    if (
+        _PROGRAMME_ASK.search(folded)
+        and not re.sub(
+            r"(?i)\b(?:programme name|programme code|partner institution)\b",
+            " ",
+            folded,
+        ).strip()
+    ):
         return True
     return False
 
@@ -1015,9 +990,7 @@ def title_page_spec(text: str) -> dict[str, Any]:
     spec["registration"] = _registration_asked(labels)
     spec["programme"] = _PROGRAMME_ASK.search(labels) is not None
     ask = "\n".join(
-        part
-        for part in (_title_page_blob(labels), _marking_title_asks(labels))
-        if part
+        part for part in (_title_page_blob(labels), _marking_title_asks(labels)) if part
     )
     folded = ask.casefold()
     if folded:
@@ -1097,11 +1070,7 @@ def cover_residue_line(line: str, cover_lines: list[str] | None = None) -> bool:
         return True
     if len(text.split()) <= 6 and _CRUMB_LABEL.search(text):
         return True
-    if (
-        len(text.split()) <= 24
-        and _FIELD_CUE.search(text)
-        and _FIELD_CUE_WORTH.search(text)
-    ):
+    if len(text.split()) <= 24 and _FIELD_CUE.search(text) and _FIELD_CUE_WORTH.search(text):
         return True
     return False
 
@@ -1231,9 +1200,7 @@ def cover_field_rows(
 
     if essay or spec.get("programme"):
         for programme_key in ("partner", "award", "title", "code"):
-            rows.append(
-                CoverFieldRow("", str(PROGRAMME[programme_key]), "house", "programme")
-            )
+            rows.append(CoverFieldRow("", str(PROGRAMME[programme_key]), "house", "programme"))
 
     module_title = pack.get("module_title")
     if not isinstance(module_title, str) or not module_title.strip():
@@ -1265,16 +1232,10 @@ def cover_field_rows(
                 )
             )
         elif key == "assignment_title":
-            value = (
-                assignment.strip()
-                if isinstance(assignment, str) and assignment.strip()
-                else ""
-            )
+            value = assignment.strip() if isinstance(assignment, str) and assignment.strip() else ""
             rows.append(CoverFieldRow("Assignment title", value, "asked", "assignment_title"))
         elif key == "registration" and spec.get("registration"):
-            rows.append(
-                CoverFieldRow("Registration number", number_str, "asked", "registration")
-            )
+            rows.append(CoverFieldRow("Registration number", number_str, "asked", "registration"))
         elif key == "word_count":
             rows.append(CoverFieldRow("Counted words", counted_str, "asked", "word_count"))
         elif key == "name" and spec.get("name") == "required":
@@ -1330,9 +1291,7 @@ def cover_field_rows(
             and not _row_present(rows, assignment.strip())
         ):
             rows.append(CoverFieldRow("", assignment.strip(), "house", "assignment_title"))
-        if lock in {None, "purpose_and_scope"} and not any(
-            row.key == "word_count" for row in rows
-        ):
+        if lock in {None, "purpose_and_scope"} and not any(row.key == "word_count" for row in rows):
             rows.append(CoverFieldRow("Counted words", counted_str, "house", "word_count"))
 
     stated = report.get("word_count", {}).get("stated")
@@ -1393,9 +1352,15 @@ def ensure_house_cover_lines(
     out = list(lines)
     if code and not _cover_line_present(out, str(code)):
         out.append(str(code))
-    if isinstance(assignment, str) and assignment.strip() and not _cover_line_present(out, assignment):
+    if (
+        isinstance(assignment, str)
+        and assignment.strip()
+        and not _cover_line_present(out, assignment)
+    ):
         out.append(assignment.strip())
-    if lock in {None, "purpose_and_scope"} and not any(item.startswith("Counted words:") for item in out):
+    if lock in {None, "purpose_and_scope"} and not any(
+        item.startswith("Counted words:") for item in out
+    ):
         if isinstance(counted, int):
             out.append(f"Counted words: {counted}")
         else:

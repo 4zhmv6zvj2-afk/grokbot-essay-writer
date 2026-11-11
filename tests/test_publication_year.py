@@ -97,7 +97,10 @@ def test_ac1_own_cite_year_beats_a_cited_work(workspace):
     narrative = "Author (1901) sets the corridor limit for this task."
     other = "Ng (1999) keeps a different claim about the same corridor."
     assert cite_look(seq, narrative) == "Author (2022) sets the corridor limit for this task."
-    assert cite_look(seq, "(Author, 1901) remains in the note.") == "(Author, 2022) remains in the note."
+    assert (
+        cite_look(seq, "(Author, 1901) remains in the note.")
+        == "(Author, 2022) remains in the note."
+    )
     assert cite_look(seq, other) == other
 
     look = f"{narrative} {other}"
@@ -109,7 +112,9 @@ def test_ac1_own_cite_year_beats_a_cited_work(workspace):
     assert "Ng (1999)" in saved
 
     ship_4a(seq, [source], {})
-    annotation = _docx(workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx")
+    annotation = _docx(
+        workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx"
+    )
     assert "(2022)" in annotation
     assert "(1901)" not in annotation
 
@@ -152,7 +157,9 @@ def test_ac2_cite_line_without_a_year_omits_the_year(workspace):
     seq = open_sequence()
     source = _plant(seq, path.name, year="2024")
     ship_4a(seq, [source], {})
-    annotation = _docx(workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx")
+    annotation = _docx(
+        workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx"
+    )
     assert "Author, A." in annotation
     assert "(2024)" not in annotation
     assert "(1901)" not in annotation

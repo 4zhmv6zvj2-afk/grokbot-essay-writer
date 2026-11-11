@@ -143,7 +143,9 @@ def _blocked_dest(dest: Path) -> str | None:
             inside = True
         except ValueError:
             inside = False
-        beside = dest_resolved == app_resolved.parent and (app_resolved.parent / "setup.json").is_file()
+        beside = (
+            dest_resolved == app_resolved.parent and (app_resolved.parent / "setup.json").is_file()
+        )
         if inside or beside:
             return save_tree
     if dest.exists() and not dest.is_dir():
@@ -624,7 +626,9 @@ def install_uploaded_copy(
         if source.is_dir():
             found = _project_root(source)
             if found is None:
-                return _fail("That folder does not contain the essay-writer project.", upload=str(source))
+                return _fail(
+                    "That folder does not contain the essay-writer project.", upload=str(source)
+                )
             root = found
         elif source.is_file():
             folder = install_folder(dest)
@@ -677,7 +681,9 @@ def install_uploaded_copy(
                 with zipfile.ZipFile(source) as archive:
                     _safe_extract(archive, folder)
             except (OSError, zipfile.BadZipFile, ValueError) as exc:
-                return _fail(f"The upload was not unpacked: {exc}", upload=str(source), dest=str(folder))
+                return _fail(
+                    f"The upload was not unpacked: {exc}", upload=str(source), dest=str(folder)
+                )
             found = _project_root(folder)
             if found is None:
                 return _fail(
@@ -733,12 +739,16 @@ def install_uploaded_copy(
     )
     launch = first_run_host.mcp_launch_command()
     mcp = (
-        first_run_host.attach_custom_mcp(root, reviewer=reviewer, include_user=include_user, enable=enable)
+        first_run_host.attach_custom_mcp(
+            root, reviewer=reviewer, include_user=include_user, enable=enable
+        )
         if attach
         else None
     )
     build_mcp = (
-        first_run_host.attach_build_mcp(root, reviewer=reviewer, include_user=include_user) if attach else None
+        first_run_host.attach_build_mcp(root, reviewer=reviewer, include_user=include_user)
+        if attach
+        else None
     )
     unpack_parent = install_folder(dest) if unpacked else None
     health_check = install_self_check()

@@ -98,10 +98,7 @@ def test_mark_scheme_aims_at_the_highest_band_and_prevails(workspace):
     assert "highest_band" in blocked["missing"]
     assert "highest band" in blocked["reason"].casefold()
     assert "High Distinction" in blocked["reason"]
-    aimed = (
-        "This is a report. Should the council publish the recycling figure? "
-        "High Distinction."
-    )
+    aimed = "This is a report. Should the council publish the recycling figure? High Distinction."
     assert assignment_gate(seq, aimed, seat="eqr")["ok"] is True
     plain = essay_pack_validate(seq, pack("RPT6001AA"), "draft")
     assert plain["refused"] == "assignment-gate"

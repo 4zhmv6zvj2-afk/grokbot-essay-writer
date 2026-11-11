@@ -40,9 +40,7 @@ _SCHEME_NAMES = (
     "marking-table.md",
     "marking-table.txt",
 )
-_SCHEME_HEAD = re.compile(
-    r"(?im)^#{0,3}\s*(mark scheme|marking guidelines?|rubric)\s*:?\s*(.*)$"
-)
+_SCHEME_HEAD = re.compile(r"(?im)^#{0,3}\s*(mark scheme|marking guidelines?|rubric)\s*:?\s*(.*)$")
 _FORMAT_LINE = re.compile(r"(?im)^\s*format\s*:\s*(essay|report)\b")
 # Same question, whichever field the brief uses. Question wins over Title.
 _QUESTION_FIELDS = (
@@ -96,9 +94,7 @@ _STOP = frozenset(
     }
 )
 _RANGE = re.compile(r"(\d{1,3})\s*[-–]\s*(\d{1,3})")
-_NUMERIC_BAND = re.compile(
-    r"(?<!\d)(?P<label>\d{1,3}\s*\+|\d{1,3}\s*[-–]\s*\d{1,3})(?!\d)"
-)
+_NUMERIC_BAND = re.compile(r"(?<!\d)(?P<label>\d{1,3}\s*\+|\d{1,3}\s*[-–]\s*\d{1,3})(?!\d)")
 _BAND_LINE = re.compile(
     r"(?im)^(?P<label>high distinction|distinction|excellent|outstanding|"
     r"first class|first|merit|credit|pass|fail)\b[^\n]{0,80}"
@@ -403,7 +399,9 @@ def read_assignment(essay_id: str) -> dict[str, Any]:
         "unnamed_note": contract.get("unnamed_note"),
         "lock": contract.get("lock"),
         "title_page": contract.get("title_page"),
-        "page_layout": contract.get("page_layout") if isinstance(contract.get("page_layout"), dict) else {},
+        "page_layout": contract.get("page_layout")
+        if isinstance(contract.get("page_layout"), dict)
+        else {},
         "findings_opening": contract.get("findings_opening"),
         "writing_type": contract.get("writing_type"),
     }
@@ -516,9 +514,7 @@ def _reason(record: dict[str, Any], seat: str) -> str:
         parts.append("Say the assignment question before saving.")
     if "highest_band" in record["missing"] and record["highest_band"]:
         owned = EQR_BAND if seat == "eqr" else WRITER_BAND
-        parts.append(
-            f"{owned} The top band here is {record['highest_band']}."
-        )
+        parts.append(f"{owned} The top band here is {record['highest_band']}.")
     if not parts:
         parts.append("The assignment check is not met yet.")
     return " ".join(parts)

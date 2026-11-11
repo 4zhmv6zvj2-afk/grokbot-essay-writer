@@ -74,9 +74,7 @@ def test_spawn_grok_uses_resolved_home_binary(monkeypatch, tmp_path):
     _thin_path(monkeypatch)
     grok = _home_with_binary(monkeypatch, tmp_path, ".grok/bin/grok")
     launch = _Launcher()
-    started = spawn_grok(
-        ["grok", "--model", "grok-4.7", "--effort", "high"], launch=launch
-    )
+    started = spawn_grok(["grok", "--model", "grok-4.7", "--effort", "high"], launch=launch)
     assert started["started"] is True
     assert started["pid"] == 4242
     assert launch.calls == [[str(grok), "--model", "grok-4.7", "--effort", "high"]]
@@ -91,9 +89,7 @@ def test_spawn_missing_only_when_no_candidate(monkeypatch, tmp_path):
     missing_agent = spawn_agent(["agent", "--model", "grok-4.7-high"], launch=launch)
     assert missing_agent["started"] is False
     assert missing_agent["reason"] == "agent-cli-missing"
-    missing_grok = spawn_grok(
-        ["grok", "--model", "grok-4.7", "--effort", "high"], launch=launch
-    )
+    missing_grok = spawn_grok(["grok", "--model", "grok-4.7", "--effort", "high"], launch=launch)
     assert missing_grok["started"] is False
     assert missing_grok["reason"] == "grok-cli-missing"
     assert launch.calls == []

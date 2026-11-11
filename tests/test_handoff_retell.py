@@ -33,7 +33,7 @@ SHORT_QUOTE = "The Strait of Hormuz carries a large share of world crude flows."
 ARGUMENT = (
     "The corridor matters because closure risk is priced through freight and "
     "insurance rather than through the barrel itself. Smith's account of the "
-    f"single-corridor model is useful here: \"{SHORT_QUOTE}\" That estimate is "
+    f'single-corridor model is useful here: "{SHORT_QUOTE}" That estimate is '
     "narrow, and it says nothing about how importers would re-route. A second "
     "reading is needed before the essay can claim a fuel-price effect, because "
     "the model holds routes fixed and samples one year of movements. The essay "

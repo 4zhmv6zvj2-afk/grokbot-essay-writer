@@ -72,9 +72,7 @@ def essay_originals(
             "read_only": True,
             "uploads": _files(uploads_dir(essay_id)),
             "brief": [
-                item
-                for item in _files(essay_dir(essay_id))
-                if item["name"].lower() in BRIEF_NAMES
+                item for item in _files(essay_dir(essay_id)) if item["name"].lower() in BRIEF_NAMES
             ],
             "databases": database_view(essay_id),
         }

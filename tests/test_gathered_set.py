@@ -25,10 +25,7 @@ from essay_writer.research import essay_research_full, essay_research_summary
 from essay_writer.state import load_state
 
 QUOTE = "The Strait handles a large share of flows."
-SAME = (
-    "Smith, J. (2020) Chokepoints and crude.\n"
-    f"{QUOTE}\n"
-)
+SAME = f"Smith, J. (2020) Chokepoints and crude.\n{QUOTE}\n"
 KEPT_NOTE = (
     "The paper measured the share of flows and reported it. "
     "The finding is that share of flows. "
@@ -70,10 +67,7 @@ Entries
 1. Quay watch
 2. Tide log
 """
-UNTIED = (
-    "Adey, P. (2021) Enrolment notes.\n"
-    "The office counted the forms on the desk.\n"
-)
+UNTIED = "Adey, P. (2021) Enrolment notes.\nThe office counted the forms on the desk.\n"
 
 
 def _escape(text: str) -> str:
@@ -83,11 +77,7 @@ def _escape(text: str) -> str:
 def _pdf(text: str, mark: bytes) -> bytes:
     stream = f"BT /F1 12 Tf 72 720 Td ({_escape(text)}) Tj ET".encode()
     content = (
-        b"<< /Length "
-        + str(len(stream)).encode()
-        + b" >>\nstream\n"
-        + stream
-        + b"\nendstream"
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
     )
     page = b"<< /Type /Page /Parent 2 0 R /Contents 3 0 R >>"
     chunks = [
@@ -162,7 +152,13 @@ def test_ac1_same_text_pdfs_with_different_hashes_keep_one(workspace):
     assert draft["ok"] is True, draft
     assert [source["id"] for source in draft["sources"]] == ["src-1"]
     assert draft["sources"][0]["locator"].endswith("copy-a.pdf")
-    saved = essay_research_summary(seq, "chokepoints", "confirm", rows, cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    saved = essay_research_summary(
+        seq,
+        "chokepoints",
+        "confirm",
+        rows,
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     assert saved["stored"] is True, saved
     assert [source["id"] for source in saved["sources"]] == ["src-1"]
     annotation = _docx(work_dir(seq) / "output" / "annotation.docx")
@@ -192,7 +188,7 @@ def test_ac1_same_text_pdfs_with_different_hashes_keep_one(workspace):
         rows,
         clarify_context=CLARIFY_OPEN,
         reviews=reviews,
-        cardDigest=card_digest_for(seq, 'essay.research.full'),
+        cardDigest=card_digest_for(seq, "essay.research.full"),
     )
     assert confirmed["stored"] is True, confirmed
     archive = zipfile.ZipFile(work_dir(seq) / "output" / "critical-reviews.zip")
@@ -255,9 +251,30 @@ def test_ac2_identical_annotation_paragraphs_are_refused(workspace):
     """AC2. Three different files with one shared annotation paragraph are refused."""
     module = "ANN9001HK"
     bodies = (
-        ("north.pdf", "src-1", "Smith, J.", "2020", "North gauge", "The north gauge measured eleven units."),
-        ("south.pdf", "src-2", "Lee, A.", "2019", "South gauge", "The south gauge measured twenty units."),
-        ("east.pdf", "src-3", "Ng, K.", "2018", "East gauge", "The east gauge measured thirty units."),
+        (
+            "north.pdf",
+            "src-1",
+            "Smith, J.",
+            "2020",
+            "North gauge",
+            "The north gauge measured eleven units.",
+        ),
+        (
+            "south.pdf",
+            "src-2",
+            "Lee, A.",
+            "2019",
+            "South gauge",
+            "The south gauge measured twenty units.",
+        ),
+        (
+            "east.pdf",
+            "src-3",
+            "Ng, K.",
+            "2018",
+            "East gauge",
+            "The east gauge measured thirty units.",
+        ),
     )
     rows = []
     for name, source_id, author, year, title, sentence in bodies:
@@ -282,7 +299,9 @@ def test_ac2_identical_annotation_paragraphs_are_refused(workspace):
     assert "same annotation paragraph" in draft["reason"]
     assert draft["stored"] is False
     assert draft["wrote"] is False
-    confirmed = essay_research_summary(seq, "gauges", "confirm", rows, cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq, "gauges", "confirm", rows, cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert confirmed["ok"] is False, confirmed
     assert confirmed["refused"] == "gathered-set"
     assert confirmed["stored"] is False
@@ -334,7 +353,9 @@ def test_ac3_source_untied_to_any_entry_is_refused(workspace):
     assert "not tied to an entry" in draft["reason"]
     assert draft["stored"] is False
     assert draft["wrote"] is False
-    confirmed = essay_research_summary(seq, "entries", "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    confirmed = essay_research_summary(
+        seq, "entries", "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert confirmed["ok"] is False
     assert confirmed["refused"] == "gathered-set"
     assert load_state(seq)["research"]["summary"] is None
@@ -354,10 +375,7 @@ def test_ac_nt6_entry_tie_or_ask_for_a_third_writing_type(workspace):
             workspace,
             essay_id=module,
             name="quay.md",
-            text=(
-                "Adey, P. (2021) Quay watch notes.\n"
-                "The Quay watch recorded the crane stop.\n"
-            ),
+            text=("Adey, P. (2021) Quay watch notes.\nThe Quay watch recorded the crane stop.\n"),
         )
         seq = open_sequence(module)
         record = read_assignment(seq)
@@ -380,7 +398,9 @@ def test_ac_nt6_entry_tie_or_ask_for_a_third_writing_type(workspace):
         draft = essay_research_summary(seq, "quay", "draft", [row])
         assert draft["ok"] is True, draft
         assert draft["sources"][0]["tied_to"] == "Quay watch"
-        saved = essay_research_summary(seq, "quay", "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+        saved = essay_research_summary(
+            seq, "quay", "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+        )
         assert saved["stored"] is True, saved
         assert saved["sources"][0]["tied_to"] == "Quay watch"
     finally:

@@ -58,9 +58,15 @@ def _pack(seq: str, module: str, *, authored: bool) -> dict:
         "genre": "essay",
         "conclusion": "open",
         "sections": [
-            {"heading": "Introduction", "body": "This essay asks how far the corridor constrains trade."},
+            {
+                "heading": "Introduction",
+                "body": "This essay asks how far the corridor constrains trade.",
+            },
             {"heading": "Analysis", "body": " ".join([BODY] * 20)},
-            {"heading": "Conclusion", "body": "The essay treats the corridor as a constraint on trade."},
+            {
+                "heading": "Conclusion",
+                "body": "The essay treats the corridor as a constraint on trade.",
+            },
         ],
         "sources": [source],
     }

@@ -57,9 +57,8 @@ def _door_options(
     """Optional research fields, bound to this essay's local store."""
     if packs is None:
         names: list[str] = []
-    elif (
-        not isinstance(packs, list)
-        or any(not isinstance(item, str) or not item.strip() for item in packs)
+    elif not isinstance(packs, list) or any(
+        not isinstance(item, str) or not item.strip() for item in packs
     ):
         return None, refuse(
             "packs",
@@ -81,9 +80,8 @@ def _door_options(
             names.append(name)
     if exclude_section_ids is None:
         excluded: list[str] = []
-    elif (
-        not isinstance(exclude_section_ids, list)
-        or any(not isinstance(item, str) or not item.strip() for item in exclude_section_ids)
+    elif not isinstance(exclude_section_ids, list) or any(
+        not isinstance(item, str) or not item.strip() for item in exclude_section_ids
     ):
         return None, refuse(
             "exclude",
@@ -92,11 +90,15 @@ def _door_options(
     else:
         excluded = [item.strip() for item in exclude_section_ids]
     if industry is not None and not isinstance(industry, dict):
-        return None, refuse("industry", "industry must be an object when it is sent. It is not evidence.")
+        return None, refuse(
+            "industry", "industry must be an object when it is sent. It is not evidence."
+        )
     try:
         digest({"industry": industry, "host_voice": host_voice})
     except TypeError:
-        return None, refuse("host_voice", "host_voice must be data the door can store. It is not evidence.")
+        return None, refuse(
+            "host_voice", "host_voice must be data the door can store. It is not evidence."
+        )
     return {
         "packs": names,
         "exclude_section_ids": excluded,
@@ -105,7 +107,9 @@ def _door_options(
     }, None
 
 
-def _open_named_packs(names: list[str], excluded: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
+def _open_named_packs(
+    names: list[str], excluded: list[str]
+) -> tuple[list[dict[str, Any]], list[str]]:
     opened: list[dict[str, Any]] = []
     skipped: list[str] = []
     banned = set(excluded)
@@ -244,7 +248,11 @@ def _prepare(
     texts = {source["locator"]: load_text_for(source) for source in kept}
     issues.extend(check_claims(kept, claims, texts, essay_id))
     if issues:
-        code = "cross-essay" if any(item["code"] == "cross-essay" for item in issues) else "invent-forbid"
+        code = (
+            "cross-essay"
+            if any(item["code"] == "cross-essay" for item in issues)
+            else "invent-forbid"
+        )
         return None, refuse(code, issues[0]["reason"], issues=issues, invent_forbid="refuse")
     kept, resolvers_called, _resolver_values = enrich_sources(kept, texts)
     kept, dropped_ids = collapse_same_work(kept, texts)
@@ -289,7 +297,9 @@ def _prepare(
             }
             for source in kept
         ],
-        "not_opened": [locator for locator in material_locators(essay_id) if locator not in opened_set],
+        "not_opened": [
+            locator for locator in material_locators(essay_id) if locator not in opened_set
+        ],
         "sources": kept,
         "claims": grounded_claims,
         "gaps": gaps,

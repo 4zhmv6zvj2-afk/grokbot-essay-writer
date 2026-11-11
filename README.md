@@ -180,6 +180,7 @@ Python 3.12 or newer on macOS or Linux (the stage lock uses `fcntl`; Windows is 
 uv sync --extra dev
 uv run pytest                      # the full suite
 uv run ruff check src tests tools
+uv run ruff format --check --force-exclude src tests tools
 uv run mypy src
 uv run python tools/generate_docs.py --check
 uv run python tools/update_prompt_snapshot.py --check

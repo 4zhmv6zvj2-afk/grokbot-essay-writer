@@ -363,7 +363,13 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
             ),
             waiting_confirm=False,
         )
-    if confirmPhase == CONFIRM and not auto_next and not minting and not cardAction and not cardDigest:
+    if (
+        confirmPhase == CONFIRM
+        and not auto_next
+        and not minting
+        and not cardAction
+        and not cardDigest
+    ):
         # Fallback for a host that cannot pass the card fields: a typed yes,
         # ok, or Confirm on a waiting card saves that card's draft. The card
         # path stays preferred, and a later stage is still its own card.
@@ -527,13 +533,15 @@ def _confirm_path(
                 payload = waiting.get("payload")
                 if isinstance(payload, dict) and isinstance(payload.get("look"), str):
                     saved_look = payload["look"]
-            if isinstance(saved_look, str) and saved_look.strip() and not answers_mean_no_change(saved_look):
+            if (
+                isinstance(saved_look, str)
+                and saved_look.strip()
+                and not answers_mean_no_change(saved_look)
+            ):
                 text = saved_look.strip()
                 look = text
         else:
-            if not _INHERITED_KEEP.get() and _superseded_card(
-                essay_id, stage, pointer, cardDigest
-            ):
+            if not _INHERITED_KEEP.get() and _superseded_card(essay_id, stage, pointer, cardDigest):
                 return _older_card(essay_id, stage, genre, pointer)
             if press_target is not None and press_target != stage:
                 return _reoffer_confirm(
@@ -739,9 +747,7 @@ def _stage_body_fields(
         if value is not None:
             payload[key] = value
     fingerprint: dict[str, object] = (
-        {"stage": stage, "inherited_keep": True}
-        if _INHERITED_KEEP.get()
-        else {"stage": stage}
+        {"stage": stage, "inherited_keep": True} if _INHERITED_KEEP.get() else {"stage": stage}
     )
     note = _note_path(essay_id, stage)
     body: dict[str, Any] = {

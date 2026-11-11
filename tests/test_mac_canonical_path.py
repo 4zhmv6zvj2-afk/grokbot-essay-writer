@@ -165,7 +165,11 @@ def test_ac7_attach_mcp_upgrade_path_self_checks_and_fo_card(tmp_path, monkeypat
     )
     monkeypatch.setattr(
         "essay_writer.first_run_host.attach_custom_mcp",
-        lambda root, **kwargs: {"ok": True, "servers": ["essay-writer"], "reviewer": kwargs.get("reviewer")},
+        lambda root, **kwargs: {
+            "ok": True,
+            "servers": ["essay-writer"],
+            "reviewer": kwargs.get("reviewer"),
+        },
     )
     monkeypatch.setattr(
         "essay_writer.first_run_host.attach_build_mcp",
@@ -210,9 +214,7 @@ def test_cli_remember_mac_still_four_way(tmp_path, monkeypatch, capsys):
     assert direct["remembered"] is False
 
 
-def test_documents_root_reads_the_mac_documents_but_keeps_test_isolation(
-    tmp_path, monkeypatch
-):
+def test_documents_root_reads_the_mac_documents_but_keeps_test_isolation(tmp_path, monkeypatch):
     """late_chain resolves Documents without keying on the test runner."""
     from essay_writer.late_chain import documents_root
 

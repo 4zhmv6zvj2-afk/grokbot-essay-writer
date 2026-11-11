@@ -33,7 +33,8 @@ SPELL = (
     "and spell them out again in the reference list."
 )
 
-DIARY_BRIEF = """
+DIARY_BRIEF = (
+    """
 Assignment title: Individual reflective diary
 
 Module title: Practice module
@@ -66,7 +67,10 @@ Comments
 Strengths
 Areas for improvement
 
-""" + SPELL + "\n"
+"""
+    + SPELL
+    + "\n"
+)
 
 ESSAY_BRIEF = (
     "Genre: essay\n"
@@ -189,7 +193,10 @@ def test_ac2_brief_table_is_extracted_and_the_top_band_is_printed(workspace):
     from essay_writer.assignment_gate import _highest_band
 
     assert _highest_band(bare) is None
-    assert _highest_band("High Distinction (80-100): evidenced\nMerit (60-69): sound\n") == "High Distinction"
+    assert (
+        _highest_band("High Distinction (80-100): evidenced\nMerit (60-69): sound\n")
+        == "High Distinction"
+    )
 
     folder = essay_dir(ESSAY)
     folder.mkdir(parents=True, exist_ok=True)
@@ -215,7 +222,10 @@ def test_ac3_aim_and_assignment_task_are_the_ask(workspace):
     seen = read_assignment(seq)
     question = seen["question"]
     assert "Understand the practice by reflecting on your own decisions." in question
-    assert "Each entry names one decision and critically analyses it with theory and evidence." in question
+    assert (
+        "Each entry names one decision and critically analyses it with theory and evidence."
+        in question
+    )
     assert "Question:" not in DIARY_BRIEF.split("Assignment task", 1)[0]
     line = basics_pass_lines(seq)[2]
     assert line.startswith("Question: ")
@@ -371,16 +381,12 @@ def test_ac6_title_page_follows_the_brief_and_blocks_a_forbidden_name(workspace)
     assert abs(section.left_margin.cm - 2.5) < 0.05
     assert section.footer.paragraphs[0].alignment == WD_ALIGN_PARAGRAPH.RIGHT
     headings = [
-        paragraph
-        for paragraph in document.paragraphs
-        if paragraph.style.name.startswith("Heading")
+        paragraph for paragraph in document.paragraphs if paragraph.style.name.startswith("Heading")
     ]
     assert headings
     assert headings[0].runs[0].font.size.pt == 12
     prose = [
-        paragraph
-        for paragraph in document.paragraphs
-        if paragraph.text.startswith("One decision")
+        paragraph for paragraph in document.paragraphs if paragraph.text.startswith("One decision")
     ]
     assert prose
     assert prose[0].alignment == WD_ALIGN_PARAGRAPH.JUSTIFY

@@ -28,9 +28,7 @@ from essay_writer.writing_basics import STAGE_ORDER
 
 STUDENT = "Privacy risk reduces willingness to disclose personal data."
 TOPIC_ONLY = "Surveys of privacy and personal data on government websites discuss trust."
-FITS = (
-    "Privacy risk reduces willingness to disclose personal data when people use a public site."
-)
+FITS = "Privacy risk reduces willingness to disclose personal data when people use a public site."
 OUTLINE = (
     "# Introduction\n"
     "Public forms ask for more data than the visitor expects.\n"

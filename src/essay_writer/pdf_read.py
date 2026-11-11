@@ -110,10 +110,7 @@ def chop_pdf(path: Path, *, limit: int = PART_LIMIT) -> dict[str, Any]:
     parts: list[dict[str, Any]] = []
     gaps: list[dict[str, Any]] = []
     single_fit = (
-        len(pieces) == 1
-        and pieces[0] == data
-        and len(data) <= limit
-        and readable_pdf(data)
+        len(pieces) == 1 and pieces[0] == data and len(data) <= limit and readable_pdf(data)
     )
     if single_fit:
         return {

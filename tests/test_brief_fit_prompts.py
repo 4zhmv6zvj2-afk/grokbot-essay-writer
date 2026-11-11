@@ -39,7 +39,9 @@ def test_ac1_writing_stages_carry_the_mark_table_bullet():
 def test_ac2_the_craft_source_and_both_launchers_read_the_same_bullet():
     """AC2. One copy in the craft source, read by both launchers."""
     helpers = HELPERS.read_text(encoding="utf-8")
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert craft.count(MARK_TABLE_LEAN) == 1
     for stage in WRITING:
         assert stage_settings(stage)["prompt_overlay"].count(MARK_TABLE_LEAN) == 1
@@ -70,5 +72,7 @@ def test_ac3_the_bullet_leans_on_listed_criteria_and_invents_none():
     validate = (REPO / "src" / "essay_writer" / "validate.py").read_text(encoding="utf-8")
     assert "MARK_TABLE_LEAN" not in gates
     assert "MARK_TABLE_LEAN" not in validate
-    voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
-    assert 'Use the criteria it lists and no others' in voice
+    voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Use the criteria it lists and no others" in voice

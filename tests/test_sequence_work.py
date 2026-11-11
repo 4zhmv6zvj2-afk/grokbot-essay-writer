@@ -21,7 +21,16 @@ def test_work_follows_the_sequence_and_uploads_stay_shared(workspace):
     assert missing["ok"] is False
 
     assert essay_research_summary(sequence_id, TOPIC, "draft", [source()])["ok"] is True
-    assert essay_research_summary(sequence_id, TOPIC, "confirm", [source()], cardDigest=card_digest_for(sequence_id, 'essay.research.summary'))["stored"] is True
+    assert (
+        essay_research_summary(
+            sequence_id,
+            TOPIC,
+            "confirm",
+            [source()],
+            cardDigest=card_digest_for(sequence_id, "essay.research.summary"),
+        )["stored"]
+        is True
+    )
     state_path = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "state.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert state["sequence_id"] == sequence_id
@@ -41,10 +50,21 @@ def test_work_follows_the_sequence_and_uploads_stay_shared(workspace):
     child_id = essay_sequence_new(ESSAY, "confirm")["sequence_id"]
     child_topic = TOPIC + " for the next sequence"
     assert essay_research_summary(child_id, child_topic, "draft", [source()])["ok"] is True
-    assert essay_research_summary(child_id, child_topic, "confirm", [source()], cardDigest=card_digest_for(child_id, 'essay.research.summary'))["stored"] is True
+    assert (
+        essay_research_summary(
+            child_id,
+            child_topic,
+            "confirm",
+            [source()],
+            cardDigest=card_digest_for(child_id, "essay.research.summary"),
+        )["stored"]
+        is True
+    )
     parent = json.loads(state_path.read_text(encoding="utf-8"))
     child = json.loads(
-        (workspace / "Essay-writer" / ESSAY / "sequences" / "2" / "state.json").read_text(encoding="utf-8")
+        (workspace / "Essay-writer" / ESSAY / "sequences" / "2" / "state.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert parent["research"]["summary"]["topic"] == TOPIC
     assert child["research"]["summary"]["topic"] == child_topic

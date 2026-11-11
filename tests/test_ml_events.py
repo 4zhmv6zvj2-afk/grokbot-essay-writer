@@ -88,7 +88,17 @@ _ALLOWED = {
         "advanced",
         "wrote",
     },
-    "digest": {"kind", "t", "tool", "essay_id", "card_digest", "posted", "payload", "omitted", "chars"},
+    "digest": {
+        "kind",
+        "t",
+        "tool",
+        "essay_id",
+        "card_digest",
+        "posted",
+        "payload",
+        "omitted",
+        "chars",
+    },
     "paths": {"kind", "t", "tool", "essay_id", "files", "local_count", "local_suffixes"},
     "shell": {
         "kind",
@@ -311,7 +321,13 @@ def test_cursor_and_build_share_one_stream(workspace, monkeypatch):
 
     monkeypatch.setattr(
         "essay_writer.cursor_office.spawn_agent",
-        lambda command: {"started": True, "reason": "", "pid": os.getpid(), "command": command, "stdout": None},
+        lambda command: {
+            "started": True,
+            "reason": "",
+            "pid": os.getpid(),
+            "command": command,
+            "stdout": None,
+        },
     )
     started = start_stage_mid(sequence, "6")
     assert started["started"] is True
@@ -323,7 +339,10 @@ def test_cursor_and_build_share_one_stream(workspace, monkeypatch):
     assert rules[40:140] not in text
     assert CHAT not in text
     rows = _events(workspace, sequence)
-    assert any(row["kind"] == "shell" and row["shell"] == "Cursor" and row["event"] == "start" for row in rows)
+    assert any(
+        row["kind"] == "shell" and row["shell"] == "Cursor" and row["event"] == "start"
+        for row in rows
+    )
     assert not any(row["kind"] == "shell" and row["shell"] == "Build" for row in rows)
     from essay_writer.build_status import finish_mid_process
 
@@ -332,19 +351,31 @@ def test_cursor_and_build_share_one_stream(workspace, monkeypatch):
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: "grok_build")
     monkeypatch.setattr(
         "essay_writer.build_office.spawn_grok",
-        lambda command: {"started": True, "reason": "", "pid": os.getpid(), "command": command, "stdout": None},
+        lambda command: {
+            "started": True,
+            "reason": "",
+            "pid": os.getpid(),
+            "command": command,
+            "stdout": None,
+        },
     )
     built = start_stage_mid(sequence, "8")
     assert built["shell"] == "grok"
     rows = _events(workspace, sequence)
-    assert any(row["kind"] == "shell" and row["shell"] == "Build" and row["event"] == "start" for row in rows)
+    assert any(
+        row["kind"] == "shell" and row["shell"] == "Build" and row["event"] == "start"
+        for row in rows
+    )
     build_src = (REPO / "src" / "essay_writer" / "build_office.py").read_text(encoding="utf-8")
     cursor_src = (REPO / "src" / "essay_writer" / "cursor_office.py").read_text(encoding="utf-8")
     assert "ml-events.jsonl" not in build_src
     assert "ml-events.jsonl" not in cursor_src
     assert "ml_events" not in build_src
     assert "ml_events" not in cursor_src
-    assert cursor_shell()["handlers"]["essay.debug.wipe"] is front_office()["handlers"]["essay.debug.wipe"]
+    assert (
+        cursor_shell()["handlers"]["essay.debug.wipe"]
+        is front_office()["handlers"]["essay.debug.wipe"]
+    )
     assert cursor_shell()["handlers"]["essay.debug.wipe"] is HANDLERS["essay.debug.wipe"]
     assert HANDLERS["essay.debug.wipe"] is essay_debug_wipe
 

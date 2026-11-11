@@ -84,7 +84,9 @@ def _read_utf8(path: Path, blocked: list[str], unreadable: list[str]) -> str | N
         return None
 
 
-def _gathered_scan(essay_id: str, pack: dict[str, Any] | None) -> tuple[list[str], list[str], list[str]]:
+def _gathered_scan(
+    essay_id: str, pack: dict[str, Any] | None
+) -> tuple[list[str], list[str], list[str]]:
     """Gathered text, names that are not UTF-8, and names that could not be opened.
 
     Unreadable names are not scanned. Replacement characters would let a copied
@@ -175,7 +177,7 @@ def _inside_quote(spans: list[tuple[int, int]], start: int, end: int) -> bool:
 def _wrapped_in_quotes(body: str, start: int, end: int) -> bool:
     if start < 1 or end >= len(body):
         return False
-    return body[start - 1] in "\"“" and body[end] in "\"”"
+    return body[start - 1] in '"“' and body[end] in '"”'
 
 
 def unquoted_exact(body: str, gathered: list[str]) -> list[str]:
@@ -213,7 +215,9 @@ def _band_edges(rules: dict[str, Any]) -> tuple[int | None, int | None]:
     return band_edges(rules)
 
 
-def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str | None = None) -> dict[str, Any]:
+def evaluate_gates(
+    essay_id: str, pack: dict[str, Any] | None = None, body: str | None = None
+) -> dict[str, Any]:
     module = module_code(essay_id) if isinstance(essay_id, str) else ""
     pack_sent = isinstance(pack, dict)
     pack_data = cast(dict[str, Any], pack) if pack_sent else {}
@@ -251,7 +255,9 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
             3,
             "question",
             question_ok,
-            "A brief or a pack title names the question." if question_ok else "Name the question in the brief or the pack title.",
+            "A brief or a pack title names the question."
+            if question_ok
+            else "Name the question in the brief or the pack title.",
         )
     )
 
@@ -262,7 +268,9 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         genre = brief_genre(essay_id)
     if module == "MOD1004AA":
         genre_ok = genre == "report"
-        genre_reason = "MOD1004AA is a report." if genre_ok else "MOD1004AA must be a report, not an essay."
+        genre_reason = (
+            "MOD1004AA is a report." if genre_ok else "MOD1004AA must be a report, not an essay."
+        )
     else:
         genre_ok = genre in {"essay", "report", "diary"}
         if genre == "diary":
@@ -318,21 +326,28 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
                 forms |= in_text_forms(name, str(year))
     records = citation_records(text)
     parked = decorative_citations(text)
-    hard_missing = [record.token for record in records if record.hard and not token_allowed(record.token, forms)]
-    questionable = [record.token for record in records if not record.hard and not token_allowed(record.token, forms)]
+    hard_missing = [
+        record.token for record in records if record.hard and not token_allowed(record.token, forms)
+    ]
+    questionable = [
+        record.token
+        for record in records
+        if not record.hard and not token_allowed(record.token, forms)
+    ]
     cite_ok = not hard_missing and not parked
     if hard_missing:
         cite_reason = "These citations are not in the gathered sources: " + ", ".join(hard_missing)
     elif parked:
         cite_reason = (
             "A citation is parked on a general sentence. "
-            "Tie it to a specific result from a gathered source, or remove it. "
-            + parked[0]
+            "Tie it to a specific result from a gathered source, or remove it. " + parked[0]
         )
     else:
         cite_reason = "In-text citations match a gathered author and year."
         if questionable:
-            label = "A possible citation was" if len(questionable) == 1 else "Possible citations were"
+            label = (
+                "A possible citation was" if len(questionable) == 1 else "Possible citations were"
+            )
             cite_reason += f" {label} not confirmed: " + ", ".join(questionable) + "."
     cite_gate = _gate(7, "citations", cite_ok, cite_reason)
     cite_gate["questionable"] = questionable
@@ -344,7 +359,9 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
 
         rules = brief_file_word_rules(essay_id)
     low, high = _band_edges(rules) if isinstance(rules, dict) and rules else (None, None)
-    exclude_cites = _exclude_in_text_citations(essay_id, rules) if isinstance(rules, dict) else False
+    exclude_cites = (
+        _exclude_in_text_citations(essay_id, rules) if isinstance(rules, dict) else False
+    )
     count = count_words(text, exclude_citations=exclude_cites)
     if pack_data.get("word_count_acknowledged") is True and rules:
         band_ok, band_reason = True, "A person acknowledged the word count."
@@ -367,7 +384,10 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
         checked = before_word(
             essay_id,
             [
-                {"heading": str(section.get("heading") or ""), "body": str(section.get("body") or "")}
+                {
+                    "heading": str(section.get("heading") or ""),
+                    "body": str(section.get("body") or ""),
+                }
                 for section in (pack_data.get("sections") or [])
                 if isinstance(section, dict)
             ],
@@ -393,7 +413,10 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
 
         if stricter_invented_max(essay_id, rules, high=high) is not None:
             draft_sections = [
-                {"heading": str(section.get("heading") or ""), "body": str(section.get("body") or "")}
+                {
+                    "heading": str(section.get("heading") or ""),
+                    "body": str(section.get("body") or ""),
+                }
                 for section in (pack_data.get("sections") or [])
                 if isinstance(section, dict)
             ]
@@ -415,12 +438,22 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
     gates.append(_gate(8, "word-band", band_ok, band_reason))
 
     if records:
-        refs_ok = all(isinstance(source.get("author") or source.get("authors"), (str, list)) and source.get("year") for source in sources)
-        refs_reason = "Cited sources have an author and a year." if refs_ok else "A cited source is missing an author or a year."
+        refs_ok = all(
+            isinstance(source.get("author") or source.get("authors"), (str, list))
+            and source.get("year")
+            for source in sources
+        )
+        refs_reason = (
+            "Cited sources have an author and a year."
+            if refs_ok
+            else "A cited source is missing an author or a year."
+        )
     else:
-        refs_ok, refs_reason = True, "No in-text citations, so the reference list is not required yet."
+        refs_ok, refs_reason = (
+            True,
+            "No in-text citations, so the reference list is not required yet.",
+        )
     gates.append(_gate(9, "references", refs_ok, refs_reason))
-
 
     identity_blocked = bool(blocked_identity_keys(essay_id, pack_data))
     gates.append(
@@ -439,7 +472,9 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
             11,
             "conclusion",
             conclusion_ok,
-            "The conclusion is noted or open." if conclusion_ok else "The conclusion must be noted or open.",
+            "The conclusion is noted or open."
+            if conclusion_ok
+            else "The conclusion must be noted or open.",
         )
     )
 
@@ -495,10 +530,18 @@ def evaluate_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str 
     }
 
 
-def essay_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str | None = None) -> dict[str, Any]:
+def essay_gates(
+    essay_id: str, pack: dict[str, Any] | None = None, body: str | None = None
+) -> dict[str, Any]:
     """Read-only mechanical gates. This is not the reviewer seat."""
     if not isinstance(essay_id, str):
-        return {"ok": False, "refused": "essay-id", "reason": "Name the sequence.", "wrote": False, "stored": False}
+        return {
+            "ok": False,
+            "refused": "essay-id",
+            "reason": "Name the sequence.",
+            "wrote": False,
+            "stored": False,
+        }
     error = target_error(essay_id)
     if error:
         write_error = sequence_write_error(essay_id)
@@ -510,7 +553,13 @@ def essay_gates(essay_id: str, pack: dict[str, Any] | None = None, body: str | N
             "stored": False,
         }
     if essay_id in BRIEF_NAMES:
-        return {"ok": False, "refused": "essay-id", "reason": "Name the module.", "wrote": False, "stored": False}
+        return {
+            "ok": False,
+            "refused": "essay-id",
+            "reason": "Name the module.",
+            "wrote": False,
+            "stored": False,
+        }
     report = evaluate_gates(essay_id, pack, body)
     report["essay_id"] = essay_id
     report["read_only"] = True

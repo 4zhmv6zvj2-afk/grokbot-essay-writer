@@ -311,7 +311,10 @@ def remember_mac_handoff_dir(path: Path | str) -> dict[str, Any]:
     if any(part.casefold() == "researchdrive" for part in folder.parts):
         return {"ok": False, "reason": "That folder is not a copy path on this computer."}
     if folder.name.casefold() == "open":
-        return {"ok": False, "reason": "Name the Mac handoff folder. The word open is not a folder."}
+        return {
+            "ok": False,
+            "reason": "Name the Mac handoff folder. The word open is not a folder.",
+        }
     try:
         folder.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
@@ -591,7 +594,12 @@ def copy_deliverable_to_mac(source: Path, *, mac_dir: Path | None = None) -> dic
             "reason": "Only a Word .docx or a .zip is copied.",
         }
     if not path.is_file():
-        return {"ok": False, "copied": False, "source": str(path), "reason": "That deliverable is not a file."}
+        return {
+            "ok": False,
+            "copied": False,
+            "source": str(path),
+            "reason": "That deliverable is not a file.",
+        }
     generated = _app_generated_deliverable(path)
     folder = _mac_copy_folder(path, mac_dir)
     if folder is None:

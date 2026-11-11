@@ -87,7 +87,10 @@ def _child_from(parent: str) -> str:
     record = load_record(child)
     assert record is not None
     locks = record.get("inherited_locks") or []
-    assert any(row.get("stage") == "2" and ENTRY_LOCK.splitlines()[0] in row.get("look", "") for row in locks)
+    assert any(
+        row.get("stage") == "2" and ENTRY_LOCK.splitlines()[0] in row.get("look", "")
+        for row in locks
+    )
     _save_stage(child, "1", _look(child, "Child opens on stage 1."))
     return child
 
@@ -146,7 +149,9 @@ def test_inherited_lock_stays_until_the_revised_card_is_saved(workspace):
 def test_ac3_delete_scope_refuses_without_where(workspace):
     """AC3. Delete draft refuses until workspace|local|both is chosen."""
     parent = _parent_with_stage2_lock()
-    mac_deliverables_record(parent).write_text('{"paths": ["/tmp/example.docx"]}\n', encoding="utf-8")
+    mac_deliverables_record(parent).write_text(
+        '{"paths": ["/tmp/example.docx"]}\n', encoding="utf-8"
+    )
     refused = essay_project_delete(MODULE, "draft")
     assert refused["ok"] is False
     assert refused.get("needs_where_choice") is True
@@ -159,7 +164,9 @@ def test_ac3_delete_scope_refuses_without_where(workspace):
 def test_ac4_no_silent_grokbot_when_mac_may_exist(workspace):
     """AC4. Omitted where does not silently become grokbot when Mac copies may exist."""
     parent = _parent_with_stage2_lock()
-    mac_deliverables_record(parent).write_text('{"paths": ["/tmp/example.docx"]}\n', encoding="utf-8")
+    mac_deliverables_record(parent).write_text(
+        '{"paths": ["/tmp/example.docx"]}\n', encoding="utf-8"
+    )
     refused = essay_project_delete(MODULE, "draft")
     assert refused["ok"] is False
     assert refused.get("needs_where_choice") is True
@@ -170,7 +177,9 @@ def test_ac5_suite_hooks_and_build_covered(workspace):
     """AC5. Shared handlers and FO copy are wired. Build covered."""
     text = (REPO / "src" / "essay_writer" / "stage_track.py").read_text(encoding="utf-8")
     assert "prior_saved_lock_ask" in text
-    assert "delete_where_gate" in (REPO / "src" / "essay_writer" / "projects.py").read_text(encoding="utf-8")
+    assert "delete_where_gate" in (REPO / "src" / "essay_writer" / "projects.py").read_text(
+        encoding="utf-8"
+    )
     assert FO_STAGES_ROLL_FORWARD in stage_tool_description()
     assert "Mac-local" in INSTRUCTIONS or "Mac-local copies" in INSTRUCTIONS
     assert front_office()["handlers"]["essay.stage"] is HANDLERS["essay.stage"]
@@ -289,13 +298,30 @@ def test_ac12_failed_essay_gates_outcome_names_refused_or_gate(workspace, monkey
         for line in ml_events_path(child).read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    outcomes = [row for row in rows if row.get("kind") == "outcome" and row.get("tool") == "essay.gates"]
+    outcomes = [
+        row for row in rows if row.get("kind") == "outcome" and row.get("tool") == "essay.gates"
+    ]
     assert outcomes
     last = outcomes[-1]
     assert last["ok"] is False
     assert last.get("refused") or last.get("gate")
     if last.get("gate"):
-        assert last["gate"] in {"brief", "module", "genre", "body", "citations", "word-band", "references", "identity", "conclusion", "unquoted-exact"} or last["gate"].isdigit()
+        assert (
+            last["gate"]
+            in {
+                "brief",
+                "module",
+                "genre",
+                "body",
+                "citations",
+                "word-band",
+                "references",
+                "identity",
+                "conclusion",
+                "unquoted-exact",
+            }
+            or last["gate"].isdigit()
+        )
 
 
 def _parent_stage1_only() -> str:
@@ -356,7 +382,10 @@ def test_ac16_parent_stage2_entry_confirmed_child_still_inherits(workspace):
     parent = _parent_with_stage2_lock()
     child = _open_child(parent)
     locks = inherited_locks(child)
-    assert any(row.get("stage") == "2" and ENTRY_LOCK.splitlines()[0] in row.get("look", "") for row in locks)
+    assert any(
+        row.get("stage") == "2" and ENTRY_LOCK.splitlines()[0] in row.get("look", "")
+        for row in locks
+    )
     _save_stage(child, "1", _look(child, "Child opens on stage 1."))
     landed = essay_stage(child, "2", "draft")
     assert landed["ok"] is True, landed

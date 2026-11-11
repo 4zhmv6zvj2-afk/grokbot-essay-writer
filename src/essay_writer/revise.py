@@ -47,7 +47,9 @@ def essay_revise(
     if blocked:
         return blocked
     if not isinstance(message, str) or not message.strip():
-        return refuse("revise", "message says what to change. The door does not invent the revision.")
+        return refuse(
+            "revise", "message says what to change. The door does not invent the revision."
+        )
     state = load_state(essay_id)
     has_research = any((state.get("research") or {}).get(depth) for depth in ("summary", "full"))
     has_word = bool(state.get("word"))
@@ -57,9 +59,7 @@ def essay_revise(
             "Nothing is confirmed yet. Confirm research, or Word, before revise.",
         )
     forms = _forms(state)
-    invented = [
-        token for token in citation_tokens(message) if not token_allowed(token, forms)
-    ]
+    invented = [token for token in citation_tokens(message) if not token_allowed(token, forms)]
     if invented:
         return refuse(
             "invent-forbid",
@@ -99,7 +99,9 @@ def essay_revise(
     report = None
     if pack is not None:
         report = inspect_pack(essay_id, pack)
-        hard = [item for item in report["blockers"] if item["code"] in {"invent-forbid", "cross-essay"}]
+        hard = [
+            item for item in report["blockers"] if item["code"] in {"invent-forbid", "cross-essay"}
+        ]
         if hard:
             return refuse(hard[0]["code"], hard[0]["reason"], blockers=report["blockers"])
     payload: dict[str, object] = {"essay_id": essay_id, "message": note}

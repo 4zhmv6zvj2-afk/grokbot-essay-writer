@@ -40,9 +40,7 @@ def _tree(root: Path, *, project: str, changelog_version: str | None) -> Path:
         else f"## {changelog_version} — 2026-11-11\n\n- A change.\n"
     )
     (root / "pyproject.toml").write_text(PYPROJECT.format(version=project), encoding="utf-8")
-    (root / "CHANGELOG.md").write_text(
-        CHANGELOG.format(headings=headings), encoding="utf-8"
-    )
+    (root / "CHANGELOG.md").write_text(CHANGELOG.format(headings=headings), encoding="utf-8")
     return root
 
 

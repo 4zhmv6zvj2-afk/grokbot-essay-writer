@@ -113,7 +113,9 @@ def _draft_reply(context: StageContext, *, card_run: CardRun | None = None) -> d
                 )
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint)
         if not auto_next and not minting:
-            note_text = render_tracking(stage, status="draft", look=text, genre=genre, essay_id=essay_id)
+            note_text = render_tracking(
+                stage, status="draft", look=text, genre=genre, essay_id=essay_id
+            )
             proposed = dict(pointer)
             proposed["waiting_stage"] = stage
             proposed["waiting_digest"] = body["digest"]
@@ -228,7 +230,9 @@ def _save_confirm(
             pointer,
             cardDigest,
             code="confirm",
-            reason=str(ready.get("reason") or "Show this step in the chat again before it can be saved."),
+            reason=str(
+                ready.get("reason") or "Show this step in the chat again before it can be saved."
+            ),
         )
     if cardDigest != ready.get("digest"):
         return _reoffer_confirm(

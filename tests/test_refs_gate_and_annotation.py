@@ -171,7 +171,9 @@ def test_ac2_stage10_word_uses_references_markdown(workspace, monkeypatch, tmp_p
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
     seq = open_sequence(MODULE)
     _advance_to_stage10(seq)
-    lines = "\n".join([SAMPLE_REFERENCE_LINE, "Jones, A. (2019) 'Second line', Practice, 1(1), pp. 1-2."])
+    lines = "\n".join(
+        [SAMPLE_REFERENCE_LINE, "Jones, A. (2019) 'Second line', Practice, 1(1), pp. 1-2."]
+    )
     _plant_stage10_pack(seq, _diary_pack(seq, references_markdown=lines))
 
     final = write_stage10(seq)
@@ -204,7 +206,9 @@ def test_ac3_stage10_word_keeps_source_ctr_lines(workspace, monkeypatch, tmp_pat
         "annotation": GOOD,
     }
     essay_research_summary(seq, TOPIC, "draft", [source])
-    essay_research_summary(seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     _advance_to_stage10(seq)
     pack = _diary_pack(seq)
     pack["sources"] = [source]
@@ -269,7 +273,10 @@ def test_annotation_page_range_with_an_em_dash_is_checked():
     issues = prose_issues("src-1 annotation", source, gathered, prose)
     assert any("4—9" in item["reason"] for item in issues)
     hyphen = prose.replace("4—9", "4-9")
-    assert any("4-9" in item["reason"] for item in prose_issues("src-1 annotation", source, gathered, hyphen))
+    assert any(
+        "4-9" in item["reason"]
+        for item in prose_issues("src-1 annotation", source, gathered, hyphen)
+    )
 
 
 def test_annotation_reads_a_page_cite():
@@ -291,7 +298,9 @@ def test_ac5_stage4a_confirm_ships_annotation_docx(workspace, monkeypatch, tmp_p
     seq = open_sequence(MODULE)
     row = _qin_source(annotation=GOOD)
     essay_research_summary(seq, TOPIC, "draft", [row])
-    essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
 
     for stage in ("1", "2", "3"):
         draft = essay_stage(seq, stage, "draft", LOOK)
@@ -318,7 +327,9 @@ def test_ac6_stage10_and_4a_surface_word_in_chat(workspace, monkeypatch, tmp_pat
     remember_registration(seq, NUMBER)
     row = _qin_source(annotation=GOOD)
     essay_research_summary(seq, TOPIC, "draft", [row])
-    essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     delivery = ship_4a(seq, [row], {row["id"]: GOOD})
     assert delivery["annotation"]["deliver"] == "chat"
     assert "docx_base64" in delivery["annotation"]
@@ -333,6 +344,7 @@ def test_ac6_stage10_and_4a_surface_word_in_chat(workspace, monkeypatch, tmp_pat
     assert "docx_base64" in chat
     stage_doc = work_dir(seq) / "output" / f"{seq}.docx"
     assert base64.b64decode(chat["docx_base64"]) == stage_doc.read_bytes()
+
 
 def test_ac7_unmounted_mac_still_delivers_word_in_chat(workspace, monkeypatch):
     """AC7. No Mac folder: no silent Mac copy, sequence Word still in chat."""

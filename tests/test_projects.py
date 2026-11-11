@@ -209,7 +209,9 @@ def test_clone_keeps_uploads_shared_and_branches_sequence_files(workspace):
     assert child["research"]["summary"]["topic"] == "ports"
     assert child["branched_from"] == f"{MODULE}-1"
     assert parent["sequence_id"] == f"{MODULE}-1"
-    assert (kb1_sequence_dir(MODULE, 2) / "essay.md").read_text(encoding="utf-8") == "sequence one\n"
+    assert (kb1_sequence_dir(MODULE, 2) / "essay.md").read_text(
+        encoding="utf-8"
+    ) == "sequence one\n"
     assert (kb1_module_dir(MODULE) / "paper.md").read_text(encoding="utf-8") == "vault paper\n"
 
 
@@ -225,7 +227,9 @@ def test_clone_rewrites_ids_inside_copied_files(workspace):
     note.write_text(f"see {MODULE}-1 and {MODULE}-10\n", encoding="utf-8")
     assert _confirm_new()["sequence_id"] == f"{MODULE}-2"
     child = sequence_dir(MODULE, 2) / "output" / f"{MODULE}-2.docx"
-    lines = [paragraph.text for paragraph in Document(str(child)).paragraphs if paragraph.text.strip()]
+    lines = [
+        paragraph.text for paragraph in Document(str(child)).paragraphs if paragraph.text.strip()
+    ]
     assert lines == [f"{MODULE}-2", f"{MODULE}-10", "sequences/2/output", "sequences/10"]
     assert (kb1_sequence_dir(MODULE, 2) / "essay.md").read_text(encoding="utf-8") == (
         f"see {MODULE}-2 and {MODULE}-10\n"
@@ -403,7 +407,14 @@ def test_health_follows_the_latest_sequence_and_hides_archived(workspace):
     state["research"]["summary"] = {"topic": "ports"}
     state_path.write_text(json.dumps(state), encoding="utf-8")
     report = essay_health()
-    assert report["opening"] == ["new", "continue", "roll-forward", "archive", "unarchive", "delete"]
+    assert report["opening"] == [
+        "new",
+        "continue",
+        "roll-forward",
+        "archive",
+        "unarchive",
+        "delete",
+    ]
     assert report["packs"][0]["essay_id"] == f"{MODULE}-1"
     assert "sequence_id" not in report["packs"][0]
     assert report["packs"][0]["stage"] == "research"

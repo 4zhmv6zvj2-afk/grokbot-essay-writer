@@ -269,7 +269,9 @@ def test_ac8_gates_fail_event_includes_gate_code(workspace, monkeypatch):
         for line in ml_events_path(seq).read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    outcomes = [row for row in rows if row.get("kind") == "outcome" and row.get("tool") == "essay.gates"]
+    outcomes = [
+        row for row in rows if row.get("kind") == "outcome" and row.get("tool") == "essay.gates"
+    ]
     assert outcomes
     assert outcomes[-1]["ok"] is False
     assert outcomes[-1]["gate"] == "brief"

@@ -42,7 +42,13 @@ def test_review_opens_the_saved_word_and_can_write_findings(workspace, monkeypat
     from essay_writer.research import essay_research_summary
 
     essay_research_summary(seq, "chokepoints", "draft", [source()])
-    essay_research_summary(seq, "chokepoints", "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        "chokepoints",
+        "confirm",
+        [source()],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     from essay_writer.validate import essay_pack_validate
 
     essay_pack_validate(seq, pack(), "draft")

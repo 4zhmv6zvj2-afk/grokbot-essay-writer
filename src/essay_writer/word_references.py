@@ -54,9 +54,7 @@ _CONTAINER_BREAK = re.compile(r",\s+(?=pp\.|\d|\()", re.IGNORECASE)
 _TITLE_MARK = re.compile(r"[.!?]")
 _CHAPTER_LEAD = re.compile(r"^in\s+", re.IGNORECASE)
 _EDITOR_END = re.compile(r"\(\s*eds?\.?\s*\)\s*", re.IGNORECASE)
-_ABBREVIATION_BEFORE = re.compile(
-    r"(?:\b[A-Z]|\b(?:pp?|vol|no|fig|ed|eds|edn|Dr|Mr|Mrs|Ms|Prof))$"
-)
+_ABBREVIATION_BEFORE = re.compile(r"(?:\b[A-Z]|\b(?:pp?|vol|no|fig|ed|eds|edn|Dr|Mr|Mrs|Ms|Prof))$")
 
 
 def _drop_empty(parts: list[tuple[str, bool]]) -> list[tuple[str, bool]]:
@@ -342,10 +340,7 @@ def empty_references_refusal(
 
     return refuse(
         "empty-references",
-        (
-            "The References section has no entries. Add reference lines before "
-            "this step can close."
-        ),
+        ("The References section has no entries. Add reference lines before this step can close."),
         wrote=False,
     )
 

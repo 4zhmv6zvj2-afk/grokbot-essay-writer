@@ -49,7 +49,9 @@ def _missing_agent(monkeypatch) -> None:
 
 def _fixed_which(monkeypatch) -> None:
     """Deterministic curl and bash paths, so these tests do not depend on the host."""
-    monkeypatch.setattr("essay_writer.first_run_install.shutil.which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        "essay_writer.first_run_install.shutil.which", lambda name: f"/usr/bin/{name}"
+    )
 
 
 def _downloader(monkeypatch, state: dict, ran: list[dict]) -> None:
@@ -86,7 +88,9 @@ def test_no_consent_downloads_nothing_and_changes_nothing(monkeypatch, tmp_path)
     )
     monkeypatch.setattr(
         "essay_writer.first_run_install.tempfile.mkdtemp",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("no temp file without consent")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("no temp file without consent")
+        ),
     )
     monkeypatch.setenv("TMPDIR", str(tmp_path))
 
@@ -134,7 +138,9 @@ def test_env_consent_runs_the_injected_installer_without_shell(monkeypatch):
     """Env consent is enough for the test seam; the fake installer records that it ran."""
     _missing_agent(monkeypatch)
     monkeypatch.setenv("ESSAY_WRITER_ALLOW_CURSOR_INSTALL", "1")
-    monkeypatch.setattr("essay_writer.first_run_install._run_cursor_installer", _forbidden("no real download"))
+    monkeypatch.setattr(
+        "essay_writer.first_run_install._run_cursor_installer", _forbidden("no real download")
+    )
     ran: list[str] = []
     state = {"binary": None}
 
@@ -359,7 +365,9 @@ def test_install_uploaded_copy_plumbs_the_expected_hash(monkeypatch, tmp_path):
 def test_pip_install_report_keeps_the_needs_consent_reason(monkeypatch, tmp_path):
     """The install report carries the structured reason instead of installing silently."""
     _missing_agent(monkeypatch)
-    monkeypatch.setattr("essay_writer.first_run_install._run_pip", lambda _cmd, _cwd: {"returncode": 0})
+    monkeypatch.setattr(
+        "essay_writer.first_run_install._run_pip", lambda _cmd, _cwd: {"returncode": 0}
+    )
     monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
     monkeypatch.setattr("essay_writer.first_run_host.attach_custom_mcp", lambda *a, **k: None)
     monkeypatch.setattr("essay_writer.first_run_host.attach_build_mcp", lambda *a, **k: None)
@@ -575,7 +583,9 @@ def test_upload_zip_sibling_checksum_verifies_without_a_flag(tmp_path, monkeypat
     monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
     upload = _upload_zip(tmp_path)
     digest = hashlib.sha256(upload.read_bytes()).hexdigest()
-    upload.with_name(upload.name + ".sha256").write_text(f"{digest}  {upload.name}\n", encoding="utf-8")
+    upload.with_name(upload.name + ".sha256").write_text(
+        f"{digest}  {upload.name}\n", encoding="utf-8"
+    )
     verified = first_run.install_uploaded_copy(
         upload,
         dest=tmp_path / "dest",

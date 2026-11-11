@@ -40,7 +40,9 @@ def test_ac1_writing_stages_carry_the_evidence_strength_bullet():
 def test_ac2_the_craft_source_and_both_launchers_read_the_same_bullet():
     """AC2. One copy in the craft source, one row on both launchers."""
     helpers = HELPERS.read_text(encoding="utf-8")
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert craft.count(EVIDENCE_STRENGTH) == 1
     for stage in WRITING:
         assert stage_settings(stage)["prompt_overlay"].count(EVIDENCE_STRENGTH) == 1
@@ -51,9 +53,10 @@ def test_ac2_the_craft_source_and_both_launchers_read_the_same_bullet():
         cursor = cursor_stage_launch(stage)
         assert cursor["settings"]["rules"] == shared["rules"]
         assert EVIDENCE_STRENGTH in cursor["settings"]["rules"]
-        assert EVIDENCE_STRENGTH in stage_launch(stage)["command"][
-            stage_launch(stage)["command"].index("--rules") + 1
-        ]
+        assert (
+            EVIDENCE_STRENGTH
+            in stage_launch(stage)["command"][stage_launch(stage)["command"].index("--rules") + 1]
+        )
 
 
 def test_ac3_the_bullet_names_the_ceilings_and_stays_prompt_only():
@@ -75,5 +78,7 @@ def test_ac3_the_bullet_names_the_ceilings_and_stays_prompt_only():
     validate = (REPO / "src" / "essay_writer" / "validate.py").read_text(encoding="utf-8")
     assert "EVIDENCE_STRENGTH" not in gates
     assert "EVIDENCE_STRENGTH" not in validate
-    voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
-    assert 'A claim is no stronger than the evidence under it.' in voice
+    voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
+    assert "A claim is no stronger than the evidence under it." in voice

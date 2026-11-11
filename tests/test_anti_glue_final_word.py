@@ -122,7 +122,9 @@ def test_ac4_diary_keeps_its_voice_and_essay_report_are_not_forced_first_person(
 
 def test_ac5_craft_source_is_the_only_inlined_copy():
     helpers = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
-    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    craft = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert craft.count(ANTI_GLUE) == 1
     assert helpers.count(ANTI_GLUE) == len(STAGES)
     for stage in STAGES:
@@ -204,5 +206,7 @@ def test_ac8_build_covered_both_shells_prompt_text_only():
         if "Ban AI-glue" in path.read_text(encoding="utf-8")
     ]
     assert hits == []
-    voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(encoding="utf-8")
+    voice = (REPO / "src" / "essay_writer" / "prompts" / "craft" / "voice.md").read_text(
+        encoding="utf-8"
+    )
     assert "Ban AI-glue" in voice

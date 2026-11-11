@@ -22,11 +22,23 @@ def test_stage_door_is_the_track_export():
 
 
 def test_spine_does_not_keep_a_second_constitution_check():
-    spine = Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+    spine = (
+        Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+    )
     stage = Path(stage_track.__file__).read_text(encoding="utf-8")
     # The landing and reply writers moved, so the door check reads all three.
-    landing = Path(stage_track.__file__).resolve().parent.joinpath("stage_landing.py").read_text(encoding="utf-8")
-    replies = Path(stage_track.__file__).resolve().parent.joinpath("stage_replies.py").read_text(encoding="utf-8")
+    landing = (
+        Path(stage_track.__file__)
+        .resolve()
+        .parent.joinpath("stage_landing.py")
+        .read_text(encoding="utf-8")
+    )
+    replies = (
+        Path(stage_track.__file__)
+        .resolve()
+        .parent.joinpath("stage_replies.py")
+        .read_text(encoding="utf-8")
+    )
     trio = stage + landing + replies
     assert "def assignment_gate" not in spine
     assert "assignment_gate" not in stage

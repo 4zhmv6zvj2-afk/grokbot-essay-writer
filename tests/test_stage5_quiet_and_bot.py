@@ -85,7 +85,9 @@ def test_word_preview_is_quiet_and_confirm_shows_the_draft(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     preview = essay_pack_render_word(seq, pack(), "draft")
@@ -180,7 +182,13 @@ def test_context_exhaust_trims_splits_and_reopens_without_a_silent_cut():
 
     invented = fit_critical_reviews(
         [{"paper_id": "a", "markdown": huge}],
-        reopens=[{"paper_id": "a", "gap": "missing limit", "passage": "A sentence that was not gathered."}],
+        reopens=[
+            {
+                "paper_id": "a",
+                "gap": "missing limit",
+                "passage": "A sentence that was not gathered.",
+            }
+        ],
         budget=40,
     )
     assert invented["exhausted"] is True
@@ -229,7 +237,9 @@ def _confirm_stage_deliverables(workspace, seq: str) -> None:
     row["annotation"] = annotation
     draft = essay_research_summary(seq, TOPIC, "draft", [row])
     assert draft["ok"] is True, draft
-    saved = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    saved = essay_research_summary(
+        seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert saved["stored"] is True, saved
     reviews = [{"paper_id": "src-1", "markdown": review}]
     full_draft = essay_research_full(
@@ -237,7 +247,13 @@ def _confirm_stage_deliverables(workspace, seq: str) -> None:
     )
     assert full_draft["ok"] is True, full_draft
     full = essay_research_full(
-        seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN, reviews=reviews, cardDigest=card_digest_for(seq, 'essay.research.full')
+        seq,
+        TOPIC,
+        "confirm",
+        [source()],
+        clarify_context=CLARIFY_OPEN,
+        reviews=reviews,
+        cardDigest=card_digest_for(seq, "essay.research.full"),
     )
     assert full["stored"] is True, full
 
@@ -247,12 +263,15 @@ def test_handoff_wires_4a_and_4b_deliverables(workspace, tmp_path):
     _confirm_stage_deliverables(workspace, seq)
     mac = tmp_path / "mac"
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output"
-    before = {name: (folder / name).read_bytes() for name in (
-        "annotation.docx",
-        "download-list.docx",
-        "papers.zip",
-        "critical-reviews.zip",
-    )}
+    before = {
+        name: (folder / name).read_bytes()
+        for name in (
+            "annotation.docx",
+            "download-list.docx",
+            "papers.zip",
+            "critical-reviews.zip",
+        )
+    }
     copied = build_deliverable_handoff(folder, mac_dir=mac)
     assert copied["handoff"] == "stage-deliverables"
     assert copied["deliverables"] == [
@@ -291,7 +310,9 @@ def test_bot_share_json_and_delete_lists(workspace, tmp_path):
 
     project = tmp_path / "proj"
     project.mkdir()
-    attached = attach_custom_mcp(project, include_user=False, enable=lambda name: {"identifier": name})
+    attached = attach_custom_mcp(
+        project, include_user=False, enable=lambda name: {"identifier": name}
+    )
     written = json.loads(Path(attached["bot_share"]).read_text(encoding="utf-8"))
     assert "CreateBotShareJson" not in json.dumps(written)
     assert written["mcpServers"]["essay-writer"]["args"] == []

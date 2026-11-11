@@ -28,7 +28,7 @@ JOURNAL = (
     "The authors confirm the limit in the gathered file.\n"
 )
 NOTE = (
-    'Smith (2020) argues the corridor is narrow. The authors confirm the limit. '
+    "Smith (2020) argues the corridor is narrow. The authors confirm the limit. "
     'The paper says "The Strait handles a large share of flows."'
 )
 
@@ -85,7 +85,9 @@ def test_word_bytes_omit_house_labels(workspace):
         "annotation": NOTE,
     }
     essay_research_summary(seq, TOPIC, "draft", [row])
-    saved = essay_research_summary(seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    saved = essay_research_summary(
+        seq, TOPIC, "confirm", [row], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     assert saved["stored"] is True
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output"
     for name in ("annotation.docx", "download-list.docx"):
@@ -97,7 +99,9 @@ def test_word_bytes_omit_house_labels(workspace):
     write_upload(workspace)
     seq = open_sequence()
     essay_research_summary(seq, TOPIC, "draft", [source()])
-    essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     preview = essay_pack_render_word(seq, pack(), "draft")
@@ -141,7 +145,9 @@ def test_annotation_house_label_is_refused_before_word(workspace):
     assert refused["refused"] == "house-jargon"
     assert refused["wrote"] is False
     assert "invent-forbid" not in refused["reason"].casefold()
-    assert not (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx").exists()
+    assert not (
+        workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / "annotation.docx"
+    ).exists()
 
 
 def test_chat_keeps_the_tool_id_and_word_does_not():

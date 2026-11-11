@@ -65,14 +65,18 @@ def _rows(essay_id: str) -> list[dict]:
 
     path = work_dir(essay_id) / "ml-events.jsonl"
     assert path.is_file(), path
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def _shells(essay_id: str, event: str, shell_name: str) -> list[dict]:
     return [
         row
         for row in _rows(essay_id)
-        if row.get("kind") == "shell" and row.get("event") == event and row.get("shell") == shell_name
+        if row.get("kind") == "shell"
+        and row.get("event") == event
+        and row.get("shell") == shell_name
     ]
 
 
@@ -141,9 +145,7 @@ def test_ac2_ml_events_record_exit_code(requires_pty, workspace, monkeypatch, tm
         script = tmp_path / f"ac2-{shell}.py"
         _write_script(
             script,
-            "sys.stderr.write('model rejected\\n')\n"
-            "sys.stderr.flush()\n"
-            "raise SystemExit(2)\n",
+            "sys.stderr.write('model rejected\\n')\nsys.stderr.flush()\nraise SystemExit(2)\n",
         )
         _arm(monkeypatch, script, shell)
         started = start_stage_mid(seq, "6")
@@ -161,7 +163,9 @@ def test_ac2_ml_events_record_exit_code(requires_pty, workspace, monkeypatch, tm
         assert _RETRY in _inbox(seq)
 
 
-def test_ac3_stage5_keeps_child_exit_after_draft_stores(requires_pty, workspace, monkeypatch, tmp_path):
+def test_ac3_stage5_keeps_child_exit_after_draft_stores(
+    requires_pty, workspace, monkeypatch, tmp_path
+):
     """AC3. Storing the stage 5 draft closes the session and still logs the child exit."""
     del workspace
     seq = open_sequence()
@@ -238,9 +242,7 @@ def test_ac4_retry_message_only_when_child_failed(requires_pty, workspace, monke
         bad_script = tmp_path / f"ac4-bad-{shell}.py"
         _write_script(
             bad_script,
-            "sys.stderr.write('model rejected\\n')\n"
-            "sys.stderr.flush()\n"
-            "raise SystemExit(2)\n",
+            "sys.stderr.write('model rejected\\n')\nsys.stderr.flush()\nraise SystemExit(2)\n",
         )
         _arm(monkeypatch, bad_script, shell)
         failed = start_stage_mid(seq, "9")

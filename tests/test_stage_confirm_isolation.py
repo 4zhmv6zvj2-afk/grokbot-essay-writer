@@ -189,7 +189,6 @@ def test_ac2_stage_4a_needs_its_own_confirm(workspace, monkeypatch):
     assert front_office()["handlers"]["essay.stage"] is HANDLERS["essay.stage"]
 
 
-
 def test_ac3_typed_confirm_saves_the_waiting_card(workspace):
     """AC3: a typed Confirm, yes, or ok on a waiting card saves that stage."""
     for typed in ("Confirm", "yes", "ok", "Yes"):

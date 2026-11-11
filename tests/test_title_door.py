@@ -115,7 +115,9 @@ def _footer(path: Path) -> str:
     return zipfile.ZipFile(path).read("word/footer1.xml").decode("utf-8")
 
 
-def test_ac1_ac2_ac5_registration_on_the_title_page_without_the_name(workspace, monkeypatch, tmp_path):
+def test_ac1_ac2_ac5_registration_on_the_title_page_without_the_name(
+    workspace, monkeypatch, tmp_path
+):
     """AC1, AC2, AC5. Student ID is a registration ask. The name stays off. The page number stays right."""
     asked = title_page_spec(BRIEF)
     assert asked["registration"] is True
@@ -245,7 +247,10 @@ def test_ac3_open_roll_forward_returns_the_child_card(workspace):
 def test_build_covered_cursor_and_grok_build_share_the_kick_and_the_cover(monkeypatch):
     """Cursor and Grok Build read one stage door, one kick door, and one write_docx."""
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
-    assert cursor_shell()["handlers"]["essay.sequence.new"] is front_office()["handlers"]["essay.sequence.new"]
+    assert (
+        cursor_shell()["handlers"]["essay.sequence.new"]
+        is front_office()["handlers"]["essay.sequence.new"]
+    )
     assert "write_docx(" in inspect.getsource(_write_stage10_sequence)
     assert "return _commit_with_next_card(" in inspect.getsource(_save_confirm)
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)

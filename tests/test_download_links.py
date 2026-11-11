@@ -179,11 +179,14 @@ def test_download_list_word_shape_is_left_aligned_with_links(workspace):
 
 
 def test_ship_4a_and_dig_confirm_return_a_chat_links_card(workspace, monkeypatch):
-    write_upload(workspace, text=(
-        "Smith, J. (2020) Chokepoints and crude.\n"
-        "The Strait handles a large share of flows.\n"
-        f"{NEEDS_URL}\n"
-    ))
+    write_upload(
+        workspace,
+        text=(
+            "Smith, J. (2020) Chokepoints and crude.\n"
+            "The Strait handles a large share of flows.\n"
+            f"{NEEDS_URL}\n"
+        ),
+    )
     seq = open_sequence()
     row = source()
     row["url"] = NEEDS_URL
@@ -212,8 +215,12 @@ def test_ship_4a_and_dig_confirm_return_a_chat_links_card(workspace, monkeypatch
     assert confirmed["delivery"]["annotation"]["deliver"] == "chat"
     assert "docx_base64" in confirmed["delivery"]["annotation"]
     assert "docx_base64" not in confirmed["delivery"]["download_list"]
-    assert front_office()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]
-    assert cursor_shell()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]
+    assert (
+        front_office()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]
+    )
+    assert (
+        cursor_shell()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]
+    )
 
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
     monkeypatch.setenv("ESSAY_WRITER_UNPAYWALL_EMAIL", "reader@example.com")
@@ -282,9 +289,16 @@ def test_download_stop_returns_links_for_cannot_open_only(workspace):
             return 200, "application/pdf", PDF
         return 200, "text/html", HTML
 
-    run_downloads(seq, [{"url": PDF_URL, "doi": "10.1/good", "title": "Real PDF"}], fetch=fetch, now=T0)
+    run_downloads(
+        seq, [{"url": PDF_URL, "doi": "10.1/good", "title": "Real PDF"}], fetch=fetch, now=T0
+    )
     for _ in range(2):
-        run_downloads(seq, [{"url": BAD_URL, "doi": "10.1/bad", "title": "Missing paper"}], fetch=fetch, now=T0)
+        run_downloads(
+            seq,
+            [{"url": BAD_URL, "doi": "10.1/bad", "title": "Missing paper"}],
+            fetch=fetch,
+            now=T0,
+        )
     stopped = run_downloads(
         seq,
         [{"url": BAD_URL, "doi": "10.1/bad", "title": "Missing paper"}],

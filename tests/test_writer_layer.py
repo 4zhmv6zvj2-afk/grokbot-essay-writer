@@ -20,7 +20,13 @@ def _write(workspace, body=None, essay_id=ESSAY):
     write_upload(workspace, essay_id=essay_id)
     seq = open_sequence(essay_id)
     essay_research_summary(seq, "chokepoints", "draft", [source(essay_id)])
-    essay_research_summary(seq, "chokepoints", "confirm", [source(essay_id)], cardDigest=card_digest_for(seq, 'essay.research.summary'))
+    essay_research_summary(
+        seq,
+        "chokepoints",
+        "confirm",
+        [source(essay_id)],
+        cardDigest=card_digest_for(seq, "essay.research.summary"),
+    )
     payload = body or pack(essay_id)
     essay_pack_validate(seq, payload, "draft")
     essay_pack_validate(seq, payload, "confirm")
@@ -41,7 +47,11 @@ def test_body_is_left_aligned_and_hashes_become_headings(workspace):
     written, path = _write(workspace, payload)
     assert written["wrote"] is True
     document = Document(str(path))
-    headings = [paragraph.text for paragraph in document.paragraphs if paragraph.style.name.startswith("Heading")]
+    headings = [
+        paragraph.text
+        for paragraph in document.paragraphs
+        if paragraph.style.name.startswith("Heading")
+    ]
     assert "Supply chain context" in headings
     assert "Evidence" in headings
     assert all(not text.startswith("#") for text in headings)

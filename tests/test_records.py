@@ -33,11 +33,14 @@ def test_read_json_tolerates_missing_corrupt_and_non_object_files(tmp_path):
 def test_read_json_treats_a_record_that_fails_validation_as_absent(tmp_path):
     path = tmp_path / "record.json"
     path.write_text('{"papers": "not a list"}', encoding="utf-8")
-    assert read_json(path, default={}, validate=lambda data: isinstance(data.get("papers"), list)) == {}
+    assert (
+        read_json(path, default={}, validate=lambda data: isinstance(data.get("papers"), list))
+        == {}
+    )
     path.write_text('{"papers": []}', encoding="utf-8")
-    assert read_json(path, default={}, validate=lambda data: isinstance(data.get("papers"), list)) == {
-        "papers": []
-    }
+    assert read_json(
+        path, default={}, validate=lambda data: isinstance(data.get("papers"), list)
+    ) == {"papers": []}
 
 
 def test_write_json_writes_one_complete_record_and_no_fixed_temp(tmp_path):
@@ -82,9 +85,7 @@ def test_two_writers_to_one_record_leave_one_complete_file(tmp_path):
         for record in records:
             write_json(path, record, mkdir=True)
 
-    threads = [
-        threading.Thread(target=write_side, args=(records,)) for records in sides.values()
-    ]
+    threads = [threading.Thread(target=write_side, args=(records,)) for records in sides.values()]
     for thread in threads:
         thread.start()
     start.set()

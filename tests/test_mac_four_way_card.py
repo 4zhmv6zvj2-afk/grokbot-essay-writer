@@ -73,7 +73,9 @@ def test_ac2_ok_creates_essay_bot_consistent_with_canonical_handoff(tmp_path, mo
     assert copied["copied"] is True
     assert (folder / "handoff.docx").read_bytes() == b"copy-me"
     secret = cloud / "Essay-writer" / "setup.secrets.json"
-    assert json.loads(secret.read_text(encoding="utf-8"))["ESSAY_WRITER_MAC_DIR"] == str(folder.resolve())
+    assert json.loads(secret.read_text(encoding="utf-8"))["ESSAY_WRITER_MAC_DIR"] == str(
+        folder.resolve()
+    )
 
 
 def test_ac3_later_and_skip_chat_only_honest(tmp_path, monkeypatch, capsys):

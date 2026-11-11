@@ -304,8 +304,16 @@ def test_rewritten_essay_is_not_a_shared_original_and_surnames_stay_unresolved(w
     incoming = workspace / "unassigned" / "rewrite.docx"
     _rewrite(incoming)
     # No exact paragraph is shared, and the file has no Counted words line.
-    latest = [paragraph.text.strip() for paragraph in Document(str(parent)).paragraphs if paragraph.text.strip()]
-    current = [paragraph.text.strip() for paragraph in Document(str(incoming)).paragraphs if paragraph.text.strip()]
+    latest = [
+        paragraph.text.strip()
+        for paragraph in Document(str(parent)).paragraphs
+        if paragraph.text.strip()
+    ]
+    current = [
+        paragraph.text.strip()
+        for paragraph in Document(str(incoming)).paragraphs
+        if paragraph.text.strip()
+    ]
     assert set(latest).isdisjoint(current)
 
     draft = essay_intake("rewrite.docx", "draft", MODULE)

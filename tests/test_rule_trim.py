@@ -20,7 +20,9 @@ STUDENT_VOICE = prompt_sections("craft/voice.md")["student_voice"]
 OWNERSHIP = "The draft is model-assisted; the student owns what they submit."
 OPENER = "Do not open with a general sentence built only from the topic nouns."
 CLOSER = "Do not close with an automatic In conclusion that only restates the topic."
-MARK_SCHEME_WORDS = "Keep mark-scheme words the brief uses, and gloss each one in plain English the first time."
+MARK_SCHEME_WORDS = (
+    "Keep mark-scheme words the brief uses, and gloss each one in plain English the first time."
+)
 CHATBOT = "If a chatbot produced"
 
 

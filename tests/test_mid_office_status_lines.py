@@ -86,9 +86,7 @@ def _unavailable(command):
     return {"started": False, "reason": "", "command": list(command)}
 
 
-def test_ac1_live_stdout_signals_a_real_phase_for_both_shells(
-    requires_pty, workspace, monkeypatch
-):
+def test_ac1_live_stdout_signals_a_real_phase_for_both_shells(requires_pty, workspace, monkeypatch):
     """AC1: Cursor CLI and Grok Build can signal a tip-sheet phase. Absent names are not invented."""
     seq = open_sequence()
     real_popen = subprocess.Popen
@@ -199,10 +197,15 @@ def test_ac3_mid_stages_arm_when_the_job_starts_and_4b_does_not_fake_it(workspac
         assert session_open(seq)
         clock["t"] = HEARTBEAT_SECONDS
         stale = due_lines(seq)
-        assert stale == [heartbeat_sentence("", "your assignment")] or stale[0].startswith("I am still working on ")
+        assert stale == [heartbeat_sentence("", "your assignment")] or stale[0].startswith(
+            "I am still working on "
+        )
         if stage == "5":
             done = finish_step(seq, "draft")
-            assert done == [milestone_sentence("draft", done[0].split(" for ")[-1].rstrip("."))] or "ready" in done[0]
+            assert (
+                done == [milestone_sentence("draft", done[0].split(" for ")[-1].rstrip("."))]
+                or "ready" in done[0]
+            )
         else:
             done = complete_job(seq)
             assert done[0].endswith("is saved.")
@@ -359,7 +362,13 @@ def test_ac5_stored_confirm_and_stage5_quiet_use_the_done_line(workspace, monkey
             continue
         saved = front_office_call(
             "essay.stage",
-            {"essay_id": fresh, "stage": stage, "confirmPhase": "confirm", "look": LOOK, **picked(draft)},
+            {
+                "essay_id": fresh,
+                "stage": stage,
+                "confirmPhase": "confirm",
+                "look": LOOK,
+                **picked(draft),
+            },
         )
         assert saved["ok"] is True, saved
     stage5 = front_office_call(

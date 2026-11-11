@@ -139,8 +139,7 @@ def fit_critical_reviews(
         body["exhausted"] = True
         body["action"] = "exhausted"
         body["tip"] = (
-            "The critical-review notes do not fit this step. "
-            "Nothing was cut off in silence."
+            "The critical-review notes do not fit this step. Nothing was cut off in silence."
         )
         return body
     papers = _papers(reviews)
@@ -152,8 +151,7 @@ def fit_critical_reviews(
         body["action"] = "exhausted"
         body["invent_forbid"] = "hold"
         body["tip"] = (
-            "The critical-review notes do not fit this step. "
-            "Nothing was cut off in silence."
+            "The critical-review notes do not fit this step. Nothing was cut off in silence."
         )
         return body
     if not papers:
@@ -218,7 +216,10 @@ def fit_critical_reviews(
         if current and current_chars + size > budget:
             batches.append(
                 _batch(
-                    [{"paper_id": item["paper_id"], "working": item["trimmed"]} for item in current],
+                    [
+                        {"paper_id": item["paper_id"], "working": item["trimmed"]}
+                        for item in current
+                    ],
                     source="split",
                 )
             )
@@ -277,7 +278,12 @@ def fit_critical_reviews(
     body["continue_revise"] = True
     if reopened:
         body["action"] = "reopen"
-    elif trimmed_lines and any(item.get("source") == "split" for item in batches) or len(batches) > 1 or (batches and batches[0].get("source") == "split"):
+    elif (
+        trimmed_lines
+        and any(item.get("source") == "split" for item in batches)
+        or len(batches) > 1
+        or (batches and batches[0].get("source") == "split")
+    ):
         body["action"] = "split"
     else:
         body["action"] = "trim"

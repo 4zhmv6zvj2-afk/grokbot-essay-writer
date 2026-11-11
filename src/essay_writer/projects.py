@@ -174,7 +174,9 @@ def stage_name(state: dict[str, Any]) -> str:
     return "open"
 
 
-def empty_sequence_state(module: str, number: int, *, parent: str | None, reason: str) -> dict[str, Any]:
+def empty_sequence_state(
+    module: str, number: int, *, parent: str | None, reason: str
+) -> dict[str, Any]:
     state = empty_state(sequence_id(module, number))
     state["sequence"] = number
     state["sequence_id"] = sequence_id(module, number)
@@ -330,11 +332,7 @@ def essay_projects(view: str, module: str | None = None) -> dict[str, Any]:
             "view must be continue, roll-forward, archive, delete, or unarchive.",
         )
     if view == "continue":
-        rows = [
-            _continue_row(module)
-            for module in modules_on_disk()
-            if not is_archived(module)
-        ]
+        rows = [_continue_row(module) for module in modules_on_disk() if not is_archived(module)]
         return {
             "ok": True,
             "view": view,
@@ -401,7 +399,9 @@ def _snapshot(module: str) -> dict[str, Any]:
         "module": module,
         "sequences": [sequence_id(module, number) for number in numbers],
         "uploads": uploads_dir(module).is_dir(),
-        "brief": any((essay_dir(module) / name).is_file() for name in ("brief.md", "brief.txt", "brief.docx")),
+        "brief": any(
+            (essay_dir(module) / name).is_file() for name in ("brief.md", "brief.txt", "brief.docx")
+        ),
         "kb1": kb1_module_dir(module).is_dir(),
     }
 
@@ -505,7 +505,9 @@ def essay_project_unarchive(module: str, confirmPhase: str | None = None) -> dic
     }
     if confirmPhase == DRAFT:
         body["digest"] = save_draft(module, UNARCHIVE, payload, fingerprint)
-        body["next"] = say("Unarchive returns this module to the continue list. Say yes to continue.")
+        body["next"] = say(
+            "Unarchive returns this module to the continue list. Say yes to continue."
+        )
         return body
     ready = confirm_ready(module, UNARCHIVE, payload, fingerprint)
     if ready.get("ok") is False:
@@ -660,7 +662,11 @@ def _local_notice(pins: list[dict[str, str]]) -> str:
 def _recheck_local(pins: list[dict[str, str]]) -> dict[str, Any] | None:
     for pin in pins:
         fresh = _local_pin(pin["path"])
-        if fresh.get("ok") is False or fresh.get("sha256") != pin["sha256"] or fresh.get("path") != pin["path"]:
+        if (
+            fresh.get("ok") is False
+            or fresh.get("sha256") != pin["sha256"]
+            or fresh.get("path") != pin["path"]
+        ):
             return refuse(
                 "delete",
                 "That file changed after the draft, or this computer can no longer see it. "
@@ -688,9 +694,7 @@ def _delete_targets(where: str, snapshot: dict[str, Any], pins: list[dict[str, s
     rows: list[str] = []
     if where in {WHERE_GROKBOT, WHERE_BOTH}:
         sequences = snapshot["sequences"]
-        rows.append(
-            "essay workspace sequences: " + (", ".join(sequences) if sequences else "none")
-        )
+        rows.append("essay workspace sequences: " + (", ".join(sequences) if sequences else "none"))
         for item in snapshot["uploads"]:
             rows.append("essay workspace upload: " + item["path"])
         for item in snapshot["brief"]:
@@ -738,7 +742,9 @@ def _sequence_delete_target(
     if sequence is None:
         return None, None
     if not isinstance(sequence, str) or not sequence.strip():
-        return None, refuse("delete", "Name the sequence id, such as MOD1004AA-2. Nothing was removed.")
+        return None, refuse(
+            "delete", "Name the sequence id, such as MOD1004AA-2. Nothing was removed."
+        )
     parsed = parse_sequence_id(sequence.strip())
     named = sequence.strip()
     if parsed is None or parsed[0] != module:
@@ -1257,7 +1263,9 @@ def _discard_tree(path: Path) -> None:
         shutil.rmtree(path)
 
 
-def _write_cloned_state(folder: Path, module: str, child: int, old: str, new: str, reason: str) -> None:
+def _write_cloned_state(
+    folder: Path, module: str, child: int, old: str, new: str, reason: str
+) -> None:
     path = folder / "state.json"
     base = empty_sequence_state(module, child, parent=old, reason=reason)
     if path.is_file():
@@ -1383,14 +1391,21 @@ def essay_sequence_new(
     else:
         parsed = parse_sequence_id(parent)
         if parsed is None or parsed[0] != module:
-            return refuse("sequence", "parent must be a sequence id of this module, such as MOD1011AA-5.")
+            return refuse(
+                "sequence", "parent must be a sequence id of this module, such as MOD1011AA-5."
+            )
         parent_number = parsed[1]
         parent_id = sequence_id(module, parent_number)
         if parent_number not in numbers:
             return refuse("sequence", f"{parent_id} is not on disk.")
     child = 1 if not numbers else max(numbers) + 1
     child_id = sequence_id(module, child)
-    payload = {"module": module, "parent": parent_id, "sequence_id": child_id, "action": "new-sequence"}
+    payload = {
+        "module": module,
+        "parent": parent_id,
+        "sequence_id": child_id,
+        "action": "new-sequence",
+    }
     fingerprint = {
         "parent": parent_id,
         "sequences": [sequence_id(module, n) for n in sequence_numbers(module)],
@@ -1424,7 +1439,9 @@ def essay_sequence_new(
         ready["confirmPhase"] = CONFIRM
         return ready
     if parent_number is None:
-        save_sequence_state(module, child, empty_sequence_state(module, child, parent=None, reason="new"))
+        save_sequence_state(
+            module, child, empty_sequence_state(module, child, parent=None, reason="new")
+        )
     else:
         try:
             clone_sequence(module, parent_number, child, reason="new-sequence")

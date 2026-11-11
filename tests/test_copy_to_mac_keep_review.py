@@ -146,7 +146,9 @@ def test_ac4_build_covered_copy_only_handoff_and_keep_existing_ship_4b():
     assert "build_deliverable_handoff" in inspect.getsource(first_run_main)
     assert "first_run_main" in inspect.getsource(server_main)
     assert researcher.ship_4b is ship_4b
-    assert "ship_4b(essay_id, sources, None)" in inspect.getsource(researcher.deliver_critical_reviews)
+    assert "ship_4b(essay_id, sources, None)" in inspect.getsource(
+        researcher.deliver_critical_reviews
+    )
     assert "deliver_critical_reviews" in inspect.getsource(stage_critical_reviews)
 
     cursor_src = Path(cursor_office.__file__).read_text(encoding="utf-8")
@@ -160,4 +162,3 @@ def test_ac4_build_covered_copy_only_handoff_and_keep_existing_ship_4b():
     assert front_office()["handlers"]["essay.stage"] is HANDLERS["essay.stage"]
     assert cursor_shell()["handlers"]["essay.research.full"] is HANDLERS["essay.research.full"]
     assert front_office()["handlers"]["essay.research.full"] is HANDLERS["essay.research.full"]
-

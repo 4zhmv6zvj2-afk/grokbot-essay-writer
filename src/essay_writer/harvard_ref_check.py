@@ -29,9 +29,7 @@ _DOI = re.compile(r"\bdoi:\s*(\S+)", re.IGNORECASE)
 _URL = re.compile(r"https?://[^\s]+", re.IGNORECASE)
 _ACCESSED = re.compile(r"\(Accessed:\s*([^)]*)\)", re.IGNORECASE)
 _ARTICLE_IN_PAGES = re.compile(r"\bpp?\.\s*([A-Za-z]\d{2,8}|\d{5,8})\b", re.IGNORECASE)
-_DOI_PREFIX = re.compile(
-    r"^(?:https?://(?:dx\.)?doi\.org/|doi\.org/|doi:\s*)", re.IGNORECASE
-)
+_DOI_PREFIX = re.compile(r"^(?:https?://(?:dx\.)?doi\.org/|doi\.org/|doi:\s*)", re.IGNORECASE)
 
 
 def claim_reference_pass(seat: str = "writer") -> dict[str, object]:
@@ -280,9 +278,7 @@ def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
     surname = _surname(author)
     if not surname or not year:
         return None
-    candidates = [
-        paragraph for paragraph in paragraphs if _name_present(paragraph.text, surname)
-    ]
+    candidates = [paragraph for paragraph in paragraphs if _name_present(paragraph.text, surname)]
     if not candidates:
         return None
     for paragraph in candidates:
@@ -380,9 +376,7 @@ def _source_misses(paragraph, source: dict[str, object]) -> list[dict[str, str]]
                     misses.append(
                         {
                             "code": "article-quotes",
-                            "detail": (
-                                f"Article title for {label} needs single quotation marks."
-                            ),
+                            "detail": (f"Article title for {label} needs single quotation marks."),
                         }
                     )
     page_hits = list(_PP.finditer(text))
@@ -412,9 +406,7 @@ def _source_misses(paragraph, source: dict[str, object]) -> list[dict[str, str]]
                 }
             )
         shown_labels = [
-            match.group(1) + "."
-            for match in page_hits
-            if _norm_span(match.group(2)) == pages
+            match.group(1) + "." for match in page_hits if _norm_span(match.group(2)) == pages
         ]
         if expected not in shown_labels:
             shown = ", ".join(shown_labels) if shown_labels else "none"
@@ -422,8 +414,7 @@ def _source_misses(paragraph, source: dict[str, object]) -> list[dict[str, str]]
                 {
                     "code": "pages-label",
                     "detail": (
-                        f"Reference for {label} should show {expected} {pages}. "
-                        f"It shows {shown}."
+                        f"Reference for {label} should show {expected} {pages}. It shows {shown}."
                     ),
                 }
             )
