@@ -1,6 +1,6 @@
 [project]
 name = "essay-writer"
-version = "0.7.0"
+version = "0.8.0"
 description = "Confirm-gated MCP server for university essays. Word only."
 keywords = ["mcp", "essay", "education", "agent"]
 classifiers = [

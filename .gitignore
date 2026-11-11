@@ -55,6 +55,9 @@ artifacts/
 *.local.md
 NOTES.local
 
+# Local review artifacts (reports and reviewer correspondence; never published)
+review-notes/
+
 # Editor and OS
 .DS_Store
 .idea/

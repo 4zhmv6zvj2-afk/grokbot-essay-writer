@@ -588,6 +588,24 @@ def test_upload_zip_sibling_checksum_verifies_without_a_flag(tmp_path, monkeypat
     assert verified["upload_checksum"] == upload.name + ".sha256"
 
 
+def test_upload_zip_reports_a_checksum_file_that_omits_the_zip(tmp_path, monkeypatch):
+    """A SHA256SUMS beside the zip that does not list it is reported, not ignored."""
+    monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
+    upload = _upload_zip(tmp_path)
+    (tmp_path / "SHA256SUMS").write_text(f"{'0' * 64}  another.zip\n", encoding="utf-8")
+    result = first_run.install_uploaded_copy(
+        upload,
+        dest=tmp_path / "dest",
+        pip_runner=lambda command, _cwd: {"returncode": 0},
+        attach=False,
+        allow_cursor_install=False,
+    )
+    assert result["ok"] is True, result
+    assert result["upload_verified"] is False
+    assert result["upload_checksum"] == "SHA256SUMS (no entry for this zip)"
+    assert "does not list this zip" in result["upload_note"]
+
+
 def test_python_bootstrap_refuses_a_missing_requirements_file(tmp_path):
     """The bootstrap has no unpinned fallback: a missing requirements file stops the install."""
     from essay_writer import python_bootstrap as boot

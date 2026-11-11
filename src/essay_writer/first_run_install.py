@@ -269,6 +269,10 @@ def _upload_checksum(source: Path, explicit: str | None) -> tuple[str | None, st
                 name = name[1:]
             if _SHA256_HEX.fullmatch(candidate) and name == source.name:
                 return candidate, f"SHA256SUMS ({source.name})"
+        # A checksum file is present but does not name this zip. Do not treat
+        # that as "no checksum": the caller reports the zip as unverified and
+        # says why, instead of silently proceeding as if no file existed.
+        return None, "SHA256SUMS (no entry for this zip)"
     return None, None
 
 
@@ -770,11 +774,19 @@ def install_uploaded_copy(
         "install_residual": RESIDUALS["install-root"],
     }
     if upload_verified is False:
-        payload["upload_note"] = (
-            "The zip was not checksum-verified. It is trusted operator input. "
-            "Pass --upload-sha256, or place a matching <zip>.sha256 or SHA256SUMS "
-            "file beside the zip, to verify it."
-        )
+        if upload_checksum_source == "SHA256SUMS (no entry for this zip)":
+            payload["upload_note"] = (
+                "A SHA256SUMS file was found beside the zip, but it does not list "
+                "this zip, so the zip was not checksum-verified. Add its entry to "
+                "SHA256SUMS, pass --upload-sha256, or remove the file to install "
+                "it as trusted operator input."
+            )
+        else:
+            payload["upload_note"] = (
+                "The zip was not checksum-verified. It is trusted operator input. "
+                "Pass --upload-sha256, or place a matching <zip>.sha256 or SHA256SUMS "
+                "file beside the zip, to verify it."
+            )
     return first_run_mac.attach_friend_upgrade_fo_card(payload, root=root)
 
 

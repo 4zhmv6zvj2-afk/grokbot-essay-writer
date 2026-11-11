@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 — 2026-11-11
 
 Structural cleanup round: one sentence splitter, one JSON record store, a real stage boundary, a single-sourced prompt bundle, module splits, and hygiene hardening.
 
@@ -48,6 +48,9 @@ Hygiene:
   writes take an fcntl lock; legacy setup adoption only accepts real product
   folders; an essay.intake mount-parity test was added. README states that
   macOS or Linux is required.
+- The installer now reports a `SHA256SUMS` file that exists beside the zip but
+  does not list it, instead of silently treating that file as absent; the result
+  stays `upload_verified: false` with a note saying why.
 
 ## 0.7.0 — 2026-11-11
 
