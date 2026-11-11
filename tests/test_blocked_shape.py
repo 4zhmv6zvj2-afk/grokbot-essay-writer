@@ -246,7 +246,9 @@ def test_stage7_asks_then_edits_and_lists_every_claim(workspace):
     assert saved["chain_armed"] is True
     overlay = stage_settings("7")["prompt_overlay"]
     rules = stage_settings("7")["rules"]
-    assert overlay.index("ask questions") < overlay.index("delta lists every sentence")
+    assert overlay.index("asks questions and edits from the student's answers") < overlay.index(
+        "delta lists every sentence"
+    )
     assert "Grok Bot reads the stage 6 draft" in rules
     assert "Cursor does heavy file work only" in rules
     assert student_surface_hits("\n".join(CHECKLISTS["7"])) == []
@@ -383,6 +385,6 @@ def test_word_save_rewrites_sequence_draft_note(workspace):
 def test_helpers_keep_the_stage6_question_line():
     helpers = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
     assert student_surface_hits(helpers) == []
-    assert "Read the stage 6 draft, ask questions, then edit from those answers" in helpers
+    assert "Stage 7 asks questions and edits from the student's answers." in helpers
     assert "Cursor" not in helpers
     assert "Grok Bot" not in helpers

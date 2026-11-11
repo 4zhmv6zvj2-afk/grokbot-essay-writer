@@ -185,12 +185,12 @@ The name is the same for both genres. Essay shape is in `docs/essay-writing-help
 
 The structure matches the helper the brief picked. On an essay, that shape is in `docs/essay-writing-helpers.md`. On a report, the sections are the Business School report sections in `docs/report-writing-helpers.md`.
 
-Stage 6 is the person's first read and local edit of the draft. A changed Word upload leaves that sequence in place and rolls forward onto the next sequence. The parent draft stays as it is.
+The tool drafts. The student directs and confirms. Stage 6 is the student's read-through and feedback, not a tool rewrite. A changed Word upload leaves that sequence in place and rolls forward onto the next sequence. The parent draft stays as it is.
 
 **Guideline:** Academic skills, Editing your writing.
 
 **Basics checklist:**
-- Stage 6 is the person's first read and local edit of the draft.
+- The tool drafts. The student directs and confirms. Stage 6 is the student's read-through and feedback, not a tool rewrite.
 - Before a sequence rename, or when the expected draft is missing or renamed, ask the person which Word file is the master copy. Do not guess path or filename.
 - The first read uses chat delivery, or a folder the student already named.
 - The structure is clear: introduction, body, and conclusion, or the report’s sections. Ideas move in stages, and the link between major points is explicit.
@@ -203,12 +203,12 @@ Stage 6 is the person's first read and local edit of the draft. A changed Word u
 
 ### 7. Ask for feedback
 
-Read the stage 6 draft, ask questions, then edit from those answers. A light check covers currency and academic tone and clarity. Heavy file work is a separate file step. The later edit, the references, and the final Word each run on their own, and only after those questions and edits are saved.
+The tool drafts. The student directs and confirms. Stage 7 asks questions and edits from the student's answers. A light check covers currency and academic tone and clarity. Heavy file work is a separate file step. The later edit, the references, and the final Word each run on their own, and only after those questions and edits are saved.
 
 **Guideline:** Module brief and rubric; Academic skills, Editing your writing, for how to use feedback.
 
 **Basics checklist:**
-- Read the stage 6 draft, ask questions, then edit from those answers.
+- The tool drafts. The student directs and confirms. Stage 7 asks questions and edits from the student's answers.
 - Ask about structure, argument, and clarity before any later step. Feedback is tied to the brief or rubric. It is not evidence.
 - A light check covers currency and academic tone and clarity. It does not open a new look-up.
 - Heavy file work is a separate file step. Asking, the light check, and edits from answers stay in the chat.
