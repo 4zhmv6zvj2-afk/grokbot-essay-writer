@@ -3,7 +3,7 @@
 This is a design for review. It does not change behaviour, prompts, the tool
 schema, the package version, or a release. `ARCHITECTURE.md` still describes
 the code as it is. Phase 4 is the import guard plus the stage-runner split
-recorded here. Implementation of those slices has not started.
+recorded here. Slice 1 is the import guard. Slices 2 and 3 have not started.
 
 Measured from commit `a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`,
 `pyproject.toml` version `0.9.0`). After `git fetch origin main`, `origin/main`
@@ -35,7 +35,9 @@ A **load edge** is a module-level `import` or `from … import`:
   `health` finishes importing.
 
 A **deferred edge** is the same import written inside a function, plus every
-`__getattr__` map entry (those fire on attribute access, not at module load).
+specialist `__getattr__` map entry (those fire on attribute access, not at
+module load). A map-only pair which breaks a load cycle belongs in the
+breaker allowlist.
 
 Cycles are strongly connected components (Tarjan). A deferred pair **breaks a
 load cycle** when the target can already reach the source through load edges
@@ -52,7 +54,7 @@ What this walk does not see: `exec`, non-literal `import_module` calls, and
 imports built as strings. The vendored bootstrap formats an `import_module`
 string for a caller-supplied module name. That string is not a package edge.
 Simple cycles longer than two modules inside the large deferred component
-were not enumerated; the direct pairs and the 27 hoist-breakers are the
+were not enumerated; the direct pairs and the 28 hoist-breakers are the
 reviewable sets.
 
 ## 1. Import graph, as measured
@@ -115,7 +117,7 @@ close a load cycle.
 | --- | --- |
 | Internal deferred import sites (one recorded target each) | 442 |
 | Unique internal deferred pairs | 281 |
-| Pairs that break a load cycle if hoisted | 27 |
+| Pairs that break a load cycle if hoisted | 28 |
 | Pairs with no path back even when deferred edges count | 22, plus one artifact |
 | Direct two-module cycles (either direction may be deferred) | 46 |
 | External deferred import sites | 59, of which 28 are `docx` |
@@ -133,6 +135,20 @@ The one artifact pair is `specialists.eqr` → the package `__init__`, from
 `from essay_writer import review` at `eqr.py` line 952. The real target of
 that statement is `review`, which is already in the breaker table.
 
+Deferred edges are function-body imports plus specialist `__getattr__` map
+entries. A map-only pair which breaks a load cycle belongs in the breaker
+allowlist. The 281 unique pairs in the table above are the function-body
+pairs: 27 of those break a load cycle, plus the 22 with no path back, the
+one artifact, and the 231 in the large component. One further map-only pair,
+`specialists.researcher` → `research`, also breaks a load cycle, so the
+breaker allowlist has 28 pairs. The independent reviewer decided that
+measured set is the allowlist, because the earlier 27 omitted this map-only
+breaker. Three other map-only deferred edges do not break a load cycle and
+stay out of the breaker allowlist: `specialists.researcher` → `dig`,
+`specialists.researcher` → `known_paths`, and `specialists.writer` → `word`.
+The 46-pair mutual allowlist is unchanged. It already records
+`research -load- specialists.researcher -defer- research`.
+
 The source rarely says why an import is inside a function. The stage-layer
 docstrings do: `stage_track.py` lines 25–36, `stage_state.py` lines 1–8,
 `stage_landing.py` lines 9–11, `stage_replies.py` lines 9–10, and
@@ -140,10 +156,11 @@ docstrings do: `stage_track.py` lines 25–36, `stage_state.py` lines 1–8,
 same idea for the install split. Everywhere else the reason below is the
 graph, not a comment.
 
-#### The 27 imports that keep the load graph a DAG
+#### The 28 imports that keep the load graph a DAG
 
 Hoisting any one of these to module level cycles the load graph along the
-return path. Sites are `function:line` in the source module.
+return path. Sites are `function:line` in the source module, except the
+map-only `specialists.researcher` → `research` row.
 
 | Deferred import | Sites | Shortest load path back |
 | --- | --- | --- |
@@ -166,6 +183,7 @@ return path. Sites are `function:line` in the source module.
 | `specialists.grok_bot` → `fo_chat_locks` | `maybe_seed_basics_on_draft:464` | `fo_chat_locks:22` → `stage_llm:39` → `specialists.grok_bot` |
 | `specialists.grok_bot` → `server` | `front_office_call:703` | `server:44` → `stage_llm:39` → `specialists.grok_bot` |
 | `specialists.grok_bot` → `stage_llm` | `confirm_line:308` | `stage_llm:39` → `specialists.grok_bot` |
+| `specialists.researcher` → `research` | `__getattr__` map entries `essay_research_summary` and `essay_research_full` in `specialists/researcher.py` lines 13–14. There is no function-body import of `research` in that module; `__getattr__` calls `import_module` on a variable. | `research.py` line 26 imports `ship_4a` and `ship_4b` from `specialists.researcher` |
 | `state` → `stage_state` | `_fcntl:27` | `stage_state:40` → `stage_llm:39` → `specialists.grok_bot:22` → `state` |
 | `textutil` → `assignment_gate` | `genre_for:252`, `word_rules_for:323` | `assignment_gate:23` → `textutil` |
 | `textutil` → `cite_fit` | `prepare_word_citations:1165` | `cite_fit:25` → `textutil` |
@@ -178,11 +196,11 @@ return path. Sites are `function:line` in the source module.
 None of `stage_track`'s own function-body imports are in this set. The stage
 split can give the new modules ordinary module-level imports of the helpers
 they call, as long as those modules do not import `stage_track` and do not
-add a load edge that turns one of the 27 into a new shape (see the stage-7
+add a load edge that turns one of the 28 into a new shape (see the stage-7
 skip note in the target section).
 
 `projects.py` → `stage_track._run_card_only` is a real upward call, from rank
-4 to rank 12, and it is **not** in the 27. Hoisting it would still leave the
+4 to rank 12, and it is **not** in the 28. Hoisting it would still leave the
 load graph acyclic, because `stage_track` does not load-reach `projects`.
 It is the one call-time import of the orchestrator from outside `server.py`.
 The call sits in the new-sequence path (`projects.py` 1459–1462): after the
@@ -546,8 +564,8 @@ Five rules. They describe the graph the slices are allowed to produce.
 1. **The load graph stays a DAG.** New module-level imports may target
    anything that does not already load-reach the importer. The guard in
    section 6 fails the build on a new load cycle.
-2. **A function-body import is required only for a pair in the 27.** New
-   modules use module-level imports except for those 27 cycle-breaking pairs
+2. **A function-body import is required only for a pair in the 28.** New
+   modules use module-level imports except for those 28 cycle-breaking pairs
    (decision Q3). The 22 hoist-safe pairs may stay deferred. Hoisting them
    is later cleanup, outside Phase 4.
 3. **`stage_track` is imported at module level only by `server.py`.**
@@ -670,7 +688,7 @@ bumps the version, edits a prompt, or edits `tools.json`.
 ### Slice 1 — import guard, no moves
 
 Add the test described in section 6. Check in two allowlists taken from the
-graph at `a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`): the 27
+graph at `a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`): the 28
 load-cycle breakers, and the 46 existing direct two-module mutual pairs.
 Slice 1 runs that guard against the package source, which this slice does
 not change, so the allowlists are validated on that commit before slice 2
@@ -695,7 +713,7 @@ assertions first (decision Q7).
 
 Check before merging the slice:
 
-- Load graph still a DAG. The 27-pair allowlist and the 46-pair allowlist
+- Load graph still a DAG. The 28-pair allowlist and the 46-pair allowlist
   are unchanged.
 - `stage_confirm` does not import `stage_track`, and it does not import
   `stage_body`.
@@ -805,7 +823,7 @@ edges) and asserts:
 1. Every load-time component has one module. No self-import. The load graph
    stays a DAG.
 2. The set of deferred pairs that break a load cycle equals a checked-in
-   allowlist of the 27 `(source, target)` pairs in section 1. Order does not
+   allowlist of the 28 `(source, target)` pairs in section 1. Order does not
    matter. A new pair fails. Deleting a pair updates the allowlist in that
    same change, so the list can shrink and must not grow.
 3. The set of direct two-module mutual pairs equals a checked-in allowlist
@@ -913,13 +931,13 @@ decisions starts an implementation slice.
 `stage_confirm` must never import `stage_body`. The planned module docstring
 in section 4 says so.
 
-**Q3.** Approved. New modules use module-level imports except the 27
+**Q3.** Approved. New modules use module-level imports except the 28
 cycle-breaking pairs.
 
 **Q4.** Approved, with the guard widened. Slice 1 allowlists the 46 existing
 direct two-module mutual pairs and fails a new direct two-module cycle even
 when both directions are deferred. That allowlist may shrink and must not
-grow. The 27-breaker allowlist and the load-DAG checks stay.
+grow. The 28-breaker allowlist and the load-DAG checks stay.
 
 **Q5.** Approved. `projects.py`'s call-time import of `_run_card_only` is an
 accepted leftover for this pass.
@@ -941,4 +959,18 @@ reply check is the gap slice 3 closes.
 **Q9.** Approved. Slice 1's guard validates both allowlists against commit
 `a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`) before slice 2
 starts. The walk stays static. Longer cycles inside the 70-module component
-stay out of Phase 4, together with that component (decision Q6).
+stay out of Phase 4, together with that component (decision Q6). The
+package source is the same at `85cbfcb766e0224b9f5fc75f9d09c2bb8aef99ab`,
+which is where slice 1 checks the allowlists.
+
+**Breaker allowlist.** The independent reviewer decided the measured
+cycle-breaking deferred set is the allowlist. That set has 28 pairs: the
+original 27 function-body breakers plus the map-only edge
+`specialists.researcher` → `research`. The earlier 27 omitted that map-only
+breaker. Deferred edges are function-body imports plus specialist
+`__getattr__` map entries, and a map-only pair which breaks a load cycle
+belongs in this allowlist. Three other map-only deferred edges do not break
+a load cycle and stay out: `specialists.researcher` → `dig`,
+`specialists.researcher` → `known_paths`, and `specialists.writer` → `word`.
+The 46-pair mutual allowlist is unchanged. It already records
+`research -load- specialists.researcher -defer- research`.
