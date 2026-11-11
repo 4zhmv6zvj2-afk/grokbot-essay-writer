@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from essay_writer import first_run, first_run_cli
+from essay_writer import first_run, first_run_cli, first_run_install
 from essay_writer.first_run import (
     CURSOR_AGENT_INSTALL_URL,
     CURSOR_AGENT_MANUAL_INSTALL,
@@ -602,7 +602,37 @@ def test_upload_zip_reports_a_checksum_file_that_omits_the_zip(tmp_path, monkeyp
     )
     assert result["ok"] is True, result
     assert result["upload_verified"] is False
-    assert result["upload_checksum"] == "SHA256SUMS (no entry for this zip)"
+    assert result["upload_checksum"] == first_run_install.UPLOAD_CHECKSUM_OMITTED
+    assert "does not list this zip" in result["upload_note"]
+
+
+def test_the_checksum_omit_notice_is_one_constant_used_at_every_site(tmp_path, monkeypatch):
+    """AC2. One module-level constant names the case and drives the note."""
+    omitted = first_run_install.UPLOAD_CHECKSUM_OMITTED
+    assert isinstance(omitted, str) and omitted
+
+    # The message is written once in the module: the constant assignment. Every
+    # other site compares against or returns the name, never the text.
+    source = Path(first_run_install.__file__).read_text(encoding="utf-8")
+    assert source.count(f'"{omitted}"') == 1, "the message is written more than once"
+    assert f'UPLOAD_CHECKSUM_OMITTED = "{omitted}"' in source
+
+    # Change the constant and both behaviour sites follow it: the reported
+    # checksum source and the note that explains it stay in step.
+    sentinel = "checksum-source-sentinel"
+    monkeypatch.setattr(first_run_install, "UPLOAD_CHECKSUM_OMITTED", sentinel)
+    monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
+    upload = _upload_zip(tmp_path)
+    (tmp_path / "SHA256SUMS").write_text(f"{'0' * 64}  another.zip\n", encoding="utf-8")
+    result = first_run.install_uploaded_copy(
+        upload,
+        dest=tmp_path / "dest",
+        pip_runner=lambda command, _cwd: {"returncode": 0},
+        attach=False,
+        allow_cursor_install=False,
+    )
+    assert result["upload_verified"] is False
+    assert result["upload_checksum"] == sentinel
     assert "does not list this zip" in result["upload_note"]
 
 

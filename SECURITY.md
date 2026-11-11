@@ -128,8 +128,12 @@ Recommendations, in order of value:
   checked when one is available: `--upload-sha256`, a sibling
   `<zip>.sha256`, or a matching `SHA256SUMS` entry; a present but wrong checksum
   refuses. With no checksum the zip is trusted operator input, the install
-  proceeds, and the result reports `upload_verified: false`. The zip's own build
-  backend still executes, so pass only a zip you produced or trust.
+  proceeds, and the result reports `upload_verified: false`. A `SHA256SUMS` file
+  that is present but carries no entry for the zip is not the same as no
+  checksum: the zip stays unverified, the install proceeds, and the result
+  reports `upload_verified: false` and says the file does not list the zip. The
+  zip's own build backend still executes, so pass only a zip you produced or
+  trust.
 - Setup does not install the Cursor CLI silently. Consent (`--install-cursor`
   or `ESSAY_WRITER_ALLOW_CURSOR_INSTALL=1`) authorises the **download** only:
   setup downloads the installer to a file and reports its SHA-256, byte count,

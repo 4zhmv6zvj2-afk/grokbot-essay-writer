@@ -145,8 +145,11 @@ On the Grok Bot computer, setup will:
   falls back to an unpinned install. A zip checksum is optional: pass
   `--upload-sha256`, or put a matching `essay-writer.zip.sha256` / `SHA256SUMS`
   file beside the zip, and the installer verifies it; with no checksum it still
-  installs and the result says `upload_verified` is false. The zip's build
-  backend runs, so pass only a zip you produced or trust.
+  installs and the result says `upload_verified` is false. A `SHA256SUMS` file
+  that is present but lists no entry for the zip leaves the install unverified
+  the same way, and the result says the file does not list it rather than
+  treating the file as absent. The zip's build backend runs, so pass only a zip
+  you produced or trust.
 - Download a private Python 3.15.2 into that folder, only after you agree and only
   if no suitable Python is already there. It never changes the Python already
   installed on the computer.

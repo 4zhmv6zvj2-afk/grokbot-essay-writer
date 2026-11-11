@@ -37,6 +37,10 @@ from essay_writer.first_run_common import (
 
 INSTALL_DIRNAME = "essay-writer-install"
 RUNTIME_REQUIREMENTS = "requirements-runtime.txt"
+# Reported as the checksum source when a SHA256SUMS file sits beside the zip but
+# does not name it. It is a constant so the caller can recognise the case and
+# explain it, and so the wording lives in one place.
+UPLOAD_CHECKSUM_OMITTED = "SHA256SUMS (no entry for this zip)"
 # Cursor CLI install. Consent (--install-cursor / env) authorises the download
 # only. The URL is downloaded to a file and hashed; nothing runs until the
 # operator also supplies the expected SHA-256 (--cursor-sha256 / env). A match
@@ -272,7 +276,7 @@ def _upload_checksum(source: Path, explicit: str | None) -> tuple[str | None, st
         # A checksum file is present but does not name this zip. Do not treat
         # that as "no checksum": the caller reports the zip as unverified and
         # says why, instead of silently proceeding as if no file existed.
-        return None, "SHA256SUMS (no entry for this zip)"
+        return None, UPLOAD_CHECKSUM_OMITTED
     return None, None
 
 
@@ -774,7 +778,7 @@ def install_uploaded_copy(
         "install_residual": RESIDUALS["install-root"],
     }
     if upload_verified is False:
-        if upload_checksum_source == "SHA256SUMS (no entry for this zip)":
+        if upload_checksum_source == UPLOAD_CHECKSUM_OMITTED:
             payload["upload_note"] = (
                 "A SHA256SUMS file was found beside the zip, but it does not list "
                 "this zip, so the zip was not checksum-verified. Add its entry to "

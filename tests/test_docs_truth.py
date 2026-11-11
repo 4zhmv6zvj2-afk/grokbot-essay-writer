@@ -64,3 +64,15 @@ def test_confirm_gate_overclaims_are_gone() -> None:
     assert "bound to the exact arguments" not in readme
     security = _read("SECURITY.md")
     assert "must pass before any file is changed" not in security
+
+
+def test_the_docs_cover_a_checksum_file_that_omits_the_zip() -> None:
+    """AC3. Both docs explain a present checksum file that does not list the zip."""
+    for name in ("README.md", "SECURITY.md"):
+        text = _read(name)
+        paragraph = " ".join(text.split())
+        assert "present but" in paragraph, name
+        assert "no entry for the zip" in paragraph, name
+        assert "unverified" in paragraph, name
+        # A missing entry is not the same as a missing file.
+        assert "rather than" in paragraph or "not the same as no" in paragraph, name
