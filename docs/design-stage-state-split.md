@@ -3,7 +3,7 @@
 This is the design record for the completed split. It does not change
 behaviour, edit a prompt, edit `tools.json`, bump the package version, or
 cut a release. `ARCHITECTURE.md` still describes the code as it is. A short
-pointer there names this file. Design decisions are recorded in section 10.
+pointer there names this file. Design decisions are recorded in section 8.
 The implementation record is the appendix.
 
 Measured from commit `21a3da0a9f567956986051f3c6b2d095d4a1141c` on `main`.
@@ -280,7 +280,7 @@ The two returns are one function body. The stored return lives here with
 the hold return, and the function body is not edited.
 The name `stage_hold` is the job the orchestrator already describes
 ("held or refused reply bodies"). The chosen name is recorded in section
-10, because the glossary will freeze it.
+8, because the glossary records it.
 
 Load imports are the globals listed at the end of section 1. Function-body
 imports stay inside the moved functions. No import of `stage_track`,
@@ -399,7 +399,7 @@ Edges that move, and why they stay off both lists:
 | --- | --- |
 | `cite_fit` → `stage_note`, deferred (replaces `cite_fit` → `stage_state`) | `stage_note` load-imports `stage_llm` and `stage_state`. Neither load-reaches `cite_fit`. `stage_note` does not import `cite_fit`. |
 | `projects` → `stage_hold`, deferred, for `door_card_reply` only | `projects` → `stage_state` stays for `init_cloned_sequence_pointer`, `rebind_cloned_confirms`, and `stage_lock`. `stage_hold` does not load-reach `projects`. `projects` does not gain a load import. |
-| `stage_hold` → `spine`, `specialists.grok_bot`, `brief_contract`, `fo_chat_locks`, `late_chain`, `encourage`, `pack_backup`, `stage7`, all deferred | Each replaces the same deferred pair from `stage_state`. None of those targets load-reach the stage modules that will import `stage_hold`. None of them import `stage_hold`. |
+| `stage_hold` → `spine`, `specialists.grok_bot`, `brief_contract`, `fo_chat_locks`, `late_chain`, `encourage`, `pack_backup`, `stage7`, all deferred | Each replaces the same deferred pair from `stage_state`. None of those targets load-reach the stage modules that import `stage_hold`. None of them import `stage_hold`. |
 | `stage_hold` → `stage_note`, `stage_state`, `stage_llm`, `confirm`, `paths`, all load | One direction. Those targets do not import `stage_hold`. |
 | `stage_note` → `stage_state`, `stage_llm`, load | One direction. |
 | `state` → `stage_state`, deferred | Unchanged. `require_fcntl` stays, and `stage_state` still load-imports `stage_llm`. This remains the one breaker that names `stage_state`. |
@@ -411,8 +411,8 @@ functions leave, because no remaining function uses `confirm`. That pair
 is not in either allowlist. Deleting it does not edit the lists.
 
 The hoist that would grow the breaker list is named here, and this design
-does not do it. `fo_chat_locks` load-imports `projects`. `projects` will
-deferred-import `stage_hold` for `door_card_reply`. Leaving
+does not do it. `fo_chat_locks` load-imports `projects`. `projects` defers
+an import of `stage_hold` for `door_card_reply`. Leaving
 `inherited_lock_pending` and `prior_saved_lock_ask` inside the functions
 that already import them keeps `stage_hold` from load-reaching
 `projects`, so `projects` → `stage_hold` is not a breaker. Moving either
@@ -511,7 +511,7 @@ bodies, because moving `_note_look` while `_superseded_card` and
 `stage_state`. That constraint is recorded under risks. The order of the
 moves, the caller map, and the test pins are the appendix.
 
-## 9. Risks, non-goals, rollback
+## 7. Risks, non-goals, rollback
 
 ### Risks
 
@@ -570,7 +570,7 @@ and no on-disk format change. The allowlists do not change, so a revert
 does not restore a list. A reverted move leaves `essay.stage` and the
 stage files as they were.
 
-## 10. Design decisions
+## 8. Design decisions
 
 Design decisions are recorded below. Q4 stays out of this pass and is not
 proposed work.
