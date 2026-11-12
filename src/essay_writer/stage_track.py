@@ -194,33 +194,22 @@ def _inherited_keep_confirm(
 
 
 def _stage_call(args: StageArgs, *, minting: bool) -> dict[str, Any]:
-    """Run one stage call with the shared damage and quarantine handling."""
-    from essay_writer.stage_state import _QUARANTINE_NOTICE, DamagedStageCommit
+    """Run one stage call. A damaged confirm record or state file stops it."""
+    from essay_writer.stage_state import DAMAGED_COMMIT, DamagedStageCommit
+    from essay_writer.state import DamagedState, state_file_refusal
 
     try:
-        result = _run_stage(args, minting=minting)
+        return _run_stage(args, minting=minting)
     except DamagedStageCommit as exc:
-        _QUARANTINE_NOTICE.set(None)
-        reason = str(exc).strip() or "The last confirm record was damaged and was not applied."
+        reason = str(exc).strip() or DAMAGED_COMMIT
         return refuse(
             "stage",
             reason,
             wrote=False,
             stored=False,
         )
-    except Exception:
-        _QUARANTINE_NOTICE.set(None)
-        raise
-    notice = _QUARANTINE_NOTICE.get()
-    if notice and isinstance(result, dict):
-        _QUARANTINE_NOTICE.set(None)
-        result["notice"] = notice
-        following = result.get("next")
-        if isinstance(following, str) and notice not in following:
-            result["next"] = f"{notice} {following}"
-        elif not isinstance(following, str):
-            result["next"] = notice
-    return result
+    except DamagedState:
+        return state_file_refusal()
 
 
 def _turn_redirect(
@@ -301,10 +290,15 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
     redirected = _turn_redirect(stage, confirmPhase, text, args.answers)
     if redirected is not None:
         return redirected
+    from essay_writer.state import record_damage_refusal
+
+    damaged = record_damage_refusal(essay_id)
+    if damaged:
+        return damaged
     pointer = load_pointer(essay_id)
     genre = brief_genre(essay_id)
     pending_lock = inherited_lock_pending(essay_id, stage)
-    blocked = _stage_refusal(cast(Pointer, pointer), stage, genre)
+    blocked = _stage_refusal(cast(Pointer, pointer), stage, genre, essay_id)
     if blocked and not (minting and _mint_stage_allowed(pointer, stage)):
         if confirmPhase == CONFIRM:
             return _confirm_blocked(essay_id, pointer, stage, genre, blocked, card_run=card_run)

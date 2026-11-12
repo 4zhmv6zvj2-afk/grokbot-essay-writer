@@ -2,10 +2,7 @@
 
 AC1: Gate tip phrasing (how to score, 70+, mark-scheme opener) is not the cover title.
 AC2: RPT5001AA-style diary cover prints the brief assignment title when the pack carries a tip.
-AC3: Cursor and Grok Build share cover_lines → cover_field_rows → assignment_on_cover.
 """
-
-import inspect
 
 from helpers import pack
 
@@ -16,7 +13,6 @@ from essay_writer.diary import (
     diary_cover_lines,
     gate_tip_cover_title,
 )
-from essay_writer.word import cover_lines, write_docx
 
 MODULE = "RPT5001AA"
 SEQ = f"{MODULE}-1"
@@ -81,12 +77,3 @@ def test_ac2_diary_cover_uses_brief_title_when_pack_carries_gate_tip(workspace, 
     diary = diary_cover_lines(SEQ, saved, report)
     assert ASSIGNMENT in diary
     assert not any(gate_tip_cover_title(line) for line in diary)
-
-
-def test_ac3_build_covered_shared_cover_title_path():
-    """AC3. write_docx and cover_lines share cover_field_rows and assignment_on_cover."""
-    cover_src = inspect.getsource(cover_lines)
-    write_src = inspect.getsource(write_docx)
-    assert "cover_field_rows(" in cover_src
-    assert "cover_lines(" in write_src
-    assert "assignment_on_cover" in inspect.getsource(cover_field_rows)

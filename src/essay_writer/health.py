@@ -36,8 +36,8 @@ from essay_writer.projects import (
 )
 from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.specialists.researcher import consensus_status
-from essay_writer.stage_state import load_pointer
-from essay_writer.state import load_state
+from essay_writer.stage_state import DAMAGED_COMMIT, DamagedStageCommit, load_pointer
+from essay_writer.state import DamagedState, load_state
 
 
 def _discover() -> list[str]:
@@ -78,11 +78,15 @@ def _pack(essay_id: str, state: dict[str, Any], sequence: str | None) -> dict[st
         body["sequence_id"] = sequence
         pointer_path = work_dir(sequence) / "tracking" / "stage.json"
         if pointer_path.is_file():
-            pointer = load_pointer(sequence)
-            body["writing_stage"] = pointer["current"]
-            body["writing_saved"] = list(pointer["saved"])
-            if body["stage"] == "open":
-                body["stage"] = pointer["current"]
+            try:
+                pointer = load_pointer(sequence)
+            except DamagedStageCommit:
+                body["writing_notice"] = DAMAGED_COMMIT
+            else:
+                body["writing_stage"] = pointer["current"]
+                body["writing_saved"] = list(pointer["saved"])
+                if body["stage"] == "open":
+                    body["stage"] = pointer["current"]
     return strip_duplicate_card_ids(body)
 
 
@@ -122,8 +126,14 @@ def essay_health() -> dict[str, Any]:
         sequence = sequence_id(essay_id, saved) if saved else None
         try:
             state = load_sequence_state(essay_id, saved) if saved else load_state(essay_id)
-        except json.JSONDecodeError:
-            packs.append({"essay_id": essay_id, "state": "unreadable"})
+        except (json.JSONDecodeError, DamagedState):
+            packs.append(
+                {
+                    "essay_id": essay_id,
+                    "state": "unreadable",
+                    "next": "The state file is damaged.",
+                }
+            )
             continue
         if state.get("unreadable"):
             item: dict[str, Any] = {

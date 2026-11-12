@@ -4,10 +4,10 @@ AC1: report Word cover carries module or sequence id, assignment title, and coun
 when the brief stayed silent on the title page.
 AC2: References list is non-empty when the body cites gathered sources, including after
 a body-only pack recovery from the sequence Word file.
-AC3: Build covered. Cursor and Grok Build share write_stage10, cover_lines, and write_docx.
+AC3: the shared stage 10 path calls write_docx, word_manifest, and cover_lines
+for this sequence.
 """
 
-import inspect
 from pathlib import Path
 
 from docx import Document
@@ -237,15 +237,93 @@ def test_ac2_stage10_references_follow_gathered_cites(workspace, monkeypatch, tm
     assert refs, refs
 
 
-def test_ac3_build_covered_on_shared_stage10_path():
-    """AC3. Cursor and Grok Build share write_stage10 and write_docx."""
-    from essay_writer.late_chain import _stage10_manifest, _write_stage10_sequence
-    from essay_writer.word import word_manifest
+def _report_sequence_before_stage10(workspace, monkeypatch, tmp_path) -> str:
+    """Same report sequence as the stage 10 cover test, stopped before stage 10."""
+    documents = tmp_path / "Documents"
+    monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(documents))
+    _brief()
+    write_upload(
+        workspace,
+        MODULE,
+        "hasan.md",
+        (
+            "Hasan and Sarker (2023) How should the firm manage corridor risk? "
+            "Corridor risk is material for the chain.\n"
+        ),
+    )
+    write_upload(
+        workspace,
+        MODULE,
+        "immadisetty.md",
+        (
+            "Immadisetty (2022) How should the firm manage corridor risk? "
+            "One named chain is in scope for the report.\n"
+        ),
+    )
+    parent = open_sequence(MODULE)
+    from essay_writer.projects import essay_sequence_new
 
-    source = inspect.getsource(_stage10_manifest) + inspect.getsource(_write_stage10_sequence)
-    assert "write_docx(" in source
-    assert "word_manifest(" in source
-    manifest = inspect.getsource(word_manifest)
-    assert "_word_pack(" in manifest
-    assert "cover_lines(" in manifest
-    assert "cover_lines(" in inspect.getsource(write_docx)
+    draft = essay_sequence_new(MODULE, "draft", parent=parent)
+    assert draft["ok"] is True, draft
+    seq = essay_sequence_new(MODULE, "confirm", parent=parent)["sequence_id"]
+    assert seq.endswith("-2")
+
+    body = _report_pack(seq)
+    _confirm_research(seq, body)
+    draft_validate = essay_pack_validate(seq, body, "draft")
+    assert draft_validate["ok"] is True, draft_validate
+    confirmed = essay_pack_validate(seq, body, "confirm")
+    assert confirmed["ok"] is True, confirmed
+
+    report = inspect_pack(seq, body)
+    cover = cover_lines(seq, body, report)
+    assert seq in cover
+    assert ASSIGNMENT in cover
+    assert any(line.startswith("Counted words:") for line in cover)
+
+    stage_path = work_dir(seq) / "output" / f"{seq}.docx"
+    write_docx(seq, body, report, stage_path)
+    from essay_writer.state import load_state, save_state
+
+    state = load_state(seq)
+    state.pop("saved_pack", None)
+    save_state(seq, state)
+    return seq
+
+
+def test_ac3_build_covered_on_shared_stage10_path(workspace, monkeypatch, tmp_path):
+    """AC3. Stage 10 calls write_docx, word_manifest, and cover_lines for this sequence."""
+    seq = _report_sequence_before_stage10(workspace, monkeypatch, tmp_path)
+
+    import essay_writer.word as word_module
+
+    real_write_docx = word_module.write_docx
+    real_word_manifest = word_module.word_manifest
+    real_cover_lines = word_module.cover_lines
+    seen_write_docx: list[str] = []
+    seen_word_manifest: list[str] = []
+    seen_cover_lines: list[str] = []
+
+    def write_docx_spy(essay_id, *args, **kwargs):
+        seen_write_docx.append(str(essay_id))
+        return real_write_docx(essay_id, *args, **kwargs)
+
+    def word_manifest_spy(essay_id, *args, **kwargs):
+        seen_word_manifest.append(str(essay_id))
+        return real_word_manifest(essay_id, *args, **kwargs)
+
+    def cover_lines_spy(essay_id, *args, **kwargs):
+        seen_cover_lines.append(str(essay_id))
+        return real_cover_lines(essay_id, *args, **kwargs)
+
+    monkeypatch.setattr("essay_writer.word.write_docx", write_docx_spy)
+    monkeypatch.setattr("essay_writer.word.word_manifest", word_manifest_spy)
+    monkeypatch.setattr("essay_writer.word.cover_lines", cover_lines_spy)
+
+    final = write_stage10(seq)
+    assert final.get("refused") != "title-page", final
+    assert final["sequence_written"] is True, final
+    assert final["copied"] is True, final
+    assert seq in seen_write_docx, seen_write_docx
+    assert seq in seen_word_manifest, seen_word_manifest
+    assert seq in seen_cover_lines, seen_cover_lines

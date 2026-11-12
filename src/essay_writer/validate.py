@@ -28,7 +28,7 @@ from essay_writer.known_paths import guard_write_door
 from essay_writer.paths import module_code, sequence_write_error
 from essay_writer.paths import work_dir as _work_dir
 from essay_writer.programme import STYLE_ID
-from essay_writer.state import load_state, save_state
+from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import speak
 from essay_writer.textutil import (
     align_in_text_cites,
@@ -935,6 +935,7 @@ def _pack_assignment_text(pack: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+@guard_damaged_records
 def essay_pack_validate(
     essay_id: str,
     pack: dict[str, Any],

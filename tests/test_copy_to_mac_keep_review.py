@@ -2,20 +2,19 @@
 
 from __future__ import annotations
 
-import inspect
 import io
 import json
 import zipfile
 from pathlib import Path
 
+import pytest
 from docx import Document
 from helpers import mac_handoff_sequence_dir, open_sequence, plant_gathered_source
 
 from essay_writer import build_office, cursor_office
-from essay_writer.build_office import _stage_files, build_deliverable_handoff
 from essay_writer.first_run import main as first_run_main
 from essay_writer.harvard_4a import harvard_4a_line
-from essay_writer.research_packs import ship_4b
+from essay_writer.research_packs import bibliography_sources, ship_4b
 from essay_writer.server import HANDLERS
 from essay_writer.server import main as server_main
 from essay_writer.shells import cursor_shell, front_office
@@ -93,8 +92,6 @@ def test_ac1_copy_to_mac_copies_existing_files_only(workspace, tmp_path, monkeyp
     assert not (copied / "download-list.docx").exists()
     assert not (copied / "papers.zip").exists()
     assert not (copied / "other.docx").exists()
-    assert "write_stage_deliverables(" not in inspect.getsource(build_deliverable_handoff)
-    assert "write_stage_deliverables(" not in inspect.getsource(_stage_files)
 
 
 def test_ac2_ship_4b_keeps_existing_long_review(workspace):
@@ -135,21 +132,57 @@ def test_ac3_ship_4b_stubs_only_when_review_is_absent(workspace):
     assert "UNIQUE-KEEP-4B-REVIEW" not in body
 
 
-def test_ac4_build_covered_copy_only_handoff_and_keep_existing_ship_4b():
+def test_ac4_build_covered_copy_only_handoff_and_keep_existing_ship_4b(
+    workspace, tmp_path, monkeypatch
+):
     """AC4. Build covered. Cursor and Grok Build / first_run share the copy-only handoff and ship_4b."""
-    handoff_src = inspect.getsource(build_deliverable_handoff)
-    stage_src = inspect.getsource(_stage_files)
-    ship_src = inspect.getsource(ship_4b)
-    assert "write_stage_deliverables(" not in handoff_src
-    assert "write_stage_deliverables(" not in stage_src
-    assert "supplied is None and md_path.is_file()" in ship_src
-    assert "build_deliverable_handoff" in inspect.getsource(first_run_main)
-    assert "first_run_main" in inspect.getsource(server_main)
     assert researcher.ship_4b is ship_4b
-    assert "ship_4b(essay_id, sources, None)" in inspect.getsource(
-        researcher.deliver_critical_reviews
+
+    mac = tmp_path / "mac"
+    mac.mkdir()
+    monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(mac))
+    seq = open_sequence()
+    out = _output(workspace)
+    out.mkdir(parents=True)
+    cli_args: list[list[str]] = []
+
+    def spy_first_run(argv=None):
+        cli_args.append(list(argv) if argv is not None else [])
+        return first_run_main(argv)
+
+    # server.main imports essay_writer.first_run.main when it sees the flag.
+    monkeypatch.setattr("essay_writer.first_run.main", spy_first_run)
+    with pytest.raises(SystemExit) as caught:
+        server_main(["--copy-to-mac", str(out)])
+    assert caught.value.code == 0
+    assert cli_args == [["--copy-to-mac", str(out)]]
+
+    plant_gathered_source(seq)
+    expected_sources = bibliography_sources(seq)
+    ship_calls: list[tuple[str, list[dict[str, object]], object]] = []
+
+    def spy_ship_4b(essay_id, sources, supplied):
+        ship_calls.append((essay_id, list(sources), supplied))
+        return ship_4b(essay_id, sources, supplied)
+
+    monkeypatch.setattr("essay_writer.research_packs.ship_4b", spy_ship_4b)
+    researcher.deliver_critical_reviews(seq)
+    assert ship_calls == [(seq, expected_sources, None)]
+    monkeypatch.setattr("essay_writer.research_packs.ship_4b", ship_4b)
+
+    deliver_calls: list[str] = []
+    real_deliver = researcher.deliver_critical_reviews
+
+    def spy_deliver(essay_id):
+        deliver_calls.append(essay_id)
+        return real_deliver(essay_id)
+
+    monkeypatch.setattr(
+        "essay_writer.specialists.researcher.deliver_critical_reviews",
+        spy_deliver,
     )
-    assert "deliver_critical_reviews" in inspect.getsource(stage_critical_reviews)
+    stage_critical_reviews(seq)
+    assert deliver_calls == [seq]
 
     cursor_src = Path(cursor_office.__file__).read_text(encoding="utf-8")
     build_src = Path(build_office.__file__).read_text(encoding="utf-8")

@@ -153,6 +153,9 @@ _CHAT_PLACE = "Grok Bot chat delivery"
 _CHAT_PLACE_TOKEN = "\x01chatplace\x01"
 _CONFIRM_CARD = "Confirm card"
 _CONFIRM_CARD_TOKEN = "\x01confirmcard\x01"
+# A refusal names the confirm record. Keep that phrase.
+_CONFIRM_RECORD = "confirm record"
+_CONFIRM_RECORD_TOKEN = "\x01confirmrecord\x01"
 _PATH_KEYS = frozenset(
     {
         "app",
@@ -193,6 +196,7 @@ def say(text: str) -> str:
     text = _scrub_paths_in_text(text)
     text = text.replace(_CHAT_PLACE, _CHAT_PLACE_TOKEN)
     text = text.replace(_CONFIRM_CARD, _CONFIRM_CARD_TOKEN)
+    text = text.replace(_CONFIRM_RECORD, _CONFIRM_RECORD_TOKEN)
     kept: list[str] = []
 
     def protect(match: re.Match[str]) -> str:
@@ -208,6 +212,7 @@ def say(text: str) -> str:
 
     restored = _tidy(re.sub(r"\x00(\d+)\x00", restore, masked))
     restored = restored.replace(_CHAT_PLACE_TOKEN, _CHAT_PLACE)
+    restored = restored.replace(_CONFIRM_RECORD_TOKEN, _CONFIRM_RECORD)
     return restored.replace(_CONFIRM_CARD_TOKEN, _CONFIRM_CARD)
 
 

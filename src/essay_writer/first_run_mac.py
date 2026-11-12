@@ -308,7 +308,7 @@ def remember_mac_handoff_dir(path: Path | str) -> dict[str, Any]:
     if blocked:
         return {"ok": False, "reason": blocked, "remembered": False, "created": False}
     folder = located if located is not None else Path(path).expanduser()
-    if any(part.casefold() == "researchdrive" for part in folder.parts):
+    if _internal_volume(folder):
         return {"ok": False, "reason": "That folder is not a copy path on this computer."}
     if folder.name.casefold() == "open":
         return {
@@ -488,7 +488,7 @@ def remember_mac_deliverable(source: Path, target: Path) -> None:
         resolved = expanded.resolve()
     except OSError:
         return
-    if any(part.casefold() == "researchdrive" for part in resolved.parts):
+    if _internal_volume(resolved):
         return
     for root in (workspace_root(), kb1_root()):
         try:
