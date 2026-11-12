@@ -1,18 +1,18 @@
 # Design: import graph and stage-runner split
 
-This is a design for review. It does not change behaviour, prompts, the tool
-schema, the package version, or a release. `ARCHITECTURE.md` still describes
-the code as it is. Phase 4 is the import guard plus the stage-runner split
-recorded here. Slice 1 is the import guard. Slices 2 and 3 have not started.
+This is the design record for the completed import-graph and stage-runner
+split. It does not change behaviour, prompts, the tool schema, the package
+version, or a release. `ARCHITECTURE.md` still describes the code as it is.
+Phase 4 is the import guard plus the stage-runner split recorded here.
+Design decisions are recorded in section 8. The implementation record is
+the appendix.
 
 Measured from commit `a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`,
 `pyproject.toml` version `0.9.0`). After `git fetch origin main`, `origin/main`
-and the tag both resolved to that commit. No open pull request was waiting
-on that measurement.
+and the tag both resolved to that commit.
 
-The independent reviewer has approved the seams, subject to the decisions in
-section 8. Package-wide hoisting of deferred imports, and the 70-module
-deferred component, are a later cleanup. They are not part of Phase 4.
+Package-wide hoisting of deferred imports, and the 70-module deferred
+component, are a later cleanup. They are not part of Phase 4.
 
 ## How the numbers were measured
 
@@ -55,7 +55,7 @@ imports built as strings. The vendored bootstrap formats an `import_module`
 string for a caller-supplied module name. That string is not a package edge.
 Simple cycles longer than two modules inside the large deferred component
 were not enumerated; the direct pairs and the 28 hoist-breakers are the
-reviewable sets.
+recorded sets.
 
 ## 1. Import graph, as measured
 
@@ -141,10 +141,10 @@ allowlist. The 281 unique pairs in the table above are the function-body
 pairs: 27 of those break a load cycle, plus the 22 with no path back, the
 one artifact, and the 231 in the large component. One further map-only pair,
 `specialists.researcher` → `research`, also breaks a load cycle, so the
-breaker allowlist has 28 pairs. The independent reviewer decided that
-measured set is the allowlist, because the earlier 27 omitted this map-only
-breaker. Three other map-only deferred edges do not break a load cycle and
-stay out of the breaker allowlist: `specialists.researcher` → `dig`,
+breaker allowlist has 28 pairs. That measured set is the allowlist, because
+the earlier 27 omitted this map-only breaker. Three other map-only deferred
+edges do not break a load cycle and stay out of the breaker allowlist:
+`specialists.researcher` → `dig`,
 `specialists.researcher` → `known_paths`, and `specialists.writer` → `word`.
 The 46-pair mutual allowlist is unchanged. It already records
 `research -load- specialists.researcher -defer- research`.
@@ -206,7 +206,7 @@ It is the one call-time import of the orchestrator from outside `server.py`.
 The call sits in the new-sequence path (`projects.py` 1459–1462): after the
 child sequence is stored, `door_card_reply` mints the stage card through the
 injected runner. That is the same `CardRun` the state layer already uses.
-The stage slices leave this call where it is.
+This split leaves this call where it is.
 
 #### Direct two-module cycles
 
@@ -263,8 +263,8 @@ textutil -defer- validate -load- textutil
 ```
 
 `build_office` ↔ `cursor_office` is in this list. Both mid-office shells
-import each other only inside functions. The stage slices do not retie that
-pair, and they do not give either shell a new import of the other.
+import each other only inside functions. This split does not retie that
+pair, and it does not give either shell a new import of the other.
 
 #### Deferred imports that do not close a cycle
 
@@ -472,8 +472,8 @@ and opens stage 6 when the following stage is `"6"`.
 
 ## 3. Behaviour the split has to keep
 
-These are already implemented. Each slice keeps the same calls and the same
-order. None of the slices edit prompt files, `tools.json`, or student-facing
+These are already implemented. The split keeps the same calls and the same
+order. It does not edit prompt files, `tools.json`, or student-facing
 sentences.
 
 ### Confirm gate
@@ -516,7 +516,7 @@ puts that string on `rules` (line 278). `_stage_body_fields` copies
 
 `tests/test_untrusted_content.py` pins the same sentences on the server
 briefing, the write seat, and every stage rule from `stage_settings`. The
-body slice keeps the two assignments. It does not reword the fence. Server
+body module keeps the two assignments. It does not reword the fence. Server
 instructions and seat files are untouched because `stage_llm.py` is untouched.
 
 ### Public MCP tool
@@ -524,13 +524,13 @@ instructions and seat files are untouched because `stage_llm.py` is untouched.
 - `essay_stage` (`stage_track.py` 121–139) stays the tool function. Parameter
   names stay as they are (`confirmPhase`, `cardAction`, `cardDigest`,
   `encourageChoice`, `paperChoice`, `lockChoice`, and the rest).
-- `StageArgs` in `stage_context.py` stays the schema object. The slices do
+- `StageArgs` in `stage_context.py` stays the schema object. The split does
   not add or drop a field.
 - `server.HANDLERS["essay.stage"]` stays `essay_stage` (`server.py` line 88).
   `tests/test_layer6_spine.py` and `tests/test_cite_fit.py` pin that identity,
   including both shells' handler maps.
 - `prompts/front_office/tools.json` already says stage 5 stores on the draft
-  and starts stage 6 with no Confirm card. That file is not part of any slice.
+  and starts stage 6 with no Confirm card. That file is outside this split.
 
 ### Both mid-office shells
 
@@ -546,20 +546,20 @@ docstring says both hosts share the decision. `mid_spawn.open_mid_child` is
 the shared opener (`build_office.spawn_grok` line 185, `cursor_office.spawn_agent`
 line 220).
 
-The body slice keeps the call to `stage_host_launch`. It does not call
+The body module keeps the call to `stage_host_launch`. It does not call
 `cursor_stage_launch` from the stage body. `tests/test_cite_fit.py` AC5
-already requires both shells to share the stage row and the cite gate.
+requires both shells to share the stage row and the cite gate.
 `tests/test_mid_office_binary_resolve.py`, `test_mid_office_status_lines.py`,
 `test_mid_office_dig.py`, `test_mid_office_stdio_exit.py`,
-`test_mid_spawn_boundary.py`, and `test_build_office.py` stay on every slice
-that moves the launch field. There is no residual shell: both hosts stay on
-the existing branch. No slice adds a Cursor-only launch.
+`test_mid_spawn_boundary.py`, and `test_build_office.py` pin the launch
+field. There is no residual shell: both hosts stay on the existing branch.
+This split adds no Cursor-only launch.
 
 ## 4. Target
 
 ### Dependency direction
 
-Five rules. They describe the graph the slices are allowed to produce.
+Five rules. They describe the graph this split produces.
 
 1. **The load graph stays a DAG.** New module-level imports may target
    anything that does not already load-reach the importer. The guard in
@@ -569,8 +569,8 @@ Five rules. They describe the graph the slices are allowed to produce.
    (decision Q3). The 22 hoist-safe pairs may stay deferred. Hoisting them
    is later cleanup, outside Phase 4.
 3. **`stage_track` is imported at module level only by `server.py`.**
-   `projects.py` keeps the one function import of `_run_card_only`. The
-   independent reviewer accepted that leftover for Phase 4 (decision Q5).
+   `projects.py` keeps the one function import of `_run_card_only`. That
+   leftover stays for Phase 4 (decision Q5).
    `stage_state`, `stage_landing`, `stage_replies`, `stage_confirm`, and
    `stage_body` do not import `stage_track` at all.
 4. **The new modules sit under the orchestrator.** `stage_track` load-imports
@@ -616,8 +616,7 @@ Move together into `stage_confirm.py`:
   once `_confirm_path` has moved (that would make `stage_confirm` import the
   orchestrator)
 
-The new module's docstring is part of the slice, and it states the ownership
-the independent reviewer required:
+The module docstring records the ownership:
 
 ```python
 """Confirm path for one stage call.
@@ -672,153 +671,92 @@ the same order. Cite landing still goes through `land_body_cites` when
 returns does not change. The quarantine wrapper does not change. The runners
 passed into the state and landing layers do not change.
 
-No slice re-exports the moved private names from `stage_track.py`.
-`tests/test_stage_boundary.py` already rejects that pattern. Callers in
-tests switch to the new module in the same slice that moves the function
+`stage_track.py` does not re-export the moved private names.
+`tests/test_stage_boundary.py` rejects that pattern. Tests that named a
+moved helper import it from the module that defines it
 (`tests/test_brief_contract.py` imports `_build_stage_body`;
 `tests/test_cite_fit.py` imports `_prepare_stage_text` and
 `_stage7_draft_body`).
 
-## 5. Implementation slices
+## 5. Shape of the split
 
-Each slice is one change, reviewable on its own, and safe to revert on its
-own. A later slice starts only after the previous one is green. No slice
-bumps the version, edits a prompt, or edits `tools.json`.
+Phase 4 is three parts, in this order. The import guard comes first and
+checks both allowlists against commit
+`a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`) on the package
+source before any function moves (decision Q9). The allowlists are the 28
+load-cycle breakers and the 46 direct two-module mutual pairs. The confirm
+path and `_stage7_skip_request` then live in `stage_confirm.py`, bodies
+unchanged, with the docstring that section 4 records. `stage_track.py`
+load-imports that module and calls the same names. `_confirm_path` is not
+imported by the tests that were searched. The six body functions then live
+in `stage_body.py`, bodies unchanged. `stage_body` load-imports
+`stage_confirm` for the skip probe. That new load edge does not create a
+component. The split stops there.
 
-### Slice 1 — import guard, no moves
+The guard is the ratchet. Either allowlist may shrink and must not grow.
+A new direct two-module cycle fails the guard even when both directions
+are deferred (decision Q4).
 
-Add the test described in section 6. Check in two allowlists taken from the
-graph at `a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`): the 28
-load-cycle breakers, and the 46 existing direct two-module mutual pairs.
-Slice 1 runs that guard against the package source, which this slice does
-not change, so the allowlists are validated on that commit before slice 2
-starts (decision Q9). Do not move a function. The existing suite, including
-`tests/test_stage_boundary.py`, stays green without edits.
+Source pins and `ARCHITECTURE.md` are retargeted with the move that takes
+the code, rather than rewritten into behaviour assertions first
+(decision Q7). `ARCHITECTURE.md` names `stage_confirm.py` and
+`stage_body.py`. `tests/test_stage_boundary.py` matches those sentences,
+and the two new modules join the set forbidden from importing
+`stage_track`. The state, landing, and reply layers stay in that set.
+Known pins:
 
-This slice is the ratchet. Later slices may shrink either allowlist. They
-may not grow either one. A new direct two-module cycle fails the guard even
-when both directions are deferred (decision Q4).
+- `tests/test_layer5_callers.py` reads `advances_without_confirm` in
+  `stage_track.py`. `gate_save` and `stage_bibliography` counts span the
+  orchestrator, landing, and replies. This split does not change those
+  counts.
+- `tests/test_layer6_spine.py` reads the text `essay_writer.spine import
+  final_review`. After the body move that import lives in `stage_body.py`,
+  so the read includes that file. The count and the string stay.
+  `assignment_gate` stays absent from the orchestrator. `quiet_stage5`
+  stays on the landing and reply side.
+- `tests/test_brief_contract.py` and `tests/test_cite_fit.py` import the
+  moved body helpers from `stage_body`. The source assertions stay:
+  `_collect_stage_misses` inside `_build_stage_body`, and
+  `stage in BODY_CITE_STAGES` with `land_body_cites` inside the prepare
+  and stage-7 draft sources.
 
-### Slice 2 — confirm path
-
-Create `stage_confirm.py` and move `_confirm_path` and `_stage7_skip_request`
-with their bodies unchanged. Put the module docstring from section 4 on the
-file: `stage_confirm` owns the confirm path and the shared stage-7 skip
-probe, and `stage_confirm` must never import `stage_body`. `stage_track.py`
-load-imports the new module and calls the same names. Update any test import
-that named those functions on `stage_track` (none do today; `_confirm_path`
-is not imported by the tests that were searched). Source pins that name a
-moved helper are retargeted in this slice, not rewritten into behaviour
-assertions first (decision Q7).
-
-Check before merging the slice:
-
-- Load graph still a DAG. The 28-pair allowlist and the 46-pair allowlist
-  are unchanged.
-- `stage_confirm` does not import `stage_track`, and it does not import
-  `stage_body`.
-- The module docstring states that `stage_confirm` owns the confirm path and
-  the shared stage-7 skip probe, and that it must never import `stage_body`.
-- `advances_without_confirm` is still called from `stage_track.py`
-  (`tests/test_layer5_callers.py` reads that file for the name).
-- Confirm-card tests, stage 7 confirm tests, and `tests/test_torn_confirm.py`
-  pass with no assertion edits.
-- Stage 5 tests pass. This slice does not move the stage-5 store.
-
-### Slice 3 — body
-
-Create `stage_body.py` and move the six body functions with their bodies
-unchanged. `stage_body` load-imports `stage_confirm` for the skip probe.
-Point `tests/test_brief_contract.py` and `tests/test_cite_fit.py` at the new
-module. Keep the source assertions (`_collect_stage_misses` inside
-`_build_stage_body`; `stage in BODY_CITE_STAGES` and `land_body_cites` inside
-the prepare and stage-7 draft sources).
-
-`tests/test_layer6_spine.py` requires the text `essay_writer.spine import
-final_review` to appear in `stage_track.py`. After this move that import
-lives in `stage_body.py`. Widen that read to the new file in this same
-slice. Keep the count and the string. Do the same for any other source pin
-that names a moved import. Known pins that read `stage_track.py` as text:
-
-- `tests/test_layer5_callers.py` — `advances_without_confirm` must remain in
-  `stage_track.py`. `gate_save` and `stage_bibliography` counts are across
-  the orchestrator plus landing plus replies; this slice should not change
-  those counts.
-- `tests/test_layer6_spine.py` — `final_review` import, `assignment_gate`
-  absent from the orchestrator, `quiet_stage5` still in the landing/reply
-  side.
-
-In this same slice, update `ARCHITECTURE.md` so it names `stage_confirm.py`
-and `stage_body.py`, and update `tests/test_stage_boundary.py` so its
-docstring pin matches the new sentences. The three existing layers stay
-forbidden from importing `stage_track`. Add the two new modules to that
-forbidden set. Source pins and `ARCHITECTURE.md` are retargeted here, in the
-slice that moves the body, rather than rewritten into behaviour assertions
-first (decision Q7).
-
-Also in this slice, add one assertion that a live stage draft reply's
-`rules` field still ends with `UNTRUSTED_FENCE` (decision Q8).
-`tests/test_untrusted_content.py` today pins `stage_settings`: the server
+The body move adds one assertion that a live stage draft reply's `rules`
+field still ends with `UNTRUSTED_FENCE` (decision Q8).
+`tests/test_untrusted_content.py` pins `stage_settings`: the server
 briefing, the write seat, and every stage rule. It does not read a live
 `essay.stage` draft reply, so dropping `body["rules"] = item["rules"]` in
-the body builder would leave that test green. That missing reply check is
-the gap this assertion closes. The fence sentences stay unchanged. The
+the body builder would leave that test passing. That missing reply check
+is the gap the assertion closes. The fence sentences stay unchanged. The
 assertion calls `essay_stage` for a draft and checks
 `result["rules"].endswith(UNTRUSTED_FENCE)`, using the same constant
-`stage_llm.UNTRUSTED_FENCE` the existing test already pins. A natural home
-is `tests/test_untrusted_content.py`.
+`stage_llm.UNTRUSTED_FENCE` the existing test already pins. Its home is
+`tests/test_untrusted_content.py`.
 
-Check before merging the slice:
+`_run_stage` stays one function. The early-tool order is the product
+policy, and it is already a straight sequence of returns. A further file
+would scatter that order without removing a second decision tree.
 
-- The confirm-gate, stage-5, fence, and handler-identity tests listed in
-  section 3 pass.
-- `tests/test_untrusted_content.py` passes without a fence-wording edit, and
-  the new live draft-reply assertion is part of this slice.
-- `tests/test_cite_fit.py` AC4 and AC5 pass, including the both-shells
-  handler check.
-- The mid-office files listed in section 3 pass. The launch call is still
-  `stage_host_launch`.
-- The import guard passes. Expect no new breaker. `stage_body` →
-  `stage_confirm` is a new load edge and must not create a component.
-
-### Slice 4 — stop
-
-Phase 4 stops after slice 3. Do not keep splitting `_run_stage`. The
-early-tool order is the product policy, and it is already a straight
-sequence of returns. A further file would scatter that order without
-removing a second decision tree.
-
-`projects.py`'s call-time import of `_run_card_only` stays. The independent
-reviewer accepted that leftover for this pass (decision Q5). A later
-cleanup, outside Phase 4, may inject the runner and delete the import. That
-cleanup touches sequence creation, so `tests/test_mac_sequence_folder.py`
-and the project tests belong to that later change, not to slices 1–3. The
-current call does not break the load DAG.
+`projects.py`'s call-time import of `_run_card_only` stays. That leftover
+stays for this pass (decision Q5). A later cleanup, outside Phase 4, may
+inject the runner and delete the import. That cleanup touches sequence
+creation, so `tests/test_mac_sequence_folder.py` and the project tests
+belong to that later change. The current call does not break the load DAG.
 
 ## 6. Test and guard plan
 
-### Behaviour suite
-
-Every slice runs the full suite (`pytest`) on the same Python floor the
-package already requires (3.12+). The tests that define "this slice kept
-the door" are the ones named in sections 3 and 5. A slice that only moves
-code should not need assertion changes except:
-
-- import paths of moved private helpers
-- source pins that read a file the helper left
-- the architecture-doc sentences in `tests/test_stage_boundary.py`, and only
-  in slice 3
-
-`tests/test_stage_split.py` (bad id, then draft-and-confirm on stage 1)
-runs on slices 2 and 3 as the shortest routing check. Stage routing beyond
-that file is the existing stage, confirm, and stage-5 files, not a new
-parallel suite.
+The suite runs on the same Python floor the package already requires
+(3.12+). A move does not need assertion changes except import paths of
+moved private helpers, source pins that read a file the helper left, and
+the architecture-doc sentences in `tests/test_stage_boundary.py`.
+`tests/test_stage_split.py` (bad id, then draft-and-confirm on stage 1) is
+the shortest routing check. Stage routing beyond that file is the existing
+stage, confirm, and stage-5 tests, not a second suite. The appendix lists
+those files. Sections 3 and 5 name the behaviour those tests hold.
 
 ### Import guard
 
-New test module, proposed path `tests/test_import_graph.py`. It reimplements
-the walk in section 1 (load edges, triggered `__getattr__` names, deferred
-edges) and asserts:
+`tests/test_import_graph.py` reimplements the walk in section 1 (load
+edges, triggered `__getattr__` names, deferred edges) and asserts:
 
 1. Every load-time component has one module. No self-import. The load graph
    stays a DAG.
@@ -835,52 +773,37 @@ edges) and asserts:
 4. The only imports of `stage_track` are `server.py` (module level,
    `essay_stage`) and `projects.py` (inside a function, name
    `_run_card_only`). Comments do not count; the walk uses `ast`.
-5. `stage_state`, `stage_landing`, `stage_replies`, and, from slice 3,
-   `stage_confirm` and `stage_body`, have zero imports of `stage_track`.
+5. `stage_state`, `stage_landing`, `stage_replies`, `stage_confirm`, and
+   `stage_body` have zero imports of `stage_track`.
 
 A hoist-safe deferred import that is not one side of a mutual pair may stay
-inside a function. Slice 1 checks both allowlists against the package as it
-stands at `a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`) before
-slice 2 starts (decision Q9).
+inside a function. The guard validates both allowlists against the package
+as it stands at `a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`)
+before any function moves (decision Q9). The package source is the same at
+`85cbfcb766e0224b9f5fc75f9d09c2bb8aef99ab`, which is where the guard checks
+the allowlists.
 
-`tests/test_stage_boundary.py` stays. It is the runtime half: importing the
-state, landing, and reply modules does not put `stage_track` in
-`sys.modules`. Slice 3 extends that runtime check to the two new modules.
-The AST check is the one that sees function-body imports.
+`tests/test_stage_boundary.py` is the runtime half: importing the state,
+landing, reply, confirm, and body modules does not put `stage_track` in
+`sys.modules`. The AST check is the one that sees function-body imports.
 
-### Stage routing tests
-
-No new routing framework. Slices 2 and 3 rely on:
-
-| File | What it holds still |
-| --- | --- |
-| `tests/test_stage_split.py` | Bad id refuses before a branch. Stage 1 draft then confirm stores. |
-| `tests/test_stage_confirm_isolation.py` | Confirm cards do not leak across stages. `AUTO_START` is stage 5 only. |
-| `tests/test_stage_card_ids.py` | Card identity. |
-| `tests/test_stage7_confirm_advance.py` | Stage 7 confirm. |
-| `tests/test_stage5_quiet_and_bot.py` | Stage 5 stores on the draft and opens stage 6. |
-| `tests/test_stage_launch_status.py` | Mid-office launch status on a stage reply. |
-| `tests/test_torn_confirm.py` | A torn confirm does not save. |
-| `tests/test_confirm_card.py`, `test_confirm_card_save.py`, `test_confirm_bindings.py` | Card press, digest binding, `advances_without_confirm`. |
-| `tests/test_cite_fit.py` | Shared cite gate for stages 5–8, both shells. |
-| `tests/test_untrusted_content.py` | Fence text on `stage_settings`. Slice 3 adds the live draft-reply `rules` assertion. The current test does not cover that reply. |
+There is no second routing suite. The confirm and body moves rely on the
+existing stage, confirm, and stage-5 tests. The appendix lists them.
 
 ## 7. Risks, non-goals, rollback
 
 ### Risks
 
 - A move that reorders two `if` blocks inside `_confirm_path` or `_run_stage`
-  changes who gets a card. The slice rule is to move a function without
-  editing its body. Review the diff as a relocation, and treat any inserted
-  line inside the function as a behaviour change that stops the slice.
+  changes who gets a card. A moved function keeps its body. An inserted
+  line inside that function is a behaviour change.
 - Source pins (`getsource`, whole-file reads) fail if the import string moves
   and the test is not updated in the same commit. Section 5 names the known
   pins. A missed pin fails CI; it does not silently change the product.
 - Dropping `body["rules"] = item["rules"]` would take the fence off the
-  stage reply even though `stage_settings` still appends it. The current
-  fence test reads `stage_settings`, not the reply body, so it would stay
-  green. Slice 3 closes that gap with a live draft-reply assertion
-  (decision Q8).
+  stage reply even though `stage_settings` still appends it. The fence test
+  reads `stage_settings`, not the reply body, so it would stay passing.
+  The live draft-reply assertion closes that gap (decision Q8).
 - Calling `cursor_stage_launch` from the body would drop Grok Build.
   `stage_host_launch` is the call that keeps both.
 - A new module that imports `stage_track` reopens the boundary the last
@@ -890,14 +813,14 @@ No new routing framework. Slices 2 and 3 rely on:
 
 ### Non-goals
 
-Phase 4 is the import guard plus the stage-runner split (slices 1–3).
+Phase 4 is the import guard plus the stage-runner split.
 Package-wide hoisting of deferred imports, and the 70-module deferred
 component, are deferred to a later cleanup. They are not part of Phase 4
 (decision Q6).
 
 - No change to confirm semantics, the stage-5 exemption, the fence sentences,
-  or the `essay.stage` schema. Slice 3 adds a live reply assertion for the
-  fence that already exists. It does not reword the fence.
+  or the `essay.stage` schema. The body move adds a live reply assertion for
+  the fence that already exists. It does not reword the fence.
 - No edit under `src/essay_writer/prompts/`, no version bump, no tag, no
   release.
 - No split of `stage_state.py`, `stage_replies.py`, or `stage_landing.py`.
@@ -911,66 +834,107 @@ component, are deferred to a later cleanup. They are not part of Phase 4
 
 ### Rollback
 
-Each slice is one commit that moves functions or adds a test. Revert that
+Each move is one commit that moves functions or adds a test. Revert that
 commit. There is no data migration and no on-disk format change. The guard's
-allowlists revert with the commit that changed them. A reverted slice leaves
+allowlists revert with the commit that changed them. A reverted move leaves
 the public tool and the stage files as they were.
 
-## 8. Decisions from the independent reviewer
+## 8. Design decisions
 
-The questions below are closed. The independent reviewer approved the seams,
-subject to the documentation changes this section records. None of these
-decisions starts an implementation slice.
+Design decisions are recorded below.
 
-**Q1.** Approved. `stage_confirm.py` and `stage_body.py` are the seams.
+**Q1.** `stage_confirm.py` and `stage_body.py` are the seams.
 `_run_stage`'s early returns and the stage-5 confirm refusal stay in
-`stage_track.py`, as section 4 proposes.
+`stage_track.py`, as section 4 records.
 
-**Q2.** Approved. The stage-7 skip probe lives in `stage_confirm.py`.
+**Q2.** The stage-7 skip probe lives in `stage_confirm.py`.
 `stage_body.py` may import `stage_confirm.py`. There is no reverse import:
-`stage_confirm` must never import `stage_body`. The planned module docstring
-in section 4 says so.
+`stage_confirm` must never import `stage_body`. The module docstring in
+section 4 records that.
 
-**Q3.** Approved. New modules use module-level imports except the 28
+**Q3.** New modules use module-level imports except the 28
 cycle-breaking pairs.
 
-**Q4.** Approved, with the guard widened. Slice 1 allowlists the 46 existing
+**Q4.** The guard is widened. It allowlists the 46 existing
 direct two-module mutual pairs and fails a new direct two-module cycle even
 when both directions are deferred. That allowlist may shrink and must not
 grow. The 28-breaker allowlist and the load-DAG checks stay.
 
-**Q5.** Approved. `projects.py`'s call-time import of `_run_card_only` is an
-accepted leftover for this pass.
+**Q5.** `projects.py`'s call-time import of `_run_card_only` is a
+leftover for this pass.
 
-**Q6.** Approved. Phase 4 is the import guard plus the stage-runner split.
+**Q6.** Phase 4 is the import guard plus the stage-runner split.
 Package-wide hoisting of deferred imports, and the 70-module deferred
 component, are a later cleanup. They are not part of Phase 4.
 
-**Q7.** Approved. Source pins and `ARCHITECTURE.md` are retargeted in the
-slice that moves the code, rather than rewritten into behaviour assertions
-first. `ARCHITECTURE.md` and `tests/test_stage_boundary.py` are updated in
-slice 3, when both new modules exist.
+**Q7.** Source pins and `ARCHITECTURE.md` are retargeted with the
+move that takes the code, rather than rewritten into behaviour assertions
+first. `ARCHITECTURE.md` and `tests/test_stage_boundary.py` are updated
+when both new modules exist.
 
-**Q8.** Approved. Slice 3 adds one assertion that a live stage draft reply's
+**Q8.** The body move adds one assertion that a live stage draft reply's
 `rules` field still ends with `UNTRUSTED_FENCE`. The current
 `tests/test_untrusted_content.py` pins `stage_settings` only. That missing
-reply check is the gap slice 3 closes.
+reply check is the gap the assertion closes.
 
-**Q9.** Approved. Slice 1's guard validates both allowlists against commit
-`a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`) before slice 2
-starts. The walk stays static. Longer cycles inside the 70-module component
-stay out of Phase 4, together with that component (decision Q6). The
-package source is the same at `85cbfcb766e0224b9f5fc75f9d09c2bb8aef99ab`,
-which is where slice 1 checks the allowlists.
+**Q9.** The guard validates both allowlists against commit
+`a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`) before any
+function moves. The walk stays static. Longer cycles inside the 70-module
+component stay out of Phase 4, together with that component (decision Q6).
+The package source is the same at `85cbfcb766e0224b9f5fc75f9d09c2bb8aef99ab`,
+which is where the guard checks the allowlists.
 
-**Breaker allowlist.** The independent reviewer decided the measured
-cycle-breaking deferred set is the allowlist. That set has 28 pairs: the
-original 27 function-body breakers plus the map-only edge
-`specialists.researcher` → `research`. The earlier 27 omitted that map-only
-breaker. Deferred edges are function-body imports plus specialist
-`__getattr__` map entries, and a map-only pair which breaks a load cycle
-belongs in this allowlist. Three other map-only deferred edges do not break
-a load cycle and stay out: `specialists.researcher` → `dig`,
+**Breaker allowlist.** The measured cycle-breaking deferred set is the
+allowlist. That set has 28 pairs: the original 27 function-body breakers
+plus the map-only edge `specialists.researcher` → `research`. The earlier
+27 omitted that map-only breaker. Deferred edges are function-body imports
+plus specialist `__getattr__` map entries, and a map-only pair which breaks
+a load cycle belongs in this allowlist. Three other map-only deferred edges
+do not break a load cycle and stay out: `specialists.researcher` → `dig`,
 `specialists.researcher` → `known_paths`, and `specialists.writer` → `word`.
 The 46-pair mutual allowlist is unchanged. It already records
 `research -load- specialists.researcher -defer- research`.
+
+## Appendix. Implementation record
+
+The split landed in three moves. Each move was one change and safe to
+revert on its own. None of them bumped the version, edited a prompt, or
+edited `tools.json`.
+
+The import guard landed first, with no function moved. Both allowlists were
+checked against the package source at
+`a9c3b83bc8a98288e8c4f2715ead37e350f78748` (tag `v0.9.0`). The existing
+suite, including `tests/test_stage_boundary.py`, passed without edits.
+
+The confirm path landed next. `_confirm_path` and `_stage7_skip_request`
+moved into `stage_confirm.py` with their bodies unchanged, under the
+docstring that section 4 records. The stage-5 store stayed in the orchestrator.
+Confirm-card tests, stage 7 confirm tests, `tests/test_torn_confirm.py`,
+and the stage 5 tests passed with no assertion edits.
+
+The body landed last. The six body functions moved into `stage_body.py`
+with their bodies unchanged. `tests/test_brief_contract.py` and
+`tests/test_cite_fit.py` were pointed at `stage_body`. The `final_review`
+source read was widened to `stage_body.py`. `ARCHITECTURE.md` and
+`tests/test_stage_boundary.py` were updated in that same move. The live
+draft-reply `rules` assertion was added to `tests/test_untrusted_content.py`.
+The new load edge `stage_body` → `stage_confirm` did not create a component.
+The launch call stayed `stage_host_launch`.
+
+The split stopped after the body move. `_run_stage` stayed one function.
+`projects.py`'s call-time import of `_run_card_only` stayed.
+
+The confirm and body moves relied on the existing tests:
+
+| File | What it holds still |
+| --- | --- |
+| `tests/test_stage_split.py` | Bad id refuses before a branch. Stage 1 draft then confirm stores. |
+| `tests/test_stage_confirm_isolation.py` | Confirm cards do not leak across stages. `AUTO_START` is stage 5 only. |
+| `tests/test_stage_card_ids.py` | Card identity. |
+| `tests/test_stage7_confirm_advance.py` | Stage 7 confirm. |
+| `tests/test_stage5_quiet_and_bot.py` | Stage 5 stores on the draft and opens stage 6. |
+| `tests/test_stage_launch_status.py` | Mid-office launch status on a stage reply. |
+| `tests/test_torn_confirm.py` | A torn confirm does not save. |
+| `tests/test_confirm_card.py`, `test_confirm_card_save.py`, `test_confirm_bindings.py` | Card press, digest binding, `advances_without_confirm`. |
+| `tests/test_cite_fit.py` | Shared cite gate for stages 5–8, both shells. |
+| `tests/test_untrusted_content.py` | Fence text on `stage_settings`, plus the live draft-reply `rules` assertion. The `stage_settings` pins do not cover that reply. |

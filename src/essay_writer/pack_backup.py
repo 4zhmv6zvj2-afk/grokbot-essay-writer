@@ -31,7 +31,7 @@ from essay_writer.confirm import (
 )
 from essay_writer.known_paths import guard_write_door, refuse_repo_write
 from essay_writer.paths import essay_dir, sequence_write_error, work_dir
-from essay_writer.state import load_state, save_state
+from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import speak
 
 TOOL = "essay.pack.restore"
@@ -61,6 +61,7 @@ def snapshot_after_pack_validate(essay_id: str, pack: dict[str, Any]) -> dict[st
     return _write_snapshot(essay_id, reason=REASON_VALIDATE, stage=None, pack=body)
 
 
+@guard_damaged_records
 def essay_pack_restore(
     essay_id: str,
     snapshot: str | None = None,

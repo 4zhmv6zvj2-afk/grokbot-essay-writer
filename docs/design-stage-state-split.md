@@ -1,9 +1,10 @@
 # Design: split stage_state
 
-This is a design for review. It does not move a function, change behaviour,
-edit a prompt, edit `tools.json`, bump the package version, or cut a release.
-`ARCHITECTURE.md` still describes the code as it is. A short pointer there
-names this file. No implementation slice starts from this pull request.
+This is the design record for the completed split. It does not change
+behaviour, edit a prompt, edit `tools.json`, bump the package version, or
+cut a release. `ARCHITECTURE.md` still describes the code as it is. A short
+pointer there names this file. Design decisions are recorded in section 8.
+The implementation record is the appendix.
 
 Measured from commit `21a3da0a9f567956986051f3c6b2d095d4a1141c` on `main`.
 `stage_state.py` is 1462 lines and defines 70 functions. The import walk is
@@ -38,15 +39,14 @@ pointer. The reply bodies call the pointer API and do not own the journal.
 Those are the seams. Line count is not one of them.
 
 `stage_landing.py`, `stage_replies.py`, and `_run_stage` stay as they are.
-That limit is repeated under non-goals so a review does not turn it into a
-slice.
+That limit is repeated under non-goals so the limit stays a limit.
 
 ## 1. Inventory
 
 Line numbers are the function's first and last line at this commit, from
 the AST (`end_lineno`). "Calls" lists names defined in this file. External
 callers are other package modules. Tests that import or patch a name are
-in section 8, not in this table.
+in the appendix, not in this table.
 
 `TOOL` is the string `"essay.stage"`. `STAGE_COMMIT` is
 `tracking/.stage.commit`. `_STAGE_NOTE_RELS` is the set of tracking-note
@@ -82,7 +82,7 @@ the lock around it. They stay in `stage_state.py`.
 | `init_cloned_sequence_pointer` | 296–312 | Child pointer after a parent copy | journal helpers, `blank_pointer`, `_clear_copied_writing` | `projects` (inside the clone function) |
 | `rebind_cloned_confirms` | 315–379 | Copied draft digests for the child id | `_atomic`, `_pointer_text`, `TOOL` | `projects` (same function) |
 | `_read_pointer_data` | 432–442 | Raw pointer JSON | `_pointer_path` | — |
-| `load_pointer` | 445–452 | Normalized pointer, replaying a torn journal first | `_pointer_lock`, `_normalize_pointer`, `blank_pointer` | `health` (module level), `stage_track` (module level). Many tests import it; section 8 lists them |
+| `load_pointer` | 445–452 | Normalized pointer, replaying a torn journal first | `_pointer_lock`, `_normalize_pointer`, `blank_pointer` | `health` (module level), `stage_track` (module level). Many tests import it; the appendix lists them |
 | `_normalize_pointer` | 455–485 | Coerced pointer fields | `_waiting_pair`, `_revision` | — |
 | `_room_state` | 488–493 | `room_grant`, `room_lock` | — | `stage_landing` |
 | `_room_after_card_save` | 496–501 | Room fields after a card save | `_room_state` | `stage_replies` |
@@ -170,7 +170,7 @@ fields `_hydrate_card` copies.
 | `_hold_confirm` | 872–901 | Next card missing; pointer stays | `_reoffer_confirm` | — |
 | `_attach_minted_card` | 904–925 | Minted card on a stored confirm | — | — |
 | `_mark_explicit_end` | 928–935 | Advance with no card (`explicit_end`) | — | `stage_landing`, `stage_replies` |
-| `_render_stage10_before_close` | 938–981 | Final Word file before the pointer may close; otherwise a held card | `_reoffer_confirm` | — (tests in section 8 read its source) |
+| `_render_stage10_before_close` | 938–981 | Final Word file before the pointer may close; otherwise a held card | `_reoffer_confirm` | — (tests in the appendix read its source) |
 | `_with_plan_encourage` | 984–995 | One plan question after stage 3 is stored | — | `stage_replies` |
 | `_cache_approved_look` | 998–1003 | Remember an approved look, except stage 5 | — | `stage_replies` |
 | `_snapshot_stage_save` | 1006–1014 | Pack snapshot after a stored save | — | `stage_landing`, `stage_replies` |
@@ -222,7 +222,7 @@ time because the bodies keep calling them unqualified: `CONFIRM`,
 inside `_stage_call` (line 194). That import stays pointed at
 `stage_state`.
 
-## 2. Proposed modules
+## 2. Target modules
 
 Two new modules. `stage_state.py` keeps the pointer, the journal, and the
 lock.
@@ -230,19 +230,19 @@ lock.
 ### `stage_state.py`
 
 Everything in the pointer table, plus the types and module names listed
-under it. After both slices, the module docstring says this file owns the
-pointer, the commit journal, and the stage lock, and that a note or a
-reply that needs a card calls back through `CardRun` on the hold module.
-The file still never imports `stage_track`.
+under it. The module docstring records that this file owns the pointer,
+the commit journal, and the stage lock, and that a note or a reply that
+needs a card calls back through `CardRun` on the hold module. The file
+never imports `stage_track`.
 
-It does not re-export a moved name. Callers change their imports in the
-slice that moves the function.
+It does not re-export a moved name. Callers import the module that defines
+the name.
 
 ### `stage_note.py`
 
 `render_tracking` and `_note_look`.
 
-The module docstring the slice adds:
+The module docstring records:
 
 ```python
 """Tracking-note text for one stage.
@@ -262,7 +262,7 @@ Load imports: `stage_settings` and `stage_title` from `stage_llm`, and
 
 `CardRun`, `_CARD_FIELDS`, and every function in the reply table.
 
-The module docstring the slice adds:
+The module docstring records:
 
 ```python
 """Held and refused replies for one stage save.
@@ -277,10 +277,10 @@ the orchestrator, the confirm path, or the body builder.
 
 `_commit_with_next_card` returns either a held reply or a stored reply.
 The two returns are one function body. The stored return lives here with
-the hold return so the slice can move the function without editing it.
+the hold return, and the function body is not edited.
 The name `stage_hold` is the job the orchestrator already describes
-("held or refused reply bodies"). Section 10 asks the reviewer to confirm
-the name before a slice, because the glossary will freeze it.
+("held or refused reply bodies"). The chosen name is recorded in section
+8, because the glossary records it.
 
 Load imports are the globals listed at the end of section 1. Function-body
 imports stay inside the moved functions. No import of `stage_track`,
@@ -293,7 +293,7 @@ no import of `stage_hold` or `stage_note`.
 
 ## 3. Dependency direction
 
-Allowed load edges after both slices:
+Allowed load edges:
 
 ```
 stage_track
@@ -390,9 +390,8 @@ hold module. This design does not do that. `stage7.py` keeps
 
 `tests/test_import_graph.py` keeps both allowlists at their current
 members. This split does not add a breaker and does not add a mutual
-pair, so neither list grows and neither list shrinks. A slice that
-produced a new pair would stop. Justifying a new pair is not part of
-this design.
+pair, so neither list grows and neither list shrinks. A new pair is
+outside this design. Justifying a new pair is not part of it.
 
 Edges that move, and why they stay off both lists:
 
@@ -400,7 +399,7 @@ Edges that move, and why they stay off both lists:
 | --- | --- |
 | `cite_fit` → `stage_note`, deferred (replaces `cite_fit` → `stage_state`) | `stage_note` load-imports `stage_llm` and `stage_state`. Neither load-reaches `cite_fit`. `stage_note` does not import `cite_fit`. |
 | `projects` → `stage_hold`, deferred, for `door_card_reply` only | `projects` → `stage_state` stays for `init_cloned_sequence_pointer`, `rebind_cloned_confirms`, and `stage_lock`. `stage_hold` does not load-reach `projects`. `projects` does not gain a load import. |
-| `stage_hold` → `spine`, `specialists.grok_bot`, `brief_contract`, `fo_chat_locks`, `late_chain`, `encourage`, `pack_backup`, `stage7`, all deferred | Each replaces the same deferred pair from `stage_state`. None of those targets load-reach the stage modules that will import `stage_hold`. None of them import `stage_hold`. |
+| `stage_hold` → `spine`, `specialists.grok_bot`, `brief_contract`, `fo_chat_locks`, `late_chain`, `encourage`, `pack_backup`, `stage7`, all deferred | Each replaces the same deferred pair from `stage_state`. None of those targets load-reach the stage modules that import `stage_hold`. None of them import `stage_hold`. |
 | `stage_hold` → `stage_note`, `stage_state`, `stage_llm`, `confirm`, `paths`, all load | One direction. Those targets do not import `stage_hold`. |
 | `stage_note` → `stage_state`, `stage_llm`, load | One direction. |
 | `state` → `stage_state`, deferred | Unchanged. `require_fcntl` stays, and `stage_state` still load-imports `stage_llm`. This remains the one breaker that names `stage_state`. |
@@ -411,9 +410,9 @@ Edges that move, and why they stay off both lists:
 functions leave, because no remaining function uses `confirm`. That pair
 is not in either allowlist. Deleting it does not edit the lists.
 
-The hoist that would grow the breaker list is named so a slice does not
-do it. `fo_chat_locks` load-imports `projects`. `projects` will
-deferred-import `stage_hold` for `door_card_reply`. Leaving
+The hoist that would grow the breaker list is named here, and this design
+does not do it. `fo_chat_locks` load-imports `projects`. `projects` defers
+an import of `stage_hold` for `door_card_reply`. Leaving
 `inherited_lock_pending` and `prior_saved_lock_ask` inside the functions
 that already import them keeps `stage_hold` from load-reaching
 `projects`, so `projects` → `stage_hold` is not a breaker. Moving either
@@ -429,9 +428,9 @@ does not apply to imports that already live inside those bodies.
 check covers them. That set is not an allowlist. Growing it is the
 guard doing its job.
 
-## 6. Behaviour the slices keep
+## 6. Behaviour the split keeps
 
-The slices move functions and retarget imports. They do not edit a
+The split moves functions and retargets imports. It does not edit a
 function body. The public contract and the stage decisions stay where
 they are.
 
@@ -481,14 +480,13 @@ the flag.
 `essay_stage` in `stage_track.py` stays the tool function. Its parameter
 names stay (`confirmPhase`, `cardAction`, `cardDigest`, `encourageChoice`,
 `paperChoice`, `lockChoice`, and the rest). `StageArgs` stays the schema
-object. `server.HANDLERS["essay.stage"]` stays `essay_stage`. No slice
-edits `prompts/front_office/tools.json` or a file under
+object. `server.HANDLERS["essay.stage"]` stays `essay_stage`. This split
+does not edit `prompts/front_office/tools.json` or a file under
 `src/essay_writer/prompts/`.
 
 ### Mid-office
 
-Mid-office behaviour would be unchanged by the later implementation of
-this design.
+Mid-office behaviour is unchanged.
 
 `stage_state.py` does not mention `cursor_office`, `build_office`,
 `mid_spawn`, or `mid_office_launch`. None of the functions that move
@@ -498,180 +496,210 @@ read the stored shell or start the child. The launch field stays in
 `stage_landing._attach_mid_run`. This design does not split those files
 and does not edit those functions.
 
-There is no residual mid-office change in the slices. A slice that
-edited a moved body and called a shell from it would be outside this
-design. The slice rule is to move the body unchanged, so that edit is
-not part of the slice.
+A moved body that called a shell would be outside this design. Moved
+bodies stay unchanged, so none of them calls a shell.
 
 The tests that compare the two shells
 (`tests/test_confirm_atomic.py`, `tests/test_stage10_sequence_write.py`,
 `tests/test_word_manifest.py`, `tests/test_pack_backup_restore.py`, and
-the `tests/test_mid_office_*.py` files) stay on the slice as regression
-checks. Their launch assertions do not move.
+the `tests/test_mid_office_*.py` files) remain the regression pins. Their
+launch assertions stay on those files.
 
-## 7. Migration slices
+The note renderer moved on its own. The note reader moved with the reply
+bodies, because moving `_note_look` while `_superseded_card` and
+`_stale_confirm_body` stayed in `stage_state` would cycle `stage_note` and
+`stage_state`. That constraint is recorded under risks. The order of the
+moves, the caller map, and the test pins are the appendix.
 
-Each slice is one commit, moves functions without editing their bodies,
-and can be reverted on its own. A later slice starts only after the
-previous one is green. No slice bumps the version, edits a prompt, or
-edits `tools.json`. No slice re-exports a moved name from
-`stage_state.py` or from `stage_track.py`.
+## 7. Risks, non-goals, rollback
 
-Do not start slice 1 until section 10 is answered. This pull request
-does not contain either slice.
+### Risks
 
-### Slice 1 — note renderer
+- Moving `_note_look` while `_superseded_card` and `_stale_confirm_body`
+  stay in `stage_state.py` creates a load cycle between `stage_note` and
+  `stage_state` and a new mutual pair. The note renderer is
+  `render_tracking` alone. `_note_look` moves with those two callers.
+- A moved body that gains or loses a line is a behaviour change. Treat
+  the diff as a relocation.
+- Hoisting `stage_hold`'s import of `fo_chat_locks` adds a breaker
+  (`projects` → `stage_hold`) and the 28-pair allowlist would grow.
+  Section 5 forbids that hoist.
+- `_grant_room` looks `_commit_pointer` up in `stage_state`.
+  `_commit_with_next_card` looks it up in `stage_hold`. A spy left only
+  on `stage_state` can still pass on room grants and miss the save.
+  Room grants carry `current` of `"1"` and `"2"`, so `assert "1" in seen`
+  and `assert "2" in seen` can pass while the save commit is unwrapped.
+  The spy wraps both attributes with the same helper, and the AC5 spy
+  records the save whose proposed pointer advances `current`. The
+  retarget stays a monkeypatch of the same helper. It does not become a
+  new behaviour assertion. `stage_landing._store_stage` and
+  `stage_replies` import `_commit_pointer` at module level and call that
+  binding. Replacing the attribute on `stage_state` does not wrap those
+  calls, and this split does not edit those bodies. Product code outside
+  that patch still calls the same `_commit_pointer`.
+- A new module that imports `stage_track` reopens the boundary the
+  guard and `tests/test_stage_boundary.py` close. Both tests include the
+  new modules.
+- Re-exporting a moved name from `stage_state` would make a missed
+  caller look imported while the real global lives on the new module.
+  This split does not re-export.
+- `stage_landing.py` and `stage_replies.py` stay large. This design is
+  not a promise to split them.
 
-Create `stage_note.py` with `render_tracking` only.
+### Non-goals
 
-`render_tracking` is a leaf. No function that remains in `stage_state.py`
-calls it. `stage_note` load-imports `stage_settings` and `stage_title`.
-It does not import `stage_state` yet, because `_note_look` is still in
-`stage_state` and moving `_note_look` now would make the two files import
-each other: `_note_look` calls `_note_path`, and `_superseded_card` and
-`_stale_confirm_body` still call `_note_look`.
+- No change to confirm order, the stage-5 exemption, the untrusted-content
+  fence, or the `essay.stage` schema.
+- No edit under `src/essay_writer/prompts/`, no edit of `tools.json`, no
+  version bump, no tag, no release.
+- No split of `stage_landing.py` or `stage_replies.py`.
+- No further split of `_run_stage`. The early-tool order stays in
+  `stage_track.py`. That split is out of this pass.
+- No package-wide hoist of deferred imports, and no edit of the 28-pair
+  or 46-pair allowlists.
+- No change to mid-office launch, to `mid_spawn.py`, or to which shell
+  `stage_host_launch` selects.
+- No rename of public tools, `StageArgs` fields, or glossary words that
+  already name a module. Glossary rows for `stage_note` and `stage_hold`
+  name those modules.
 
-Retarget `render_tracking` in `stage_landing.py`, `stage_replies.py`,
-and `tests/test_stage_card_ids.py`. `stage_settings` is only used by
-`render_tracking`, so drop it from `stage_state.py`'s import list.
-`stage_title` stays until slice 2, because the reply functions still
-call it.
+### Rollback
 
-Add `stage_note` to `STAGE_LAYERS` and to the layer list in
+Each move is one commit. Revert that commit. There is no data migration
+and no on-disk format change. The allowlists do not change, so a revert
+does not restore a list. A reverted move leaves `essay.stage` and the
+stage files as they were.
+
+## 8. Design decisions
+
+Design decisions are recorded below. Q4 stays out of this pass and is not
+proposed work.
+
+**Q1.** `stage_note` stays a separate module.
+
+**Q2.** `CardRun` lives on `stage_hold.py`.
+
+**Q3.** The chosen names are `stage_note` and `stage_hold`.
+
+**Q4.** Out of this pass. Further splits of `_run_stage`, and any split
+of `stage_landing.py` or `stage_replies.py`, are not proposed. A later
+design would have to say so on its own. This document stops after the
+note module and the hold module. Q4 is not an implementation slice in
+this pass.
+
+## Appendix. Implementation record
+
+The split landed in two moves. Each move was one commit, moved functions
+without editing their bodies, and could be reverted on its own. Neither
+move bumped the version, edited a prompt, or edited `tools.json`. Neither
+re-exported a moved name from `stage_state.py` or from `stage_track.py`.
+Both allowlists stayed unchanged, and neither new module imported
+`stage_track`.
+
+The note renderer moved first. `stage_note.py` was created with
+`render_tracking` only. That function is a leaf: no function that remained
+in `stage_state.py` calls it. `stage_note` load-imported `stage_settings`
+and `stage_title`, and did not import `stage_state`, because `_note_look`
+was still there. Moving `_note_look` then would have made the two files
+import each other: `_note_look` calls `_note_path`, and `_superseded_card`
+and `_stale_confirm_body` still called `_note_look`. Callers of
+`render_tracking` in `stage_landing.py`, `stage_replies.py`, and
+`tests/test_stage_card_ids.py` were pointed at `stage_note`.
+`stage_settings` is only used by `render_tracking`, so it left
+`stage_state.py`'s import list. `stage_title` stayed until the reply
+functions moved, because those functions still called it. `stage_note`
+was added to `STAGE_LAYERS` and to the layer list in
 `tests/test_stage_boundary.py`, including the subprocess import check.
-Expect both allowlists unchanged.
-
-`_note_look` stays in `stage_state.py` for this slice. `cite_fit` does
+`_note_look` stayed in `stage_state.py` for this move, and `cite_fit` did
 not change yet.
 
-### Slice 2 — note reader and reply bodies
+The note reader and the reply bodies moved together:
 
-In the same commit:
-
-- Move `_note_look` into `stage_note.py`. Add the load import of
+- `_note_look` moved into `stage_note.py`, with the load import of
   `_note_path`.
-- Create `stage_hold.py` and move `CardRun`, `_CARD_FIELDS`, and every
+- `stage_hold.py` was created with `CardRun`, `_CARD_FIELDS`, and every
   function in the reply table, bodies unchanged.
-- Add the load imports listed in section 1. Leave every function-body
-  import inside the function that already has it.
-- Point external callers at the new modules (section 8).
-- Drop the now-unused names from `stage_state.py`'s import list:
-  `confirm`'s names, `relative`, `brief_genre`, `next_stage`, and
-  `stage_title`. Keep `POINTER_FILE`, `STAGE_ORDER`, `tracking_file`,
-  `work_dir`, and `refuse_repo_write`.
-- Update the `stage_state` module docstring, the `stage_track` module
-  docstring (lines 25–32), the `stage_replies` module docstring, the
-  `stage_context` comment that names `essay_writer.stage_state` (lines
-  10–11), and the layout bullets in `ARCHITECTURE.md`,
-  `docs/GLOSSARY.md`, and `README.md` so they name `stage_note.py` and
-  `stage_hold.py` and still describe `stage_state.py` as the pointer,
-  journal, and lock. Keep the sentences `tests/test_stage_boundary.py`
-  already requires in `ARCHITECTURE.md`. The `stage_context` comment
-  keeps its claim: the state side does not import that module.
+- The load imports are the globals in section 1. Every function-body
+  import stayed inside the function that already had it.
+- External callers were pointed at the new modules, as the tables below
+  record.
+- `stage_state.py` dropped `confirm`'s names, `relative`, `brief_genre`,
+  `next_stage`, and `stage_title`. It kept `POINTER_FILE`, `STAGE_ORDER`,
+  `tracking_file`, `work_dir`, and `refuse_repo_write`.
+- The `stage_state` module docstring, the `stage_track` module docstring
+  (lines 25–32), the `stage_replies` module docstring, the `stage_context`
+  comment that names `essay_writer.stage_state` (lines 10–11), and the
+  layout bullets in `ARCHITECTURE.md`, `docs/GLOSSARY.md`, and `README.md`
+  were updated to name `stage_note.py` and `stage_hold.py` and still
+  describe `stage_state.py` as the pointer, journal, and lock. The
+  sentences `tests/test_stage_boundary.py` requires in `ARCHITECTURE.md`
+  stayed. The `stage_context` comment kept its claim: the state side does
+  not import that module.
 
 `_note_look` and its two callers (`_superseded_card`,
-`_stale_confirm_body`) leave `stage_state.py` in this same commit, so
-`stage_state` never imports `stage_note`.
+`_stale_confirm_body`) left `stage_state.py` in that same commit, so
+`stage_state` never imported `stage_note`. There was no load cycle.
 
-Expect both allowlists unchanged. Expect no load cycle. Expect
-`stage_hold` and `stage_note` to import `stage_track` zero times.
+The split stopped there. `_commit_pointer` stayed with the lock.
+`_run_stage`, `stage_landing.py`, and `stage_replies.py` stayed whole.
+The deferred imports this design left inside functions stayed there.
 
-### Stop
+### Callers
 
-After slice 2, stop. Do not split `_commit_pointer` from the lock. Do
-not split `_run_stage`. Do not split `stage_landing.py` or
-`stage_replies.py`. Do not hoist the deferred imports this design left
-inside functions.
+`MOVED_NAMES` in `tests/test_stage_boundary.py` checks that `stage_track`
+does not carry those attributes. It does not say which file defines them.
+The list stayed.
 
-## 8. Tests and source pins to retarget
-
-Pins stay source pins. A slice updates the module a pin reads. It does
+Pins stayed source pins. A move updated the module a pin reads. It did
 not rewrite the pin into a behaviour assertion.
 
-### Slice 1
-
-| Pin | Retarget |
+| Pin | Where it points |
 | --- | --- |
 | `src/essay_writer/stage_landing.py` import of `render_tracking` | `stage_note` |
 | `src/essay_writer/stage_replies.py` import of `render_tracking` | `stage_note` |
 | `tests/test_stage_card_ids.py` import of `render_tracking` | `stage_note` |
-| `tests/test_import_graph.py` `STAGE_LAYERS` | Add `stage_note` |
-| `tests/test_stage_boundary.py` `LAYERS`, the subprocess import list, and the architecture-doc assertions if the docstring of that test names the layer set | Add `stage_note`. Keep the existing sentences |
+| `tests/test_import_graph.py` `STAGE_LAYERS` | includes `stage_note` |
+| `tests/test_stage_boundary.py` `LAYERS`, the subprocess import list, and the architecture-doc assertions if the docstring of that test names the layer set | includes `stage_note`. The existing sentences stayed |
 
-`MOVED_NAMES` in `tests/test_stage_boundary.py` checks that
-`stage_track` does not carry those attributes. It does not say which
-file defines them. The list stays. It does not need a retarget to
-remain true.
-
-### Slice 2 — production imports
-
-| Module | Names that move | Names that stay on `stage_state` |
+| Module | Names that moved | Names that stayed on `stage_state` |
 | --- | --- | --- |
 | `stage_track.py` load import | `CardRun`, `_card_record`, `_confirm_blocked`, `_mint_stage_allowed`, `_stage_refusal` → `stage_hold` | `_INHERITED_KEEP`, `TOOL`, `Pointer`, `_waiting_digest`, `load_pointer` |
 | `stage_track.py` inside `_stage_call` | — | `_QUARANTINE_NOTICE`, `DamagedStageCommit` |
 | `stage_confirm.py` | `CardRun`, `_card_record`, `_hydrate_card`, `_older_card`, `_pointer_lost`, `_reoffer_confirm`, `_stage7_skip_reply`, `_superseded_card` → `stage_hold` | `_INHERITED_KEEP`, `TOOL`, `_grant_room`, `_room_blocks` |
-| `stage_landing.py` | `CardRun`, `_mark_explicit_end`, `_pointer_lost`, `_snapshot_stage_save`, `_stage5_held` → `stage_hold`. `render_tracking` already on `stage_note` from slice 1 | `_INHERITED_KEEP`, `TOOL`, `_commit_pointer`, `_payload`, `_room_state`, `_saved_after_confirm` |
-| `stage_replies.py` | `CardRun` and the reply names → `stage_hold`: `_cache_approved_look`, `_commit_with_next_card`, `_confirm_line`, `_mark_explicit_end`, `_older_card`, `_pointer_lost`, `_reoffer_confirm`, `_replay_confirm_card`, `_snapshot_stage_save`, `_stale_confirm_body`, `_with_plan_encourage`. `render_tracking` is already on `stage_note` from slice 1. This file does not import `_note_look` | `_INHERITED_KEEP`, `TOOL`, `StageResult`, `_commit_pointer`, `_note_path`, `_room_after_card_save`, `_saved_after_confirm`, `_waiting_digest` |
+| `stage_landing.py` | `CardRun`, `_mark_explicit_end`, `_pointer_lost`, `_snapshot_stage_save`, `_stage5_held` → `stage_hold`. `render_tracking` already on `stage_note` | `_INHERITED_KEEP`, `TOOL`, `_commit_pointer`, `_payload`, `_room_state`, `_saved_after_confirm` |
+| `stage_replies.py` | `CardRun` and the reply names → `stage_hold`: `_cache_approved_look`, `_commit_with_next_card`, `_confirm_line`, `_mark_explicit_end`, `_older_card`, `_pointer_lost`, `_reoffer_confirm`, `_replay_confirm_card`, `_snapshot_stage_save`, `_stale_confirm_body`, `_with_plan_encourage`. `render_tracking` is on `stage_note`. This file does not import `_note_look` | `_INHERITED_KEEP`, `TOOL`, `StageResult`, `_commit_pointer`, `_note_path`, `_room_after_card_save`, `_saved_after_confirm`, `_waiting_digest` |
 | `stage_body.py` | none | `_INHERITED_KEEP`, `_note_path`, `_payload`, `_revisit_window` |
 | `cite_fit.py` lines 211, 229, 353 | `_note_look` → `stage_note` | — |
 | `projects.py` line 1459 | `door_card_reply` → `stage_hold` | lines 1311–1314: `init_cloned_sequence_pointer`, `rebind_cloned_confirms`, `stage_lock` |
 | `state.py`, `health.py`, `revise.py` | none | `require_fcntl`, `load_pointer`, `in_first_draft` |
 
-`stage_replies` keeps importing `StageResult` from `stage_state`. That
-type stays.
+`stage_replies` kept importing `StageResult` from `stage_state`.
 
-### Slice 2 — tests that bind a moved name
-
-| Test | What moves |
+| Test | What moved |
 | --- | --- |
 | `tests/test_cite_fit.py` | import `_note_look` → `stage_note` |
 | `tests/test_cite_fit_restore.py` | import `_note_look` → `stage_note` |
 | `tests/test_short_cites.py` | import `_note_look` → `stage_note` |
 | `tests/test_basics_pass_cache.py` | import `_opening_look` → `stage_hold` |
-| `tests/test_confirm_atomic.py` | import `_draft_next_card` → `stage_hold`. `monkeypatch.setattr("essay_writer.stage_state._draft_next_card", ...)` becomes the `stage_hold` path. `inspect.getsource(_draft_next_card)` follows the import. `TOOL` and `load_pointer` stay. The `getsource(_save_confirm)` assertion stays |
+| `tests/test_confirm_atomic.py` | import `_draft_next_card` → `stage_hold`. `monkeypatch.setattr("essay_writer.stage_state._draft_next_card", ...)` became the `stage_hold` path. `inspect.getsource(_draft_next_card)` follows the import. `TOOL` and `load_pointer` stayed. The `getsource(_save_confirm)` assertion stayed |
 | `tests/test_word_manifest.py` | import and `getsource` of `_render_stage10_before_close` → `stage_hold` |
-| `tests/test_word_references_4a.py` | import and `getsource` of `_render_stage10_before_close` → `stage_hold`. `load_pointer` stays |
+| `tests/test_word_references_4a.py` | import and `getsource` of `_render_stage10_before_close` → `stage_hold`. `load_pointer` stayed |
 | `tests/test_pack_backup_restore.py` | imports of `_commit_with_next_card` and `_snapshot_stage_save`, and their `getsource` checks → `stage_hold` |
-| `tests/test_stage10_sequence_write.py` | import and `getsource` of `_commit_with_next_card` → `stage_hold`. The order assertion (`_render_stage10_before_close` before `_commit_pointer`) stays a source pin. `load_pointer` stays |
-| `tests/test_layer5_callers.py` | The save-line count reads `stage_track.py` plus `stage_state.py` and expects `essay_writer.spine import save_line` once. That import lives in `_confirm_line` (line 1454). Include `stage_hold.py` in the read so the count stays 1 |
-| `tests/test_stage_boundary.py` | Add `stage_hold` beside `stage_note` in `LAYERS` and in the subprocess import check. Extend the `_MINTING` file read to `stage_hold.py`, because `_draft_next_card` will live there and the current read only opens `stage_state.py` |
-| `tests/test_import_graph.py` | Add `stage_hold` to `STAGE_LAYERS`. Leave `CYCLE_BREAKERS` and `MUTUAL_PAIRS` unchanged, including `("state", "stage_state")` |
-| `tests/test_concurrent_confirm.py` | See the monkeypatch note below. `getsource(stage_state._commit_pointer)` stays. `load_pointer` stays |
+| `tests/test_stage10_sequence_write.py` | import and `getsource` of `_commit_with_next_card` → `stage_hold`. The order assertion (`_render_stage10_before_close` before `_commit_pointer`) stayed a source pin. `load_pointer` stayed |
+| `tests/test_layer5_callers.py` | The save-line count reads `stage_track.py` plus `stage_state.py` and expects `essay_writer.spine import save_line` once. That import lives in `_confirm_line` (line 1454). `stage_hold.py` was included in the read so the count stayed 1 |
+| `tests/test_stage_boundary.py` | `stage_hold` joined `stage_note` in `LAYERS` and in the subprocess import check. The `_MINTING` file read was extended to `stage_hold.py`, because `_draft_next_card` lives there |
+| `tests/test_import_graph.py` | `stage_hold` was added to `STAGE_LAYERS`. `CYCLE_BREAKERS` and `MUTUAL_PAIRS` stayed unchanged, including `("state", "stage_state")` |
+| `tests/test_concurrent_confirm.py` | The `_commit_pointer` spy below. `getsource(stage_state._commit_pointer)` stayed. `load_pointer` stayed |
 
-### Monkeypatch of `_commit_pointer`
-
-`tests/test_concurrent_confirm.py` replaces `stage_state._commit_pointer`.
-That wraps calls which look the name up as a global inside
-`stage_state.py`. Today those calls are `_grant_room` and
-`_commit_with_next_card`.
-
-`stage_landing._store_stage` and `stage_replies` (the draft note, and the
-revisit save) import `_commit_pointer` at module level and call that
-binding. Replacing the attribute on `stage_state` does not wrap those
-calls today. The slices do not change that. They do not edit those
-bodies to "fix" the patch.
-
-After slice 2, `_grant_room` still looks the name up in `stage_state`,
-and `_commit_with_next_card` looks it up in `stage_hold`. The slice
-wraps both attributes with the same helper. The spy in AC5 has to
-record the save whose proposed pointer advances `current`, which is the
-`_commit_with_next_card` call, not only the room grant. Room grants also
-carry `current` of `"1"` and `"2"`, so a spy left only on `stage_state`
-can still satisfy `assert "1" in seen` and `assert "2" in seen` while
-the save commit is unwrapped. That is the retarget. It stays a
-monkeypatch of the same helper. It does not become a new behaviour
-assertion.
-
+`tests/test_concurrent_confirm.py` replaced `stage_state._commit_pointer`.
+The risks record why that spy also wraps `stage_hold._commit_pointer`.
 `tests/test_torn_confirm.py` patches `stage_state._atomic` and
-`stage_state.stage_lock`, and imports `STAGE_COMMIT`. Those names stay.
-No retarget. `tests/test_hygiene.py` patches `stage_state.fcntl` and
-calls `require_fcntl`, `stage_lock`, and `load_pointer`. Those stay.
-No retarget.
-
-### Imports of `load_pointer` that do not move
+`stage_state.stage_lock`, and imports `STAGE_COMMIT`. Those names stayed.
+`tests/test_hygiene.py` patches `stage_state.fcntl` and calls
+`require_fcntl`, `stage_lock`, and `load_pointer`. Those stayed.
 
 These tests import `load_pointer` from `stage_state` and do not import a
-name this design moves. They need no retarget:
+name this design moves:
 
 `tests/test_closed_parent_roll.py`, `tests/test_cold_e2e.py`,
 `tests/test_confirm_bindings.py`, `tests/test_confirm_card.py`,
@@ -687,82 +715,12 @@ name this design moves. They need no retarget:
 `tests/test_stage7_confirm_advance.py`, `tests/test_stage_confirm_isolation.py`,
 `tests/test_stage_launch_status.py`.
 
-`tests/test_title_door.py` imports `TOOL` and `load_pointer`. Both stay.
-Its `getsource(_save_confirm)` pin stays, as do the same pins in
+`tests/test_title_door.py` imports `TOOL` and `load_pointer`. Both stayed.
+Its `getsource(_save_confirm)` pin stayed, as did the same pins in
 `tests/test_title_cover.py` and `tests/test_confirm_next_card.py`: they
 read `_save_confirm` and the mid-office launch functions, which this
 design does not move.
 
 `tests/test_confirm_atomic.py` also pins `minting=True` and the absence
-of `_MINTING` on `_draft_next_card`. That pin follows the function to
-`stage_hold`. The assertion text stays.
-
-## 9. Risks, non-goals, rollback
-
-### Risks
-
-- Moving `_note_look` in slice 1, while `_superseded_card` and
-  `_stale_confirm_body` stay in `stage_state.py`, creates a load cycle
-  between `stage_note` and `stage_state` and a new mutual pair. Slice 1
-  moves only `render_tracking`. Slice 2 moves `_note_look` and those
-  callers together.
-- A moved body that gains or loses a line is a behaviour change. Review
-  the diff as a relocation.
-- Hoisting `stage_hold`'s import of `fo_chat_locks` adds a breaker
-  (`projects` → `stage_hold`) and the 28-pair allowlist would grow.
-  Section 5 forbids that hoist.
-- The `_commit_pointer` spy, if left only on `stage_state` after slice 2,
-  can stay green on room grants and stop wrapping the save. Section 8
-  is the retarget that prevents that. Product code that is not under
-  that patch still calls the same `_commit_pointer`.
-- A new module that imports `stage_track` reopens the boundary the
-  guard and `tests/test_stage_boundary.py` close. Both tests gain the
-  new modules in the slice that creates them.
-- Re-exporting a moved name from `stage_state` would make a missed
-  caller look imported while the real global lives on the new module.
-  The slices do not re-export.
-- `stage_landing.py` and `stage_replies.py` stay large. This design is
-  not a promise to split them.
-
-### Non-goals
-
-- No change to confirm order, the stage-5 exemption, the untrusted-content
-  fence, or the `essay.stage` schema.
-- No edit under `src/essay_writer/prompts/`, no edit of `tools.json`, no
-  version bump, no tag, no release.
-- No split of `stage_landing.py` or `stage_replies.py`.
-- No further split of `_run_stage`. The early-tool order stays in
-  `stage_track.py`. That split is out of this pass. It is not a slice
-  waiting on a yes.
-- No package-wide hoist of deferred imports, and no edit of the 28-pair
-  or 46-pair allowlists.
-- No change to mid-office launch, to `mid_spawn.py`, or to which shell
-  `stage_host_launch` selects.
-- No rename of public tools, `StageArgs` fields, or glossary words that
-  already name a module. New glossary rows for `stage_note` and
-  `stage_hold` are written in slice 2, when the modules exist.
-
-### Rollback
-
-Each slice is one commit. Revert that commit. There is no data migration
-and no on-disk format change. The allowlists do not change, so a revert
-does not restore a list. A reverted slice leaves `essay.stage` and the
-stage files as they were.
-
-## 10. Decisions from the independent reviewer
-
-Q1, Q2, and Q3 are closed. The independent reviewer approved the seams.
-None of these decisions starts an implementation slice. Q4 stays out of
-this pass and is not proposed work.
-
-**Q1.** Approved. `stage_note` stays a separate module.
-
-**Q2.** Approved. `CardRun` lives on `stage_hold.py`.
-
-**Q3.** Approved. The names `stage_note` and `stage_hold` are approved.
-
-**Q4.** Out of this pass. Further splits of `_run_stage`, and any split
-of `stage_landing.py` or `stage_replies.py`, are not proposed. A later
-design would have to say so on its own. This document's slices stop
-after the note module and the hold module. Q4 is not an approved
-implementation slice.
+of `_MINTING` on `_draft_next_card`. That pin followed the function to
+`stage_hold`. The assertion text stayed.

@@ -54,31 +54,44 @@ def parse_shell(value: object) -> str | None:
     return None
 
 
+class UnknownMidOfficeShell(ValueError):
+    """A stored file-work choice is present and is not Cursor or Grok Build."""
+
+
 def persisted_shell() -> str:
     """Shell on the setup record later tools already read.
 
-    A missing field stays Cursor. The stored binary token grokbuild stays
-    Grok Build, because older records used that token. Any other value this
-    setup would refuse stays Cursor.
+    A missing or blank field stays Cursor. The stored binary token grokbuild
+    stays Grok Build, because older records used that token. Any other stored
+    value fails with UnknownMidOfficeShell.
     """
 
     saved = essay_paths.load_saved_setup()
     if not isinstance(saved, dict) or "mid_office_shell" not in saved:
         return SHELL_CURSOR
     raw = saved.get("mid_office_shell")
+    if isinstance(raw, str) and not raw.strip():
+        return SHELL_CURSOR
     parsed = parse_shell(raw)
     if parsed is not None:
         return parsed
     if isinstance(raw, str) and "".join(raw.split()).casefold() == "grokbuild":
         return SHELL_GROK_BUILD
-    return SHELL_CURSOR
+    raise UnknownMidOfficeShell(
+        "The stored file-work choice is not one of the two setup choices: Cursor or Grok Build."
+    )
 
 
 def mid_office() -> str:
     """Operator name for the persisted mid-office shell. Absent field is Cursor."""
-    if persisted_shell() == SHELL_CURSOR:
+    shell = persisted_shell()
+    if shell == SHELL_CURSOR:
         return "Cursor"
-    return "Grok Build"
+    if shell == SHELL_GROK_BUILD:
+        return "Grok Build"
+    raise UnknownMidOfficeShell(
+        "The stored file-work choice is not one of the two setup choices: Cursor or Grok Build."
+    )
 
 
 def resolve_setup_shell(value: object) -> str | dict[str, object]:
@@ -227,11 +240,15 @@ def _write_secret_text(path: Path, text: str) -> None:
 
 
 def read_setup_secret(name: str) -> str | None:
-    """Local setup secret. Never returned from a door reply."""
-    if os.environ.get("ESSAY_WRITER_ROOT"):
-        return None
+    """Local setup secret. Never returned from a door reply.
 
-    record = essay_paths.resolve_setup_record()
+    When ESSAY_WRITER_ROOT is set, this still reads the file confirm wrote
+    beside the chosen app folder, including when the cloud workspace is missing.
+    """
+    if os.environ.get("ESSAY_WRITER_ROOT"):
+        record = essay_paths.setup_record_for_run()
+    else:
+        record = essay_paths.resolve_setup_record()
     if record is None:
         return None
     path = _secrets_path(record)
@@ -266,7 +283,7 @@ def _under(path: Path, root: Path) -> bool:
 
 
 def _internal_volume(path: Path) -> bool:
-    return any(part.casefold() == "researchdrive" for part in path.parts)
+    return essay_paths._refuse_internal_volume(path)
 
 
 def _host_cloud_setup() -> Path:

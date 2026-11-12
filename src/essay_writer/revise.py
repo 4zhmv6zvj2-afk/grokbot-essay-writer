@@ -13,7 +13,7 @@ from essay_writer.confirm import (
 )
 from essay_writer.known_paths import guard_write_door
 from essay_writer.paths import sequence_write_error, work_dir
-from essay_writer.state import load_state, save_state
+from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import say
 from essay_writer.textutil import citation_tokens, in_text_forms, token_allowed
 from essay_writer.validate import inspect_pack, research_index
@@ -30,6 +30,7 @@ def _forms(state: dict[str, object]) -> set[str]:
     return forms
 
 
+@guard_damaged_records
 def essay_revise(
     essay_id: str,
     message: str,

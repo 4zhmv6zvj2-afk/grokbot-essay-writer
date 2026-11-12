@@ -45,7 +45,9 @@ def _under(path: Path, root: Path) -> bool:
 
 
 def _internal_volume(path: Path) -> bool:
-    return any(part.casefold() == "researchdrive" for part in path.parts)
+    from essay_writer.paths import _refuse_internal_volume
+
+    return _refuse_internal_volume(path)
 
 
 def _clone_url(value: str) -> bool:
