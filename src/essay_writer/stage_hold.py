@@ -106,7 +106,7 @@ def _pointer_lost(
 ) -> dict[str, object]:
     """The pointer moved after this call read it. The newer pointer stays."""
     fresh = load_pointer(essay_id)
-    blocked = _stage_refusal(cast(Pointer, fresh), stage, genre)
+    blocked = _stage_refusal(cast(Pointer, fresh), stage, genre, essay_id)
     if blocked is not None:
         return _confirm_blocked(essay_id, fresh, stage, genre, blocked, card_run=card_run)
     return refuse(
@@ -765,9 +765,19 @@ def _stale_confirm_body(
     return payload.get("look") != look_text
 
 
-def _stage_refusal(pointer: Pointer, stage: str, genre: str | None) -> dict[str, object] | None:
+def _stage_refusal(
+    pointer: Pointer,
+    stage: str,
+    genre: str | None,
+    essay_id: str | None = None,
+) -> dict[str, object] | None:
     current = pointer["current"]
     if pointer.get("closed"):
+        if isinstance(essay_id, str) and essay_id.strip():
+            from essay_writer.late_chain import MISSING_FINAL_WORD, _missing_stored_final_word
+
+            if _missing_stored_final_word(essay_id):
+                return refuse("word", MISSING_FINAL_WORD, next=MISSING_FINAL_WORD)
         return refuse("stage", "The last stage is already saved. This tool does not submit.")
     window = _revisit_window(cast(dict[str, Any], pointer))
     if window and stage in {"2", "3"}:

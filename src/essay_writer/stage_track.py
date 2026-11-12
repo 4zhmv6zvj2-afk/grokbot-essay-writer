@@ -298,7 +298,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
     pointer = load_pointer(essay_id)
     genre = brief_genre(essay_id)
     pending_lock = inherited_lock_pending(essay_id, stage)
-    blocked = _stage_refusal(cast(Pointer, pointer), stage, genre)
+    blocked = _stage_refusal(cast(Pointer, pointer), stage, genre, essay_id)
     if blocked and not (minting and _mint_stage_allowed(pointer, stage)):
         if confirmPhase == CONFIRM:
             return _confirm_blocked(essay_id, pointer, stage, genre, blocked, card_run=card_run)

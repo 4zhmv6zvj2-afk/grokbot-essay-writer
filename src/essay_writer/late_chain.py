@@ -124,6 +124,7 @@ STAGE10_UNMOUNTED = (
     "The final Word stays in this chat and on this sequence. "
     "This tool does not submit."
 )
+MISSING_FINAL_WORD = "The final Word file is missing."
 FINDINGS_UNMOUNTED = (
     "The review opened the saved Word file. "
     "The Mac folder is not on this computer, so the findings stay in this chat and on this sequence."
@@ -744,6 +745,62 @@ def _stage10_mark_path(source: Path) -> Path:
     return source.with_name(".stage10-copied.json")
 
 
+def _mounted_final_docx(essay_id: str) -> Path | None:
+    """The copied final Word file when Documents is mounted for this sequence."""
+    project = module_code(essay_id)
+    leaf = f"{project}-final.docx"
+    from essay_writer.first_run import sequence_mac_deliverables_dir
+
+    folder = sequence_mac_deliverables_dir(essay_id)
+    if folder is not None:
+        return folder / leaf
+    root = documents_root()
+    if root is not None and root.is_dir():
+        return root / f"{project}-10" / leaf
+    return None
+
+
+def _recorded_copy_present(source: Path, record: dict[str, Any]) -> bool:
+    """True when the copied final named by this stage 10 record is still on disk."""
+    place = record.get("place")
+    if isinstance(place, str) and place.strip() and Path(place).expanduser().is_file():
+        return True
+    mounted = _mounted_final_docx(source.stem)
+    return mounted is not None and mounted.is_file()
+
+
+def _missing_stored_final_word(essay_id: str) -> bool:
+    """True when stage 10 recorded a copied final and that file is gone."""
+    import json
+
+    source = work_dir(essay_id) / "output" / f"{essay_id}.docx"
+    mark = _stage10_mark_path(source)
+    if not mark.is_file():
+        return False
+    try:
+        record = json.loads(mark.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(record, dict) or record.get("copied") is not True:
+        return False
+    return not _recorded_copy_present(source, record)
+
+
+def _stop_missing_final_word(body: dict[str, Any]) -> None:
+    """Say the final Word file is missing. This does not write it again."""
+    body["ok"] = False
+    body["refused"] = "word"
+    body["reason"] = MISSING_FINAL_WORD
+    body["next"] = say(MISSING_FINAL_WORD)
+    body["place"] = ""
+    body["final_word"] = {
+        "ok": False,
+        "copied": False,
+        "place": "",
+        "reason": MISSING_FINAL_WORD,
+    }
+
+
 def _stage10_pack_sha(pack: dict[str, Any]) -> str:
     import hashlib
     import json
@@ -771,7 +828,10 @@ def _remember_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) 
 def _reuse_stage10(
     source: Path, pack: dict[str, Any], body: dict[str, Any]
 ) -> dict[str, Any] | None:
-    """Return the previous stage 10 result when this pack was already written."""
+    """Return the previous stage 10 result when this pack was already written.
+
+    A recorded copy whose file is gone stops here. The Word file is not written again.
+    """
     import json
 
     mark = _stage10_mark_path(source)
@@ -785,10 +845,16 @@ def _reuse_stage10(
         return None
     if record.get("sequence_written") is not True:
         return None
-    if record.get("copied") is True:
-        place = record.get("place")
-        if not isinstance(place, str) or not place or not Path(place).is_file():
-            return None
+    if record.get("copied") is True and not _recorded_copy_present(source, record):
+        body["ok"] = False
+        body["copied"] = False
+        body["sequence_written"] = False
+        body["reused"] = False
+        body["reason"] = MISSING_FINAL_WORD
+        body["place"] = ""
+        body["comments_place"] = ""
+        body["findings_place"] = ""
+        return body
     body["ok"] = True
     body["copied"] = record.get("copied") is True
     body["sequence_written"] = True
@@ -1413,7 +1479,11 @@ def finish_stage_reply(
     *,
     armed: bool,
 ) -> dict[str, Any]:
-    """One stage only. Quiet mid steps once the chain is armed. Stage 10 names the final Word."""
+    """One stage only. Quiet mid steps once the chain is armed. Stage 10 names the final Word.
+
+    A stored stage 10 reply does not write that Word file again. A missing copy
+    stops and says so. Documents left unmounted stay on the unmounted reply.
+    """
 
     body["chain_started"] = False
     body["chain_armed"] = armed
@@ -1450,26 +1520,39 @@ def finish_stage_reply(
             body["next"] = say(line)
     if stage == "10" and body.get("stored"):
         final = body.get("final_word")
-        if not isinstance(final, dict) or "copied" not in final:
-            final = write_stage10(essay_id)
-        if isinstance(final, dict):
+        source = work_dir(essay_id) / "output" / f"{essay_id}.docx"
+        missing_copy = (
+            not isinstance(final, dict)
+            or "copied" not in final
+            or (isinstance(final, dict) and final.get("reason") == MISSING_FINAL_WORD)
+            or (
+                isinstance(final, dict)
+                and final.get("copied") is True
+                and not _recorded_copy_present(source, final)
+            )
+        )
+        if missing_copy:
+            _stop_missing_final_word(body)
+        elif isinstance(final, dict) and final.get("reason") == "mac-not-mounted":
             final.pop("sequence_written", None)
-        if final.get("reason") == "mac-not-mounted":
             final = dict(final)
             final["place"] = ""
             final["comments_place"] = ""
             final["delivery"] = "chat"
             body["place"] = ""
             body["next"] = say(STAGE10_UNMOUNTED)
-        else:
+            body["final_word"] = final
+        elif isinstance(final, dict):
+            final.pop("sequence_written", None)
             body["place"] = final["place"]
             findings = final.get("findings_place") or ""
             note = f" The review note is {findings}." if findings else ""
             body["next"] = say(
                 f"Open {final['place']} and keep a copy.{note} This tool does not submit."
             )
-        body["final_word"] = final
-        delivery = final.get("delivery") if isinstance(final, dict) else None
+            body["final_word"] = final
+        kept = body.get("final_word")
+        delivery = kept.get("delivery") if isinstance(kept, dict) else None
         if isinstance(delivery, dict):
             body["delivery"] = delivery
     elif stage == "10" and armed and not body.get("stored"):
