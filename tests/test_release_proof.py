@@ -22,7 +22,7 @@ REPRODUCE = WORKFLOWS / "reproduce.yml"
 
 PINNED_RUNNER = "ubuntu-24.04"
 COSIGN_RELEASE = "v3.1.4"
-COSIGN_INSTALLER_ACTION = "sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6"
+COSIGN_INSTALLER_ACTION = "sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532"
 CERTIFICATE_IDENTITY = (
     "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer"
     "/.github/workflows/release.yml@refs/heads/main"
