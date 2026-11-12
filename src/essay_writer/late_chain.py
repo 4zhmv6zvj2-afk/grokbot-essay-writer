@@ -141,6 +141,10 @@ _LEAKS = (
     "/Users/",
     "/Volumes/",
     "ResearchDrive",
+    "BackupDrive",
+    "Backup-Drive",
+    "ArchiveDrive",
+    "Archive-Drive",
     "Apply every line",
 )
 

@@ -39,6 +39,7 @@ from essay_writer.confirm import (
 from essay_writer.known_paths import guard_write_door
 from essay_writer.paths import (
     ESSAY_ID,
+    _refuse_internal_volume,
     essay_dir,
     essay_id_error,
     kb1_module_dir,
@@ -586,7 +587,7 @@ def _local_pin(raw: str) -> dict[str, Any]:
             "Nothing was removed.",
             path=raw,
         )
-    if any(part.casefold() == "researchdrive" for part in expanded.parts):
+    if _refuse_internal_volume(expanded):
         return refuse(
             "delete",
             "That path is not a named file on this computer. Nothing was removed.",

@@ -424,13 +424,23 @@ def stage_host_launch(
     budget: int | None = None,
 ) -> dict[str, Any]:
     """Launch for the stored mid-office. Cursor and Grok Build share stage_settings."""
-    from essay_writer.setup import SHELL_CURSOR, persisted_shell
+    from essay_writer.setup import (
+        SHELL_CURSOR,
+        SHELL_GROK_BUILD,
+        UnknownMidOfficeShell,
+        persisted_shell,
+    )
 
-    if persisted_shell() == SHELL_CURSOR:
+    shell = persisted_shell()
+    if shell == SHELL_CURSOR:
         return cursor_stage_launch(stage, reviews=reviews, reopens=reopens, budget=budget)
-    from essay_writer.build_office import stage_launch
+    if shell == SHELL_GROK_BUILD:
+        from essay_writer.build_office import stage_launch
 
-    return stage_launch(stage, reviews=reviews, reopens=reopens, budget=budget)
+        return stage_launch(stage, reviews=reviews, reopens=reopens, budget=budget)
+    raise UnknownMidOfficeShell(
+        "The stored file-work choice is not one of the two setup choices: Cursor or Grok Build."
+    )
 
 
 def assignment_requirements(essay_id: str) -> dict[str, Any]:

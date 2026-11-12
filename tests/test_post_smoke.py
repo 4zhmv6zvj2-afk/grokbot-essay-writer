@@ -5,6 +5,7 @@ import re
 import zipfile
 from pathlib import Path
 
+import pytest
 from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.doors import DOORS
@@ -23,6 +24,7 @@ from essay_writer.server import INSTRUCTIONS, house_instructions
 from essay_writer.setup import (
     CURSOR_SETUP_PROMPT,
     SETUP_PROMPT,
+    UnknownMidOfficeShell,
     essay_setup,
     mid_office,
     setup_prompt,
@@ -261,7 +263,8 @@ def test_mid_office_shell_is_persisted_and_not_an_env_flag(tmp_path, monkeypatch
         json.dumps({"app_path": str(tmp_path / "app"), "mid_office_shell": "not-a-shell"}),
         encoding="utf-8",
     )
-    assert mid_office() == "Cursor"
+    with pytest.raises(UnknownMidOfficeShell):
+        mid_office()
     record.write_text(
         json.dumps({"app_path": str(tmp_path / "app"), "mid_office_shell": "grokbuild"}),
         encoding="utf-8",

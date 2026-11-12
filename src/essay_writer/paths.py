@@ -157,10 +157,91 @@ def _adopt_legacy_setup(legacy: Path, dest: Path) -> None:
         os.close(fd)
 
 
+def _host_setup_file() -> Path:
+    """Host cloud setup record. A test root must not read or replace this file."""
+    return Path("/workspace") / SETUP_DIRNAME / "setup.json"
+
+
+def _normalise_volume(part: str) -> str:
+    return part.casefold().replace("-", "").replace("_", "").replace(" ", "")
+
+
+def _env_root_writes_beside(cloud: Path) -> bool:
+    """True when confirm leaves the cloud record alone and writes beside the app."""
+    if not os.environ.get("ESSAY_WRITER_ROOT"):
+        return False
+    try:
+        return cloud.resolve() == _host_setup_file().resolve()
+    except OSError:
+        return True
+
+
+def _setup_names_app(path: Path) -> Path | None:
+    """App folder named by a setup.json that sits beside that folder."""
+    if path.name != "setup.json" or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    folder = _folder_from_setup(data)
+    if not folder:
+        return None
+    try:
+        app = Path(folder).expanduser().resolve()
+        record = path.resolve()
+    except OSError:
+        return None
+    if record.parent != app.parent:
+        return None
+    return app
+
+
+def _beside_app_setup(root: Path) -> Path | None:
+    """setup.json beside the chosen app folder for this run.
+
+    The run root is that app folder, or a sibling of it when the root is only
+    isolating this run. The host cloud record and the home record are not read.
+    """
+    try:
+        root_resolved = root.expanduser().resolve()
+    except OSError:
+        root_resolved = root.expanduser()
+    candidate = root_resolved.parent / "setup.json"
+    app = _setup_names_app(candidate)
+    if app is None:
+        return None
+    if root_resolved == app or root_resolved.parent == app.parent:
+        return candidate
+    return None
+
+
+def setup_record_for_run() -> Path | None:
+    """Setup file confirm wrote. ESSAY_WRITER_ROOT does not skip this read.
+
+    With no cloud workspace, confirm writes beside the chosen app folder.
+    A test root writes beside the app folder and leaves the host cloud record
+    unchanged. A cloud workspace that is not that host file is the file confirm wrote.
+    """
+    if not os.environ.get("ESSAY_WRITER_ROOT"):
+        return None
+    cloud = saved_setup_path()
+    if cloud is not None and not _env_root_writes_beside(cloud):
+        return cloud if cloud.is_file() else None
+    raw = os.environ.get("ESSAY_WRITER_ROOT")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    return _beside_app_setup(Path(raw))
+
+
 def resolve_setup_record() -> Path | None:
     """The setup file later tools read, after a beside-app record is copied home.
 
-    A test root reads nothing. A missing cloud record does not search the home
+    ESSAY_WRITER_ROOT keeps this reader off the host record and the home
+    record. Stored keys still load through setup_record_for_run, from the
+    file confirm wrote. A missing cloud record does not search the home
     directory. With no cloud workspace, a record left beside the app is copied
     to the home file and then read from there.
     """
@@ -184,11 +265,12 @@ def resolve_setup_record() -> Path | None:
 
 
 def saved_setup_path() -> Path | None:
-    """Where setup.json lives. Later tools do not read recommended_base.
+    """Where setup.json lives when later tools are not using a test root.
 
     The cloud computer wins. With no cloud workspace, a user-local confirm is
-    read from the home record. A test root does not change that path; the
-    reader still ignores the file while ESSAY_WRITER_ROOT is set.
+    read from the home record. While ESSAY_WRITER_ROOT is set and there is no
+    cloud workspace, this is None; setup_record_for_run reads the file confirm
+    wrote beside the chosen app folder instead.
     """
     if CLOUD_WORKSPACE.is_dir():
         return CLOUD_WORKSPACE / SETUP_DIRNAME / "setup.json"
@@ -211,7 +293,10 @@ def _folder_from_setup(saved: dict) -> str | None:
 
 
 def load_saved_setup() -> dict | None:
-    """Read the setup record. Ignored when a test root is set."""
+    """Read the setup record. A test root does not use the host record.
+
+    Stored Consensus and Unpaywall values still load from the file confirm wrote.
+    """
     path = resolve_setup_record()
     if path is None or not path.is_file():
         return None
@@ -445,15 +530,16 @@ def relative(path: Path) -> str:
         return path.name
 
 
-def _path_parts_casefold(path: Path) -> list[str]:
-    return [part.casefold() for part in path.parts]
-
-
 _INTERNAL_VOLUME_PARTS = frozenset({"researchdrive", "backupdrive", "archivedrive"})
 
 
 def _refuse_internal_volume(path: Path) -> bool:
-    return any(part in _INTERNAL_VOLUME_PARTS for part in _path_parts_casefold(path))
+    """True for ResearchDrive, BackupDrive, and ArchiveDrive path parts.
+
+    Hyphens, underscores, and spaces in that one part are ignored, so
+    Backup-Drive and Archive-Drive are the same drives.
+    """
+    return any(_normalise_volume(part) in _INTERNAL_VOLUME_PARTS for part in path.parts)
 
 
 def student_chat_path(raw: object) -> str:
