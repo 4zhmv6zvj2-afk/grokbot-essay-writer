@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.9.2 — 2026-11-13
+
+Setup defaults, damaged-record handling, final-Word safety, and dependency updates.
+
+- Setup secrets and the file-work choice load from the record beside the chosen app.
+  A missing choice stays Cursor; an unknown choice fails clearly. Backup and archive
+  drives are refused as save folders, and those drive names stay out of student chat.
+- The plagiarism scan and source gathering use one text rule: invalid text is
+  refused, valid UTF-8/BOM/UTF-16 is kept, and no replaced copy continues. The word
+  band and section budgets share one citation-word rule while keeping a tighter
+  pack maximum.
+- Inherited locks stay pending until a save actually stores. A damaged confirm
+  record or state file stops the tool, says so, and is not applied.
+- After the last stage is saved, a missing final Word file is not written again;
+  the tool says it is missing. An unmounted Documents reply stays unmounted. A web
+  link in rules or a longer instruction is not treated as a remote launch; real
+  remote targets and cloud flags are still refused.
+- Dependencies: cosign-installer v4.1.3, codeql upload-sarif v4.39.3, ruff 0.17.4,
+  click 8.5.1, pydantic 2.14.3, pydantic-core 2.50.4, sse-starlette 3.7.0. The
+  hash-pinned CI set and `uv.lock` are updated together; the build set is unchanged.
+
 ## 0.9.1 — 2026-11-12
 
 Maintenance patch: one draft-ordering fix and the architecture and test cleanup behind it.
