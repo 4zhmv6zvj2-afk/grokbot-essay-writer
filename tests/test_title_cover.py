@@ -128,7 +128,18 @@ def test_ac1_ac2_ac5_registration_on_the_title_page_without_the_name(
         "sources": [],
     }
     stage6 = work_dir(seq) / "output" / f"{seq}.docx"
+    from essay_writer.word import cover_lines
+
+    seen_cover: list[str] = []
+    real_cover = cover_lines
+
+    def cover_spy(essay_id, *args, **kwargs):
+        seen_cover.append(str(essay_id))
+        return real_cover(essay_id, *args, **kwargs)
+
+    monkeypatch.setattr("essay_writer.word.cover_lines", cover_spy)
     write_docx(seq, pack, report, stage6)
+    assert seq in seen_cover
     state = load_state(seq)
     bare = dict(pack)
     assert "registration_number" not in bare
