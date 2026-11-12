@@ -33,6 +33,10 @@ LOADED_EMAIL = "dummy-loaded@example.com"
 DECOY_KEY = "dummy-decoy-consensus-key"
 
 
+def _host(url: object) -> str:
+    return (urlparse(str(url)).hostname or "").casefold()
+
+
 def _quiet_lookup_env(monkeypatch) -> None:
     for name in (
         "CONSENSUS_API_KEY",
@@ -122,7 +126,8 @@ def test_ew_hunt_s1_ac1(case_id, tmp_path, monkeypatch):
 
     def fake_get(url: str, headers: dict[str, str] | None = None) -> dict[str, object]:
         captured.append({"url": url, "headers": dict(headers or {})})
-        if "api.consensus.app" in url:
+        host = _host(url)
+        if host == "api.consensus.app":
             return {
                 "plan": "free",
                 "results": [
@@ -134,7 +139,7 @@ def test_ew_hunt_s1_ac1(case_id, tmp_path, monkeypatch):
                     }
                 ],
             }
-        if "api.openalex.org" in url:
+        if host == "api.openalex.org":
             return {
                 "results": [
                     {
@@ -145,7 +150,7 @@ def test_ew_hunt_s1_ac1(case_id, tmp_path, monkeypatch):
                     }
                 ]
             }
-        if "api.unpaywall.org" in url:
+        if host == "api.unpaywall.org":
             return {"best_oa_location": {"url_for_pdf": "https://example.test/paper.pdf"}}
         return {}
 
@@ -165,17 +170,17 @@ def test_ew_hunt_s1_ac1(case_id, tmp_path, monkeypatch):
     dumped = json.dumps(draft)
     assert LOADED_KEY not in dumped
     assert LOADED_EMAIL not in dumped
-    consensus_calls = [item for item in captured if "api.consensus.app" in str(item["url"])]
+    consensus_calls = [item for item in captured if _host(item["url"]) == "api.consensus.app"]
     assert consensus_calls
     assert consensus_calls[0]["headers"]["x-api-key"] == LOADED_KEY
-    unpaywall_calls = [item for item in captured if "api.unpaywall.org" in str(item["url"])]
+    unpaywall_calls = [item for item in captured if _host(item["url"]) == "api.unpaywall.org"]
     assert unpaywall_calls
     dig_email = parse_qs(urlparse(str(unpaywall_calls[0]["url"])).query).get("email")
     assert dig_email == [LOADED_EMAIL]
 
     source = {"id": "s1", "locator": "uploads/MOD1004AA/note.txt", "doi": "10.1000/dummy"}
     enrich_sources([source], {source["locator"]: "See 10.1000/dummy for the paper.\n"})
-    research_unpaywall = [url for url in research_urls if "api.unpaywall.org" in url]
+    research_unpaywall = [url for url in research_urls if _host(url) == "api.unpaywall.org"]
     assert research_unpaywall
     research_email = parse_qs(urlparse(research_unpaywall[0]).query).get("email")
     assert research_email == [LOADED_EMAIL]
