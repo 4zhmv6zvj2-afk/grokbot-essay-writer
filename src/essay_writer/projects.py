@@ -1305,15 +1305,17 @@ def clone_sequence(module: str, parent: int, child: int, *, reason: str) -> None
     kb1_staging = kb1_target.with_name(f".{child}.partial")
     published = False
     kb1_published = False
+    from essay_writer.stage_state import (
+        DamagedStageCommit,
+        init_cloned_sequence_pointer,
+        rebind_cloned_confirms,
+        stage_lock,
+    )
+
     try:
         _discard_tree(staging)
         _discard_tree(kb1_staging)
         target.parent.mkdir(parents=True, exist_ok=True)
-        from essay_writer.stage_state import (
-            init_cloned_sequence_pointer,
-            rebind_cloned_confirms,
-            stage_lock,
-        )
 
         if source.is_dir():
             with stage_lock(sequence_id(module, parent)):
@@ -1344,6 +1346,14 @@ def clone_sequence(module: str, parent: int, child: int, *, reason: str) -> None
             os.replace(kb1_staging, kb1_target)
             kb1_published = True
         write_last_saved(module, child)
+    except DamagedStageCommit:
+        _discard_tree(staging)
+        _discard_tree(kb1_staging)
+        if published:
+            _discard_tree(target)
+        if kb1_published:
+            _discard_tree(kb1_target)
+        raise
     except FileExistsError:
         _discard_tree(staging)
         _discard_tree(kb1_staging)
@@ -1444,8 +1454,17 @@ def essay_sequence_new(
             module, child, empty_sequence_state(module, child, parent=None, reason="new")
         )
     else:
+        from essay_writer.stage_state import DAMAGED_COMMIT, DamagedStageCommit
+
         try:
             clone_sequence(module, parent_number, child, reason="new-sequence")
+        except DamagedStageCommit as exc:
+            return refuse(
+                "stage",
+                str(exc).strip() or DAMAGED_COMMIT,
+                wrote=False,
+                stored=False,
+            )
         except FileExistsError:
             return refuse("sequence", f"{child_id} already exists. Draft again.")
         except SequenceCloneError:

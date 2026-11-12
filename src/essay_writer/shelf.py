@@ -23,7 +23,7 @@ from essay_writer.paths import (
     work_dir,
 )
 from essay_writer.records import read_json, write_json
-from essay_writer.state import load_state, save_state
+from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import say
 from essay_writer.validate import inspect_pack, pack_identity
 
@@ -58,6 +58,7 @@ def _shelf_card_path(essay_id: str, pack_id: str) -> str:
     return f"Essay-writer/{module}/sequences/{number}/shelf/{pack_id}.json"
 
 
+@guard_damaged_records
 def essay_shelf_put(
     essay_id: str,
     pack: dict[str, object],

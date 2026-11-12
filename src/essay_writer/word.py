@@ -35,7 +35,7 @@ from essay_writer.paths import (
 )
 from essay_writer.programme import STYLE_ID
 from essay_writer.review import PERSON_BLOCK, writer_clears_left
-from essay_writer.state import load_state, save_state
+from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import (
     for_word,
     prose_for_surface,
@@ -429,6 +429,7 @@ def write_docx(
     log_word_docx_written(essay_id, pack, report, lines, path, product_log=product_log)
 
 
+@guard_damaged_records
 def essay_pack_render_word(
     essay_id: str,
     pack: dict[str, Any],

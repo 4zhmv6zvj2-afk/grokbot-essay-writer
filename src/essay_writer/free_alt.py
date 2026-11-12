@@ -20,7 +20,7 @@ from essay_writer.confirm import (
 )
 from essay_writer.known_paths import guard_write_door
 from essay_writer.paths import sequence_write_error, work_dir
-from essay_writer.state import load_state
+from essay_writer.state import guard_damaged_records, load_state
 from essay_writer.student_voice import say
 
 TOOL = "essay.download.leftovers"
@@ -89,6 +89,7 @@ def leftover_addresses(essay_id: str) -> list[dict[str, str]]:
     return without_keepers(essay_id, found)
 
 
+@guard_damaged_records
 def essay_download_leftovers(essay_id: str, confirmPhase: str | None = None) -> dict[str, object]:
     """Draft lists stored leftover addresses. Confirm fetches those addresses only."""
     from essay_writer.specialists.researcher import real_4a_bibliography

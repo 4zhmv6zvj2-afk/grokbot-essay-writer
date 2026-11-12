@@ -221,53 +221,60 @@ def test_ac2_note_and_pointer_fields_commit_together(workspace, monkeypatch):
     assert "Status: draft" in _note(revisit, "2")
 
 
-def test_damaged_stage_journal_is_set_aside_and_the_save_continues(workspace):
-    """A damaged confirm record is not applied. The next save still stores."""
+def test_damaged_stage_journal_stops_and_is_not_applied(workspace):
+    """A damaged confirm record stops the save. It is not applied or set aside."""
     seq = open_sequence()
     first = essay_stage(seq, "1", "draft", LOOK)
     assert first["ok"] is True, first
+    note_before = _note(seq, "1")
     journal = work_dir(seq) / STAGE_COMMIT
     journal.parent.mkdir(parents=True, exist_ok=True)
     journal.write_bytes(b"{not json")
     saved = essay_stage(seq, "1", "draft", NEWER)
-    assert saved["ok"] is True, saved
-    assert "damaged" in saved.get("notice", "")
-    assert "set aside" in saved["notice"]
-    assert "not applied" in saved["notice"]
-    assert not journal.exists()
-    quarantined = list((work_dir(seq) / "tracking").glob(".stage.commit.damaged-*"))
-    assert [path.read_bytes() for path in quarantined] == [b"{not json"]
-    assert NEWER in _note(seq, "1")
-    assert load_pointer(seq)["current"] == "1"
+    assert saved["ok"] is False, saved
+    assert saved["stored"] is False
+    assert saved["refused"] == "stage"
+    assert "last confirm record was damaged" in saved["reason"].casefold()
+    assert journal.read_bytes() == b"{not json"
+    assert list((work_dir(seq) / "tracking").glob(".stage.commit.damaged-*")) == []
+    assert _note(seq, "1") == note_before
+    assert NEWER not in _note(seq, "1")
 
     journal.write_text('{"pointer": {}}\n', encoding="utf-8")
     kept = essay_stage(seq, "1", "draft", LOOK)
-    assert kept["ok"] is True, kept
-    assert load_pointer(seq)["current"] == "1"
-    assert load_pointer(seq).get("saved") == []
+    assert kept["ok"] is False, kept
+    assert kept["stored"] is False
+    assert "damaged" in kept["reason"].casefold()
+    assert journal.is_file()
+    assert NEWER not in _note(seq, "1")
 
-    journal.write_text('{"pointer": {"current": "1"}, "note": "nope"}\n', encoding="utf-8")
+    journal.write_text(
+        '{"pointer": {"current": "1"}, "note": "nope", "note_text": "APPLIED BADLY"}\n',
+        encoding="utf-8",
+    )
     noted = essay_stage(seq, "1", "draft", NEWER)
-    assert noted["ok"] is True, noted
-    assert "damaged" in noted.get("notice", "")
-    assert NEWER in _note(seq, "1")
+    assert noted["ok"] is False, noted
+    assert noted["stored"] is False
+    assert "APPLIED BADLY" not in _note(seq, "1")
+    assert journal.is_file()
+    assert list((work_dir(seq) / "tracking").glob(".stage.commit.damaged-*")) == []
 
+    journal.unlink()
     fresh = open_sequence()
     opened = essay_stage(fresh, "1", "draft", LOOK)
     assert opened["ok"] is True, opened
     damaged = work_dir(fresh) / STAGE_COMMIT
     damaged.write_bytes(b"{not json")
-    clone_sequence(ESSAY, 2, 3, reason="roll-forward")
+    with pytest.raises(stage_state.DamagedStageCommit):
+        clone_sequence(ESSAY, 2, 3, reason="roll-forward")
     child = f"{ESSAY}-3"
-    assert not (work_dir(child) / STAGE_COMMIT).is_file()
-    assert list((work_dir(child) / "tracking").glob(".stage.commit.damaged-*"))
-    child_draft = essay_stage(child, "1", "draft", NEWER)
-    assert child_draft["ok"] is True, child_draft
-    assert NEWER in _note(child, "1")
+    assert not work_dir(child).exists()
+    assert damaged.read_bytes() == b"{not json"
+    assert list((work_dir(fresh) / "tracking").glob(".stage.commit.damaged-*")) == []
 
 
-def test_a_failed_quarantine_refuses_instead_of_raising(workspace, monkeypatch):
-    """When the damaged journal cannot be moved, the save refuses and names it."""
+def test_a_damaged_journal_stays_when_rename_would_fail(workspace, monkeypatch):
+    """A damaged confirm record is left in place. The save refuses without moving it."""
     seq = open_sequence()
     first = essay_stage(seq, "1", "draft", LOOK)
     assert first["ok"] is True, first
@@ -285,9 +292,9 @@ def test_a_failed_quarantine_refuses_instead_of_raising(workspace, monkeypatch):
     saved = essay_stage(seq, "1", "draft", NEWER)
     assert saved["ok"] is False, saved
     assert saved["refused"] == "stage"
-    assert str(journal) in saved["reason"]
-    assert "Move that file" in saved["reason"]
+    assert "last confirm record was damaged" in saved["reason"].casefold()
     assert journal.read_bytes() == b"{not json"
+    assert list((work_dir(seq) / "tracking").glob(".stage.commit.damaged-*")) == []
 
 
 def test_ac3_open_clone_cannot_publish_a_torn_pair(workspace, monkeypatch):

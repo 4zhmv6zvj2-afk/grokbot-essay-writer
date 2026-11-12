@@ -19,7 +19,7 @@ from essay_writer.assignment_gate import assignment_gate, mark_scheme_text
 from essay_writer.confirm import DRAFT, refuse
 from essay_writer.paths import workspace_root
 from essay_writer.prompt_loader import text
-from essay_writer.state import load_state, save_state
+from essay_writer.state import load_state, refusal_for_damage, save_state
 from essay_writer.student_voice import say, speak
 
 # Canonical client-language rule. Shells and the bot sheet use this text.
@@ -706,8 +706,11 @@ def front_office_call(name: str, arguments: dict[str, object]) -> dict[str, obje
     try:
         result = handler(**arguments)
     except Exception as exc:
-        note_call(name, arguments, error=exc)
-        raise
+        refused = refusal_for_damage(exc)
+        if refused is None:
+            note_call(name, arguments, error=exc)
+            raise
+        result = refused
     note_call(name, arguments, result=result)
     if isinstance(result, dict):
         spoken = speak(result)

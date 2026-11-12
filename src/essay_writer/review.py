@@ -17,7 +17,7 @@ from essay_writer.confirm import (
 )
 from essay_writer.paths import module_code, sequence_write_error
 from essay_writer.specialists.eqr import REVIEW_PROMPT
-from essay_writer.state import load_state, save_state
+from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import say
 
 TOOL = "essay.review"
@@ -59,6 +59,7 @@ def eqr_verdict(essay_id: str, stage: str) -> str | None:
     return verdict
 
 
+@guard_damaged_records
 def essay_review(
     essay_id: str,
     stage: str,

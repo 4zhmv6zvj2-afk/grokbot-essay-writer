@@ -24,7 +24,7 @@ from essay_writer.originals import material_locators
 from essay_writer.paths import local_pack_names, sequence_write_error, work_dir, workspace_root
 from essay_writer.resolvers import enrich_sources, field_provenance, find_opposing_point
 from essay_writer.specialists.researcher import ship_4a, ship_4b
-from essay_writer.state import load_state, save_state
+from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import say
 
 SUMMARY = "essay.research.summary"
@@ -545,6 +545,7 @@ def _run(
     return body
 
 
+@guard_damaged_records
 def essay_research_summary(
     essay_id: str,
     topic: str,
@@ -575,6 +576,7 @@ def essay_research_summary(
     )
 
 
+@guard_damaged_records
 def essay_research_full(
     essay_id: str,
     topic: str,

@@ -13,8 +13,6 @@ import os
 import sys
 import threading
 from contextlib import contextmanager
-from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any, TypedDict, cast
 
 # The stage lock is POSIX-only. Importing the package on Windows must succeed;
@@ -96,21 +94,14 @@ def _apply_commit(root, record: dict[str, object]) -> None:
         journal.unlink()
 
 
-def _quarantine_notice(name: str) -> str:
-    return (
-        "The last confirm record was damaged and was not applied. "
-        f"It was set aside as {name}, and this save continued."
-    )
-
-
-_QUARANTINE_NOTICE: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "essay_stage_quarantine_notice",
-    default=None,
-)
+DAMAGED_COMMIT = "The last confirm record was damaged and was not applied."
 
 
 class DamagedStageCommit(Exception):
     """A stage journal exists and cannot be applied."""
+
+    def __init__(self) -> None:
+        super().__init__(DAMAGED_COMMIT)
 
 
 def _commit_record_ok(record: object) -> bool:
@@ -145,29 +136,14 @@ def _journal_damaged(root) -> bool:
     return not _commit_record_ok(record)
 
 
-def _quarantine_journal(root) -> Path | None:
-    """Rename a damaged journal aside so the next save can proceed.
+def _raise_if_journal_damaged(root) -> None:
+    """Stop when the journal exists and is not a commit record.
 
-    A failed rename raises DamagedStageCommit and leaves the file in place.
-    The message names the journal and how to move it.
+    A missing file is not damage. The damaged file stays where it is and is
+    not applied.
     """
-    journal = root / STAGE_COMMIT
-    if not journal.is_file():
-        return None
-    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    dest = journal.with_name(f".stage.commit.damaged-{stamp}")
-    suffix = 1
-    while dest.exists():
-        dest = journal.with_name(f".stage.commit.damaged-{stamp}-{suffix}")
-        suffix += 1
-    try:
-        journal.rename(dest)
-    except OSError as exc:
-        raise DamagedStageCommit(
-            "The last confirm record was damaged and could not be set aside "
-            f"({journal}). Move that file out of the tracking folder, then save again."
-        ) from exc
-    return dest
+    if _journal_damaged(root):
+        raise DamagedStageCommit()
 
 
 def _read_commit(root) -> dict[str, object] | None:
@@ -264,12 +240,11 @@ def init_cloned_sequence_pointer(folder) -> None:
     stage 1 with nothing saved. The parent's writing pointer is not kept,
     and the copied stage notes and drafts are removed so stages 1–3 run
     again from the first card. A journal copied with the tree is finished
-    first, then replaced, so the child is not a torn pair.
+    first, then replaced, so the child is not a torn pair. A damaged journal
+    stops the copy. It is not applied and it is not set aside.
     """
-    if _journal_damaged(folder):
-        _quarantine_journal(folder)
-    else:
-        _replay_commit(folder)
+    _raise_if_journal_damaged(folder)
+    _replay_commit(folder)
     path = folder / POINTER_FILE
     if path.is_file():
         _atomic(path, _pointer_text(cast(Pointer, blank_pointer())))
@@ -482,10 +457,12 @@ def _pointer_lock(essay_id: str):
     """One exclusive lock for the note and pointer on this sequence.
 
     The same thread may re-enter. A journal left by a crashed commit is
-    finished before the body runs, so readers do not see a torn pair.
+    finished before the body runs, so readers do not see a torn pair. A
+    damaged journal stops the caller. It is not applied.
     """
     held = _held_locks()
     if essay_id in held:
+        _raise_if_journal_damaged(work_dir(essay_id))
         yield
         return
     module = require_fcntl()
@@ -496,7 +473,9 @@ def _pointer_lock(essay_id: str):
         module.flock(handle.fileno(), module.LOCK_EX)
         held.add(essay_id)
         try:
-            _replay_commit(work_dir(essay_id))
+            root = work_dir(essay_id)
+            _raise_if_journal_damaged(root)
+            _replay_commit(root)
             yield
         finally:
             held.discard(essay_id)
@@ -542,10 +521,6 @@ def _commit_pointer(
     between the live files is finished from that journal on the next lock.
     """
     with _pointer_lock(essay_id):
-        if _journal_damaged(work_dir(essay_id)):
-            dest = _quarantine_journal(work_dir(essay_id))
-            if dest is not None:
-                _QUARANTINE_NOTICE.set(_quarantine_notice(dest.name))
         fresh = load_pointer(essay_id)
         if _revision(fresh) != _revision(base):
             return None
