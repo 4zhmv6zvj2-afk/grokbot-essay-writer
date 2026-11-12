@@ -433,7 +433,10 @@ def test_ew_hunt_s1_ac10(case_id, monkeypatch):
         body = speak({"ok": True, "reason": f"Saved {raw}", "path": raw, "next": f"Open {raw}"})
         assert name not in json.dumps(body)
         assert name not in completed_draft_chat(f"The draft mentions {raw} and {name}.")
+    lower_backup = "backupdrive"
+    hyphen_archive = "archive-drive"
     assert (
-        "backupdrive" not in student_chat_path("/Volumes/backupdrive/notes/essay.docx").casefold()
+        lower_backup
+        not in student_chat_path(f"/Volumes/{lower_backup}/notes/essay.docx").casefold()
     )
-    assert "archivedrive" not in say("Copies live on /Volumes/archive-drive/out").casefold()
+    assert "archivedrive" not in say(f"Copies live on /Volumes/{hyphen_archive}/out").casefold()
