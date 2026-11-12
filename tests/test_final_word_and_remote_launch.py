@@ -6,6 +6,7 @@ A command that is itself a remote or cloud launch is still refused.
 
 import copy
 
+from docx import Document
 from helpers import mac_handoff_sequence_dir, open_sequence, picked
 from test_stage10_sequence_write import MODULE, NUMBER, _brief, _kick, _output, _pack, _park
 
@@ -55,6 +56,10 @@ def _sequence_final(seq: str):
 
 def _stamp(path):
     return path.read_bytes(), path.stat().st_mtime_ns
+
+
+def _text(path):
+    return "\n".join(paragraph.text for paragraph in Document(str(path)).paragraphs)
 
 
 def _confirm(monkeypatch, documents, *, mounted: bool) -> tuple[str, dict]:
@@ -123,7 +128,9 @@ def test_stage10_confirm_writes_the_copy_before_the_pointer_closes(
     assert copied.is_file()
     assert _output(seq).is_file()
     assert _sequence_final(seq).is_file()
-    assert copied.read_bytes() == _output(seq).read_bytes()
+    assert _text(copied) == _text(_output(seq))
+    assert _sequence_final(seq).read_bytes() == _output(seq).read_bytes()
+    assert "Registration number:" in _text(copied)
 
 
 def test_a_later_visit_leaves_a_present_final_word_file(workspace, monkeypatch, tmp_path):
