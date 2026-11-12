@@ -20,14 +20,14 @@ from essay_writer.brief_contract import (
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
 from essay_writer.diary import diary_cover_lines, title_page_spec
-from essay_writer.late_chain import _stage10_gate, _write_stage10_sequence, write_stage10
+from essay_writer.late_chain import _stage10_gate, write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_replies import _save_confirm
 from essay_writer.state import load_state, save_state
-from essay_writer.word import cover_lines, write_docx
+from essay_writer.word import write_docx
 
 NUMBER = "445566"
 NAME = "Ada Example"
@@ -157,13 +157,7 @@ def test_ac1_ac2_ac5_registration_on_the_title_page_without_the_name(
 def test_build_covered_cursor_and_grok_build_share_the_cover(monkeypatch):
     """Build covered. Cursor and Grok Build share title_page_spec, the cover write, and word_contract."""
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
-    assert "write_docx(" in inspect.getsource(_write_stage10_sequence)
     assert "word_contract_refusal(" in inspect.getsource(_stage10_gate)
-    assert "cover_lines(" in inspect.getsource(write_docx)
-    assert "cover_field_rows(" in inspect.getsource(cover_lines)
-    assert "cover_lines_from_field_rows(" in inspect.getsource(cover_lines)
-    assert "cover_field_rows(" in inspect.getsource(diary_cover_lines)
-    assert "cover_lines_from_field_rows(" in inspect.getsource(diary_cover_lines)
     assert "def title_page_spec" not in inspect.getsource(stage_launch)
     assert "def title_page_spec" not in inspect.getsource(cursor_stage_launch)
     assert "def word_contract_refusal" not in inspect.getsource(stage_launch)

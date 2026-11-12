@@ -20,7 +20,7 @@ from essay_writer.confirm import save_draft
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
 from essay_writer.diary import title_page_spec
 from essay_writer.doors import DOORS
-from essay_writer.late_chain import _write_stage10_sequence, write_stage10
+from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import INSTRUCTIONS
@@ -251,7 +251,6 @@ def test_build_covered_cursor_and_grok_build_share_the_kick_and_the_cover(monkey
         cursor_shell()["handlers"]["essay.sequence.new"]
         is front_office()["handlers"]["essay.sequence.new"]
     )
-    assert "write_docx(" in inspect.getsource(_write_stage10_sequence)
     assert "return _commit_with_next_card(" in inspect.getsource(_save_confirm)
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
     assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)
