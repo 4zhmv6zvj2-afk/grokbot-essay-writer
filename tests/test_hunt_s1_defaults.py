@@ -326,6 +326,71 @@ def test_ew_hunt_s1_ac6(case_id, tmp_path, monkeypatch):
         assert calls == []
 
 
+def _beside_app_shell(tmp_path: Path, monkeypatch, body: dict[str, object]) -> None:
+    """Setup record beside the app, with the override root set and no cloud workspace."""
+    missing = tmp_path / "no-workspace"
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", missing)
+    app = tmp_path / "chosen-app"
+    record = dict(body)
+    record["app_path"] = str(app)
+    (tmp_path / "setup.json").write_text(json.dumps(record) + "\n", encoding="utf-8")
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(app))
+    assert not missing.exists()
+
+
+def test_beside_app_grok_build_is_read_with_the_override_root(tmp_path, monkeypatch):
+    """A Grok Build choice beside the app is read when the override root is set."""
+    _beside_app_shell(
+        tmp_path,
+        monkeypatch,
+        {"mid_office_shell": "grok_build"},
+    )
+    assert persisted_shell() == "grok_build"
+    assert mid_office() == "Grok Build"
+    launch = stage_host_launch("1")
+    assert launch["command"][0] == "grok"
+
+
+def test_beside_app_unknown_shell_fails_with_the_override_root(tmp_path, monkeypatch):
+    """An unknown choice beside the app fails and does not select Cursor."""
+    calls: list[str] = []
+
+    def cursor_launch(*_args, **_kwargs):
+        calls.append("cursor")
+        return {"shell": "cursor", "command": ["agent"]}
+
+    def grok_launch(*_args, **_kwargs):
+        calls.append("grok")
+        return {"command": ["grok"]}
+
+    monkeypatch.setattr("essay_writer.cursor_office.cursor_stage_launch", cursor_launch)
+    monkeypatch.setattr("essay_writer.build_office.stage_launch", grok_launch)
+    for raw in ("not-a-shell", "cursr"):
+        calls.clear()
+        _beside_app_shell(
+            tmp_path,
+            monkeypatch,
+            {"mid_office_shell": raw},
+        )
+        with pytest.raises(UnknownMidOfficeShell):
+            persisted_shell()
+        with pytest.raises(UnknownMidOfficeShell):
+            mid_office()
+        with pytest.raises(UnknownMidOfficeShell):
+            stage_host_launch("1")
+        assert calls == []
+
+
+def test_beside_app_missing_shell_stays_cursor_with_the_override_root(tmp_path, monkeypatch):
+    """A missing file-work choice beside the app still selects Cursor."""
+    _beside_app_shell(tmp_path, monkeypatch, {})
+    assert persisted_shell() == "cursor"
+    assert mid_office() == "Cursor"
+    launch = stage_host_launch("1")
+    assert launch["command"][0] == "agent"
+    assert launch["shell"] == "cursor"
+
+
 def _refuse_save(monkeypatch, tmp_path: Path, folder: Path) -> None:
     monkeypatch.setattr("essay_writer.paths.saved_setup_path", lambda: None)
     monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "no-workspace")

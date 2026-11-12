@@ -295,9 +295,13 @@ def _folder_from_setup(saved: dict) -> str | None:
 def load_saved_setup() -> dict | None:
     """Read the setup record. A test root does not use the host record.
 
-    Stored Consensus and Unpaywall values still load from the file confirm wrote.
+    When ESSAY_WRITER_ROOT is set and the host or home record is not used,
+    this reads the file confirm wrote. An unset override root does not add
+    that extra source. A stored file-work choice is read from that file.
     """
     path = resolve_setup_record()
+    if path is None and os.environ.get("ESSAY_WRITER_ROOT"):
+        path = setup_record_for_run()
     if path is None or not path.is_file():
         return None
     try:
