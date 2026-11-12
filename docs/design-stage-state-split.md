@@ -1,9 +1,10 @@
 # Design: split stage_state
 
-This is a design for review. It does not move a function, change behaviour,
-edit a prompt, edit `tools.json`, bump the package version, or cut a release.
-`ARCHITECTURE.md` still describes the code as it is. A short pointer there
-names this file. No implementation slice starts from this pull request.
+This is the design record for the completed split. It does not change
+behaviour, edit a prompt, edit `tools.json`, bump the package version, or
+cut a release. `ARCHITECTURE.md` still describes the code as it is. A short
+pointer there names this file. The implementation followed the slices in
+section 7. Design decisions are recorded in section 10.
 
 Measured from commit `21a3da0a9f567956986051f3c6b2d095d4a1141c` on `main`.
 `stage_state.py` is 1462 lines and defines 70 functions. The import walk is
@@ -38,8 +39,7 @@ pointer. The reply bodies call the pointer API and do not own the journal.
 Those are the seams. Line count is not one of them.
 
 `stage_landing.py`, `stage_replies.py`, and `_run_stage` stay as they are.
-That limit is repeated under non-goals so a review does not turn it into a
-slice.
+That limit is repeated under non-goals so it is not turned into a slice.
 
 ## 1. Inventory
 
@@ -279,8 +279,8 @@ the orchestrator, the confirm path, or the body builder.
 The two returns are one function body. The stored return lives here with
 the hold return so the slice can move the function without editing it.
 The name `stage_hold` is the job the orchestrator already describes
-("held or refused reply bodies"). Section 10 asks the reviewer to confirm
-the name before a slice, because the glossary will freeze it.
+("held or refused reply bodies"). The chosen name is recorded in section
+10, because the glossary will freeze it.
 
 Load imports are the globals listed at the end of section 1. Function-body
 imports stay inside the moved functions. No import of `stage_track`,
@@ -517,8 +517,8 @@ previous one is green. No slice bumps the version, edits a prompt, or
 edits `tools.json`. No slice re-exports a moved name from
 `stage_state.py` or from `stage_track.py`.
 
-Do not start slice 1 until section 10 is answered. This pull request
-does not contain either slice.
+The implementation followed the slices below. Design decisions are recorded
+in section 10.
 
 ### Slice 1 — note renderer
 
@@ -706,7 +706,7 @@ of `_MINTING` on `_draft_next_card`. That pin follows the function to
   between `stage_note` and `stage_state` and a new mutual pair. Slice 1
   moves only `render_tracking`. Slice 2 moves `_note_look` and those
   callers together.
-- A moved body that gains or loses a line is a behaviour change. Review
+- A moved body that gains or loses a line is a behaviour change. Treat
   the diff as a relocation.
 - Hoisting `stage_hold`'s import of `fo_chat_locks` adds a breaker
   (`projects` → `stage_hold`) and the 28-pair allowlist would grow.
@@ -732,8 +732,8 @@ of `_MINTING` on `_draft_next_card`. That pin follows the function to
   version bump, no tag, no release.
 - No split of `stage_landing.py` or `stage_replies.py`.
 - No further split of `_run_stage`. The early-tool order stays in
-  `stage_track.py`. That split is out of this pass. It is not a slice
-  waiting on a yes.
+  `stage_track.py`. That split is out of this pass. It is not an
+  implementation slice in this pass.
 - No package-wide hoist of deferred imports, and no edit of the 28-pair
   or 46-pair allowlists.
 - No change to mid-office launch, to `mid_spawn.py`, or to which shell
@@ -749,20 +749,19 @@ and no on-disk format change. The allowlists do not change, so a revert
 does not restore a list. A reverted slice leaves `essay.stage` and the
 stage files as they were.
 
-## 10. Decisions from the independent reviewer
+## 10. Design decisions
 
-Q1, Q2, and Q3 are closed. The independent reviewer approved the seams.
-None of these decisions starts an implementation slice. Q4 stays out of
-this pass and is not proposed work.
+Design decisions are recorded below. Q4 stays out of this pass and is not
+proposed work.
 
-**Q1.** Approved. `stage_note` stays a separate module.
+**Q1.** `stage_note` stays a separate module.
 
-**Q2.** Approved. `CardRun` lives on `stage_hold.py`.
+**Q2.** `CardRun` lives on `stage_hold.py`.
 
-**Q3.** Approved. The names `stage_note` and `stage_hold` are approved.
+**Q3.** The chosen names are `stage_note` and `stage_hold`.
 
 **Q4.** Out of this pass. Further splits of `_run_stage`, and any split
 of `stage_landing.py` or `stage_replies.py`, are not proposed. A later
 design would have to say so on its own. This document's slices stop
-after the note module and the hold module. Q4 is not an approved
-implementation slice.
+after the note module and the hold module. Q4 is not an implementation
+slice in this pass.
