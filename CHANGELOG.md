@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.1 — 2026-11-12
+
+Maintenance patch: one draft-ordering fix and the architecture and test cleanup behind it.
+
+- Two saves can share one whole-second timestamp and one file-clock tick. The later
+  draft now wins on a monotonic write-order stamp; the fingerprint is unchanged.
+- The stage runner is split into `stage_confirm.py`, `stage_body.py`,
+  `stage_note.py`, and `stage_hold.py`. `stage_track.py` falls from 1,115 to 463
+  lines. Behaviour, the confirm gate, and the public tool contract stay the same.
+- A static import-graph guard keeps the load graph acyclic: 28 cycle-breaking
+  deferred pairs and 46 direct mutual pairs.
+- Thirty-one brittle source-text pins are replaced by behavioural checks:
+  `getsource` call sites fall from 222 to 191.
+- No prompt, tool-schema, or student-facing wording changes.
+
 ## 0.9.0 — 2026-11-11
 
 Student-facing lines for the opening, four redirects, and stages 6 and 7.
