@@ -124,8 +124,8 @@ def essay_revise(
         "proposed_notes": [] if report is None else report["notes"],
         "same_arguments_required": True,
         "next": say(
-            "Show this revision to the human. Saying yes records the note and does not "
-            "write a .docx. A changed draft still needs validate, then Word."
+            "Say yes to keep this step. This records the note and does not write a Word file. "
+            "A changed draft still needs a check, then Word."
         ),
     }
     _quiet_revise(essay_id, body)

@@ -138,6 +138,39 @@ def reset_status() -> None:
             continue
 
 
+def _strip_one_full_stop(text: str) -> str:
+    """Drop one trailing full stop. An ellipsis stays."""
+    if not isinstance(text, str):
+        return text
+    cleaned = text.rstrip()
+    if cleaned.endswith("...") or cleaned.endswith("…"):
+        return text
+    if cleaned.endswith("."):
+        return cleaned[:-1].rstrip()
+    return text
+
+
+def _is_full_sentence(text: str) -> bool:
+    """A labelled question that is already a sentence should not fill a status line."""
+    cleaned = text.strip()
+    if not cleaned:
+        return False
+    if cleaned.endswith((".", "!", "?")):
+        return True
+    return len(cleaned.split()) >= 8
+
+
+def _short_status_subject(essay_id: str, record: dict[str, Any]) -> str:
+    """Module code, or your report when this assignment is a report."""
+    raw = record.get("format") if isinstance(record, dict) else None
+    if isinstance(raw, str) and raw.strip().casefold() == "report":
+        return "your report"
+    from essay_writer.paths import module_code
+
+    code = module_code(essay_id) if isinstance(essay_id, str) and essay_id.strip() else ""
+    return code or "your report"
+
+
 def _usable_subject(subject: str, fallback: str) -> str:
 
     cleaned = " ".join(say(subject).split()) if isinstance(subject, str) else ""
@@ -164,17 +197,26 @@ def _guard(text: str, subject: str) -> str:
 
 
 def subject_for(essay_id: str) -> str:
-    """Labeled Question or Task only. Otherwise the sequence id, never the whole brief."""
+    """Labeled Question or Task only. Otherwise the sequence id, never the whole brief.
+
+    A question that is already a full sentence is not repeated. The status
+    line uses the module code, or your report when the assignment is a report.
+    """
     question = ""
+    record: dict[str, Any] = {}
     try:
         from essay_writer.assignment_gate import read_assignment
 
-        record = read_assignment(essay_id)
-        found = record.get("question") if isinstance(record, dict) else None
+        loaded = read_assignment(essay_id)
+        if isinstance(loaded, dict):
+            record = loaded
+        found = record.get("question")
         if isinstance(found, str):
             question = found.strip()
     except Exception:
         question = ""
+    if question and _is_full_sentence(question):
+        return _short_status_subject(essay_id, record)
     if question:
         return _usable_subject(question, essay_id or "your assignment")
     return _usable_subject(essay_id, "your assignment")
@@ -209,14 +251,31 @@ def basis_for(essay_id: str) -> str:
         return cleaned
     question = record.get("question") if isinstance(record, dict) else None
     if isinstance(question, str) and question.strip():
+        if _is_full_sentence(question.strip()):
+            return "the brief and the assignment ask"
         return _usable_subject(question.strip(), "the brief and the assignment ask")
     return "the brief and the assignment ask"
 
 
-def _fill(template: str, subject: str, basis: str) -> str:
+def _fill(
+    template: str,
+    subject: str,
+    basis: str,
+    *,
+    host: str | None = None,
+    keep_names: bool = False,
+) -> str:
     if not template:
         return ""
-    return _guard(template.format(subject=subject, basis=basis), subject)
+    subject = _strip_one_full_stop(subject)
+    basis = _strip_one_full_stop(basis)
+    values = {"subject": subject, "basis": basis}
+    if "{host}" in template:
+        values["host"] = host or ""
+    filled = template.format(**values)
+    if keep_names:
+        return " ".join(say(filled).split())
+    return _guard(filled, subject)
 
 
 def start_sentence(activity: str, subject: str) -> str:
@@ -256,6 +315,10 @@ _SPAWN_EXIT_KEYS = {
     "grok-cli-missing": "exit_missing_tool",
     "remote-cloud-banned": "exit_stopped",
 }
+_MISSING_HOST = {
+    "agent-cli-missing": "Cursor",
+    "grok-cli-missing": "Grok Build",
+}
 
 
 def exit_reason_sentence(
@@ -264,8 +327,16 @@ def exit_reason_sentence(
     """Plain-English line when mid-office file work stops before the step is saved."""
     subject = _usable_subject(subject, "your assignment")
     if isinstance(spawn_reason, str) and spawn_reason.strip():
-        key = _SPAWN_EXIT_KEYS.get(spawn_reason.strip(), "exit_stopped")
-        line = _fill(_template("any", key), subject, subject)
+        token = spawn_reason.strip()
+        key = _SPAWN_EXIT_KEYS.get(token, "exit_stopped")
+        host = _MISSING_HOST.get(token)
+        line = _fill(
+            _template("any", key),
+            subject,
+            subject,
+            host=host,
+            keep_names=bool(host),
+        )
         if line:
             return line
     if isinstance(exit_code, int) and exit_code != 0:

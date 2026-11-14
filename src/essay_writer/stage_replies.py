@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from essay_writer.confirm import DRAFT, confirm_ready, save_draft
+from essay_writer.confirm import DRAFT, NO_MATCHING_DRAFT, confirm_ready, save_draft
 from essay_writer.paths import relative
 from essay_writer.stage_context import StageContext
 from essay_writer.stage_hold import (
@@ -234,9 +234,7 @@ def _save_confirm(
             pointer,
             cardDigest,
             code="confirm",
-            reason=str(
-                ready.get("reason") or "Show this step in the chat again before it can be saved."
-            ),
+            reason=str(ready.get("reason") or NO_MATCHING_DRAFT),
         )
     if cardDigest != ready.get("digest"):
         return _reoffer_confirm(

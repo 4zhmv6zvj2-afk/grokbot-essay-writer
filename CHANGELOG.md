@@ -25,6 +25,11 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   Both waiting fields stay clear until a real draft. A typed yes still saves only
   the waiting stage when the host sends no card fields. A typed yes does not
   delete a module.
+- Student chat keeps ordinary English, including confirm, pack, and the names
+  Cursor, Grok Build, and Grok Bot. Word files still drop those labels. Save
+  lines say to choose Confirm or to say yes. A missing file-work app is named,
+  and the essay so far stays safe. The typed-yes stage rule is stated once, and
+  it never saves a later stage.
 
 ## 0.9.1 — 2026-11-12
 

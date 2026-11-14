@@ -19,7 +19,7 @@ from helpers import (
 from essay_writer.build_office import RESIDUALS, build_deliverable_handoff, stage_launch
 from essay_writer.context_fit import fit_critical_reviews
 from essay_writer.first_run import attach_custom_mcp, repo_bot_share
-from essay_writer.late_chain import FIRST_DRAFT_READY, QUIET_STEP, STAGE6_OPEN
+from essay_writer.late_chain import FIRST_DRAFT_READY, STAGE6_OPEN
 from essay_writer.projects import essay_project_delete
 from essay_writer.research import essay_research_full, essay_research_summary
 from essay_writer.revise import essay_revise
@@ -94,7 +94,7 @@ def test_word_preview_is_quiet_and_confirm_shows_the_draft(workspace):
     _quiet(preview)
     assert preview["step"] == "5b"
     assert preview["wrote"] is False
-    assert preview["next"] == QUIET_STEP
+    assert "Say yes to keep this step." in preview["next"]
     assert preview.get("path") not in ("", None)
     assert preview["path"] not in preview["next"]
 
