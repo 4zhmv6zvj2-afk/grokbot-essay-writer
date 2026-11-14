@@ -118,23 +118,24 @@ def test_ac1_confirm_returns_card_or_does_not_advance(workspace, monkeypatch):
     assert saved["stored"] is True
     assert saved["advanced"] is True
     assert saved["current"] == "2"
-    assert saved["card"]["stage"] == "2"
-    assert saved["cardDigest"] == saved["card"]["digest"]
-    assert len(saved["cardDigest"]) == 64
-    assert saved["digest"] != saved["cardDigest"]
+    assert saved.get("card") is None
+    assert saved.get("cardAction") is None
+    assert saved.get("cardDigest") is None
     pointer = load_pointer(seq)
     assert pointer["revision"] == before["revision"] + 1
     assert pointer["current"] == "2"
     assert pointer["saved"] == ["1"]
-    assert pointer["waiting_stage"] == "2"
-    assert pointer["waiting_digest"] == saved["cardDigest"]
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
 
     held_seq = open_sequence("RPT1008AA")
     opened = _live(essay_id=held_seq, stage="1", confirmPhase="draft", look=LOOK)
     assert opened["ok"] is True, opened
     held_before = load_pointer(held_seq)
+    calls = {"n": 0}
 
     def _fail(essay_id: str, following: str, card_run) -> dict:
+        calls["n"] += 1
         return {
             "ok": False,
             "refused": "named-parts",
@@ -142,31 +143,29 @@ def test_ac1_confirm_returns_card_or_does_not_advance(workspace, monkeypatch):
         }
 
     monkeypatch.setattr("essay_writer.stage_hold._draft_next_card", _fail)
-    refused = _live(
+    kept = _live(
         essay_id=held_seq,
         stage="1",
         confirmPhase="confirm",
         cardAction="confirm",
         cardDigest=opened["cardDigest"],
     )
-    assert refused.get("stored") is not True
-    assert refused.get("advanced") is not True
-    assert "not saved" in refused["reason"]
+    assert calls["n"] == 0
+    assert kept["stored"] is True, kept
+    assert kept.get("card") is None
     stayed = load_pointer(held_seq)
-    assert stayed["revision"] == held_before["revision"]
-    assert stayed["current"] == "1"
-    assert stayed["saved"] == []
-    assert stayed["waiting_stage"] == "1"
-    assert stayed["waiting_digest"] == held_before["waiting_digest"]
-    assert refused.get("card", {}).get("stage") == "1"
-    assert refused.get("cardDigest") == stayed["waiting_digest"]
+    assert stayed["revision"] == held_before["revision"] + 1
+    assert stayed["current"] == "2"
+    assert stayed["saved"] == ["1"]
+    assert stayed["waiting_stage"] is None
+    assert stayed["waiting_digest"] is None
 
 
 def test_ac2_diary_entry_1_confirm_returns_stage2_card_or_stays(workspace):
-    """AC2. Live door. A task that says Entry 1 does not advance without a card."""
+    """AC2. Live door. A task that says Entry 1 does not save that stage."""
     _brief("RPT5001AA", DIARY)
     seq = open_sequence("RPT5001AA")
-    look = "\n".join(basics_pass_lines(seq))
+    look = "\n".join(basics_pass_lines(seq)) + "\nThe task names four occasions."
     draft = _live(essay_id=seq, stage="1", confirmPhase="draft", look=look)
     assert draft["ok"] is True, draft
     before = load_pointer(seq)
@@ -178,17 +177,14 @@ def test_ac2_diary_entry_1_confirm_returns_stage2_card_or_stays(workspace):
         cardDigest=draft["cardDigest"],
     )
     pointer = load_pointer(seq)
-    advanced_without_card = pointer["current"] != "1" and not saved.get("cardDigest")
-    assert advanced_without_card is False
     assert saved["ok"] is True, saved
     assert saved["stored"] is True
     assert saved["current"] == "2"
-    assert saved["card"]["stage"] == "2"
-    assert saved["card"]["essay_id"] == seq
-    assert saved["cardDigest"] == saved["card"]["digest"]
+    assert saved.get("card") is None
+    assert saved.get("cardDigest") is None
     assert pointer["revision"] == before["revision"] + 1
-    assert pointer["waiting_stage"] == "2"
-    assert pointer["waiting_digest"] == saved["cardDigest"]
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
     assert "1" in pointer["saved"]
 
     student = _live(
@@ -201,8 +197,8 @@ def test_ac2_diary_entry_1_confirm_returns_stage2_card_or_stays(workspace):
     assert student["refused"] == "named-parts"
     still = load_pointer(seq)
     assert still["current"] == "2"
-    assert still["waiting_stage"] == "2"
-    assert still["waiting_digest"] == saved["cardDigest"]
+    assert still["waiting_stage"] is None
+    assert still["waiting_digest"] is None
 
 
 def test_ac3_stage5_and_last_stage_advance_without_card(workspace):

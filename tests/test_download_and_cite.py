@@ -62,7 +62,7 @@ def test_ac1_confirm_is_a_clickable_card_and_typed_yes_saves(workspace):
     """A typed yes saves the waiting card; a wrong card still refuses."""
     _brief()
     seq = open_sequence()
-    look = _look(seq)
+    look = _look(seq) + "\nThe corridor is the case."
     draft = essay_stage(seq, "1", "draft", look)
     card = draft["card"]
     assert card["deliver"] == "chat"
@@ -85,7 +85,7 @@ def test_ac1_confirm_is_a_clickable_card_and_typed_yes_saves(workspace):
 
     # A card field that is not the Confirm action, or a wrong digest, still refuses.
     seq2 = open_sequence()
-    look2 = _look(seq2)
+    look2 = _look(seq2) + "\nThe corridor is the case."
     draft2 = essay_stage(seq2, "1", "draft", look2)
     refused = essay_stage(
         seq2,
@@ -121,7 +121,7 @@ def test_ac1_confirm_is_a_clickable_card_and_typed_yes_saves(workspace):
     saved = essay_stage(seq2, "1", "confirm", cardAction="confirm", cardDigest=draft2["digest"])
     assert saved["stored"] is True, saved
     assert saved["current"] == "2"
-    assert saved["card"]["stage"] == "2"
+    assert saved.get("card") is None
     assert load_pointer(seq2)["saved"] == ["1"]
 
 
@@ -151,7 +151,7 @@ def test_ac2_rest_of_basics_walk_before_confirm(workspace):
     for stage in STAGE_ORDER:
         if stage == "5":
             break
-        draft = essay_stage(seq, stage, "draft", look)
+        draft = essay_stage(seq, stage, "draft", look + f"\nThis sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         assert draft["basics_pass"] == lines
         assert draft["stored"] is False
@@ -225,7 +225,7 @@ def test_ac3_build_covered_shared_confirm_handlers(workspace):
 
     _brief()
     seq = open_sequence()
-    look = _look(seq)
+    look = _look(seq) + "\nThe corridor is the case."
     arguments = {
         "essay_id": seq,
         "stage": "1",

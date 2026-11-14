@@ -195,8 +195,8 @@ def test_roll_forward_speech_has_no_tool_id(workspace):
 
 def test_stage7_draft_leads_with_questions(workspace):
     seq = open_sequence()
-    look = "Kept."
     for stage in ("1", "2", "3", "4a", "4b", "5", "6"):
+        look = f"Kept. This sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, draft
         if stage == "4a":
@@ -207,7 +207,7 @@ def test_stage7_draft_leads_with_questions(workspace):
             continue
         saved = essay_stage(seq, stage, "confirm", look, **picked(draft))
         assert saved["stored"] is True, saved
-    asked = essay_stage(seq, "7", "draft", look)
+    asked = essay_stage(seq, "7", "draft", "Kept. This sentence belongs to stage 7.")
     assert asked["ok"] is True, asked
     assert asked["questions"]
     assert asked["next"].startswith(STAGE7_LINE)

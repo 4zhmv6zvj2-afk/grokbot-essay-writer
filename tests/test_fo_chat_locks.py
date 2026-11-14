@@ -74,7 +74,7 @@ def _parent_with_stage2_lock() -> str:
     assert draft["ok"] is True, draft
     parent = essay_sequence_new(MODULE, "confirm")["sequence_id"]
     _save_stage(parent, "1", _look(parent, "Task noted for the diary."))
-    _save_stage(parent, "2", _look(parent, ENTRY_LOCK))
+    _save_stage(parent, "2", _look(parent, ENTRY_LOCK, "The entries are the student's own."))
     return parent
 
 
@@ -124,7 +124,9 @@ def test_ac2_keep_skips_confirm_revise_shows_card(workspace):
 
     child2 = _child_from(parent)
     essay_stage(child2, "2", "draft", lockChoice="revise")
-    revised = essay_stage(child2, "2", "draft", _look(child2, ENTRY_LOCK))
+    revised = essay_stage(
+        child2, "2", "draft", _look(child2, ENTRY_LOCK, "The entries are the student's own.")
+    )
     assert revised.get("card", {}).get("stage") == "2"
 
 

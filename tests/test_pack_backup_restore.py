@@ -69,7 +69,7 @@ def _plant_reports(seq: str) -> None:
 
 
 def _save_stage(seq: str, stage: str) -> dict:
-    draft = essay_stage(seq, stage, "draft", LOOK)
+    draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
     assert draft["ok"] is True, draft
     if stage == "5":
         assert draft["stored"] is True, draft

@@ -1,7 +1,7 @@
 """Held and refused replies for one stage save.
 
 stage_hold builds the reply a save returns when it is held or refused,
-replays a Confirm card, and commits the next card through the injected
+replays a Confirm card, and commits the pointer through the injected
 CardRun. The pointer write stays in stage_state: this module calls
 _commit_pointer and does not write the journal itself. It never imports
 the orchestrator, the confirm path, or the body builder.
@@ -462,47 +462,28 @@ def _commit_with_next_card(
     approved_look: str | None = None,
     card_run: CardRun,
 ) -> dict[str, object]:
-    """One write advances the pointer and stores the next waiting card.
+    """One write advances the pointer and stores the tracking note.
 
-    A stage that expects a card and cannot mint one does not write. Stage 5
-    and the last stage write the advance with no card, and say so. The next
-    card is minted through the injected ``card_run``; this module never
-    imports the orchestrator.
+    The next stage's Confirm card is not minted on this path. A missing card
+    does not roll the save back. Both waiting fields are cleared. Stage 10
+    still writes the sequence file before the pointer can close. Stage 5 and
+    the last stage name an advance with no card. This module never imports
+    the orchestrator.
     """
-    if isinstance(approved_look, str) and approved_look.strip():
-        _cache_approved_look(essay_id, stage, approved_look)
     if stage == "10":
         held = _render_stage10_before_close(body, essay_id, stage, genre, pointer, card_digest)
         if held is not None:
             return held
-    opened: dict[str, object] | None = None
-    fields: dict[str, object] | None = None
     pending_next = _pending_inherited(essay_id, following)
     # A copied stage 2 or 3 names the parent save. Confirm waits for revise or re-lock.
-    expects_card = _expects_next_card(following) and pending_next is None
-    if expects_card:
-        opened = _draft_next_card(essay_id, following or "", card_run)
-        if isinstance(opened, dict):
-            fields = _next_card_fields(opened, essay_id, following or "")
-        if fields is None or opened is None:
-            return _hold_confirm(
-                essay_id,
-                stage,
-                genre,
-                pointer,
-                card_digest,
-                opened if isinstance(opened, dict) else None,
-                following or "",
-            )
-        updated["waiting_stage"] = following
-        updated["waiting_digest"] = fields["cardDigest"]
-    else:
-        updated["waiting_stage"] = None
-        updated["waiting_digest"] = None
+    updated["waiting_stage"] = None
+    updated["waiting_digest"] = None
     stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
     if stored is None:
         return _pointer_lost(essay_id, stage, genre, card_run=card_run)
     updated = stored
+    if isinstance(approved_look, str) and approved_look.strip():
+        _cache_approved_look(essay_id, stage, approved_look)
     body["wrote"] = True
     body["stored"] = True
     body["advanced"] = following is not None
@@ -529,12 +510,15 @@ def _commit_with_next_card(
 
         finished["next"] = critical_reviews_delivery_next(finished["next"])
         finished.pop("delivery_speech", None)
-    if fields is not None and opened is not None:
-        finished = _attach_minted_card(finished, opened, fields)
-    elif pending_next is not None and following:
+    if pending_next is not None and following:
         finished = _name_inherited_lock(finished, essay_id, following, pending_next)
-    else:
+    elif not _expects_next_card(following):
         finished = _mark_explicit_end(finished)
+    else:
+        finished["repost"] = False
+        finished.pop("card", None)
+        finished.pop("cardAction", None)
+        finished.pop("cardDigest", None)
     finished = _with_plan_encourage(finished, essay_id, stage, plan_text)
     _snapshot_stage_save(
         essay_id,

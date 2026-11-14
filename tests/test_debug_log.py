@@ -379,10 +379,10 @@ def test_health_and_confirm_lines_name_the_card_and_the_land(workspace, monkeypa
     text = f"{global_text}\n{seq_text}"
     land = subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip()
     assert f"Land {land} pid {os.getpid()} tools {len(DOORS)}." in text
-    assert f"Card digest {saved['cardDigest']}." in text
-    assert "Card present." in text
-    assert f"Posted {saved['card']['digest']}." in text
-    assert "Confirm store yes advance yes next-card" in text
+    assert "Card digest none." in text
+    assert "Card absent." in text
+    assert "Posted none." in text
+    assert "Confirm store yes advance yes next-card none." in text
     assert "debug.log" not in json.dumps(saved)
 
 

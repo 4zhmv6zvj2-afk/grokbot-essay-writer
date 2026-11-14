@@ -57,7 +57,7 @@ def _ask_again(seq: str, stage: str) -> dict:
 def _child_for(stage: str) -> str:
     parent = _parent_with_stage2_lock()
     if stage == "3":
-        _save_stage(parent, "3", _look(parent, ENTRY_LOCK))
+        _save_stage(parent, "3", _look(parent, ENTRY_LOCK, "The plan keeps those entries."))
     child = _child_from(parent)
     if stage == "3":
         kept = essay_stage(child, "2", "draft", lockChoice="keep")

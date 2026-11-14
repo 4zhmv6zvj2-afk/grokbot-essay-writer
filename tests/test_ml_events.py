@@ -238,10 +238,10 @@ def test_stage_confirm_digest_are_structured_and_leave_out_chat(workspace, monke
     confirm = [row for row in rows if row["kind"] == "confirm" and row.get("phase") == "confirm"]
     assert confirm
     assert confirm[-1]["card_action"] == "confirm"
-    assert confirm[-1]["card_present"] is True
+    assert saved.get("card") is None
     digest = [row for row in rows if row["kind"] == "digest"]
     assert any(row.get("card_digest") == draft["cardDigest"] for row in digest)
-    assert any(row.get("posted") == saved["card"]["digest"] for row in digest)
+    assert all(row.get("posted") in (None, "", draft["cardDigest"]) for row in digest)
     assert all(len(row["card_digest"]) == 64 for row in digest if "card_digest" in row)
     assert "ml-events.jsonl" not in json.dumps(saved)
 

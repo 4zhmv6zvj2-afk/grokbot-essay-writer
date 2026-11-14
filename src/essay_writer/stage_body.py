@@ -8,6 +8,7 @@ stage-7 skip probe from stage_confirm. It never imports the orchestrator.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,95 @@ from essay_writer.stage_state import (
     _payload,
     _revisit_window,
 )
+
+GUIDANCE_REASON = "Add your own sentence for this stage; the checklist alone is not a save"
+GUIDANCE_NEXT = "One sentence of your own is the look. Add it in this chat, then save."
+
+
+def guidance_only_refusal() -> dict[str, Any]:
+    """Spoken refusal. Nothing is written and no Confirm card is returned."""
+    return refuse("guidance-only", GUIDANCE_REASON, next=GUIDANCE_NEXT)
+
+
+def _normalize_look(text: str) -> str:
+    return re.sub(r"\s+", " ", text.strip()).casefold()
+
+
+def _guidance_pieces(essay_id: str, stage: str, genre: str | None) -> list[str]:
+    """Normalized guidance blocks and their lines, longest first."""
+    from essay_writer.brief_contract import opening_card_lines
+    from essay_writer.specialists.grok_bot import (
+        CHECKLIST_WALK,
+        basics_pass_lines,
+        cached_approved_look,
+    )
+    from essay_writer.stage_llm import prompt_overlay, stage_rules
+
+    scores, format_line, question_line = basics_pass_lines(essay_id)
+    blocks = [
+        "\n".join((scores, format_line, question_line)),
+        scores,
+        format_line,
+        question_line,
+        CHECKLIST_WALK,
+        prompt_overlay(stage, genre),
+        stage_rules(stage, genre),
+    ]
+    from essay_writer.stage_state import load_pointer
+
+    saved = load_pointer(essay_id).get("saved") or []
+    # A copied sequence keeps the parent's look until this sequence saves a stage.
+    cached = cached_approved_look(essay_id) if saved else None
+    if isinstance(cached, str) and cached.strip():
+        blocks.append(cached)
+    opening = [line.strip() for line in opening_card_lines(essay_id, stage) if line.strip()]
+    if opening:
+        blocks.append("\n".join(opening))
+        blocks.extend(opening)
+    pieces: list[str] = []
+    for block in blocks:
+        if not isinstance(block, str) or not block.strip():
+            continue
+        pieces.append(block)
+        pieces.extend(line for line in block.splitlines() if line.strip())
+    norms = {_normalize_look(piece) for piece in pieces}
+    norms.discard("")
+    return sorted(norms, key=len, reverse=True)
+
+
+def look_is_confirmable(essay_id: str, stage: str, genre: str | None, text: str) -> bool:
+    """True when the text that would be stored has a sentence of the student's own.
+
+    Missing or blank text is not confirmable. Text that is only the Basics
+    lines, the checklist walk, the stage overlay, the stage rules, the cached
+    approved look, or the opening lines — joined in either order — is not
+    confirmable. A remaining line that is not one of those blocks is enough.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return False
+    remaining = _normalize_look(text)
+    for piece in _guidance_pieces(essay_id, stage, genre):
+        if not remaining:
+            break
+        while piece and piece in remaining:
+            start = 0
+            removed = False
+            while True:
+                index = remaining.find(piece, start)
+                if index < 0:
+                    break
+                end = index + len(piece)
+                before = index == 0 or remaining[index - 1] == " "
+                after = end == len(remaining) or remaining[end] == " "
+                if before and after:
+                    remaining = (remaining[:index] + " " + remaining[end:]).strip()
+                    remaining = re.sub(r"\s+", " ", remaining).strip()
+                    removed = True
+                    break
+                start = index + 1
+            if not removed:
+                break
+    return bool(remaining)
 
 
 def _prepare_stage_text(
@@ -337,6 +427,20 @@ def _build_stage_body(
         text,
         minting=minting,
     )
+    from essay_writer.spine import stage_uses_confirm_card
+
+    # Card-bearing stages only. Stage 5 stores on the draft, including an empty look.
+    # formatAnswer and questionAnswer are not part of this change. The predicate
+    # runs only when those arguments are absent.
+    answer_call = getattr(args, "formatAnswer", None) is not None or getattr(
+        args, "questionAnswer", None
+    ) is not None
+    if (
+        stage_uses_confirm_card(stage)
+        and not answer_call
+        and not look_is_confirmable(essay_id, stage, genre, text)
+    ):
+        return guidance_only_refusal()
     # A waiting-card mint is not the student's answer. Part names, Entry N,
     # and house words are checked when the student later writes that stage.
     blocked_save, stage5_gate = _collect_stage_misses(

@@ -31,7 +31,7 @@ def _through(seq: str, stop: str) -> None:
     for stage in STAGE_ORDER:
         if stage == stop:
             return
-        draft = essay_stage(seq, stage, "draft", LOOK)
+        draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         if stage == "4a":
             plant_gathered_source(seq)
@@ -77,11 +77,13 @@ def test_ac1_stage_confirm_saves_only_that_stage(workspace):
     assert load_pointer(seq)["current"] == "2"
     assert "2" not in load_pointer(seq)["saved"]
     assert "3" not in load_pointer(seq)["saved"]
-    assert saved["card"]["stage"] == "2"
+    assert saved.get("card") is None
     assert saved["repost"] is False
+    assert load_pointer(seq)["waiting_stage"] is None
+    assert load_pointer(seq)["waiting_digest"] is None
 
     reused = essay_stage(seq, "2", "confirm", look="Press Confirm for Stage 1")
-    assert reused["ok"] is False
+    assert reused.get("stored") is not True
     assert reused["stored"] is not True
     assert load_pointer(seq)["saved"] == ["1"]
     assert "2" not in load_pointer(seq)["saved"]
@@ -175,8 +177,9 @@ def test_ac2_stage_4a_needs_its_own_confirm(workspace, monkeypatch):
     assert "4a" in load_pointer(seq)["saved"]
     assert load_pointer(seq)["current"] == "4b"
     assert "4b" not in load_pointer(seq)["saved"]
-    assert saved["card"]["stage"] == "4b"
+    assert saved.get("card") is None
     assert saved["repost"] is False
+    assert load_pointer(seq)["waiting_stage"] is None
 
     cursor_rules = cursor_stage_launch("4a")["settings"]["rules"]
     build_rules = stage_launch("4a")["settings"]["rules"]
@@ -191,9 +194,9 @@ def test_ac2_stage_4a_needs_its_own_confirm(workspace, monkeypatch):
 
 def test_ac3_typed_confirm_saves_the_waiting_card(workspace):
     """AC3: a typed Confirm, yes, or ok on a waiting card saves that stage."""
-    for typed in ("Confirm", "yes", "ok", "Yes"):
+    for index, typed in enumerate(("Confirm", "yes", "ok", "Yes"), start=1):
         seq = open_sequence()
-        look = "The task is a short report."
+        look = f"The task is a short report. Pass {index}."
         draft = essay_stage(seq, "1", "draft", look)
         assert draft["ok"] is True, draft
         spoken = front_office_call(

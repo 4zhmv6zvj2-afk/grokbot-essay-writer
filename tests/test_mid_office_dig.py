@@ -91,8 +91,8 @@ def test_ac2_same_stage_digest_returns_waiting_card_without_another_child(worksp
     monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _count(calls))
     seq = open_sequence()
     try:
-        look = "Saved from the brief."
         for stage in ("1", "2", "3"):
+            look = f"Saved from the brief. This sentence belongs to stage {stage}."
             draft = essay_stage(seq, stage, "draft", look)
             assert draft["ok"] is True, draft
             saved = essay_stage(seq, stage, "confirm", look, **picked(draft))

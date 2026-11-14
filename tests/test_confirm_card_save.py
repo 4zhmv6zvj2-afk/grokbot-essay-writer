@@ -53,7 +53,7 @@ def _through(seq: str, stop: str) -> None:
     for stage in STAGE_ORDER:
         if stage == stop:
             return
-        draft = essay_stage(seq, stage, "draft", LOOK)
+        draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         if stage == "4a":
             plant_gathered_source(seq)
@@ -114,7 +114,7 @@ def test_ac1_stage2_confirm_does_not_save_stage3(workspace):
     saved: list[str] = []
     hops = (("1", "2"), ("2", "3"), ("3", "4a"))
     for stage, following in hops:
-        draft = essay_stage(seq, stage, "draft", LOOK)
+        draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         assert draft["stored"] is False
         assert stage not in load_pointer(seq)["saved"]
@@ -137,7 +137,7 @@ def test_ac1_stage2_confirm_does_not_save_stage3(workspace):
             assert "Status: final" not in later_text
         assert "Status: final" in _stage_note(seq, stage)
 
-        nxt = essay_stage(seq, following, "draft", LOOK)
+        nxt = essay_stage(seq, following, "draft", f"{LOOK} This sentence belongs to stage {following}.")
         assert nxt["ok"] is True, nxt
         assert nxt["stored"] is False
         jumped = essay_stage(seq, following, "confirm", **picked(nxt))
@@ -223,7 +223,7 @@ def test_ac2_press_with_card_saves_in_one_call(workspace, monkeypatch):
     assert load_pointer(seq)["saved"] == ["1"]
     assert load_pointer(seq)["current"] == "2"
 
-    draft2 = essay_stage(seq, "2", "draft", LOOK)
+    draft2 = essay_stage(seq, "2", "draft", f"{LOOK} This sentence belongs to stage 2.")
     mute = essay_stage(
         seq,
         "2",

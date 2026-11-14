@@ -16,11 +16,10 @@ lock is saved on stage 2, then the plan is saved again on stage 3.
 Cursor and Grok Build both read the path and the rules from
 essay_writer.stage_llm.stage_settings. Only the stage state layer writes it.
 The note and the pointer fields that name it are one commit under the
-stage lock. A confirm that expects a next card stores that card's waiting
-digest in the same write as the advance. If that card cannot be minted,
-the write does not happen and the waiting card stays. Stage 5 and the
-last stage name an advance with no card. A newer current or saved list
-is left in place.
+stage lock. A confirm clears waiting_stage and waiting_digest. It does not
+mint the next stage's card, and a missing card does not roll the save back.
+Stage 5 and the last stage name an advance with no card. A newer current
+or saved list is left in place.
 
 The pointer, the commit journal, and the stage lock live in
 essay_writer/stage_state.py. The tracking-note renderer and look reader live
@@ -351,7 +350,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         )
     ):
         return prior_saved_lock_ask(essay_id, stage, pending_lock)
-    from essay_writer.spine import advances_without_confirm
+    from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 
     auto_next = advances_without_confirm(stage)
     if confirmPhase == CONFIRM and auto_next:
@@ -393,6 +392,20 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         and _waiting_digest(pointer, stage) is None
         and latest_draft(essay_id, TOOL, stage=stage) is None
     ):
+        from essay_writer.specialists.grok_bot import typed_save_word
+        from essay_writer.stage_body import guidance_only_refusal, look_is_confirmable
+
+        answer_call = getattr(args, "formatAnswer", None) is not None or getattr(
+            args, "questionAnswer", None
+        ) is not None
+        if (
+            text
+            and stage_uses_confirm_card(stage)
+            and not answer_call
+            and not typed_save_word(look)
+            and not look_is_confirmable(essay_id, stage, genre, text)
+        ):
+            return guidance_only_refusal()
         return _noop_result(essay_id, stage, confirmPhase, pointer["current"])
     resolved = replace(
         args,

@@ -200,7 +200,12 @@ def test_front_office_posts_start_milestone_and_five_minute_line(workspace, monk
     for stage in ("1", "2", "3"):
         draft = front_office_call(
             "essay.stage",
-            {"essay_id": seq, "stage": stage, "confirmPhase": "draft", "look": LOOK},
+            {
+                "essay_id": seq,
+                "stage": stage,
+                "confirmPhase": "draft",
+                "look": f"{LOOK} This sentence belongs to stage {stage}.",
+            },
         )
         assert draft["ok"] is True, draft
         assert "status" not in draft
@@ -271,7 +276,12 @@ def test_stage5_draft_that_stores_says_the_first_draft_is_ready(workspace, monke
     for stage in ("1", "2", "3", "4a", "4b"):
         draft = front_office_call(
             "essay.stage",
-            {"essay_id": seq, "stage": stage, "confirmPhase": "draft", "look": LOOK},
+            {
+                "essay_id": seq,
+                "stage": stage,
+                "confirmPhase": "draft",
+                "look": f"{LOOK} This sentence belongs to stage {stage}.",
+            },
         )
         assert draft["ok"] is True, draft
         assert "card" in draft

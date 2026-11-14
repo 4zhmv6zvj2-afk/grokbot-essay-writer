@@ -87,7 +87,7 @@ def test_card_only_confirm_hydrates_every_card_stage_and_typed_confirm_stays_ref
     for stage in STAGE_ORDER:
         if stage == "1":
             continue
-        draft = essay_stage(seq, stage, "draft", look)
+        draft = essay_stage(seq, stage, "draft", f"{look}\nThis sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         if stage == "4a":
             plant_gathered_source(seq)
@@ -118,7 +118,7 @@ def test_card_only_confirm_restores_stage7_fields(workspace):
     for stage in STAGE_ORDER:
         if stage == "7":
             break
-        draft = essay_stage(seq, stage, "draft", look)
+        draft = essay_stage(seq, stage, "draft", f"{look}\nThis sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         if stage == "4a":
             plant_gathered_source(seq)
@@ -126,13 +126,13 @@ def test_card_only_confirm_restores_stage7_fields(workspace):
             continue
         saved = essay_stage(seq, stage, "confirm", **picked(draft))
         assert saved["stored"] is True, saved
-    asked = essay_stage(seq, "7", "draft", look)
+    asked = essay_stage(seq, "7", "draft", f"{look}\nThis sentence belongs to stage 7.")
     assert asked["ok"] is True, asked
     edited = essay_stage(
         seq,
         "7",
         "draft",
-        look,
+        f"{look}\nThe corridor claim stays in this edit.",
         answers="Keep the corridor claim.",
         edited="The corridor claim stays.",
         webCheck={"currency": True, "clarity": True},

@@ -72,15 +72,17 @@ def test_ac2_approved_look_cached_and_reused(workspace):
     assert load_state(seq).get("approved_look") == look
 
     for stage in ("2", "3"):
-        kept = essay_stage(seq, stage, "draft", look)
+        stage_look = look + f"\nThis sentence belongs to stage {stage}."
+        kept = essay_stage(seq, stage, "draft", stage_look)
         assert kept["ok"] is True, kept
-        essay_stage(seq, stage, "confirm", look, **picked(kept))
+        essay_stage(seq, stage, "confirm", stage_look, **picked(kept))
 
     plant_gathered_source(seq)
     for stage in ("4a", "4b"):
-        kept = essay_stage(seq, stage, "draft", look)
+        stage_look = look + f"\nThis sentence belongs to stage {stage}."
+        kept = essay_stage(seq, stage, "draft", stage_look)
         assert kept["ok"] is True, kept
-        essay_stage(seq, stage, "confirm", look, **picked(kept))
+        essay_stage(seq, stage, "confirm", stage_look, **picked(kept))
 
     stage5 = essay_stage(seq, "5", "draft", look)
     assert stage5["stored"] is True, stage5
@@ -88,19 +90,20 @@ def test_ac2_approved_look_cached_and_reused(workspace):
     empty_tail = essay_stage(seq, "6", "draft", DUMP)
     assert empty_tail["ok"] is True, empty_tail
     assert empty_tail.get("basics_seeded") is True
-    assert _opening_look(seq) == look
+    assert _opening_look(seq) == look + "\nThis sentence belongs to stage 4b."
 
 
 def test_ac3_wrong_basics_still_refuses(workspace):
     """AC3. Replacing the three Basics lines with wrong shaped content still blocks."""
     _brief(f"Genre: report\nQuestion: {QUESTION}\n")
     seq = open_sequence()
-    look = _opened(seq)
+    look = _opened(seq) + "\nThe corridor is the case."
     draft = essay_stage(seq, "1", "draft", look)
     essay_stage(seq, "1", "confirm", look, **picked(draft))
     for stage in ("2", "3"):
-        d = essay_stage(seq, stage, "draft", look)
-        essay_stage(seq, stage, "confirm", look, **picked(d))
+        stage_look = look + f"\nThis sentence belongs to stage {stage}."
+        d = essay_stage(seq, stage, "draft", stage_look)
+        essay_stage(seq, stage, "confirm", stage_look, **picked(d))
     basics_pass_lines(seq)
     wrong = "\n".join(
         (
@@ -120,21 +123,23 @@ def test_ac4_stage5_skips_basics_gate(workspace):
     """AC4. Stage 5 still skips the Basics pass gate."""
     _brief(f"Genre: report\nQuestion: {QUESTION}\n")
     seq = open_sequence()
-    look = _opened(seq)
+    look = _opened(seq) + "\nThe corridor is the case."
     draft = essay_stage(seq, "1", "draft", look)
     essay_stage(seq, "1", "confirm", look, **picked(draft))
     for stage in ("2", "3"):
-        d = essay_stage(seq, stage, "draft", look)
-        essay_stage(seq, stage, "confirm", look, **picked(d))
+        stage_look = look + f"\nThis sentence belongs to stage {stage}."
+        d = essay_stage(seq, stage, "draft", stage_look)
+        essay_stage(seq, stage, "confirm", stage_look, **picked(d))
     plant_gathered_source(seq)
     for stage in ("4a", "4b"):
-        d = essay_stage(seq, stage, "draft", look)
-        essay_stage(seq, stage, "confirm", look, **picked(d))
-    quiet = essay_stage(seq, "5", "draft", look)
+        stage_look = look + f"\nThis sentence belongs to stage {stage}."
+        d = essay_stage(seq, stage, "draft", stage_look)
+        essay_stage(seq, stage, "confirm", stage_look, **picked(d))
+    quiet = essay_stage(seq, "5", "draft", _opened(seq))
     assert quiet["ok"] is True, quiet
     assert quiet["stored"] is True
     assert "basics_pass" not in quiet
-    assert load_state(seq).get("approved_look") == look
+    assert load_state(seq).get("approved_look") == look + "\nThis sentence belongs to stage 4b."
 
 
 def test_ac5_daily_use_without_brief_unchanged(workspace):

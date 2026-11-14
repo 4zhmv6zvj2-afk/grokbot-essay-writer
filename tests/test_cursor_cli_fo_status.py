@@ -138,7 +138,12 @@ def test_ac4_early_exit_surfaces_exit_reason_to_fo_and_logs(workspace, monkeypat
     for stage in ("1", "2", "3"):
         draft = front_office_call(
             "essay.stage",
-            {"essay_id": seq, "stage": stage, "confirmPhase": "draft", "look": LOOK},
+            {
+                "essay_id": seq,
+                "stage": stage,
+                "confirmPhase": "draft",
+                "look": f"{LOOK} This sentence belongs to stage {stage}.",
+            },
         )
         front_office_call(
             "essay.stage",

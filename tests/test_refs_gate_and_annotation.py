@@ -130,8 +130,12 @@ def _advance_to_stage10(seq: str) -> None:
     plant_gathered_source(seq)
     for stage in ("1", "2", "3", "4a", "4b", "5", "6", "7", "8", "9"):
         # Stage 7 "all fine" opens Confirm. The confirm call must not send it again.
+        sentence = f"{LOOK} This sentence belongs to stage {stage}."
+        if stage == "7":
+            asked = essay_stage(seq, stage, "draft", sentence)
+            assert asked["ok"] is True, (stage, asked)
         draft_kwargs = {"answers": "all fine"} if stage == "7" else {}
-        draft = essay_stage(seq, stage, "draft", LOOK, **draft_kwargs)
+        draft = essay_stage(seq, stage, "draft", sentence, **draft_kwargs)
         assert draft["ok"] is True, (stage, draft)
         saved = essay_stage(seq, stage, "confirm", LOOK, **picked(draft))
         assert saved.get("stored") is True or stage == "5", (stage, saved)
@@ -252,7 +256,7 @@ def test_ac4_stage4a_confirm_refuses_surname_stub(workspace, monkeypatch, tmp_pa
     save_state(seq, state)
 
     for stage in ("1", "2", "3"):
-        draft = essay_stage(seq, stage, "draft", LOOK)
+        draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         saved = essay_stage(seq, stage, "confirm", LOOK, **picked(draft))
         assert saved["stored"] is True, saved
 
@@ -303,7 +307,7 @@ def test_ac5_stage4a_confirm_ships_annotation_docx(workspace, monkeypatch, tmp_p
     )
 
     for stage in ("1", "2", "3"):
-        draft = essay_stage(seq, stage, "draft", LOOK)
+        draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         saved = essay_stage(seq, stage, "confirm", LOOK, **picked(draft))
         assert saved["stored"] is True, saved
 

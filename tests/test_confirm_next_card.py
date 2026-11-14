@@ -1,7 +1,6 @@
-"""The live Confirm returns the next card for the open sequence.
+"""A saved stage names the next stage and does not mint its Confirm card.
 
-AC1: a successful Confirm, except stage 5, returns the next draft card.
-The next waiting digest is stored in that same pointer write.
+A guidance-only look is refused and writes no final look.
 AC2: a closed pack or the wrong sequence does not mint a postable card.
 AC3: the briefing posts only the door card for the current open sequence.
 AC4: Build covered. Cursor and Grok Build share that Confirm path.
@@ -13,7 +12,6 @@ from pathlib import Path
 
 from helpers import open_sequence
 
-from essay_writer.assignment_gate import read_assignment
 from essay_writer.build_office import stage_launch
 from essay_writer.confirm import save_draft
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
@@ -104,19 +102,25 @@ def _close(seq: str) -> str:
     )
 
 
-def test_ac1_confirm_returns_the_next_draft_card(workspace):
-    """AC1. Live Confirm returns the next card and stores its digest with the advance."""
-    _brief("RPT5001AA", DIARY)
-    seq = open_sequence("RPT5001AA")
-    record = read_assignment(seq)
-    assert record["active"] is True
-    assert record["named_entries"] == [
-        "North occasion",
-        "South occasion",
-        "East occasion",
-        "West occasion",
-    ]
-    look = "\n".join(basics_pass_lines(seq))
+STUDENT = "Task: evaluate the corridor."
+GUIDANCE_REASON = "Add your own sentence for this stage; the checklist alone is not a save"
+GUIDANCE_NEXT = "One sentence of your own is the look. Add it in this chat, then save."
+CHECKLIST_SENTENCE = "Before the save, the chat opens with a short Basics pass"
+STAGE1_RULE = (
+    "The Basics pass opens the reply, the task analysis is the look, "
+    "and a reply that is only the Basics pass is refused."
+)
+CARD_SENTENCE = "The Confirm card for that stage is in this reply."
+
+
+def _own(seq: str) -> str:
+    return "\n".join(basics_pass_lines(seq)) + "\n" + STUDENT
+
+
+def _save_stage1(module: str = "MOD1004AA") -> tuple[str, str, dict]:
+    _brief(module, REPORT, SCHEME)
+    seq = open_sequence(module)
+    look = _own(seq)
     draft = _live(essay_id=seq, stage="1", confirmPhase="draft", look=look)
     assert draft["ok"] is True, draft
     saved = _live(
@@ -126,43 +130,266 @@ def test_ac1_confirm_returns_the_next_draft_card(workspace):
         cardAction="confirm",
         cardDigest=draft["cardDigest"],
     )
-    assert saved["ok"] is True, saved
-    assert saved["stored"] is True
-    assert saved["advanced"] is True
-    assert saved["current"] == "2"
-    assert load_pointer(seq)["waiting_stage"] == "2"
-    assert load_pointer(seq)["waiting_digest"] == saved["cardDigest"]
-    _card(saved, "2", seq)
+    assert saved["stored"] is True, saved
+    return seq, look, saved
 
-    for stage, nxt in (("2", "3"), ("3", "4a")):
-        pressed = _live(
-            essay_id=seq,
-            stage=stage,
-            confirmPhase="confirm",
-            cardAction=saved["cardAction"],
-            cardDigest=saved["cardDigest"],
-        )
-        assert pressed["stored"] is True, pressed
-        assert pressed["current"] == nxt
-        assert stage in load_pointer(seq)["saved"]
-        assert load_pointer(seq)["waiting_stage"] == nxt
-        assert load_pointer(seq)["waiting_digest"] == pressed["cardDigest"]
-        _card(pressed, nxt, seq)
-        saved = pressed
 
-    _brief("MOD1004AA", REPORT, SCHEME)
-    report = open_sequence("MOD1004AA")
-    report_look = "\n".join(basics_pass_lines(report))
-    opened = _live(essay_id=report, stage="1", confirmPhase="draft", look=report_look)
-    hopped = _live(
-        essay_id=report,
+def _refused(body: dict) -> None:
+    assert body["ok"] is False, body
+    assert body["refused"] == "guidance-only"
+    assert body["reason"] == GUIDANCE_REASON
+    assert body["next"] == GUIDANCE_NEXT
+    assert body["wrote"] is False
+    assert body["stored"] is False
+    assert body.get("card") is None
+    assert body.get("cardAction") is None
+    assert body.get("cardDigest") is None
+
+
+def test_confirm_names_the_next_stage_and_does_not_mint_its_card(workspace):
+    """essay-u1-a1: a saved stage names the next stage and leaves the card fields off the reply.
+
+    Both waiting fields are clear. saved_next does not say the Confirm card is in this reply.
+    The confirm path does not mint the next card and does not roll the save back.
+    """
+    seq, _look, saved = _save_stage1()
+    assert saved["next"].startswith("Start Stage 2 —")
+    assert "in this chat" in saved["next"]
+    assert CARD_SENTENCE not in saved["next"]
+    assert saved.get("card") is None
+    assert saved.get("cardAction") is None
+    assert saved.get("cardDigest") is None
+    pointer = load_pointer(seq)
+    assert "1" in pointer["saved"]
+    assert pointer["current"] == "2"
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
+    note = (work_dir(seq) / "tracking" / "1.md").read_text(encoding="utf-8")
+    assert STUDENT in note
+    assert "## Final look" in note
+    from essay_writer.specialists.grok_bot import saved_next
+    from essay_writer.stage_hold import _commit_with_next_card
+
+    assert CARD_SENTENCE not in saved_next("2", "Title")
+    assert CARD_SENTENCE not in saved_next("5", "Title")
+    assert CARD_SENTENCE not in inspect.getsource(saved_next)
+    commit = inspect.getsource(_commit_with_next_card)
+    assert "_draft_next_card(" not in commit
+    assert "_hold_confirm(" not in commit
+
+
+def test_confirm_without_a_new_draft_does_not_advance(workspace):
+    """essay-u1-a2: confirming the next stage with no new draft does not store it."""
+    seq, _look, _saved = _save_stage1()
+    pressed = _live(essay_id=seq, stage="2", confirmPhase="confirm")
+    assert pressed.get("stored") is not True
+    pointer = load_pointer(seq)
+    assert pointer["current"] == "2"
+    assert "2" not in pointer["saved"]
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
+
+
+def test_guidance_only_draft_writes_no_look(workspace):
+    """essay-u1-b1: a draft with no look is refused, and confirming it does not store.
+
+    waiting_stage and waiting_digest stay None. No tracking note is created.
+    A later real note is left byte for byte when the empty look is sent again.
+    """
+    seq, look, _saved = _save_stage1()
+    empty = _live(essay_id=seq, stage="2", confirmPhase="draft")
+    _refused(empty)
+    pointer = load_pointer(seq)
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
+    note = work_dir(seq) / "tracking" / "2.md"
+    assert not note.is_file()
+    pressed = _live(essay_id=seq, stage="2", confirmPhase="confirm")
+    assert pressed.get("stored") is not True
+    again = _live(essay_id=seq, stage="2", confirmPhase="confirm", look="")
+    assert again.get("stored") is not True
+    assert not note.is_file()
+    assert "2" not in load_pointer(seq)["saved"]
+    real = _live(
+        essay_id=seq,
+        stage="2",
+        confirmPhase="draft",
+        look="The corridor needs a second reading.",
+    )
+    assert real["ok"] is True, real
+    before = note.read_bytes()
+    repeat = _live(essay_id=seq, stage="2", confirmPhase="draft")
+    _refused(repeat)
+    assert note.read_bytes() == before
+    text = note.read_text(encoding="utf-8")
+    assert CHECKLIST_SENTENCE not in text.split("## Working look", 1)[-1]
+    assert look not in text
+
+
+def test_guidance_blocks_and_the_previous_look_are_refused(workspace):
+    """essay-u1-b2: basics, the stage overlay, and the previous stage's text are not a look.
+
+    Joining those blocks in either order is still refused. Confirm does not store.
+    """
+    from essay_writer.stage_llm import prompt_overlay
+
+    seq, previous, _saved = _save_stage1()
+    basics = "\n".join(basics_pass_lines(seq))
+    overlay = prompt_overlay("2", "report")
+    looks = (
+        basics,
+        overlay,
+        previous,
+        basics.swapcase(),
+        f"{basics}\n{overlay}",
+        f"{overlay}\n{basics}",
+    )
+    note = work_dir(seq) / "tracking" / "2.md"
+    for look in looks:
+        drafted = _live(essay_id=seq, stage="2", confirmPhase="draft", look=look)
+        _refused(drafted)
+        confirmed = _live(essay_id=seq, stage="2", confirmPhase="confirm", look=look)
+        _refused(confirmed)
+        assert not note.is_file()
+        assert "2" not in load_pointer(seq)["saved"]
+        assert load_pointer(seq)["waiting_stage"] is None
+        assert load_pointer(seq)["waiting_digest"] is None
+
+
+def test_a_student_sentence_returns_a_card_and_confirm_clears_waiting(workspace):
+    """essay-u1-b3: one sentence of the student's own returns a card, and Confirm stores that stage.
+
+    A short real note also saves. Both waiting fields are None after the save.
+    """
+    seq, _look, _saved = _save_stage1()
+    sentence = "The corridor needs a second reading."
+    draft = _live(essay_id=seq, stage="2", confirmPhase="draft", look=sentence)
+    assert draft["ok"] is True, draft
+    assert draft["card"]["stage"] == "2"
+    assert draft["cardAction"] == "confirm"
+    assert draft["cardDigest"]
+    saved = _live(
+        essay_id=seq,
+        stage="2",
+        confirmPhase="confirm",
+        cardAction="confirm",
+        cardDigest=draft["cardDigest"],
+    )
+    assert saved["stored"] is True, saved
+    assert saved.get("card") is None
+    pointer = load_pointer(seq)
+    assert "2" in pointer["saved"]
+    assert "3" not in pointer["saved"]
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
+    short = open_sequence("RPT1008AA")
+    brief = _live(essay_id=short, stage="1", confirmPhase="draft", look="Pass.")
+    assert brief["ok"] is True, brief
+    assert brief["card"]["stage"] == "1"
+    kept = _live(
+        essay_id=short,
         stage="1",
         confirmPhase="confirm",
         cardAction="confirm",
-        cardDigest=opened["cardDigest"],
+        cardDigest=brief["cardDigest"],
     )
-    assert hopped["stored"] is True, hopped
-    _card(hopped, "2", report)
+    assert kept["stored"] is True, kept
+    assert "Pass." in (work_dir(short) / "tracking" / "1.md").read_text(encoding="utf-8")
+
+
+def test_stage1_rule_refuses_a_basics_only_reply(workspace):
+    """essay-u1-c1: the stage 1 rule says a Basics-only reply is refused, and the draft agrees.
+
+    The sentence is in the stage 1 checklist, not in the checklist walk.
+    """
+    import json
+
+    from essay_writer.specialists.grok_bot import CHECKLIST_WALK
+    from essay_writer.stage_llm import stage_rules
+
+    for genre in (None, "essay", "report", "diary"):
+        assert STAGE1_RULE in stage_rules("1", genre)
+    snapshot = json.loads((REPO / "tests" / "snapshots" / "prompts.json").read_text(encoding="utf-8"))
+    for key in ("1:none", "1:essay", "1:report", "1:diary"):
+        assert STAGE1_RULE in snapshot["stage_rules"][key]
+    assert STAGE1_RULE not in CHECKLIST_WALK
+    _brief("MOD1004AA", REPORT, SCHEME)
+    seq = open_sequence("MOD1004AA")
+    basics = _live(
+        essay_id=seq,
+        stage="1",
+        confirmPhase="draft",
+        look="\n".join(basics_pass_lines(seq)),
+    )
+    _refused(basics)
+    assert not (work_dir(seq) / "tracking" / "1.md").is_file()
+
+
+def test_stage5_still_stores_a_look_the_predicate_would_refuse(workspace):
+    """essay-u1-c2: stage 5 stores on the draft and starts stage 6, including a guidance-only look.
+
+    There is no second refusal. AUTO_START is unchanged.
+    """
+    from essay_writer.spine import AUTO_START
+    from essay_writer.stage_body import look_is_confirmable
+
+    assert AUTO_START == {"5": "6"}
+    seq = open_sequence("MOD1004AA")
+    planted = {
+        "current": "5",
+        "saved": ["1", "2", "3", "4a", "4b"],
+        "files": {},
+        "closed": False,
+        "revisit_open": None,
+        "revisit_after_lock": False,
+        "chain_armed": False,
+        "room_grant": None,
+        "room_lock": False,
+        "waiting_stage": None,
+        "waiting_digest": None,
+        "revision": 4,
+    }
+    path = work_dir(seq) / "tracking" / "stage.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    basics = "\n".join(basics_pass_lines(seq))
+    assert look_is_confirmable(seq, "5", None, basics) is False
+    path.write_text(json.dumps(planted), encoding="utf-8")
+    stored = _live(essay_id=seq, stage="5", confirmPhase="draft", look=basics)
+    assert stored["ok"] is True, stored
+    assert stored["stored"] is True
+    assert stored.get("refused") != "guidance-only"
+    assert load_pointer(seq)["current"] == "6"
+    assert "5" in load_pointer(seq)["saved"]
+    path.write_text(json.dumps(planted), encoding="utf-8")
+    empty = _live(essay_id=seq, stage="5", confirmPhase="draft", look="")
+    assert empty["stored"] is True, empty
+    assert empty.get("refused") != "guidance-only"
+    assert load_pointer(seq)["current"] == "6"
+
+
+def test_empty_look_omits_the_heading(workspace):
+    """essay-u1-e1: an empty look omits the look heading on every stage, including stage 5.
+
+    A non-empty look still gets the heading and the student's sentence under it.
+    """
+    from essay_writer.stage_note import render_tracking
+
+    for stage in ("1", "2", "5", "10"):
+        for status in ("draft", "final"):
+            empty = render_tracking(stage, status=status, look="", essay_id="MOD1004AA-1")
+            blank = render_tracking(stage, status=status, look="   ", essay_id="MOD1004AA-1")
+            assert "## Working look" not in empty
+            assert "## Final look" not in empty
+            assert "## Working look" not in blank
+            assert "## Final look" not in blank
+            filled = render_tracking(
+                stage,
+                status=status,
+                look="A student sentence.",
+                essay_id="MOD1004AA-1",
+            )
+            heading = "Final look" if status == "final" else "Working look"
+            assert f"## {heading}\n\nA student sentence.\n" in filled
 
 
 def test_ac2_closed_or_wrong_sequence_does_not_mint_a_card(workspace):

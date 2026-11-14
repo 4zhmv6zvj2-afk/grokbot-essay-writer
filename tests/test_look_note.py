@@ -17,22 +17,30 @@ REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
 WORKFLOW = REPO / "docs" / "workflow.md"
 LOOK = (
-    "look is an optional plain note of the checklist answers; "
-    "omit it and the stage guidance is the final look."
+    "look is the student's own sentence for this stage; "
+    "omit it and no final look is written."
 )
 CHANGED = "A changed look needs a fresh draft."
 MARK = "**Shared rules:**"
 
 
 def test_case_1():
-    """AC1: The look note is in both docs. The stage door keeps its cap.
+    """essay-u1-d1: the helper and the workflow template say the student's sentence is the look.
 
+    AC1: The look note is in both docs. The stage door keeps its cap.
     The changed-look line stays on the door. The new sentence does not.
     """
     helper = HELPERS.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
+    template = REPO / "tools" / "doc_templates" / "workflow.md"
+    template_text = template.read_text(encoding="utf-8")
+    old = "omit it and the stage guidance is the final look."
     assert LOOK in helper
     assert LOOK in workflow
+    assert LOOK in template_text
+    assert old not in helper
+    assert old not in workflow
+    assert old not in template_text
     assert helper.index(LOOK) < helper.index("## Stage checklists")
     paragraph = next(
         line for line in workflow.splitlines() if line.startswith("`essay.stage` writes")

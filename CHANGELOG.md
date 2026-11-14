@@ -20,6 +20,11 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
 - Dependencies: cosign-installer v4.1.3, codeql upload-sarif v4.39.3, ruff 0.17.4,
   click 8.5.1, pydantic 2.14.3, pydantic-core 2.50.4, sse-starlette 3.7.0. The
   hash-pinned CI set and `uv.lock` are updated together; the build set is unchanged.
+- After a save, the next stage's card appears only when that stage is drafted with
+  the student's own text. A guidance-only draft is refused and writes no look.
+  Both waiting fields stay clear until a real draft. A typed yes still saves only
+  the waiting stage when the host sends no card fields. A typed yes does not
+  delete a module.
 
 ## 0.9.1 — 2026-11-12
 

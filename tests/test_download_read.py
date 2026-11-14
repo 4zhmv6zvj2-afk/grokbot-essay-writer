@@ -223,7 +223,7 @@ def test_reconcile_checks_disk_and_documents_not_the_zip(workspace, tmp_path):
     assert "only-in-zip-paper.pdf" not in refreshed.namelist()
     assert "Behind the runway" in _docx(_output(workspace) / "annotation.docx")
     for stage in ("1", "2", "3", "4a"):
-        drafted = essay_stage(seq, stage, "draft")
+        drafted = essay_stage(seq, stage, "draft", f"The student's sentence for stage {stage}.")
         assert drafted["ok"] is True
         assert essay_stage(seq, stage, "confirm", **picked(drafted))["ok"] is True
     draft = essay_stage(seq, "4b", "draft", "The read can start.")

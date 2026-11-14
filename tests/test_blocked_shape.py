@@ -53,7 +53,7 @@ def _advance(seq: str, stop: str, look: str = "Kept.") -> dict:
     for stage in STAGES:
         if stage == stop:
             return last
-        draft = essay_stage(seq, stage, "draft", look)
+        draft = essay_stage(seq, stage, "draft", f"{look} This sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         if stage == "4a":
             plant_gathered_source(seq)
@@ -169,7 +169,8 @@ def test_stage7_asks_then_edits_and_lists_every_claim(workspace):
     from essay_writer.stage7 import load_stage7, save_stage7
 
     seq = open_sequence()
-    opened = _advance(seq, "7")
+    _advance(seq, "7")
+    opened = essay_stage(seq, "7", "draft", "Kept. This sentence belongs to stage 7.")
     assert opened["card"]["stage"] == "7"
     assert opened["questions"]
     assert load_stage7(seq).get("asked") is True
@@ -281,7 +282,7 @@ def test_split_chain_shows_blocked_review_then_final_word(workspace, monkeypatch
         **picked(edited),
     )
     assert saved7["current"] == "8"
-    quiet = essay_stage(seq, "8", "draft", "Kept.")
+    quiet = essay_stage(seq, "8", "draft", "Kept. This sentence belongs to stage 8.")
     assert quiet["ok"] is True
     assert quiet["stored"] is False
     assert "Open the Confirm card to save Stage 8" in quiet["next"]
@@ -302,7 +303,7 @@ def test_split_chain_shows_blocked_review_then_final_word(workspace, monkeypatch
     assert kept9["eqr"] == "missing"
     assert kept9["next_run"]["run"] == "review"
     assert "independent review" in kept9["next"].casefold()
-    drafted10 = essay_stage(seq, "10", "draft", "Kept.")
+    drafted10 = essay_stage(seq, "10", "draft", "Kept. This sentence belongs to stage 10.")
     blocked = essay_stage(seq, "10", "confirm", "Kept.", **picked(drafted10))
     assert blocked["ok"] is False
     assert blocked["refused"] == "eqr"
