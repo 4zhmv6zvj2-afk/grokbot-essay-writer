@@ -6,8 +6,8 @@ rather than that the brief is silent. A mark scheme that lists percentage
 weights without a band says so and names no band.
 
 Ids: essay-brief-a1, essay-brief-a2, essay-brief-a3, essay-brief-a4,
-essay-brief-b1, essay-brief-b2, essay-brief-b3, essay-brief-c3,
-essay-brief-d1.
+essay-brief-b1, essay-brief-b2, essay-brief-b3, essay-brief-c1,
+essay-brief-c2, essay-brief-c3, essay-brief-d1.
 """
 
 from __future__ import annotations
