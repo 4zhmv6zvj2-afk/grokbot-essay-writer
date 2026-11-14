@@ -52,7 +52,10 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   mark scheme heading is read the same way, so a percentage table with no band
   gets that sentence too. A mark scheme heading with nothing under it is not
   filled from later prose, so that brief keeps "No mark scheme is on this
-  module."
+  module." A `Section weights:` heading with no table is not read from the
+  labelled field or prose below it either. Only a table row, a weight row, or a
+  column header opens that block, so `Word count: …10%` under an empty weights
+  heading keeps "No mark scheme is on this module."
 
 ## 0.9.1 — 2026-11-12
 
