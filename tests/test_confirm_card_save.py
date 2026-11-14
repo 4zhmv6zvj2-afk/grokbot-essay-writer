@@ -46,7 +46,7 @@ REPO = Path(__file__).resolve().parents[1]
 LOOK = "Kept."
 DRAFT_SENTENCE = "The firm cut emissions in 2024."
 MID_BUILD_STATUS_SHA = "1176fc960d1a0c53dc2e52cb64ffd28aa3cdd1a6897a31eea65a9cf3c4a9b6b7"
-TIP_SHEET_SHA = "8c32946fcbfd8025cecac0e6c8979cfe53c09bb644bf684ca942743ff18929d2"
+TIP_SHEET_SHA = "d953b3ed6aa766fb92bc893746368d03b90f38a80213715f31359f0160a4160d"
 
 
 def _through(seq: str, stop: str) -> None:

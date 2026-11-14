@@ -30,6 +30,10 @@ from essay_writer.student_voice import speak
 
 DRAFT = "draft"
 CONFIRM = "confirm"
+NO_MATCHING_DRAFT = (
+    "This step is not waiting to be saved. Ask me to show it again. "
+    "If it changed, ask me to show the new draft before saving."
+)
 _WRITE_ORDER = threading.Lock()
 _LAST_WRITTEN_NS = 0
 
@@ -77,7 +81,7 @@ def phase_refusal(phase: object) -> dict[str, Any] | None:
     if phase is None:
         return refuse(
             "confirm",
-            "Show this step in the chat first, then save it.",
+            "This step has not been shown yet. Ask me to show it, then save.",
         )
     return refuse("confirm", "That step was not shown in a form this chat can save.")
 
@@ -214,7 +218,11 @@ def load_draft_by_digest(
 
 
 def _card_refusal(
-    record: dict[str, Any], card_digest_value: object, payload: dict[str, Any]
+    record: dict[str, Any],
+    card_digest_value: object,
+    payload: dict[str, Any],
+    *,
+    card_shown: bool = True,
 ) -> dict[str, Any] | None:
     """Refuse unless the stored card and the caller's card digest both match.
 
@@ -222,46 +230,54 @@ def _card_refusal(
     shown card. A draft written before the card was bound has no stored digest,
     so it cannot be confirmed. The caller must send the digest the draft reply
     returned; a missing or different value refuses.
+
+    A door with no card, such as research, passes card_shown false so the
+    refusal asks the student to say yes again rather than to pick a card.
     """
+    again = (
+        "Ask me to show it again, then pick the new card."
+        if card_shown
+        else "Ask me to show it again, then say yes to keep the new draft."
+    )
     stored = record.get("cardDigest")
     if not isinstance(stored, str) or not stored.strip():
-        return refuse(
-            "confirm",
-            "This draft was saved before the card was bound to the save. "
-            "Show this step again in the chat, then pick the new card.",
-            digest=digest(payload),
+        early = (
+            "This draft was saved before the card was bound to the save."
+            if card_shown
+            else "This draft was saved before its save step was bound."
         )
+        return refuse("confirm", early + " " + again, digest=digest(payload))
     shown = record.get("shown")
     if not isinstance(shown, dict):
-        return refuse(
-            "confirm",
-            "The card that was shown is no longer part of this draft. "
-            "Show this step again in the chat, then pick the new card.",
-            digest=digest(payload),
+        missing = (
+            "The card that was shown is no longer part of this draft."
+            if card_shown
+            else "The draft that was shown is no longer part of this save."
         )
+        return refuse("confirm", missing + " " + again, digest=digest(payload))
     rebuilt = card_digest(record["payload"], shown)
     if rebuilt != stored:
-        return refuse(
-            "confirm",
-            "The card that was shown changed after this step was saved. "
-            "Show this step again in the chat, then pick the new card.",
-            digest=digest(payload),
+        changed = (
+            "The card that was shown changed after this step was saved."
+            if card_shown
+            else "The draft that was shown changed after this step was saved."
         )
+        return refuse("confirm", changed + " " + again, digest=digest(payload))
     caller = card_digest_value.strip() if isinstance(card_digest_value, str) else ""
     if not caller:
-        return refuse(
-            "confirm",
-            "Name the card that was shown before this step is saved. "
-            "Show this step again in the chat, then pick the new card.",
-            digest=digest(payload),
+        named = (
+            "Name the card that was shown before this step is saved."
+            if card_shown
+            else "Send the draft value this step returned before it is saved."
         )
+        return refuse("confirm", named + " " + again, digest=digest(payload))
     if caller != rebuilt:
-        return refuse(
-            "confirm",
-            "That is not the card this step showed. "
-            "Show this step again in the chat, then pick the new card.",
-            digest=digest(payload),
+        wrong = (
+            "That is not the card this step showed."
+            if card_shown
+            else "That is not the draft this step showed."
         )
+        return refuse("confirm", wrong + " " + again, digest=digest(payload))
     return None
 
 
@@ -274,6 +290,7 @@ def confirm_ready(
     root: Path | None = None,
     card_digest: str | None = None,
     require_card: bool = False,
+    card_shown: bool = True,
 ) -> dict[str, Any]:
     """Return the draft record, or a refusal dict (ok false).
 
@@ -282,23 +299,29 @@ def confirm_ready(
     look-up body. A door that acts on the shown card passes require_card so
     the stored card is rebuilt and must equal both the stored digest and the
     caller's card_digest. A caller that does not bind a card leaves both off.
+    card_shown false marks a door whose draft returns no card, such as
+    research, so its refusals ask for a yes rather than a card pick.
     """
     record = load_draft(essay_id, tool, payload, root=root)
     if record is None:
         return refuse(
             "confirm",
-            "No matching draft is waiting. Show this step in the chat again before it can be saved. "
-            "If the draft, the topic, or the source list changed, show it again.",
+            NO_MATCHING_DRAFT,
             digest=digest(payload),
         )
     if dump(record.get("fingerprint")) != dump(fingerprint):
         return refuse(
             "confirm",
-            "The saved files changed after that step was shown. Show this step again in this chat.",
+            "The saved files changed after that step was shown. Ask me to show it again.",
             digest=digest(payload),
         )
     if require_card or card_digest is not None:
-        refused = _card_refusal(record, card_digest, payload)
+        refused = _card_refusal(
+            record,
+            card_digest,
+            payload,
+            card_shown=card_shown,
+        )
         if refused is not None:
             return refused
     return record

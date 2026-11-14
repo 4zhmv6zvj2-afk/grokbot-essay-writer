@@ -228,8 +228,8 @@ def test_front_office_posts_start_milestone_and_five_minute_line(workspace, monk
         {"essay_id": seq, "stage": "4a", "confirmPhase": "draft", "look": LOOK},
     )
     assert started["ok"] is True, started
-    assert started["status"] == [start_sentence("gathering", QUESTION)]
-    assert QUESTION in started["status"][0]
+    assert started["status"] == [start_sentence("gathering", "your report")]
+    assert "your report" in started["status"][0]
     for line in started["status"]:
         _plain(line)
     assert started.get("kind") != "watch"
@@ -248,11 +248,11 @@ def test_front_office_posts_start_milestone_and_five_minute_line(workspace, monk
         },
     )
     assert finished["ok"] is True, finished
-    assert finished["status"] == [f"{QUESTION} is saved."]
+    assert finished["status"] == ["your report is saved."]
     assert "Open the Confirm card" not in " ".join(finished["status"])
     assert "gathered the sources" not in " ".join(finished["status"])
     assert "annotated the sources" not in " ".join(finished["status"])
-    assert QUESTION in finished["status"][0]
+    assert "your report" in finished["status"][0]
     for line in finished["status"]:
         _plain(line)
     assert isinstance(finished.get("next"), str) and finished["next"].strip()
@@ -309,10 +309,10 @@ def test_stage5_draft_that_stores_says_the_first_draft_is_ready(workspace, monke
     assert done["started"]["stage"] == "6"
     assert "card" not in done
     assert done["quiet"] is True
-    assert done["status"] == [milestone_sentence("draft", QUESTION)]
-    assert start_sentence("drafting", QUESTION) not in done["status"]
+    assert done["status"] == [milestone_sentence("draft", "your report")]
+    assert start_sentence("drafting", "your report") not in done["status"]
     assert "ready" in done["status"][-1]
-    assert QUESTION in done["status"][-1]
+    assert "your report" in done["status"][-1]
     for line in done["status"]:
         _plain(line)
     assert due_lines(seq) == []
@@ -323,7 +323,7 @@ def test_stage5_draft_that_stores_says_the_first_draft_is_ready(workspace, monke
     )
     assert refused["ok"] is False
     assert "status" not in refused
-    assert milestone_sentence("draft", QUESTION) not in json.dumps(refused)
+    assert milestone_sentence("draft", "your report") not in json.dumps(refused)
 
 
 def test_idle_clock_thread_is_a_daemon_and_only_arms_once(monkeypatch):

@@ -122,9 +122,7 @@ def essay_shelf_put(
     }
     if confirmPhase == DRAFT:
         body["digest"] = save_draft(essay_id, PUT, payload, fingerprint)
-        body["next"] = say(
-            "Show this saved-copy draft to the human. Saying yes stores it on this computer."
-        )
+        body["next"] = say("Say yes to keep this step. That stores this copy on this computer.")
         return body
     ready = confirm_ready(essay_id, PUT, payload, fingerprint)
     if ready.get("ok") is False:

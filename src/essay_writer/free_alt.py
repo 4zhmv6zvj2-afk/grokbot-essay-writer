@@ -124,8 +124,7 @@ def essay_download_leftovers(essay_id: str, confirmPhase: str | None = None) -> 
     }
     if not rows:
         body["next"] = say(
-            "No leftover free-alternative address is already stored. "
-            "Nothing was fetched. Do not invent an address."
+            "No leftover free-alternative address is already stored. Nothing was fetched."
         )
         if confirmPhase == CONFIRM:
             body["ok"] = True
@@ -155,7 +154,5 @@ def essay_download_leftovers(essay_id: str, confirmPhase: str | None = None) -> 
             "Leftover free alternatives already found were fetched. Only a real PDF is kept."
         )
     else:
-        body["next"] = say(
-            "The stored leftover addresses were fetched. No new PDF was saved. Do not invent an address."
-        )
+        body["next"] = say("The stored leftover addresses were fetched. No new PDF was saved.")
     return body

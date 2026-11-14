@@ -126,8 +126,9 @@ def test_ac4_early_exit_surfaces_exit_reason_to_fo_and_logs(workspace, monkeypat
     missed = start_stage_mid(seq, "4a")
     assert missed["started"] is False
     assert missed["status"]
-    assert "writing tool" in missed["status"][0].casefold()
-    _plain(missed["status"][0])
+    assert "Cursor" in missed["status"][0]
+    assert "safe" in missed["status"][0].casefold()
+    assert "writing tool" not in missed["status"][0].casefold()
 
     log_path = debug_log_path(seq)
     assert not log_path.exists()
@@ -162,7 +163,10 @@ def test_ac4_early_exit_surfaces_exit_reason_to_fo_and_logs(workspace, monkeypat
     )
     assert door["ok"] is True
     assert door.get("status")
-    assert "writing tool" in " ".join(door["status"]).casefold()
+    joined = " ".join(door["status"])
+    assert "Cursor" in joined
+    assert "safe" in joined.casefold()
+    assert "writing tool" not in joined.casefold()
 
     reset_status()
     monkeypatch.setattr(
@@ -223,6 +227,8 @@ def test_ac5_build_covered_cursor_and_grok_share_rules():
     assert inspect.getsource(spawn_agent).count("proc") >= 1
     assert inspect.getsource(spawn_grok).count("proc") >= 1
     assert report_phase.__module__ != build_report_phase.__module__
-    assert spawn_exit_status("MOD1004AA-2", "agent-cli-missing") == spawn_exit_status(
-        "MOD1004AA-2", "grok-cli-missing"
-    )
+    cursor_missing = spawn_exit_status("MOD1004AA-2", "agent-cli-missing")
+    grok_missing = spawn_exit_status("MOD1004AA-2", "grok-cli-missing")
+    assert cursor_missing != grok_missing
+    assert "Cursor" in cursor_missing[0]
+    assert "Grok Build" in grok_missing[0]

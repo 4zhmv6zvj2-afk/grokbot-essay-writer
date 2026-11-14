@@ -9,6 +9,7 @@ from essay_writer.clarify import parse_clarify
 from essay_writer.confirm import (
     CONFIRM,
     DRAFT,
+    NO_MATCHING_DRAFT,
     card_digest,
     confirm_ready,
     now,
@@ -464,10 +465,8 @@ def _run(
         body["digest"] = save_draft(essay_id, tool, payload, fingerprint, shown=draft_shown)
         body["cardDigest"] = card_digest(payload, draft_shown)
         body["stored"] = False
-        body["next"] = say(
-            "Show this draft to the human. Say yes only for these same arguments "
-            "after you have seen this result. This reply's card digest is needed on the save call."
-        )
+        # A research draft carries no card, so the student is asked to say yes.
+        body["next"] = say("Say yes to keep this step.")
         return body
     ready = confirm_ready(
         essay_id,
@@ -476,6 +475,7 @@ def _run(
         fingerprint,
         card_digest=cardDigest,
         require_card=True,
+        card_shown=False,
     )
     if ready.get("ok") is False:
         ready["confirmPhase"] = CONFIRM
@@ -484,8 +484,7 @@ def _run(
     if shown is None:
         return refuse(
             "confirm",
-            "No matching draft is waiting. Show this step in the chat again before it can be saved. "
-            "If the draft, the topic, or the source list changed, show it again.",
+            NO_MATCHING_DRAFT,
             confirmPhase=CONFIRM,
         )
     # A second enrich may have filled a field the draft missed. The saved

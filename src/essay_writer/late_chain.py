@@ -238,6 +238,9 @@ def quiet_word_step(body: dict[str, Any], pack: dict[str, Any] | None) -> dict[s
         return body
     if body.get("wrote"):
         return mark_quiet(body, completed_draft_chat(draft_prose(pack)), step="5b")
+    kept = body.get("next")
+    if isinstance(kept, str) and "Say yes to keep this step." in kept:
+        return mark_quiet(body, kept, step="5b")
     return mark_quiet(body, QUIET_STEP, step="5b")
 
 

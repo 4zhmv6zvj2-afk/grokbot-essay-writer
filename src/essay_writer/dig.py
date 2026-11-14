@@ -20,6 +20,7 @@ from essay_writer import safe_url
 from essay_writer.confirm import (
     CONFIRM,
     DRAFT,
+    NO_MATCHING_DRAFT,
     card_digest,
     confirm_ready,
     phase_refusal,
@@ -31,6 +32,7 @@ from essay_writer.known_paths import guard_write_door
 from essay_writer.paths import module_code, sequence_write_error, uploads_dir, work_dir
 from essay_writer.resolvers import resolver_mode, unpaywall_doi_url, unpaywall_email
 from essay_writer.setup import read_setup_secret
+from essay_writer.student_voice import say
 
 TOOL = "essay.dig"
 OPENALEX_URL = "https://api.openalex.org/works"
@@ -546,13 +548,13 @@ def essay_dig(
         body = _dig_reply(essay_id, query, confirmPhase, card)
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint, shown=card)
         body["cardDigest"] = card_digest(payload, card)
-        body["next"] = (
-            "This source card is not on disk yet. Say yes to write dig-card.json and dig-card.md. "
-            "Only look-up hits are listed. This reply's card digest is needed on the save call."
+        body["next"] = say(
+            "This source card is not on disk yet. Choose Confirm to keep this step. "
+            "Only look-up hits are listed."
         )
         if _open_candidates(card):
-            body["next"] += (
-                " Open copies are checked when you say yes. Only a real PDF is saved."
+            body["next"] += " " + say(
+                "Open copies are checked when you keep this step. Only a real PDF is saved."
                 " An HTML page is not a paper."
             )
         return body
@@ -571,8 +573,7 @@ def essay_dig(
     if stored_card is None:
         return refuse(
             "confirm",
-            "No matching draft is waiting. Show this step in the chat again before it can be saved. "
-            "If the draft, the topic, or the source list changed, show it again.",
+            NO_MATCHING_DRAFT,
             confirmPhase=CONFIRM,
         )
     card = stored_card

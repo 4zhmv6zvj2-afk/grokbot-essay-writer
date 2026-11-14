@@ -61,7 +61,8 @@ def test_bold_genre_and_question_labels_do_not_join_the_brief(workspace):
     seen = read_assignment(seq)
     assert seen["format"] == "report"
     assert seen["question"] == QUESTION
-    assert subject_for(seq) == QUESTION
+    assert subject_for(seq) == "your report"
+    assert QUESTION not in subject_for(seq)
     assert "warehouse" not in subject_for(seq)
     _brief("**Genre:** report\n" + ("Warehouse analysis of the corridor network. " * 8))
     assert read_assignment(seq)["question"] is None

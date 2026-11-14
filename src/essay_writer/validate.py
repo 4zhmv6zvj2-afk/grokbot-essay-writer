@@ -754,9 +754,8 @@ def _word_gate(
                     {
                         "code": "word-count",
                         "reason": (
-                            f"Counted words {counted} sit outside {low}–{high}. "
-                            "Fix the draft, or set word_count_acknowledged true only after a person accepts it. "
-                            "The door does not set that flag."
+                            f"This draft is {counted} words. The brief allows {low}–{high}. "
+                            "Shorten it, or tell me you accept this length."
                         ),
                     }
                 )
@@ -1002,8 +1001,7 @@ def essay_pack_validate(
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint)
         body["ok"] = True
         body["next"] = (
-            "Show these checks to the human. Confirm with the same pack only after an explicit yes. "
-            "A changed pack needs a fresh draft."
+            "Say yes to keep this step. If this draft changed, ask me to show it again before saving."
         )
         return speak(body)
     ready = confirm_ready(essay_id, TOOL, payload, fingerprint)

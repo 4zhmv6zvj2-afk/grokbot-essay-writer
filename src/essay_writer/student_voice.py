@@ -1,7 +1,9 @@
 """Words a student may hear or read in Word.
 
-Chat may keep a tool id. Word drops house labels, including the word dig
-inside a tool id. Invent guidance may stay in chat. Word drops it.
+Chat keeps ordinary English, including Confirm, Cursor, Grok Build, and
+Grok Bot. It still drops internal labels. Word drops the stricter list,
+including pack, and it drops invent guidance. A lenient note keeps
+ordinary English such as pack and the academic verb confirm.
 """
 
 from __future__ import annotations
@@ -16,7 +18,22 @@ _KEEP = re.compile(
     re.IGNORECASE,
 )
 
-_SWAPS: tuple[tuple[re.Pattern[str], str], ...] = (
+# Chat only. Ordinary English stays, including confirm, dig as a verb,
+# Cursor, Grok Build, and Grok Bot. GO and PASS stay capitals-only.
+_CHAT_SWAPS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bdig card\b", re.IGNORECASE), "source card"),
+    (re.compile(r"SuperGrok", re.IGNORECASE), ""),
+    (re.compile(r"\bfront office\b", re.IGNORECASE), ""),
+    (re.compile(r"\bmid office\b", re.IGNORECASE), ""),
+    (re.compile(r"\bfront-office\b", re.IGNORECASE), ""),
+    (re.compile(r"\bmid-office\b", re.IGNORECASE), ""),
+    (re.compile(r"\bEQR\b"), ""),
+    (re.compile(r"\bGO\b"), ""),
+    (re.compile(r"\bPASS\b"), ""),
+)
+
+# Word only. These no longer run through say().
+_WORD_SWAPS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bdig card\b", re.IGNORECASE), "source card"),
     (re.compile(r"SuperGrok", re.IGNORECASE), ""),
     (re.compile(r"Grok Build", re.IGNORECASE), ""),
@@ -204,7 +221,7 @@ def say(text: str) -> str:
         return f"\x00{len(kept) - 1}\x00"
 
     masked = _KEEP.sub(protect, text)
-    for pattern, replacement in _SWAPS:
+    for pattern, replacement in _CHAT_SWAPS:
         masked = pattern.sub(replacement, masked)
 
     def restore(match: re.Match[str]) -> str:
@@ -254,14 +271,18 @@ def prose_for_surface(text: str, surface: str) -> str:
 
 
 def for_word(text: str) -> str:
-    """Word file text. House labels and invent guidance are omitted.
+    """Word file text. The strict list and invent guidance are omitted.
 
-    Tool ids that contain the word dig are kept in chat and dropped here.
+    This does not call say(). Tool ids that contain the word dig are kept
+    in chat and dropped here. Grok Build and Grok Bot are dropped here.
     """
     if not isinstance(text, str) or not text:
         return text
-    spoken = say(text)
-    cleaned = _tidy(_INVENT.sub(" ", spoken))
+    cleaned = _drop_assistant_voice(text)
+    cleaned = _scrub_paths_in_text(cleaned)
+    for pattern, replacement in _WORD_SWAPS:
+        cleaned = pattern.sub(replacement, cleaned)
+    cleaned = _tidy(_INVENT.sub(" ", cleaned))
     return _tidy(_DIG_WORD.sub("look-up", cleaned))
 
 

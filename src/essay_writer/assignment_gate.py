@@ -508,10 +508,8 @@ def _reason(record: dict[str, Any], seat: str) -> str:
     parts: list[str] = []
     if "record" in record["missing"]:
         parts.append("Write what this assignment asks before saving.")
-    if "format" in record["missing"] and record["format"]:
-        parts.append(f"The prescribed format is {record['format']}. Say that before saving.")
-    if "question" in record["missing"]:
-        parts.append("Say the assignment question before saving.")
+    if ("format" in record["missing"] and record["format"]) or "question" in record["missing"]:
+        parts.append("Add the format and the assignment question in this chat, then save.")
     if "highest_band" in record["missing"] and record["highest_band"]:
         owned = EQR_BAND if seat == "eqr" else WRITER_BAND
         parts.append(f"{owned} The top band here is {record['highest_band']}.")

@@ -580,10 +580,7 @@ def essay_pack_render_word(
 
             attach_eqr_first_run_speech(body)
         else:
-            body["next"] = say(
-                "Show this Word preview to the human. No file has been written. "
-                "Say yes to write this same draft, and only once validation of this draft is recorded."
-            )
+            body["next"] = say("No file has been written yet. Say yes to keep this step.")
         if stage is None:
             from essay_writer.late_chain import quiet_word_step
 

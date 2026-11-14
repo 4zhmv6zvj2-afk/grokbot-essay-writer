@@ -32,7 +32,7 @@ Do not rename a diary column to the words mark scheme.
 - done_mid: I have finished the file work on {subject}.
 - saved: {subject} is saved.
 - exit_stopped: File work on {subject} stopped before it finished. Please wait and try this step again in this chat.
-- exit_missing_tool: I could not start file work on {subject} because the writing tool is not on this computer.
+- exit_missing_tool: File work needs the {host} app on this computer. The essay so far is safe.
 
 ## phases
 - sources: I have gathered the sources for {subject}.

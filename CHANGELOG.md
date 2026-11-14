@@ -25,6 +25,22 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   Both waiting fields stay clear until a real draft. A typed yes still saves only
   the waiting stage when the host sends no card fields. A typed yes does not
   delete a module.
+- Student chat keeps ordinary English, including confirm, pack, and the names
+  Cursor, Grok Build, and Grok Bot. Word files still drop those labels. Save
+  lines say to choose Confirm or to say yes. A missing file-work app is named,
+  and the essay so far stays safe. The typed-yes stage rule is stated once, and
+  it never saves a later stage.
+- Research summary and full research drafts carry no card, so their student line
+  is "Say yes to keep this step." The dig draft keeps its card and its
+  "Choose Confirm to keep this step." line. The copy tests assert the two lines
+  separately.
+- The host sheet and the `essay.pack.validate` description say the host sets
+  `word_count_acknowledged` only after the student accepts the stated length. The
+  student word-band line is unchanged, and the flag stays out of the student
+  `next` and `reason`.
+- The leftover free-alternative reply keeps "Nothing was fetched." and drops
+  "Do not invent an address." The delete sentence in the generated bot docs, the
+  template, and `briefing.md` now starts with a capital A.
 
 ## 0.9.1 — 2026-11-12
 
