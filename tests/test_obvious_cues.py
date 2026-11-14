@@ -5,8 +5,8 @@ file is not rewritten, and the combined stage title stays when no Genre or
 Format label is set.
 
 Ids: essay-cues-a1, essay-cues-a2, essay-cues-a3, essay-cues-a4, essay-cues-a5,
-essay-cues-b1, essay-cues-b2, essay-cues-b3, essay-cues-b4, essay-cues-c1,
-essay-cues-c2, essay-cues-d1.
+essay-cues-a6, essay-cues-b1, essay-cues-b2, essay-cues-b3, essay-cues-b4,
+essay-cues-c1, essay-cues-c2, essay-cues-d1.
 """
 
 from __future__ import annotations
@@ -122,8 +122,8 @@ def test_essay_cues_a1_obvious_cues_fill_empty_fields(case_id, workspace):
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-cues-a2", id="essay-cues-a2")])
-def test_essay_cues_a2_essay_and_report_together_stay_unset(case_id, workspace):
-    """a2: When essay and report both match, the format stays empty."""
+def test_essay_cues_a2_two_assignment_types_stay_unset(case_id, workspace):
+    """a2: Two assignment types stay empty. An annual report is the topic, not a type."""
     assert case_id == "essay-cues-a2"
     both = _plant(
         "CUE2001AA",
@@ -132,13 +132,42 @@ def test_essay_cues_a2_essay_and_report_together_stay_unset(case_id, workspace):
     assert read_assignment(both)["format"] is None
     assert brief_genre(both) is None
 
-    mentioned = _plant(
-        "CUE2002AA",
-        "Write an essay on the annual report of one named firm.\n",
+    annual = "Write an essay on the annual report of one named firm.\n"
+    mentioned = _plant("CUE2002AA", annual)
+    record = read_assignment(mentioned)
+    assert record["format"] == "essay"
+    assert record["question"] is None
+    assert _lines(mentioned)[1] == "Format: essay."
+    assert _lines(mentioned)[2] == QUESTION_UNREAD
+    assert (essay_dir("CUE2002AA") / "brief.md").read_text(encoding="utf-8") == annual
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-cues-a6", id="essay-cues-a6")])
+def test_essay_cues_a6_a_mention_or_negation_is_not_the_assignment_type(case_id, workspace):
+    """a6: A mention or a negation of a phrase is not the type. The Assessment line still is."""
+    assert case_id == "essay-cues-a6"
+    mention = _plant(
+        "CUE2101AA",
+        "Write an essay on the individual report of one named firm.\n",
     )
-    assert read_assignment(mentioned)["format"] is None
-    assert "essay" in "Write an essay on the annual report of one named firm."
-    assert "report" in "Write an essay on the annual report of one named firm."
+    assert read_assignment(mention)["format"] == "essay"
+    assert _lines(mention)[1] == "Format: essay."
+
+    negation = _plant(
+        "CUE2102AA",
+        "Do not write a reflective diary. Write an essay on the corridor.\n",
+    )
+    assert read_assignment(negation)["format"] == "essay"
+    assert _lines(negation)[1] == "Format: essay."
+    assert brief_genre(negation) is None
+
+    for module, line, expected in (
+        ("CUE2103AA", "Assessment: Individual report\n", "report"),
+        ("CUE2104AA", "Assessment: reflective diary\n", "reflective diary"),
+    ):
+        seq = _plant(module, line)
+        assert read_assignment(seq)["format"] == expected, module
+        assert _lines(seq)[1] == f"Format: {expected}."
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-cues-a3", id="essay-cues-a3")])

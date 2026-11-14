@@ -132,6 +132,8 @@ _TASK_VERB = re.compile(
     r"summarise|summarize)\b"
 )
 # An obvious format cue. A label still wins; these fill only an empty field.
+# A kind counts only as the assignment type, so a topic that happens to be an
+# annual report, or a type the brief tells the student not to write, is not it.
 _FORMAT_KIND = r"(individual\s+report|reflective\s+diary|essay|report)"
 _ASSIGNMENT_TYPE = re.compile(
     rf"(?i)(?:"
@@ -140,12 +142,10 @@ _ASSIGNMENT_TYPE = re.compile(
     rf"\bthis\s+(?:assignment|assessment|task)\s+is\s+an?\s+{_FORMAT_KIND}\b"
     rf"|"
     rf"\b(?:write|produce|submit)\s+an?\s+{_FORMAT_KIND}\b"
-    rf"|"
-    rf"\b{_FORMAT_KIND}[ \t]+or[ \t]+(?:an?[ \t]+)?{_FORMAT_KIND}\b"
     rf")"
 )
-_INDIVIDUAL_REPORT = re.compile(r"(?i)\bindividual\s+report\b")
-_REFLECTIVE_DIARY = re.compile(r"(?i)\breflective\s+diary\b")
+_EITHER_OR = re.compile(rf"(?i)\b{_FORMAT_KIND}[ \t]+or[ \t]+(?:an?[ \t]+)?{_FORMAT_KIND}\b")
+_NEGATION = re.compile(r"(?i)\b(?:not|never|no)\b")
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d{1,2}[.)])\s+")
 _TASK_OPEN = re.compile(
     r"(?i)^(?:evaluate|analyse|analyze|assess|discuss|compare|contrast|"
@@ -500,27 +500,44 @@ def _kind_name(raw: str) -> str:
     return name
 
 
-def _format_cue(text: str) -> str | None:
-    """One obvious format, or nothing when essay and report both match.
+def _sentence_start(text: str, at: int) -> int:
+    """Start of the sentence that contains this position."""
+    start = 0
+    for index in range(at):
+        if text[index] in ".!?\n":
+            start = index + 1
+    return start
 
-    "Individual report" and "reflective diary" count wherever the brief says
-    them. "Essay" or "report" counts when it is the assignment type. Words
-    inside the mark scheme are not this cue. Nothing is written back.
+
+def _negated(text: str, at: int) -> bool:
+    """True when a "not", "never", or "no" comes before this phrase in its sentence."""
+    return bool(_NEGATION.search(text[_sentence_start(text, at) : at]))
+
+
+def _format_cue(text: str) -> str | None:
+    """One obvious format, or nothing when two assignment types both match.
+
+    A kind counts only where the brief sets the assignment type: an Assessment
+    or Assignment line, "this assignment is ...", or "write an ...". So an
+    annual report a student must write about is a topic, not a second format.
+    A type the brief tells the student not to write is not that type either.
+    Words inside the mark scheme are not this cue. Nothing is written back.
     """
     if not text or not text.strip():
         return None
     body = _brief_without_scheme(unmarked_labels(text))
     if not body.strip():
         return None
-    # A brief that names both essay and report does not pick one of them.
-    if re.search(r"(?i)\bessay\b", body) and re.search(r"(?i)\breport\b", body):
-        return None
     kinds: set[str] = set()
-    if _REFLECTIVE_DIARY.search(body):
-        kinds.add("reflective diary")
-    if _INDIVIDUAL_REPORT.search(body):
-        kinds.add("report")
+    for match in _EITHER_OR.finditer(body):
+        if _negated(body, match.start()):
+            continue
+        for raw in match.groups():
+            if raw:
+                kinds.add(_kind_name(raw))
     for match in _ASSIGNMENT_TYPE.finditer(body):
+        if _negated(body, match.start()):
+            continue
         for raw in match.groups():
             if raw:
                 kinds.add(_kind_name(raw))
