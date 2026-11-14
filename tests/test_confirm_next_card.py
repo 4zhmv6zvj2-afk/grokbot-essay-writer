@@ -466,3 +466,53 @@ def test_ac4_build_covered_shares_the_confirm_next_card_path(monkeypatch):
     assert (
         cursor_shell()["entry"]["command"] == front_office()["entry"]["command"] == "essay-writer"
     )
+
+
+STAGE1_NEXT = "Start Stage 1 — Analyse the task in this chat."
+
+
+def _confirm_new_sequence(module: str, parent: str | None = None) -> dict:
+    draft = mount_handler("essay.sequence.new")(module=module, confirmPhase="draft", parent=parent)
+    assert draft["ok"] is True, draft
+    opened = mount_handler("essay.sequence.new")(
+        module=module, confirmPhase="confirm", parent=parent
+    )
+    assert opened["ok"] is True, opened
+    return opened
+
+
+def _stage1_saved_next(body: dict) -> None:
+    from essay_writer.specialists.grok_bot import saved_next
+    from essay_writer.stage_llm import brief_genre, stage_title
+
+    child_id = body["sequence_id"]
+    assert brief_genre(child_id) == "essay"
+    expected = saved_next("1", stage_title("1", brief_genre(child_id)))
+    assert expected == STAGE1_NEXT
+    assert body["next"] == expected
+    assert "Stage 1" in body["next"]
+    assert body.get("card") is None
+    assert body.get("cardAction") is None
+    assert body.get("cardDigest") is None
+    pointer = load_pointer(child_id)
+    assert pointer["current"] == "1"
+    assert pointer["saved"] == []
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
+
+
+def test_open_names_stage_1_and_does_not_return_a_card(workspace):
+    """essay-u1-f1: a fresh sequence and a roll-forward child name Stage 1 and return no card.
+
+    card, cardAction, and cardDigest are absent. next is the stage 1 saved-next line.
+    A guidance-only Stage 1 card is not restored.
+    """
+    module = "MOD1011AA"
+    fresh = _confirm_new_sequence(module)
+    assert fresh["sequence_id"] == f"{module}-1"
+    assert fresh["parent"] is None
+    _stage1_saved_next(fresh)
+    child = _confirm_new_sequence(module, fresh["sequence_id"])
+    assert child["sequence_id"] == f"{module}-2"
+    assert child["parent"] == fresh["sequence_id"]
+    _stage1_saved_next(child)
