@@ -41,6 +41,18 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
 - The leftover free-alternative reply keeps "Nothing was fetched." and drops
   "Do not invent an address." The delete sentence in the generated bot docs, the
   template, and `briefing.md` now starts with a capital A.
+- The spoken Basics pass stops calling a brief silent when its own prose still
+  shows a format word, a task verb, or a question mark. Those lines now say
+  "I could not read a format from this brief." and "I could not read the
+  assignment question from this brief." A brief that carries none of those
+  signals keeps "the brief does not name one". A mark scheme that lists
+  percentage weights without a band says "The brief lists percentage weights,
+  not grade bands." No band is invented, and the brief file is not rewritten.
+  A brief that prints its weights under `Section weights:` rather than under a
+  mark scheme heading is read the same way, so a percentage table with no band
+  gets that sentence too. A mark scheme heading with nothing under it is not
+  filled from later prose, so that brief keeps "No mark scheme is on this
+  module."
 
 ## 0.9.1 — 2026-11-12
 

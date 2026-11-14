@@ -41,6 +41,7 @@ _SCHEME_NAMES = (
     "marking-table.txt",
 )
 _SCHEME_HEAD = re.compile(r"(?im)^#{0,3}\s*(mark scheme|marking guidelines?|rubric)\s*:?\s*(.*)$")
+_WEIGHTS_HEAD = re.compile(r"(?im)^#{0,3}\s*(section\s+weights?)\s*:?\s*(.*)$")
 _FORMAT_LINE = re.compile(r"(?im)^\s*format\s*:\s*(essay|report)\b")
 # Same question, whichever field the brief uses. Question wins over Title.
 _QUESTION_FIELDS = (
@@ -112,6 +113,133 @@ _RANK = {
     "fail": 0,
 }
 
+# Spoken gap lines. The same sentences reach the chat from every seat, so they
+# live here as the one definition. Nothing is written back to the brief.
+FORMAT_UNREAD = "Format: I could not read a format from this brief."
+QUESTION_UNREAD = "Question: I could not read the assignment question from this brief."
+FORMAT_NAMED_ONE = "Format: the brief does not name one."
+QUESTION_NAMED_ONE = "Question: the brief does not name one."
+PERCENTAGE_WEIGHTS = "The brief lists percentage weights, not grade bands."
+NO_MARK_SCHEME = "No mark scheme is on this module."
+
+# A format word a reader can see in prose, and a task verb that sets the job.
+_FORMAT_WORD = re.compile(r"(?i)\b(?:report|essay|reflective\s+diary|diary|reflection)\b")
+_TASK_VERB = re.compile(
+    r"(?i)\b(?:evaluate|analyse|analyze|assess|discuss|compare|contrast|"
+    r"criticise|criticize|define|describe|explain|justify|outline|review|"
+    r"summarise|summarize)\b"
+)
+_PERCENT = re.compile(r"(?<!\d)(\d{1,3})\s*%")
+_LABELLED_FIELD = re.compile(
+    r"(?i)^\s*(?:genre|format|assignment\s+question|question|task|assignment\s+ask|"
+    r"ask|title|assignment\s+title)\s*:"
+)
+
+
+def _prose_text(essay_id: str) -> str:
+    """Brief text with the mark scheme block left out. The file is not changed."""
+    return _brief_without_scheme(_brief_text(essay_id))
+
+
+def _prose_signal_text(essay_id: str) -> str:
+    """Unlabelled prose only. A labelled field is read by its own reader.
+
+    A Genre, Format, Question, Task, assignment ask, or Title line already
+    answers one requirement, so its words do not stand in for prose the
+    reader failed to read. Every other line is prose.
+    """
+    kept: list[str] = []
+    for line in unmarked_labels(_prose_text(essay_id)).splitlines():
+        if _LABELLED_FIELD.match(line):
+            continue
+        kept.append(line)
+    return "\n".join(kept)
+
+
+def prose_has_format_signal(essay_id: str) -> bool:
+    """True when the unlabelled prose shows a format word, a task verb, or a question mark.
+
+    One test serves both spoken gap lines. A brief that shows any of these is
+    not silent on the assignment, so the line says the read failed instead.
+    """
+    text = _prose_signal_text(essay_id)
+    if not text:
+        return False
+    return bool(_FORMAT_WORD.search(text) or _TASK_VERB.search(text) or "?" in text)
+
+
+def format_gap_line(essay_id: str, format_value: object) -> str:
+    """The spoken format line. A named format speaks for itself.
+
+    An unset format with a visible signal in the prose says the read failed.
+    A brief that carries no signal at all keeps the older silent sentence.
+    """
+    if isinstance(format_value, str) and format_value.strip():
+        return f"Format: {format_value.strip()}."
+    if prose_has_format_signal(essay_id):
+        return FORMAT_UNREAD
+    return FORMAT_NAMED_ONE
+
+
+def question_gap_line(essay_id: str, question: object) -> str:
+    """The spoken question line. A stored question is said in the student's words."""
+    if isinstance(question, str) and question.strip():
+        return f"Question: {question.strip()}"
+    if prose_has_format_signal(essay_id):
+        return QUESTION_UNREAD
+    return QUESTION_NAMED_ONE
+
+
+def _scheme_percentages(essay_id: str) -> list[int]:
+    """Percentages printed on the module's mark scheme, in reading order."""
+    return [int(value) for value in _PERCENT.findall(_scheme_source(essay_id))]
+
+
+def _scheme_source(essay_id: str) -> str:
+    """Scheme text the spoken line reads: the filed scheme, then the brief.
+
+    A filed scheme is already a mark scheme. A brief may print its weights
+    under a mark scheme heading or under `Section weights:`, so both blocks
+    are read here. A block of percentages has no named band, which the shared
+    scheme reader treats as absent; this reader still sees it, which is how the
+    percentage sentence replaces the no-scheme sentence.
+    """
+    filed = _scheme_file(essay_id)
+    if filed:
+        return filed
+    brief = _brief_text(essay_id)
+    return _scheme_block(brief) or _weights_block(brief)
+
+
+def _band_search_text(scheme: str) -> str:
+    """The scheme with table pipes gone and each line stripped.
+
+    A band name often sits in a table row, where a leading pipe and padding
+    would stop a band pattern that starts at the line. Reading the same lines
+    with the pipes replaced and the edges trimmed finds that name. Nothing is
+    added, reordered, or invented.
+    """
+    lines = [line.replace("|", " ").strip() for line in scheme.splitlines()]
+    return "\n".join(lines)
+
+
+def percentage_weights_only(essay_id: str) -> bool:
+    """True when the scheme lists percentages but names no band and no range.
+
+    A scheme with a named band or a numeric range keeps today's reading, so
+    this returns False there. Nothing is invented from the percentages.
+    """
+    scheme = _scheme_source(essay_id)
+    if not scheme.strip():
+        return False
+    weights = _scheme_percentages(essay_id)
+    if not weights:
+        return False
+    if any(value <= 0 or value > 100 for value in weights):
+        return False
+    searchable = _band_search_text(scheme)
+    return _highest_band(searchable) is None and _RANGE.search(searchable) is None
+
 
 def _read(path) -> str:
     from essay_writer.invent import read_gathered_text
@@ -142,25 +270,65 @@ def _scheme_file(essay_id: str) -> str:
     return "\n".join(chunks).strip()
 
 
-def _scheme_in_brief(brief: str) -> str:
+def _block_after(brief: str, head: re.Pattern[str], *, skip_blank: bool = False) -> str:
+    """Lines under one heading, up to a blank line or the next heading.
+
+    The heading pattern names its label in group 1 and any text after the
+    label in group 2. An empty heading ends the block at once, so a heading
+    with no content is not filled from later prose or from a labelled field.
+    With ``skip_blank``, a blank line between the heading and its first
+    content line is skipped, so a heading followed by a table is captured.
+    Once content has started, a blank line or a new heading ends the block.
+    The brief file is only read.
+    """
     if not brief:
         return ""
-    lines = brief.splitlines()
     taken: list[str] = []
     capture = False
-    for line in lines:
-        match = _SCHEME_HEAD.match(line.strip())
+    for line in brief.splitlines():
+        match = head.match(line.strip())
         if match:
             capture = True
             rest = match.group(2).strip()
             if rest:
                 taken.append(rest)
             continue
-        if capture:
-            if not line.strip() or line.startswith("#"):
+        if not capture:
+            continue
+        if not line.strip():
+            if taken:
                 break
-            taken.append(line.strip())
-    captured = "\n".join(taken).strip()
+            if skip_blank:
+                continue
+            break
+        if line.startswith("#"):
+            break
+        taken.append(line.strip())
+    return "\n".join(taken).strip()
+
+
+def _scheme_block(brief: str) -> str:
+    """Text under a mark scheme heading in the brief, whether or not it names bands.
+
+    A mark scheme heading with nothing under it captures nothing. Later prose
+    or a labelled field is not that block, so it is not read as one.
+    """
+    return _block_after(brief, _SCHEME_HEAD)
+
+
+def _weights_block(brief: str) -> str:
+    """Text under a section weights heading in the brief.
+
+    A brief may print its weights under `Section weights:` rather than under a
+    mark scheme heading. That block is a percentage list too, so it is read by
+    the same tests that read a mark scheme block. A blank line before the table
+    is skipped, because a weights heading is often set off from its table.
+    """
+    return _block_after(brief, _WEIGHTS_HEAD, skip_blank=True)
+
+
+def _scheme_in_brief(brief: str) -> str:
+    captured = _scheme_block(brief)
     if not captured:
         return ""
     if _highest_band(captured) is None and _RANGE.search(captured) is None:
