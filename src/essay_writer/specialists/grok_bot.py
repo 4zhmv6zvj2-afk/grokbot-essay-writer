@@ -344,23 +344,18 @@ def basics_pass_lines(essay_id: str) -> tuple[str, str, str]:
         quoted = top_column_quote(scheme, band)
         scores = f"How to score high: {quoted}."
     elif kind == FINDINGS_NONE or not record.get("mark_scheme"):
-        scores = "No mark scheme is on this module."
+        if essay_assignment_gate.percentage_weights_only(essay_id):
+            scores = essay_assignment_gate.PERCENTAGE_WEIGHTS
+        else:
+            scores = essay_assignment_gate.NO_MARK_SCHEME
     elif snippet:
         scores = f"The mark scheme scores {snippet}."
     elif band:
         scores = f"The mark scheme scores {band}."
     else:
         scores = "The mark scheme is on this module and does not name what it scores."
-    named = record.get("format") if isinstance(record.get("format"), str) else ""
-    if named:
-        format_line = f"Format: {named}."
-    else:
-        format_line = "Format: the brief does not name one."
-    question = record.get("question") if isinstance(record.get("question"), str) else ""
-    if question:
-        question_line = f"Question: {question}"
-    else:
-        question_line = "Question: the brief does not name one."
+    format_line = essay_assignment_gate.format_gap_line(essay_id, record.get("format"))
+    question_line = essay_assignment_gate.question_gap_line(essay_id, record.get("question"))
     return scores, format_line, question_line
 
 
@@ -384,7 +379,8 @@ def _scores_line_shaped(line: str) -> bool:
     return (
         line.startswith("The mark scheme scores")
         or line.startswith("How to score high:")
-        or line.startswith("No mark scheme is on this module.")
+        or line.startswith(essay_assignment_gate.NO_MARK_SCHEME)
+        or line == essay_assignment_gate.PERCENTAGE_WEIGHTS
         or line == "The mark scheme is on this module and does not name what it scores."
     )
 

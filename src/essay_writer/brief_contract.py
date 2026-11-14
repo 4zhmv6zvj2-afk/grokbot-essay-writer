@@ -266,16 +266,18 @@ def assignment_silence_gaps(essay_id: str) -> list[str]:
     """Gap sentences when a brief or scheme is on the module but silent on a requirement.
 
     Stage 1 and stage 3 doors attach these beside the Basics pass so the chat names
-    what is missing without filling samples-study defaults.
+    what is missing without filling samples-study defaults. The format and
+    question sentences are the same ones the Basics pass speaks: a brief whose
+    prose shows a signal says the read failed, not that the brief is silent.
     """
     record = _record(essay_id)
     if record.get("active") is not True:
         return []
     gaps: list[str] = []
     if not record.get("format"):
-        gaps.append("Format: the brief does not name one.")
+        gaps.append(essay_assignment_gate.format_gap_line(essay_id, record.get("format")))
     if not record.get("question"):
-        gaps.append("Question: the brief does not name one.")
+        gaps.append(essay_assignment_gate.question_gap_line(essay_id, record.get("question")))
     from essay_writer.specialists.writer import document_word_band
 
     if not document_word_band(essay_id):
