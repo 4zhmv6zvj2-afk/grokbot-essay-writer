@@ -50,7 +50,9 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   not grade bands." No band is invented, and the brief file is not rewritten.
   A brief that prints its weights under `Section weights:` rather than under a
   mark scheme heading is read the same way, so a percentage table with no band
-  gets that sentence too.
+  gets that sentence too. A mark scheme heading with nothing under it is not
+  filled from later prose, so that brief keeps "No mark scheme is on this
+  module."
 
 ## 0.9.1 — 2026-11-12
 

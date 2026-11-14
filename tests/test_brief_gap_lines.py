@@ -7,8 +7,8 @@ weights without a band says so and names no band.
 
 Ids: essay-brief-a1, essay-brief-a2, essay-brief-a3, essay-brief-a4,
 essay-brief-b1, essay-brief-b2, essay-brief-b3, essay-brief-b4,
-essay-brief-b5, essay-brief-c1, essay-brief-c2, essay-brief-c3,
-essay-brief-d1.
+essay-brief-b5, essay-brief-b6, essay-brief-c1, essay-brief-c2,
+essay-brief-c3, essay-brief-d1.
 """
 
 from __future__ import annotations
@@ -323,6 +323,66 @@ def test_essay_brief_b5_a_section_weights_table_is_read_without_a_scheme_heading
     banded_seq = _plant("SYN7104AA", banded)
     assert percentage_weights_only(banded_seq) is False
     assert basics_pass_lines(banded_seq)[0] == NO_MARK_SCHEME
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-brief-b6", id="essay-brief-b6")])
+def test_essay_brief_b6_an_empty_mark_scheme_heading_captures_nothing(case_id, workspace):
+    """b6: An empty scheme heading is not filled from a later field that has a percentage."""
+    assert case_id == "essay-brief-b6"
+    labelled = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Mark scheme\n"
+        "\n"
+        "Word count: 2,000 words, plus or minus 10%.\n"
+    )
+    seq = _plant("SYN9201AA", labelled)
+    folder = essay_dir("SYN9201AA")
+    before = (folder / "brief.md").read_bytes()
+    scores, format_line, question_line = basics_pass_lines(seq)
+    assert percentage_weights_only(seq) is False
+    assert scores == NO_MARK_SCHEME
+    assert scores != PERCENTAGE_WEIGHTS
+    assert format_line == "Format: report."
+    assert question_line == "Question: How do chokepoints constrain the corridor?"
+
+    reply = essay_stage(seq, "1", "draft", "The corridor is the case here.")
+    assert reply["ok"] is True, reply
+    assert reply["basics_pass"][0] == NO_MARK_SCHEME
+    assert PERCENTAGE_WEIGHTS not in "\n".join(reply["basics_pass"])
+    assert (folder / "brief.md").read_bytes() == before
+
+    variants = {
+        "SYN9202AA": ("Marking guidelines", "Referencing: Harvard 10% of the mark.\n"),
+        "SYN9203AA": ("Rubric", "Some unrelated prose with 30% in it.\n"),
+    }
+    for module, (heading, following) in variants.items():
+        brief = (
+            "Genre: report\n"
+            "Question: How do chokepoints constrain the corridor?\n"
+            "\n"
+            f"{heading}\n"
+            "\n"
+            f"{following}"
+        )
+        other = _plant(module, brief)
+        assert percentage_weights_only(other) is False, module
+        assert basics_pass_lines(other)[0] == NO_MARK_SCHEME, module
+
+    still_weighted = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Section weights:\n"
+        "\n"
+        "| Section | Weight |\n"
+        "| --- | --- |\n"
+        "| Analysis | 60% |\n"
+    )
+    weighted = _plant("SYN9204AA", still_weighted)
+    assert percentage_weights_only(weighted) is True
+    assert basics_pass_lines(weighted)[0] == PERCENTAGE_WEIGHTS
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-brief-c3", id="essay-brief-c3")])

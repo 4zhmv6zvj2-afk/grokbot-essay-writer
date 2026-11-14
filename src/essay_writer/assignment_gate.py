@@ -270,14 +270,16 @@ def _scheme_file(essay_id: str) -> str:
     return "\n".join(chunks).strip()
 
 
-def _block_after(brief: str, head: re.Pattern[str]) -> str:
+def _block_after(brief: str, head: re.Pattern[str], *, skip_blank: bool = False) -> str:
     """Lines under one heading, up to a blank line or the next heading.
 
     The heading pattern names its label in group 1 and any text after the
-    label in group 2. A blank line between the heading and its first content
-    line is skipped, so a heading followed by a table is captured. Once content
-    has started, a blank line or a new heading ends the block. The brief file
-    is only read.
+    label in group 2. An empty heading ends the block at once, so a heading
+    with no content is not filled from later prose or from a labelled field.
+    With ``skip_blank``, a blank line between the heading and its first
+    content line is skipped, so a heading followed by a table is captured.
+    Once content has started, a blank line or a new heading ends the block.
+    The brief file is only read.
     """
     if not brief:
         return ""
@@ -296,7 +298,9 @@ def _block_after(brief: str, head: re.Pattern[str]) -> str:
         if not line.strip():
             if taken:
                 break
-            continue
+            if skip_blank:
+                continue
+            break
         if line.startswith("#"):
             break
         taken.append(line.strip())
@@ -304,7 +308,11 @@ def _block_after(brief: str, head: re.Pattern[str]) -> str:
 
 
 def _scheme_block(brief: str) -> str:
-    """Text under a mark scheme heading in the brief, whether or not it names bands."""
+    """Text under a mark scheme heading in the brief, whether or not it names bands.
+
+    A mark scheme heading with nothing under it captures nothing. Later prose
+    or a labelled field is not that block, so it is not read as one.
+    """
     return _block_after(brief, _SCHEME_HEAD)
 
 
@@ -313,9 +321,10 @@ def _weights_block(brief: str) -> str:
 
     A brief may print its weights under `Section weights:` rather than under a
     mark scheme heading. That block is a percentage list too, so it is read by
-    the same tests that read a mark scheme block.
+    the same tests that read a mark scheme block. A blank line before the table
+    is skipped, because a weights heading is often set off from its table.
     """
-    return _block_after(brief, _WEIGHTS_HEAD)
+    return _block_after(brief, _WEIGHTS_HEAD, skip_blank=True)
 
 
 def _scheme_in_brief(brief: str) -> str:
