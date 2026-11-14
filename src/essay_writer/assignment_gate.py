@@ -145,7 +145,12 @@ _ASSIGNMENT_TYPE = re.compile(
     rf")"
 )
 _EITHER_OR = re.compile(rf"(?i)\b{_FORMAT_KIND}[ \t]+or[ \t]+(?:an?[ \t]+)?{_FORMAT_KIND}\b")
-_NEGATION = re.compile(r"(?i)\b(?:not|never|no)\b")
+# A heading line that opens with the type is the type, as in "Individual report,
+# 2,000 words, due 12 December 2026." A mention later in a sentence is not.
+_LINE_START_TYPE = re.compile(
+    r"(?im)^[ \t]*(?:[-*•][ \t]*)?(individual[ \t]+report|reflective[ \t]+diary)\b"
+)
+_NEGATION = re.compile(r"(?i)\b(?:not|never|no|cannot|can['’]t|don['’]t|doesn['’]t|won['’]t)\b")
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d{1,2}[.)])\s+")
 _TASK_OPEN = re.compile(
     r"(?i)^(?:evaluate|analyse|analyze|assess|discuss|compare|contrast|"
@@ -510,18 +515,20 @@ def _sentence_start(text: str, at: int) -> int:
 
 
 def _negated(text: str, at: int) -> bool:
-    """True when a "not", "never", or "no" comes before this phrase in its sentence."""
+    """True when a refusal such as "not", "no", "cannot", or "don't" comes first in the sentence."""
     return bool(_NEGATION.search(text[_sentence_start(text, at) : at]))
 
 
 def _format_cue(text: str) -> str | None:
     """One obvious format, or nothing when two assignment types both match.
 
-    A kind counts only where the brief sets the assignment type: an Assessment
-    or Assignment line, "this assignment is ...", or "write an ...". So an
-    annual report a student must write about is a topic, not a second format.
-    A type the brief tells the student not to write is not that type either.
-    Words inside the mark scheme are not this cue. Nothing is written back.
+    A kind counts where the brief sets the assignment type: an Assessment or
+    Assignment line, "this assignment is ...", "write an ...", or a heading
+    line that opens with the type. So an annual report a student must write
+    about is a topic, not a second format, and a mention later in a sentence
+    is not the type either. A type the brief tells the student not to write
+    is not that type. Words inside the mark scheme are not this cue. Nothing
+    is written back.
     """
     if not text or not text.strip():
         return None
@@ -541,6 +548,10 @@ def _format_cue(text: str) -> str | None:
         for raw in match.groups():
             if raw:
                 kinds.add(_kind_name(raw))
+    for match in _LINE_START_TYPE.finditer(body):
+        if _negated(body, match.start()):
+            continue
+        kinds.add(_kind_name(match.group(1)))
     if "reflective diary" in kinds and ("essay" in kinds or "report" in kinds):
         return None
     if len(kinds) == 1:

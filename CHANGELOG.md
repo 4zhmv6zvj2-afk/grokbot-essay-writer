@@ -58,12 +58,17 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   heading keeps "No mark scheme is on this module."
 - An obvious cue fills a format or a question the brief left empty. "Individual
   report", "reflective diary", and "essay" or "report" used as the assignment
-  type set the format. One task sentence, or one question that ends with a
-  question mark, sets the question, and a mark-scheme bullet is not that
-  question. If two assignment types both match, the format stays empty. A
-  mention or a negation is not the assignment type, so "Write an essay on the
-  annual report of one named firm" is an essay and "Do not write a reflective
-  diary" does not set a diary. A labelled Genre, Format, Question, Task,
+  type set the format, including a heading line that opens with the type, such
+  as "Individual report, 2,000 words, due 12 December 2026." One task sentence,
+  or one question that ends with a question mark, sets the question, and a
+  mark-scheme bullet is not that question. If two assignment types both match,
+  the format stays empty. A mention is not the assignment type, so "Write an
+  essay on the annual report of one named firm" is an essay, and a later line
+  that only mentions an individual report does not set one. A refusal in the
+  same sentence is not the assignment type either: not, never, no, cannot,
+  can't, don't, doesn't, and won't count, in either apostrophe form, so "Do not
+  write a reflective diary" and "Don't write an essay" set no format while a
+  later clear cue still fills. A labelled Genre, Format, Question, Task,
   assignment ask, or Title line still wins, and a word count that already
   parses stays as it is. The brief file is not rewritten, no remembered answer
   is stored, and the combined stage title stays when the brief still has no

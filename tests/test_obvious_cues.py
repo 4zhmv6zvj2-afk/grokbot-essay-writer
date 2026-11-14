@@ -5,8 +5,8 @@ file is not rewritten, and the combined stage title stays when no Genre or
 Format label is set.
 
 Ids: essay-cues-a1, essay-cues-a2, essay-cues-a3, essay-cues-a4, essay-cues-a5,
-essay-cues-a6, essay-cues-b1, essay-cues-b2, essay-cues-b3, essay-cues-b4,
-essay-cues-c1, essay-cues-c2, essay-cues-d1.
+essay-cues-a6, essay-cues-a7, essay-cues-a8, essay-cues-b1, essay-cues-b2,
+essay-cues-b3, essay-cues-b4, essay-cues-c1, essay-cues-c2, essay-cues-d1.
 """
 
 from __future__ import annotations
@@ -168,6 +168,78 @@ def test_essay_cues_a6_a_mention_or_negation_is_not_the_assignment_type(case_id,
         seq = _plant(module, line)
         assert read_assignment(seq)["format"] == expected, module
         assert _lines(seq)[1] == f"Format: {expected}."
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-cues-a7", id="essay-cues-a7")])
+def test_essay_cues_a7_a_heading_line_that_is_the_type(case_id, workspace):
+    """a7: A line that starts with the type is the type. A mention later in prose is not."""
+    assert case_id == "essay-cues-a7"
+    northwind = (
+        "Individual report, 2,000 words, due 12 December 2026.\n"
+        "\n"
+        "Evaluate how Northwind Components could close the material loop "
+        "by reusing offcuts.\n"
+    )
+    seq = _plant("CUE2201AA", northwind)
+    record = read_assignment(seq)
+    assert record["format"] == "report"
+    assert record["question"] == (
+        "Evaluate how Northwind Components could close the material loop by reusing offcuts."
+    )
+    scores, format_line, question_line = _lines(seq)
+    assert format_line == "Format: report."
+    assert question_line == (
+        "Question: Evaluate how Northwind Components could close the material loop "
+        "by reusing offcuts."
+    )
+    assert (essay_dir("CUE2201AA") / "brief.md").read_text(encoding="utf-8") == northwind
+
+    diary = "Reflective diary, four entries.\n\nWhat changed in your week on the ward?\n"
+    diary_seq = _plant("CUE2202AA", diary)
+    assert read_assignment(diary_seq)["format"] == "reflective diary"
+    assert _lines(diary_seq)[1] == "Format: reflective diary."
+    assert (essay_dir("CUE2202AA") / "brief.md").read_text(encoding="utf-8") == diary
+
+    mention = _plant(
+        "CUE2203AA",
+        "The module office keeps one individual report on file for reference.\n"
+        "Evaluate how the corridor carries traffic.\n",
+    )
+    mention_record = read_assignment(mention)
+    assert mention_record["format"] is None
+    assert mention_record["question"] == "Evaluate how the corridor carries traffic."
+    assert _lines(mention)[1] == FORMAT_UNREAD
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-cues-a8", id="essay-cues-a8")])
+def test_essay_cues_a8_the_usual_refusals_are_negation(case_id, workspace):
+    """a8: cannot, can't, don't, doesn't, and won't are negation, in both apostrophe forms."""
+    assert case_id == "essay-cues-a8"
+    refusals = (
+        "Cannot write an essay.",
+        "Can't write an essay.",
+        "Can’t write an essay.",
+        "Don't write an essay.",
+        "Don’t write an essay.",
+        "Doesn't write an essay.",
+        "Doesn’t write an essay.",
+        "Won't write an essay.",
+        "Won’t write an essay.",
+    )
+    for index, line in enumerate(refusals, start=1):
+        module = f"CUE23{index:02d}AA"
+        seq = _plant(module, f"{line}\n")
+        record = read_assignment(seq)
+        assert record["format"] is None, line
+        assert _lines(seq)[1] == FORMAT_UNREAD, line
+
+    later = _plant(
+        "CUE2310AA",
+        "Don’t write an essay about the corridor.\nWrite an essay on the harbour.\n",
+    )
+    later_record = read_assignment(later)
+    assert later_record["format"] == "essay"
+    assert _lines(later)[1] == "Format: essay."
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-cues-a3", id="essay-cues-a3")])
