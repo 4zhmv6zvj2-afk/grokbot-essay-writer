@@ -16,6 +16,7 @@ This is not mechanical gate 1. A missing brief is not a failure.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from essay_writer.diary import extract_marking_table
@@ -130,6 +131,92 @@ _TASK_VERB = re.compile(
     r"summarise|summarize)\b"
 )
 _PERCENT = re.compile(r"(?<!\d)(\d{1,3})\s*%")
+# A plain weight row, a column header such as "Section Weight", and a pipe row
+# open a weights block. A labelled field or ordinary prose does not, whatever
+# percentage it carries, so `Word count: ... 10%` is not read as a weight.
+_PLAIN_WEIGHT_ROW = re.compile(
+    r"^\s*(?:[-*•]\s*|\d{1,2}[.)]\s*)?[A-Za-z][A-Za-z &/'().,\-]{0,63}"
+    r"\s*(?:—|–|-|:)?\s*\d{1,3}\s*%\s*[.]?\s*$"
+)
+_WEIGHT_HEADER_WORDS = frozenset(
+    {
+        "section",
+        "sections",
+        "part",
+        "parts",
+        "criterion",
+        "criteria",
+        "component",
+        "components",
+        "item",
+        "items",
+        "area",
+        "areas",
+        "weight",
+        "weights",
+        "weighting",
+        "weightings",
+        "mark",
+        "marks",
+        "percentage",
+        "score",
+        "%",
+    }
+)
+# A prose sentence that starts with one of these is not a weight row.
+_PROSE_OPENERS = frozenset(
+    {
+        "this",
+        "these",
+        "the",
+        "a",
+        "an",
+        "there",
+        "it",
+        "you",
+        "your",
+        "students",
+        "we",
+        "each",
+        "all",
+        "some",
+        "for",
+        "in",
+        "on",
+        "at",
+        "to",
+        "and",
+        "or",
+        "if",
+        "when",
+        "where",
+        "which",
+        "that",
+        "as",
+        "by",
+        "with",
+    }
+)
+
+
+def _opens_weights(first: str) -> bool:
+    """True when this first line looks like a weights table or a weight row.
+
+    A pipe row, a plain ``Drivers 20%`` row, and a column header are accepted.
+    Anything else, a labelled field or prose, ends a weights block with nothing
+    captured, so a percentage in ``Word count:`` is not read as a weight.
+    """
+    if first.lstrip().startswith("|"):
+        return True
+    words = re.findall(r"[A-Za-z]+", first)
+    if len(words) > 8 or (words and words[0].casefold() in _PROSE_OPENERS):
+        return False
+    if _PLAIN_WEIGHT_ROW.match(first):
+        return True
+    tokens = re.findall(r"[A-Za-z%]+", first)
+    return bool(tokens) and all(token.casefold() in _WEIGHT_HEADER_WORDS for token in tokens)
+
+
 _LABELLED_FIELD = re.compile(
     r"(?i)^\s*(?:genre|format|assignment\s+question|question|task|assignment\s+ask|"
     r"ask|title|assignment\s+title)\s*:"
@@ -270,7 +357,13 @@ def _scheme_file(essay_id: str) -> str:
     return "\n".join(chunks).strip()
 
 
-def _block_after(brief: str, head: re.Pattern[str], *, skip_blank: bool = False) -> str:
+def _block_after(
+    brief: str,
+    head: re.Pattern[str],
+    *,
+    skip_blank: bool = False,
+    opens: Callable[[str], bool] | None = None,
+) -> str:
     """Lines under one heading, up to a blank line or the next heading.
 
     The heading pattern names its label in group 1 and any text after the
@@ -278,6 +371,8 @@ def _block_after(brief: str, head: re.Pattern[str], *, skip_blank: bool = False)
     with no content is not filled from later prose or from a labelled field.
     With ``skip_blank``, a blank line between the heading and its first
     content line is skipped, so a heading followed by a table is captured.
+    With ``opens``, the block's first content line must pass that test, so a
+    heading set off from a labelled field or ordinary prose captures nothing.
     Once content has started, a blank line or a new heading ends the block.
     The brief file is only read.
     """
@@ -303,6 +398,8 @@ def _block_after(brief: str, head: re.Pattern[str], *, skip_blank: bool = False)
             break
         if line.startswith("#"):
             break
+        if not taken and opens is not None and not opens(line.strip()):
+            break
         taken.append(line.strip())
     return "\n".join(taken).strip()
 
@@ -323,8 +420,12 @@ def _weights_block(brief: str) -> str:
     mark scheme heading. That block is a percentage list too, so it is read by
     the same tests that read a mark scheme block. A blank line before the table
     is skipped, because a weights heading is often set off from its table.
+
+    The first content line must look like a table or a weight row. A labelled
+    field or ordinary prose ends the block with nothing captured, so a
+    percentage inside `Word count:` is not read as a weight.
     """
-    return _block_after(brief, _WEIGHTS_HEAD, skip_blank=True)
+    return _block_after(brief, _WEIGHTS_HEAD, skip_blank=True, opens=_opens_weights)
 
 
 def _scheme_in_brief(brief: str) -> str:

@@ -7,7 +7,7 @@ weights without a band says so and names no band.
 
 Ids: essay-brief-a1, essay-brief-a2, essay-brief-a3, essay-brief-a4,
 essay-brief-b1, essay-brief-b2, essay-brief-b3, essay-brief-b4,
-essay-brief-b5, essay-brief-b6, essay-brief-c1, essay-brief-c2,
+essay-brief-b5, essay-brief-b6, essay-brief-b7, essay-brief-c1, essay-brief-c2,
 essay-brief-c3, essay-brief-d1.
 """
 
@@ -381,6 +381,64 @@ def test_essay_brief_b6_an_empty_mark_scheme_heading_captures_nothing(case_id, w
         "| Analysis | 60% |\n"
     )
     weighted = _plant("SYN9204AA", still_weighted)
+    assert percentage_weights_only(weighted) is True
+    assert basics_pass_lines(weighted)[0] == PERCENTAGE_WEIGHTS
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-brief-b7", id="essay-brief-b7")])
+def test_essay_brief_b7_an_empty_section_weights_heading_keeps_the_no_scheme_line(
+    case_id, workspace
+):
+    """b7: A labelled field under an empty weights heading is not read as weights."""
+    assert case_id == "essay-brief-b7"
+    labelled = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Section weights:\n"
+        "\n"
+        "Word count: 2,000 words, plus or minus 10%.\n"
+    )
+    seq = _plant("SYN7201AA", labelled)
+    folder = essay_dir("SYN7201AA")
+    before = (folder / "brief.md").read_bytes()
+    scores, format_line, question_line = basics_pass_lines(seq)
+    assert percentage_weights_only(seq) is False
+    assert scores == NO_MARK_SCHEME
+    assert scores != PERCENTAGE_WEIGHTS
+    assert format_line == "Format: report."
+    assert question_line == "Question: How do chokepoints constrain the corridor?"
+
+    reply = essay_stage(seq, "1", "draft", "The corridor is the case here.")
+    assert reply["ok"] is True, reply
+    assert reply["basics_pass"][0] == NO_MARK_SCHEME
+    assert PERCENTAGE_WEIGHTS not in "\n".join(reply["basics_pass"])
+    assert (folder / "brief.md").read_bytes() == before
+
+    prose = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Section weights:\n"
+        "\n"
+        "This module is 30% coursework and 70% examination.\n"
+    )
+    other = _plant("SYN7202AA", prose)
+    assert percentage_weights_only(other) is False
+    assert basics_pass_lines(other)[0] == NO_MARK_SCHEME
+
+    still_weighted = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Section weights:\n"
+        "\n"
+        "| Section | Weight |\n"
+        "| --- | --- |\n"
+        "| Analysis | 60% |\n"
+        "| Evidence | 40% |\n"
+    )
+    weighted = _plant("SYN7203AA", still_weighted)
     assert percentage_weights_only(weighted) is True
     assert basics_pass_lines(weighted)[0] == PERCENTAGE_WEIGHTS
 
