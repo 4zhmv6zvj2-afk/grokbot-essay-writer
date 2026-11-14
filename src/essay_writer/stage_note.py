@@ -26,12 +26,7 @@ def render_tracking(
     item = stage_settings(stage, genre)
     title = stage_title(stage, genre)
     sequence_line = f"Sequence id: {essay_id}\n\n" if essay_id else ""
-    head = (
-        f"# Stage {stage} — {title}\n\n"
-        f"{sequence_line}"
-        f"Status: {status}\n\n"
-        f"{item['rules']}\n"
-    )
+    head = f"# Stage {stage} — {title}\n\n{sequence_line}Status: {status}\n\n{item['rules']}\n"
     if not isinstance(look, str) or not look.strip():
         return head
     heading = "Final look" if status == "final" else "Working look"

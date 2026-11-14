@@ -137,7 +137,9 @@ def test_ac1_stage2_confirm_does_not_save_stage3(workspace):
             assert "Status: final" not in later_text
         assert "Status: final" in _stage_note(seq, stage)
 
-        nxt = essay_stage(seq, following, "draft", f"{LOOK} This sentence belongs to stage {following}.")
+        nxt = essay_stage(
+            seq, following, "draft", f"{LOOK} This sentence belongs to stage {following}."
+        )
         assert nxt["ok"] is True, nxt
         assert nxt["stored"] is False
         jumped = essay_stage(seq, following, "confirm", **picked(nxt))

@@ -151,7 +151,9 @@ def test_ac2_rest_of_basics_walk_before_confirm(workspace):
     for stage in STAGE_ORDER:
         if stage == "5":
             break
-        draft = essay_stage(seq, stage, "draft", look + f"\nThis sentence belongs to stage {stage}.")
+        draft = essay_stage(
+            seq, stage, "draft", look + f"\nThis sentence belongs to stage {stage}."
+        )
         assert draft["ok"] is True, draft
         assert draft["basics_pass"] == lines
         assert draft["stored"] is False

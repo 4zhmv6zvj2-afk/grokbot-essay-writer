@@ -81,8 +81,14 @@ def test_server_instructions_offer_the_typed_fallback():
     assert "a typed yes does not remove anything." in delete
     assert "Not yet does not remove anything." in delete
     assert "a typed ok, yes, or confirm saves" not in delete.casefold()
-    assert "If the card cannot be used, a typed ok, yes, or confirm saves that waiting step." not in stage
-    assert "A typed reply does not save a stage unless it is a yes, ok, or Confirm on a waiting card." not in stage
+    assert (
+        "If the card cannot be used, a typed ok, yes, or confirm saves that waiting step."
+        not in stage
+    )
+    assert (
+        "A typed reply does not save a stage unless it is a yes, ok, or Confirm on a waiting card."
+        not in stage
+    )
     assert "Not yet does not save." in stage
     assert "Stage 5 stores on the draft" in stage
     assert "cardAction confirm and cardDigest from that card" in stage
@@ -90,9 +96,9 @@ def test_server_instructions_offer_the_typed_fallback():
     import json
 
     snapshot = json.loads(
-        (
-            Path(__file__).resolve().parents[1] / "tests" / "snapshots" / "prompts.json"
-        ).read_text(encoding="utf-8")
+        (Path(__file__).resolve().parents[1] / "tests" / "snapshots" / "prompts.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert snapshot["instructions"] == INSTRUCTIONS
     assert "a typed yes does not remove anything." in snapshot["instructions"]

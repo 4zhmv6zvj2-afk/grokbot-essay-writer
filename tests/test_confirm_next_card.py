@@ -309,7 +309,9 @@ def test_stage1_rule_refuses_a_basics_only_reply(workspace):
 
     for genre in (None, "essay", "report", "diary"):
         assert STAGE1_RULE in stage_rules("1", genre)
-    snapshot = json.loads((REPO / "tests" / "snapshots" / "prompts.json").read_text(encoding="utf-8"))
+    snapshot = json.loads(
+        (REPO / "tests" / "snapshots" / "prompts.json").read_text(encoding="utf-8")
+    )
     for key in ("1:none", "1:essay", "1:report", "1:diary"):
         assert STAGE1_RULE in snapshot["stage_rules"][key]
     assert STAGE1_RULE not in CHECKLIST_WALK

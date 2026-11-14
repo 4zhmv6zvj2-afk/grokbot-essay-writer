@@ -395,9 +395,10 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         from essay_writer.specialists.grok_bot import typed_save_word
         from essay_writer.stage_body import guidance_only_refusal, look_is_confirmable
 
-        answer_call = getattr(args, "formatAnswer", None) is not None or getattr(
-            args, "questionAnswer", None
-        ) is not None
+        answer_call = (
+            getattr(args, "formatAnswer", None) is not None
+            or getattr(args, "questionAnswer", None) is not None
+        )
         if (
             text
             and stage_uses_confirm_card(stage)

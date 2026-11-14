@@ -432,9 +432,10 @@ def _build_stage_body(
     # Card-bearing stages only. Stage 5 stores on the draft, including an empty look.
     # formatAnswer and questionAnswer are not part of this change. The predicate
     # runs only when those arguments are absent.
-    answer_call = getattr(args, "formatAnswer", None) is not None or getattr(
-        args, "questionAnswer", None
-    ) is not None
+    answer_call = (
+        getattr(args, "formatAnswer", None) is not None
+        or getattr(args, "questionAnswer", None) is not None
+    )
     if (
         stage_uses_confirm_card(stage)
         and not answer_call

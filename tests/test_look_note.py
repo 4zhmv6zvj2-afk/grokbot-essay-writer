@@ -16,10 +16,7 @@ from essay_writer.stage_llm import stage_settings
 REPO = Path(__file__).resolve().parents[1]
 HELPERS = REPO / "docs" / "academic-writing-helpers.md"
 WORKFLOW = REPO / "docs" / "workflow.md"
-LOOK = (
-    "look is the student's own sentence for this stage; "
-    "omit it and no final look is written."
-)
+LOOK = "look is the student's own sentence for this stage; omit it and no final look is written."
 CHANGED = "A changed look needs a fresh draft."
 MARK = "**Shared rules:**"
 

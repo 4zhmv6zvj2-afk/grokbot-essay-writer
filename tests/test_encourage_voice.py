@@ -69,7 +69,9 @@ def _confirm_plan(workspace: Path) -> tuple[str, dict]:
     _plant_brief(workspace)
     seq = open_sequence()
     for stage in ("1", "2"):
-        draft = essay_stage(seq, stage, "draft", _look(seq, f"Kept. This sentence belongs to stage {stage}."))
+        draft = essay_stage(
+            seq, stage, "draft", _look(seq, f"Kept. This sentence belongs to stage {stage}.")
+        )
         assert draft["ok"] is True, draft
         saved = essay_stage(
             seq,
@@ -178,7 +180,11 @@ def test_ac3_skip_and_silence_do_not_block_or_invent(workspace):
     seq = open_sequence()
     answered = open_sequence()
     for stage in ("1", "2", "3", "4a", "4b", "5"):
-        text = PLAN if stage == "3" else f"Saved from the brief. This sentence belongs to stage {stage}."
+        text = (
+            PLAN
+            if stage == "3"
+            else f"Saved from the brief. This sentence belongs to stage {stage}."
+        )
         draft = essay_stage(seq, stage, "draft", text)
         assert draft["ok"] is True, draft
         if stage == "4a":
@@ -229,7 +235,9 @@ def test_ac3_skip_and_silence_do_not_block_or_invent(workspace):
             plant_gathered_source(answered)
         saved = essay_stage(answered, stage, "confirm", text, **picked(draft))
         assert saved["stored"] is True, saved
-    stage5 = essay_stage(answered, "5", "draft", "Saved from the brief. This sentence belongs to stage 5.")
+    stage5 = essay_stage(
+        answered, "5", "draft", "Saved from the brief. This sentence belongs to stage 5."
+    )
     assert stage5["ok"] is True, stage5
     assert stage5["student_detail"] == {"depth": OWN}
     assert INVENTED not in json.dumps(stage5["student_detail"])
