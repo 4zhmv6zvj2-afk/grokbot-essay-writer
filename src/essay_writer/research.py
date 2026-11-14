@@ -465,7 +465,8 @@ def _run(
         body["digest"] = save_draft(essay_id, tool, payload, fingerprint, shown=draft_shown)
         body["cardDigest"] = card_digest(payload, draft_shown)
         body["stored"] = False
-        body["next"] = say("Choose Confirm to keep this step.")
+        # A research draft carries no card, so the student is asked to say yes.
+        body["next"] = say("Say yes to keep this step.")
         return body
     ready = confirm_ready(
         essay_id,
@@ -474,6 +475,7 @@ def _run(
         fingerprint,
         card_digest=cardDigest,
         require_card=True,
+        card_shown=False,
     )
     if ready.get("ok") is False:
         ready["confirmPhase"] = CONFIRM

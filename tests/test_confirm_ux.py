@@ -79,7 +79,7 @@ def test_server_instructions_offer_the_typed_fallback():
         for line in briefing.splitlines()
         if line.startswith("essay.stage and essay.project.delete")
     )
-    assert "a typed yes does not remove anything." in delete
+    assert "A typed yes does not remove anything." in delete
     assert "Not yet does not remove anything." in delete
     assert "a typed ok, yes, or confirm saves" not in delete.casefold()
     assert (
@@ -102,7 +102,7 @@ def test_server_instructions_offer_the_typed_fallback():
         )
     )
     assert snapshot["instructions"] == INSTRUCTIONS
-    assert "a typed yes does not remove anything." in snapshot["instructions"]
+    assert "A typed yes does not remove anything." in snapshot["instructions"]
     assert "a typed ok, yes, or confirm saves that waiting step" not in INSTRUCTIONS
     assert "A typed ok, yes, or confirm is not a pick" not in INSTRUCTIONS
 

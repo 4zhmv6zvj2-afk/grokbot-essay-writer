@@ -88,6 +88,10 @@ Do **not** start Word or call `essay.pack.render_word` from this sheet by itself
 - **Free look-ups only** (Crossref, OpenAlex, doi.org, Unpaywall) to fill blank bibliographic fields on a source already gathered for this essay id when match rules pass. A miss stays blank.
 - **No student name** on the cover or body unless the assignment record requires it. When that record requires a registration number, ask once, store the number the student supplies on the sequence, and print that number. Do not invent a registration number. An empty required number is refused. Put the page number where the assignment record says, including the lower right when the brief says so.
 
+## Word and the word band
+
+`essay.pack.validate` reports a count outside the band as a blocker, with this student line: This draft is N words. The brief allows A–B. Shorten it, or tell me you accept this length. Say that line as given. When the student accepts that length, the host sets `word_count_acknowledged` on the pack and sends that same pack through `essay.pack.validate` again. The host sets `word_count_acknowledged` only after the student accepts. Until then a later validate of the same pack still blocks. The door never sets the flag, and `word_count_acknowledged` never appears in the student `next` or `reason`.
+
 ## Noted versus open
 
 - The person sets pack `conclusion` to `noted` or `open`. The bot does not flip `open` to `noted` or invent support (`docs/memo-how-it-works-note.md`).
@@ -106,7 +110,7 @@ To drop one sequence, such as `MOD1004AA-2`, pass that sequence id with the modu
 1. Ask which module, such as `MOD1011AA`.
 2. Ask where: essay workspace only (`where` `grokbot`), copies on the student's computer only (`where` `local`), or both (`where` `both`).
 3. Call `essay.project.delete` with `confirmPhase` `draft`, that module, and that where. Show both lists. Sequences, uploads, the assignment, and local subject notes are the workspace list. `computer_list` is the computer list. If that list is empty, say the computer list is empty. Nothing is removed on draft (`wrote` false).
-4. The draft includes a Confirm card. Send `confirmPhase` `confirm` only with `cardAction` `confirm` and `cardDigest` from that card, and only after the person picks Confirm on the card. Repeat the same module, the same `where`, and the same `localPaths`. a typed yes does not remove anything. Not yet does not remove anything.
+4. The draft includes a Confirm card. Send `confirmPhase` `confirm` only with `cardAction` `confirm` and `cardDigest` from that card, and only after the person picks Confirm on the card. Repeat the same module, the same `where`, and the same `localPaths`. A typed yes does not remove anything. Not yet does not remove anything.
 
 `where` `grokbot`, or leaving `where` off, removes the workspace only. Word and zip copies on the student's computer stay. Say `leave_behind_notice` and show `computer_list` (empty when workspace-only). If a named path is not visible — including on an unmounted Mac folder — say it stays; do not guess.
 

@@ -6,11 +6,13 @@ import re
 from pathlib import Path
 
 from helpers import (
+    CLARIFY_OPEN,
     ESSAY,
     OTHER,
     TOPIC,
     open_sequence,
     pack,
+    plant_gathered_source,
     source,
     write_upload,
 )
@@ -26,16 +28,17 @@ from essay_writer.confirm import NO_MATCHING_DRAFT, phase_refusal
 from essay_writer.cursor_office import start_stage_mid
 from essay_writer.dig import essay_dig
 from essay_writer.free_alt import essay_download_leftovers
-from essay_writer.paths import essay_dir, module_code
+from essay_writer.paths import essay_dir, module_code, work_dir
 from essay_writer.projects import essay_project_delete, essay_sequence_new
 from essay_writer.prompt_loader import text as prompt_text
-from essay_writer.research import essay_research_summary
+from essay_writer.research import essay_research_full, essay_research_summary
 from essay_writer.revise import essay_revise
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.shelf import essay_shelf_put
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
+from essay_writer.state import load_state
 from essay_writer.student_voice import for_word, say, strip_word_labels, student_surface_hits
 from essay_writer.validate import essay_pack_validate
 from essay_writer.word import essay_pack_render_word
@@ -65,6 +68,7 @@ BANNED = (
     "card digest",
     "word_count_acknowledged",
     "dig-card",
+    "do not invent an address",
     "say that before saving",
     "show it in the chat again",
 )
@@ -103,18 +107,17 @@ def _stub_lookups(monkeypatch) -> None:
     monkeypatch.setattr("essay_writer.dig._get_json", lambda url, headers=None: {"results": []})
 
 
-def _research_and_dig(seq: str, *, confirm: bool) -> None:
+def _research_draft(seq: str, *, confirm: bool) -> None:
+    """The research draft has no card, so its student line asks the student to say yes."""
     missing = essay_research_summary(seq, TOPIC, "confirm", [source()])
     assert missing["ok"] is False, missing
     assert missing["reason"] == NO_MATCHING_DRAFT
     _clean(missing["reason"])
-    missing_dig = essay_dig(seq, "corridor", "confirm")
-    assert missing_dig["ok"] is False, missing_dig
-    assert missing_dig["reason"] == NO_MATCHING_DRAFT
-    _clean(missing_dig["reason"])
     draft = essay_research_summary(seq, TOPIC, "draft", [source()])
     assert draft["ok"] is True, draft
-    assert KEEP in draft["next"]
+    assert draft.get("card") is None
+    assert SAY_YES in draft["next"]
+    assert KEEP not in draft["next"]
     _clean(draft["next"])
     if confirm:
         confirmed = essay_research_summary(
@@ -125,9 +128,19 @@ def _research_and_dig(seq: str, *, confirm: bool) -> None:
             cardDigest=draft["cardDigest"],
         )
         assert confirmed["ok"] is True, confirmed
+
+
+def _dig_draft(seq: str) -> None:
+    """The dig draft still has a card, so its student line names Choose Confirm."""
+    missing_dig = essay_dig(seq, "corridor", "confirm")
+    assert missing_dig["ok"] is False, missing_dig
+    assert missing_dig["reason"] == NO_MATCHING_DRAFT
+    _clean(missing_dig["reason"])
     card = essay_dig(seq, "corridor", "draft")
     assert card["ok"] is True, card
+    assert isinstance(card.get("card"), dict)
     assert KEEP in card["next"]
+    assert SAY_YES not in card["next"]
     assert isinstance(card.get("cardDigest"), str) and card["cardDigest"]
     _clean(card["next"])
 
@@ -205,8 +218,10 @@ def test_essay_copy_b1_student_lines_name_the_save(workspace, monkeypatch):
     child = _open(ESSAY, fresh["sequence_id"])
     _no_card(child)
     assert load_pointer(child["sequence_id"])["saved"] == []
-    _research_and_dig(fresh["sequence_id"], confirm=True)
-    _research_and_dig(child["sequence_id"], confirm=False)
+    _research_draft(fresh["sequence_id"], confirm=True)
+    _dig_draft(fresh["sequence_id"])
+    _research_draft(child["sequence_id"], confirm=False)
+    _dig_draft(child["sequence_id"])
     refused = phase_refusal(None)
     assert refused is not None
     assert "has not been shown yet" in refused["reason"]
@@ -286,6 +301,276 @@ def test_essay_copy_b3_guidance_next_stays_student_facing(workspace):
         _clean(drafted["next"])
         _clean(str(drafted.get("reason") or ""))
         assert drafted.get("card") is None
+
+
+def test_essay_copy_r2_a1_research_drafts_have_no_card(workspace, monkeypatch):
+    """essay-copy-r2-a1. Summary and full research drafts return no card and ask the student to say yes."""
+    _stub_lookups(monkeypatch)
+    write_upload(workspace)
+    seq = _open(ESSAY)["sequence_id"]
+    summary = essay_research_summary(seq, TOPIC, "draft", [source()])
+    assert summary["ok"] is True, summary
+    assert summary.get("card") is None
+    assert summary.get("cardAction") is None
+    assert isinstance(summary.get("cardDigest"), str) and summary["cardDigest"]
+    assert SAY_YES in summary["next"]
+    assert KEEP not in summary["next"]
+    _clean(summary["next"])
+
+    full = essay_research_full(
+        seq,
+        TOPIC,
+        "draft",
+        [source()],
+        clarify_context=CLARIFY_OPEN,
+    )
+    assert full["ok"] is True, full
+    assert full.get("card") is None
+    assert full.get("cardAction") is None
+    assert isinstance(full.get("cardDigest"), str) and full["cardDigest"]
+    assert SAY_YES in full["next"]
+    assert KEEP not in full["next"]
+    _clean(full["next"])
+
+
+def test_essay_copy_r2_a2_dig_keeps_its_card(workspace, monkeypatch):
+    """essay-copy-r2-a2. The dig draft still returns a card and keeps the Choose Confirm line."""
+    _stub_lookups(monkeypatch)
+    seq = _open(ESSAY)["sequence_id"]
+    card = essay_dig(seq, "corridor", "draft")
+    assert card["ok"] is True, card
+    assert isinstance(card.get("card"), dict)
+    assert KEEP in card["next"]
+    assert SAY_YES not in card["next"]
+    _clean(card["next"])
+
+
+def test_essay_copy_r2_a3_research_and_dig_lines_are_split(workspace, monkeypatch):
+    """essay-copy-r2-a3. Research asserts the say-yes line; dig asserts the Choose Confirm line."""
+    _stub_lookups(monkeypatch)
+    write_upload(workspace)
+    seq = _open(ESSAY)["sequence_id"]
+    research = essay_research_summary(seq, TOPIC, "draft", [source()])
+    dig = essay_dig(seq, "corridor", "draft")
+    assert SAY_YES in research["next"]
+    assert KEEP not in research["next"]
+    assert KEEP in dig["next"]
+    assert SAY_YES not in dig["next"]
+    assert research["next"] != dig["next"]
+
+
+def test_essay_copy_r2_a4_unsaved_research_is_not_kept(workspace, monkeypatch):
+    """essay-copy-r2-a4. An unsaved research draft is not kept, and the typed fallback is the real path there."""
+    _stub_lookups(monkeypatch)
+    write_upload(workspace)
+    seq = _open(ESSAY)["sequence_id"]
+    draft = essay_research_summary(seq, TOPIC, "draft", [source()])
+    assert draft["ok"] is True, draft
+    assert load_state(seq).get("research", {}).get("summary") is None
+
+    typed = essay_research_summary(seq, TOPIC, "confirm", [source()], cardDigest="yes")
+    assert typed["ok"] is False, typed
+    assert typed["refused"] == "confirm"
+    assert typed.get("card") is None
+    assert "pick the new card" not in typed["reason"]
+    assert "say yes" in typed["reason"]
+    assert load_state(seq).get("research", {}).get("summary") is None
+
+    kept = essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        [source()],
+        cardDigest=draft["cardDigest"],
+    )
+    assert kept["ok"] is True, kept
+    assert kept["stored"] is True
+    stored = load_state(seq)["research"]["summary"]
+    assert isinstance(stored, dict)
+    assert stored["sources"]
+
+
+def test_essay_copy_r2_a4_b_dig_keeps_the_card_path(workspace, monkeypatch):
+    """Neighbouring case: dig still has a card, and a typed yes does not confirm it."""
+    _stub_lookups(monkeypatch)
+    seq = _open(ESSAY)["sequence_id"]
+    draft = essay_dig(seq, "corridor", "draft")
+    assert draft["ok"] is True, draft
+    assert isinstance(draft.get("card"), dict)
+    typed = essay_dig(seq, "corridor", "confirm", cardDigest="yes")
+    assert typed["ok"] is False, typed
+    assert typed["refused"] == "confirm"
+    assert not (work_dir(seq) / "dig-card.json").exists()
+    kept = essay_dig(seq, "corridor", "confirm", cardDigest=draft["cardDigest"])
+    assert kept["ok"] is True, kept
+    assert (work_dir(seq) / "dig-card.json").is_file()
+
+
+def test_essay_copy_r2_b1_word_band_line_stays(workspace):
+    """essay-copy-r2-b1. The student word-band line stays in those words."""
+    folder = essay_dir(OTHER)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "brief.md").write_text(
+        "Genre: report\nQuestion: How do chokepoints constrain the corridor?\n"
+        "Word count: 800 words (720 to 880).\n",
+        encoding="utf-8",
+    )
+    seq = _open(OTHER)["sequence_id"]
+    covered = pack(OTHER)
+    covered["assessment"] = "Individual report"
+    covered["sections"] = [dict(item) for item in covered["sections"]]
+    covered["sections"][0]["body"] += " How do chokepoints constrain the corridor?"
+    band = essay_pack_validate(seq, covered, "draft")
+    reasons = [
+        item["reason"]
+        for item in band.get("blockers") or []
+        if isinstance(item, dict) and item.get("code") == "word-count"
+    ]
+    assert reasons, band
+    assert re.fullmatch(
+        r"This draft is \d+ words\. The brief allows \d+\u2013\d+\. "
+        r"Shorten it, or tell me you accept this length\.",
+        reasons[0],
+    )
+    _clean(reasons[0])
+
+
+def test_essay_copy_r2_b2_host_sheet_names_the_flag(workspace):
+    """essay-copy-r2-b2. The host sheet says the host sets word_count_acknowledged only after the student accepts."""
+    shell = _flat(SHELL.read_text(encoding="utf-8"))
+    assert "word_count_acknowledged" in shell
+    assert "The host sets `word_count_acknowledged` only after the student accepts." in shell
+    assert "Until then a later validate of the same pack still blocks." in shell
+    bot = BOT.read_text(encoding="utf-8")
+    assert "word_count_acknowledged" in bot
+
+    seq = _open(ESSAY)["sequence_id"]
+    write_upload(workspace)
+    draft = essay_research_summary(seq, TOPIC, "draft", [source()])
+    assert draft["ok"] is True, draft
+    saved = essay_research_summary(
+        seq,
+        TOPIC,
+        "confirm",
+        [source()],
+        cardDigest=draft["cardDigest"],
+    )
+    assert saved["ok"] is True, saved
+    checked = essay_pack_validate(seq, pack(), "draft")
+    assert checked["ok"] is True, checked
+    text = _flat(str(checked.get("next") or "") + " " + str(checked.get("reason") or ""))
+    assert "word_count_acknowledged" not in text.casefold()
+
+
+def test_essay_copy_r2_b3_validate_description_names_the_host_path():
+    """essay-copy-r2-b3. The essay.pack.validate tool description names the host path."""
+    from essay_writer.doors import DOORS
+
+    door = next(item for item in DOORS if item["tool"] == "essay.pack.validate")
+    description = door["description"]
+    assert "word_count_acknowledged" in description
+    assert "only after the student accepts" in description
+    assert "the door never sets that flag" in description
+
+
+def test_essay_copy_r2_b4_a_test_asserts_the_host_path(workspace):
+    """essay-copy-r2-b4. The host path is asserted here, on the sheet, the description, and the reply."""
+    from essay_writer.doors import DOORS
+
+    shell = _flat(SHELL.read_text(encoding="utf-8"))
+    door = next(item for item in DOORS if item["tool"] == "essay.pack.validate")
+    assert "word_count_acknowledged" in shell
+    assert "word_count_acknowledged" in door["description"]
+
+    folder = essay_dir(OTHER)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "brief.md").write_text(
+        "Genre: report\nQuestion: How do chokepoints constrain the corridor?\n"
+        "Word count: 800 words (720 to 880).\n",
+        encoding="utf-8",
+    )
+    seq = _open(OTHER)["sequence_id"]
+    covered = pack(OTHER)
+    covered["assessment"] = "Individual report"
+    covered["sections"] = [dict(item) for item in covered["sections"]]
+    covered["sections"][0]["body"] += " How do chokepoints constrain the corridor?"
+    checked = essay_pack_validate(seq, covered, "draft")
+    reasons = [
+        item["reason"]
+        for item in checked.get("blockers") or []
+        if isinstance(item, dict) and item.get("code") == "word-count"
+    ]
+    assert reasons
+    assert "word_count_acknowledged" not in reasons[0]
+
+
+def test_essay_copy_r2_b5_the_flag_is_a_host_record(workspace):
+    """essay-copy-r2-b5. A later validate still blocks until a real acceptance, then the host records the flag."""
+    folder = essay_dir(OTHER)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "brief.md").write_text(
+        "Genre: report\nQuestion: How do chokepoints constrain the corridor?\n"
+        "Word count: 800 words (720 to 880).\n",
+        encoding="utf-8",
+    )
+    seq = _open(OTHER)["sequence_id"]
+    covered = pack(OTHER)
+    covered["assessment"] = "Individual report"
+    covered["sections"] = [dict(item) for item in covered["sections"]]
+    covered["sections"][0]["body"] += " How do chokepoints constrain the corridor?"
+    first = essay_pack_validate(seq, covered, "draft")
+    assert any(item.get("code") == "word-count" for item in first.get("blockers") or []), first
+    again = essay_pack_validate(seq, covered, "draft")
+    assert any(item.get("code") == "word-count" for item in again.get("blockers") or []), again
+
+    accepted = dict(covered)
+    accepted["word_count_acknowledged"] = True
+    checked = essay_pack_validate(seq, accepted, "draft")
+    notes = [
+        item["reason"]
+        for item in checked.get("notes") or []
+        if isinstance(item, dict) and item.get("code") == "word-count"
+    ]
+    assert notes, checked
+    assert "A person acknowledged that." in notes[0]
+    assert not [item for item in checked.get("blockers") or [] if item.get("code") == "word-count"]
+
+
+def test_essay_copy_r2_c1_free_alt_drops_the_invent_line(workspace, monkeypatch):
+    """essay-copy-r2-c1. The free_alt next keeps Nothing was fetched and drops the invent-address line."""
+    from essay_writer.free_alt import essay_download_leftovers
+
+    seq = _open(ESSAY)["sequence_id"]
+    plant_gathered_source(seq)
+    folder = work_dir(seq) / "output"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "annotation.docx").write_bytes(b"PK annotated bibliography")
+    draft = essay_download_leftovers(seq, "draft")
+    assert draft["ok"] is True, draft
+    assert "Nothing was fetched." in draft["next"]
+    assert "Do not invent an address." not in draft["next"]
+    folded = draft["next"].casefold()
+    assert "do not invent an address" not in folded
+    _clean(draft["next"])
+
+
+def test_essay_copy_r2_d1_the_delete_sentence_starts_with_a_capital():
+    """essay-copy-r2-d1. The sentence starts with a capital A in the generated docs, the template, and briefing.md."""
+    sentence = "A typed yes does not remove anything."
+    lower = "a typed yes does not remove anything."
+    shell = SHELL.read_text(encoding="utf-8")
+    bot = BOT.read_text(encoding="utf-8")
+    briefing = BRIEFING.read_text(encoding="utf-8")
+    for text in (shell, bot):
+        assert sentence in text
+        assert lower not in text
+    delete_brief = next(
+        line for line in briefing.splitlines() if line.startswith("Call essay.project.delete")
+    )
+    assert sentence in delete_brief
+    assert lower not in delete_brief
+    assert sentence in bot
+    assert bot == _render_bot()
 
 
 def test_essay_copy_c1_missing_host_names_the_app(workspace, monkeypatch):
@@ -428,13 +713,12 @@ def test_essay_copy_d2_delete_still_needs_the_card(workspace):
         line for line in briefing.splitlines() if line.startswith("Call essay.project.delete")
     )
     delete_shell = shell.split("## Delete a module", 1)[1].split("\n## ", 1)[0]
-    for paragraph in (delete_brief, delete_shell):
-        assert "a typed yes does not remove anything." in paragraph
+    for paragraph in (delete_brief, delete_shell, bot):
+        assert "A typed yes does not remove anything." in paragraph
         folded = paragraph.casefold()
         assert "typed ok, yes, or confirm saves" not in folded
         assert "typed yes saves" not in folded
         assert "typed confirm saves" not in folded
-    assert "a typed yes does not remove anything." in bot
     seq = open_sequence()
     draft = essay_project_delete(ESSAY, "draft", where="grokbot")
     assert draft["ok"] is True, draft

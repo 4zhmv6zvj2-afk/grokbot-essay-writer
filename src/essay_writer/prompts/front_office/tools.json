@@ -78,7 +78,7 @@
       "confirmed research"
     ],
     "writes": "validation record for this pack",
-    "description": "Essay: essay.pack.validate (Confirm two-step). Checks one essay pack before Word: one essay id, sources covered by confirmed research, invent-forbid, Harvard Referencing, no student name or number, and a human choice of noted or open conclusion. A noted conclusion needs gathered excerpt support; open is allowed when support is thin. The door does not change open into noted. A changed pack needs a fresh draft. The first draft is authored from the stage 4b critical-review markdowns, one markdown per paper. Pass critical_reviews on the pack. Re-open a source paper only with reopen when that markdown does not cover the gap."
+    "description": "Essay: essay.pack.validate (Confirm two-step). Checks one essay pack before Word: one essay id, sources covered by confirmed research, invent-forbid, Harvard Referencing, no student name or number, and a human choice of noted or open conclusion. A noted conclusion needs gathered excerpt support; open is allowed when support is thin. The door does not change open into noted. A changed pack needs a fresh draft. The first draft is authored from the stage 4b critical-review markdowns, one markdown per paper. Pass critical_reviews on the pack. Re-open a source paper only with reopen when that markdown does not cover the gap. A count outside the word band blocks Word. The host sets word_count_acknowledged on the pack only after the student accepts the stated length; the door never sets that flag."
   },
   {
     "id": "pack.restore",
