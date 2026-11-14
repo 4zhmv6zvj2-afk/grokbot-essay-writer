@@ -85,7 +85,8 @@ def test_ac1_confirm_is_a_clickable_card_and_typed_yes_saves(workspace):
 
     # A card field that is not the Confirm action, or a wrong digest, still refuses.
     seq2 = open_sequence()
-    look2 = _look(seq2) + "\nThe corridor is the case."
+    # This sequence copies the one just saved. The parent's look is guidance.
+    look2 = _look(seq2) + "\nThe firm needs a second reading of the corridor."
     draft2 = essay_stage(seq2, "1", "draft", look2)
     refused = essay_stage(
         seq2,

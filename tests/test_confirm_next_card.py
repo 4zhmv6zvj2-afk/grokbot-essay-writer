@@ -516,3 +516,43 @@ def test_open_names_stage_1_and_does_not_return_a_card(workspace):
     assert child["sequence_id"] == f"{module}-2"
     assert child["parent"] == fresh["sequence_id"]
     _stage1_saved_next(child)
+
+
+def test_copied_child_parent_look_is_guidance_only(workspace):
+    """essay-u1-g1: a copied child's stage 1 draft of the parent's saved look is guidance-only.
+
+    The child has not saved a stage, so the parent's look is still cached.
+    That look is not the child's own sentence. The draft is refused, Confirm
+    writes nothing, and the child's stage 1 note is not stored.
+    """
+    from essay_writer.specialists.grok_bot import cached_approved_look
+
+    module = "MOD1004AA"
+    _brief(module, REPORT, SCHEME)
+    parent = open_sequence(module)
+    parent_look = "\n".join(basics_pass_lines(parent)) + "\nParent stage one look."
+    draft = _live(essay_id=parent, stage="1", confirmPhase="draft", look=parent_look)
+    assert draft["ok"] is True, draft
+    saved = _live(
+        essay_id=parent,
+        stage="1",
+        confirmPhase="confirm",
+        cardAction="confirm",
+        cardDigest=draft["cardDigest"],
+    )
+    assert saved["stored"] is True, saved
+    assert cached_approved_look(parent) == parent_look
+    child = _confirm_new_sequence(module, parent)["sequence_id"]
+    assert load_pointer(child)["saved"] == []
+    assert cached_approved_look(child) == parent_look
+    drafted = _live(essay_id=child, stage="1", confirmPhase="draft", look=parent_look)
+    _refused(drafted)
+    confirmed = _live(essay_id=child, stage="1", confirmPhase="confirm", look=parent_look)
+    _refused(confirmed)
+    note = work_dir(child) / "tracking" / "1.md"
+    assert not note.is_file()
+    pointer = load_pointer(child)
+    assert pointer["current"] == "1"
+    assert "1" not in pointer["saved"]
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None

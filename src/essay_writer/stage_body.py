@@ -62,11 +62,10 @@ def _guidance_pieces(essay_id: str, stage: str, genre: str | None) -> list[str]:
         prompt_overlay(stage, genre),
         stage_rules(stage, genre),
     ]
-    from essay_writer.stage_state import load_pointer
-
-    saved = load_pointer(essay_id).get("saved") or []
-    # A copied sequence keeps the parent's look until this sequence saves a stage.
-    cached = cached_approved_look(essay_id) if saved else None
+    # The cached approved look is guidance whenever it is non-empty.
+    # A fresh sequence has none. A copied child keeps the parent's look
+    # until it saves a stage, and that parent look is not a student sentence.
+    cached = cached_approved_look(essay_id)
     if isinstance(cached, str) and cached.strip():
         blocks.append(cached)
     opening = [line.strip() for line in opening_card_lines(essay_id, stage) if line.strip()]
