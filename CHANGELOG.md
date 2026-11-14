@@ -56,6 +56,15 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   labelled field or prose below it either. Only a table row, a weight row, or a
   column header opens that block, so `Word count: …10%` under an empty weights
   heading keeps "No mark scheme is on this module."
+- An obvious cue fills a format or a question the brief left empty. "Individual
+  report", "reflective diary", and "essay" or "report" used as the assignment
+  type set the format. One task sentence, or one question that ends with a
+  question mark, sets the question, and a mark-scheme bullet is not that
+  question. If essay and report both match, the format stays empty. A labelled
+  Genre, Format, Question, Task, assignment ask, or Title line still wins, and
+  a word count that already parses stays as it is. The brief file is not
+  rewritten, no remembered answer is stored, and the combined stage title stays
+  when the brief still has no Genre or Format label.
 
 ## 0.9.1 — 2026-11-12
 
