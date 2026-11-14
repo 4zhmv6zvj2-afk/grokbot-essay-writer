@@ -87,7 +87,7 @@ def _confirm(monkeypatch, documents, *, mounted: bool) -> tuple[str, dict]:
         return real(essay_id, base, proposed, note=note, note_text=note_text)
 
     monkeypatch.setattr(stage_hold, "_commit_pointer", watching)
-    look = "\n".join(basics_pass_lines(seq))
+    look = "\n".join(basics_pass_lines(seq)) + "\nThe final file is ready."
     draft = essay_stage(seq, "10", "draft", look)
     assert draft["ok"] is True, draft
     saved = essay_stage(seq, "10", "confirm", **picked(draft))

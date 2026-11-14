@@ -477,7 +477,7 @@ def test_ac5_stage10_confirm_refreshes_the_sequence_final(workspace):
     assert parked.read_bytes() == parent_bytes
     assert not child_final.exists()
     _park(child)
-    look = "\n".join(basics_pass_lines(child))
+    look = "\n".join(basics_pass_lines(child)) + "\nThe final file is ready."
     draft = essay_stage(child, "10", "draft", look)
     assert draft["ok"] is True, draft
     saved = front_office_call(

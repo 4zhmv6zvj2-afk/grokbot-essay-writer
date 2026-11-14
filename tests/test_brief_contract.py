@@ -221,7 +221,7 @@ def test_ac_nt1_brief_record_stages_and_unnamed(workspace, monkeypatch):
     assert plan["unnamed_note"] == UNNAMED_NOTE
     assert plan["named_by_brief"] is False
     assert stage_contract_refusal(unnamed, "2", "Entry 1 is unnamed.") is None
-    _save(unnamed, "1", _look(unnamed))
+    _save(unnamed, "1", _look(unnamed, "The task is the student's own."))
     stored = _save(unnamed, "2", _look(unnamed, "Entry 1 is the first unnamed part."))
     assert stored["stored"] is True
 
@@ -234,7 +234,7 @@ def test_ac_nt1_brief_record_stages_and_unnamed(workspace, monkeypatch):
     assert section_plan_for(essay)["sections"] == []
     assert stage_contract_refusal(essay, "2", _look(essay)) is None
     assert "thesis" in stage_settings("2", "essay")["prompt_overlay"]
-    _save(essay, "1", _look(essay))
+    _save(essay, "1", _look(essay, "The task is the student's own."))
     assert _save(essay, "2", _look(essay, "The thesis answers the question."))["stored"] is True
 
     _write_brief("REP9001HK", REPORT_WITH_LIST)
@@ -265,7 +265,7 @@ def test_ac_nt1_brief_record_stages_and_unnamed(workspace, monkeypatch):
     for stage in ("2", "3", "5"):
         held = stage_contract_refusal(field, stage, _look(field))
         assert held is not None and held["refused"] == "brief-mapping"
-    refused = essay_stage(field, "1", "draft", _look(field))
+    refused = essay_stage(field, "1", "draft", _look(field, "The task is the student's own."))
     assert refused["ok"] is False
     if refused["refused"] == "misses":
         assert any(item["code"] == "brief-mapping" for item in refused["misses"])
@@ -371,7 +371,7 @@ def test_ac_nt2_named_entries_shapes(workspace, monkeypatch):
     assert [row["name"] for row in plan["sections"]] == list(TITLES)
     assert plan["sections"][0]["limit"] == 500
 
-    _save(seq, "1", _look(seq))
+    _save(seq, "1", _look(seq, "The task is the student's own."))
     early = essay_stage(seq, "2", "draft", _entry_look(seq))
     assert early["ok"] is False
     assert early["refused"] == "named-parts"
@@ -380,7 +380,7 @@ def test_ac_nt2_named_entries_shapes(workspace, monkeypatch):
     _save(seq, "2", _titles_look(seq))
     stage3 = essay_stage(seq, "3", "draft", _entry_look(seq))
     assert stage3["refused"] == "named-parts"
-    _save(seq, "3", _titles_look(seq))
+    _save(seq, "3", _titles_look(seq) + "\nThe plan names each entry.")
 
     pointer = work_dir(seq) / POINTER_FILE
     data = json.loads(pointer.read_text(encoding="utf-8"))

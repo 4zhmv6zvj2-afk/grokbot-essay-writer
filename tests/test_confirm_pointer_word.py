@@ -119,8 +119,12 @@ def test_ac1_finished_answer_returns_the_card(workspace):
             assert "card" not in done
             assert load_pointer(seq)["current"] == "6"
             continue
+        sentence = f"{LOOK} This sentence belongs to stage {stage}."
+        if stage == "7":
+            asked = essay_stage(seq, stage, "draft", sentence)
+            assert asked["ok"] is True, asked
         kwargs = {"answers": "all fine"} if stage == "7" else {}
-        draft = essay_stage(seq, stage, "draft", LOOK, **kwargs)
+        draft = essay_stage(seq, stage, "draft", sentence, **kwargs)
         assert draft["ok"] is True, draft
         assert draft["stored"] is False
         assert draft["card"]["kind"] == "confirm"
@@ -143,7 +147,7 @@ def test_ac2_stray_fields_do_not_change_the_card(workspace):
     """AC2. Extra confirm fields still save. No-card no-change returns a card on stage 2."""
     seq = _open("MOD1004AA")
     essay_stage(seq, "1", "confirm", **picked(essay_stage(seq, "1", "draft", LOOK)))
-    draft = essay_stage(seq, "2", "draft", LOOK)
+    draft = essay_stage(seq, "2", "draft", f"{LOOK} This sentence belongs to stage 2.")
     saved = essay_stage(
         seq,
         "2",
@@ -186,19 +190,19 @@ def test_ac3_confirm_returns_the_next_card_and_clears_waiting(workspace):
     pointer = load_pointer(seq)
     assert "1" in pointer["saved"]
     assert pointer["current"] == "2"
-    assert pointer["waiting_stage"] == "2"
-    assert pointer["waiting_digest"] == saved["cardDigest"]
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
     assert saved["repost"] is False
-    assert saved["card"]["stage"] == "2"
-    assert saved["card"]["kind"] == "confirm"
-    assert saved["card"]["stage"] != "1"
+    assert saved.get("card") is None
+    assert saved.get("cardAction") is None
+    assert saved.get("cardDigest") is None
 
     for stage in STAGE_ORDER:
         if stage == "5":
             break
         if stage == "1":
             continue
-        opened = essay_stage(seq, stage, "draft", LOOK)
+        opened = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         if stage == "4a":
             plant_gathered_source(seq)
         essay_stage(seq, stage, "confirm", **picked(opened))
@@ -219,8 +223,8 @@ def test_ac4_saved_stage_does_not_replay_its_card(workspace):
     assert again["ok"] is False, again
     assert "already saved" in again["reason"]
     assert again["waiting_confirm"] is False
-    assert again.get("card", {}).get("stage") != "1"
-    assert again["card"]["stage"] == load_pointer(seq)["current"] == "2"
+    assert again.get("card") is None
+    assert load_pointer(seq)["current"] == "2"
     fresh = essay_stage(seq, "2", "draft", "Purpose stays with the brief.")
     assert fresh["ok"] is True, fresh
     assert fresh["card"]["stage"] == "2"

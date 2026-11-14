@@ -254,7 +254,7 @@ def test_each_stage_confirm_saves_the_final_look_then_the_next_stage(workspace):
     for stage in STAGE_ORDER:
         item = stage_settings(stage, genre)
         following = item["next_stage"]
-        draft = essay_stage(seq, stage, "draft")
+        draft = essay_stage(seq, stage, "draft", f"The student's sentence for stage {stage}.")
         assert draft["ok"] is True, draft
         assert draft["rules"] == item["rules"]
         assert draft["stage_title"] == stage_title(stage, genre)
@@ -338,11 +338,8 @@ def test_essay_sequence_keeps_the_thesis_label(workspace):
         "Confirm to save the final look and go to **Stage 2 — Establish a thesis**."
     )
     saved = essay_stage(seq, "1", "confirm", "The task is an essay.", **picked(draft))
-    assert saved["card"]["stage"] == "2"
-    assert saved["next"] == (
-        "Open the Confirm card to save Stage 2 — Establish a thesis, "
-        "or choose Not yet to keep working in this chat."
-    )
+    assert saved.get("card") is None
+    assert saved["next"] == "Start Stage 2 — Establish a thesis in this chat."
     stage_two = essay_stage(
         seq,
         "2",
@@ -366,8 +363,8 @@ def test_essay_sequence_keeps_the_thesis_label(workspace):
 
 
 def _save_through(seq: str, stop: str) -> None:
-    look = "Saved from the brief."
     for stage in STAGE_ORDER:
+        look = f"Saved from the brief. This sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, draft
         if stage == "4a":
@@ -429,7 +426,7 @@ def test_plan_revisit_updates_tracking_and_blocks_a_silent_draft(workspace):
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "tracking"
     empty = essay_stage(seq, "3", "draft", "   ")
     assert empty["ok"] is False
-    assert empty["refused"] == "stage"
+    assert empty["refused"] == "guidance-only"
     delta = "The analysis now follows Smith 2020. The central theme still holds."
     opened = essay_stage(seq, "3", "draft", delta)
     assert opened["revisit"] is True

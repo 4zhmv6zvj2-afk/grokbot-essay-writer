@@ -148,7 +148,7 @@ def _markdown_lines() -> list[str]:
 
 def _save_basics(seq: str) -> None:
     for stage in ("1", "2", "3"):
-        draft = essay_stage(seq, stage, "draft", LOOK)
+        draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         assert draft["ok"] is True, (stage, draft)
         saved = essay_stage(seq, stage, "confirm", LOOK, **picked(draft))
         assert saved["stored"] is True, (stage, saved)
@@ -196,7 +196,7 @@ def test_ac2_stage10_close_refuses_empty_or_unmatched_references(workspace, monk
         seq, _diary_pack(seq, body="A decision, with theory, on the practice the brief names.")
     )
 
-    draft = essay_stage(seq, "10", "draft", LOOK)
+    draft = essay_stage(seq, "10", "draft", f"{LOOK} The final file is ready.")
     assert draft["ok"] is True, draft
     refused = essay_stage(seq, "10", "confirm", LOOK, **picked(draft))
     assert refused["ok"] is False, refused
@@ -309,7 +309,7 @@ def test_ac4_basics_4a_confirm_stage10_word_journey(workspace, monkeypatch, tmp_
 
     _park_stage10(seq)
     _plant_stage10_pack(seq, _diary_pack(seq, references_markdown=MARKDOWN))
-    draft = essay_stage(seq, "10", "draft", LOOK)
+    draft = essay_stage(seq, "10", "draft", f"{LOOK} The final file is ready.")
     assert draft["ok"] is True, draft
     saved = essay_stage(seq, "10", "confirm", LOOK, **picked(draft))
     assert saved["ok"] is True, saved

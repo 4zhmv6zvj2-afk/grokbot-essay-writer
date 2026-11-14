@@ -84,8 +84,8 @@ def test_ac2_cursor_and_grok_build_launches_carry_the_same_rules():
 
 def test_ac3_stage5_quiet_chat_does_not_speak_the_glue_bullet(workspace):
     seq = open_sequence()
-    look = "Saved from the brief."
     for stage in ("1", "2", "3", "4a", "4b"):
+        look = f"Saved from the brief. This sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, draft
         if stage == "4a":
@@ -137,8 +137,8 @@ def test_ac5_craft_source_is_the_only_inlined_copy():
 
 def test_ac6_stage9_save_names_title_opening_and_one_body_paragraph(workspace):
     seq = open_sequence()
-    look = "Kept."
     for stage in ("1", "2", "3", "4a", "4b", "5", "6"):
+        look = f"Kept. This sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, draft
         if stage == "4a":
@@ -147,16 +147,18 @@ def test_ac6_stage9_save_names_title_opening_and_one_body_paragraph(workspace):
             continue
         saved = essay_stage(seq, stage, "confirm", look, **picked(draft))
         assert saved["stored"] is True, saved
-    asked = essay_stage(seq, "7", "draft", look)
+    asked = essay_stage(seq, "7", "draft", "Kept. This sentence belongs to stage 7.")
     assert asked["ok"] is True, asked
-    answered = essay_stage(seq, "7", "draft", look, answers="all fine / none")
+    answered = essay_stage(
+        seq, "7", "draft", "Kept. This sentence belongs to stage 7.", answers="all fine / none"
+    )
     assert answered["ok"] is True, answered
     saved7 = essay_stage(seq, "7", "confirm", look, **picked(answered))
     assert saved7["stored"] is True, saved7
-    draft8 = essay_stage(seq, "8", "draft", look)
+    draft8 = essay_stage(seq, "8", "draft", "Kept. This sentence belongs to stage 8.")
     saved8 = essay_stage(seq, "8", "confirm", look, **picked(draft8))
     assert saved8["current"] == "9", saved8
-    draft9 = essay_stage(seq, "9", "draft", look)
+    draft9 = essay_stage(seq, "9", "draft", "Kept. This sentence belongs to stage 9.")
     assert draft9["stored"] is False
     assert STAGE9_OWN_WORDS not in (draft9.get("next") or "")
     saved9 = front_office_call(

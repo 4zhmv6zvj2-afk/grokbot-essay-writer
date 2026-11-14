@@ -35,8 +35,8 @@ def test_saved_next_is_student_copy():
         text = saved_next(stage, "Stage title")
         _assert_student_copy(text)
         assert "Stage" in text
-        if stage != "5":
-            assert "Confirm card" in text
+        assert "The Confirm card for that stage is in this reply." not in text
+        assert text.startswith("Start Stage") or text.index("Start Stage") > 0
     assert saved_next("10", "Submit the final draft").startswith(STAGE9_OWN_WORDS)
 
 
@@ -56,7 +56,53 @@ def test_confirm_phase_refusal_is_plain():
 
 
 def test_server_instructions_offer_the_typed_fallback():
-    assert "a typed ok, yes, or confirm saves that waiting step" in INSTRUCTIONS
+    """essay-u1-d2: a typed yes does not remove a module, and the stage paragraph does not repeat the typed-yes sentence.
+
+    The server-instructions snapshot matches this briefing.
+    """
+    from pathlib import Path
+
+    briefing = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "essay_writer"
+        / "prompts"
+        / "front_office"
+        / "briefing.md"
+    ).read_text(encoding="utf-8")
+    delete = next(
+        line for line in briefing.splitlines() if line.startswith("Call essay.project.delete")
+    )
+    stage = next(
+        line
+        for line in briefing.splitlines()
+        if line.startswith("essay.stage and essay.project.delete")
+    )
+    assert "a typed yes does not remove anything." in delete
+    assert "Not yet does not remove anything." in delete
+    assert "a typed ok, yes, or confirm saves" not in delete.casefold()
+    assert (
+        "If the card cannot be used, a typed ok, yes, or confirm saves that waiting step."
+        not in stage
+    )
+    assert (
+        "A typed reply does not save a stage unless it is a yes, ok, or Confirm on a waiting card."
+        not in stage
+    )
+    assert "Not yet does not save." in stage
+    assert "Stage 5 stores on the draft" in stage
+    assert "cardAction confirm and cardDigest from that card" in stage
+    assert "If the stage is in saved, or current is a later stage, do not show that card." in stage
+    import json
+
+    snapshot = json.loads(
+        (Path(__file__).resolve().parents[1] / "tests" / "snapshots" / "prompts.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert snapshot["instructions"] == INSTRUCTIONS
+    assert "a typed yes does not remove anything." in snapshot["instructions"]
+    assert "a typed ok, yes, or confirm saves that waiting step" not in INSTRUCTIONS
     assert "A typed ok, yes, or confirm is not a pick" not in INSTRUCTIONS
 
 

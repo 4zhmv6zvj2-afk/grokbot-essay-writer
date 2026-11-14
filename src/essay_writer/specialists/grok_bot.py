@@ -168,12 +168,9 @@ def saved_next(stage: str, title: str) -> str:
     After stage 9, the student next line names the own-words rewrite.
     """
     lead = f"Start Stage {stage} — {title} in this chat."
-    if stage == "5":
-        return lead
-    line = f"{lead} The Confirm card for that stage is in this reply."
     if stage == "10":
-        return f"{STAGE9_OWN_WORDS} {line}"
-    return line
+        return f"{STAGE9_OWN_WORDS} {lead}"
+    return lead
 
 
 def missing_confirm_next(stage: str, title: str) -> str:

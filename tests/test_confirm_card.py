@@ -15,8 +15,8 @@ from essay_writer.writing_basics import STAGE_ORDER
 
 
 def _save_until(seq: str, stop: str) -> None:
-    look = "Saved from the brief."
     for stage in STAGE_ORDER:
+        look = f"Saved from the brief. This sentence belongs to stage {stage}."
         if stage == stop:
             return
         draft = essay_stage(seq, stage, "draft", look)
@@ -81,8 +81,8 @@ def test_a_stage_draft_is_a_card_and_typed_words_do_not_save(workspace):
     assert saved["stored"] is True
     assert saved["current"] == "2"
     assert saved["repost"] is False
-    assert saved["card"]["stage"] == "2"
-    assert saved["card"]["kind"] == "confirm"
+    assert saved.get("card") is None
+    assert saved.get("cardDigest") is None
 
 
 def test_both_shells_speak_the_same_stage_card(workspace):

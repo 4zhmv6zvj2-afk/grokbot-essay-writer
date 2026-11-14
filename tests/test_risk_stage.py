@@ -53,7 +53,7 @@ def _through(seq: str, stop: str) -> None:
     for stage in STAGE_ORDER:
         if stage == stop:
             return
-        draft = essay_stage(seq, stage, "draft", LOOK)
+        draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         if stage == "4a":
             plant_gathered_source(seq)

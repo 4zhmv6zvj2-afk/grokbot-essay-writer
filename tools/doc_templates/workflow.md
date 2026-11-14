@@ -112,7 +112,7 @@ At the final Word (stage 9, after the reviewer pass), one look-up runs when the 
 
 Each stage's guidance is applied as rules. The rules are that stage's checklist, loaded from `essay_writer.stage_llm.stage_settings` (`rules`). Cursor tool text and Grok Build `stage_launch` both use that field. Follow every line. The rules include the internal Basics checklist walk. For stages 2, 3, 4a, 4b, and 5 they also include the post-research plan revisit. `stage_launch` puts that same text on grok `--rules`. The Cursor launch does not put that text on an agent flag.
 
-`essay.stage` writes the tracking note at `Essay-writer/<module>/sequences/<n>/tracking/<stage>.md`. The note is that stage's guidance. Draft does not move the stage. Confirm saves the final look in that file, then `tracking/stage.json` moves to the next stage. look is an optional plain note of the checklist answers; omit it and the stage guidance is the final look. Stage 10 does not submit. A copied sequence starts again at stage 1. Stages 1 to 3 are written again. Research and saved papers stay. The previous final is parked under reference/.
+`essay.stage` writes the tracking note at `Essay-writer/<module>/sequences/<n>/tracking/<stage>.md`. The note is that stage's guidance. Draft does not move the stage. Confirm saves the final look in that file, then `tracking/stage.json` moves to the next stage. look is the student's own sentence for this stage; omit it and no final look is written. Stage 10 does not submit. A copied sequence starts again at stage 1. Stages 1 to 3 are written again. Research and saved papers stay. The previous final is parked under reference/.
 
 ## First draft
 

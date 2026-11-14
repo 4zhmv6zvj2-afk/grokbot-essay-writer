@@ -211,7 +211,7 @@ def test_ac1_ac2_ac3_clone_then_stage10_confirm_writes_the_child_and_documents(
     assert f"Registration number: {NUMBER}" not in _title(child_path)
     assert remember_registration(child, NUMBER) == NUMBER
     _park(child)
-    look = "\n".join(basics_pass_lines(child))
+    look = "\n".join(basics_pass_lines(child)) + "\nThe final file is ready."
     draft = essay_stage(child, "10", "draft", look)
     assert draft["ok"] is True, draft
     parent_before = parent_path.read_bytes()
@@ -257,6 +257,8 @@ def test_ac1_ac2_ac3_clone_then_stage10_confirm_writes_the_child_and_documents(
         if not matches:
             sid = opened["sequence_id"]
             matches = [line for line in candidates if sid in line]
+        if not matches and opened.get("card") is None:
+            matches = [line for line in candidates if "Card absent." in line]
         assert matches, f"missing sequence.new confirm log for {opened.get('sequence_id')}"
         _assert_sequence_log(opened, matches[-1])
     stage_line = next(
@@ -288,7 +290,7 @@ def test_ac4_missing_registration_does_not_close_or_record_the_sequence_final(
     child_path = _output(child)
     before = child_path.read_bytes()
     _park(child)
-    look = "\n".join(basics_pass_lines(child))
+    look = "\n".join(basics_pass_lines(child)) + "\nThe final file is ready."
     draft = essay_stage(child, "10", "draft", look)
     assert draft["ok"] is True, draft
     note = work_dir(child) / "tracking" / "10.md"

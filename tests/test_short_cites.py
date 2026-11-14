@@ -88,7 +88,8 @@ def _walk(seq: str, stop: str, *, stage3: str) -> None:
     for stage in STAGE_ORDER:
         if stage == stop:
             return
-        look = stage3 if stage == "3" else "Saved from the brief."
+        base = stage3 if stage == "3" else "Saved from the brief."
+        look = f"{base} This sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, (stage, draft)
         if stage == "5":
@@ -171,7 +172,7 @@ def test_ac2_a_long_cited_stretch_is_cut_at_the_stage_door(workspace):
     assert saved["stored"] is True, saved
 
     # The next stage keeps the same length without the ask being repeated.
-    again = essay_stage(seq, "7", "draft", MINI_REVIEW)
+    again = essay_stage(seq, "7", "draft", MINI_REVIEW + " This sentence belongs to stage 7.")
     assert again["ok"] is True, again
     assert len(_cited_sentences(_note_look(seq, "7") or "", "Beldad")) <= 2
 

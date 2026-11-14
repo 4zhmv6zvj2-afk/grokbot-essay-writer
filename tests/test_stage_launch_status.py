@@ -72,7 +72,7 @@ def _plain(line: str) -> None:
 
 def _save_through(seq: str, look: str, stages: tuple[str, ...]) -> None:
     for stage in stages:
-        draft = essay_stage(seq, stage, "draft", look)
+        draft = essay_stage(seq, stage, "draft", f"{look} This sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         saved = essay_stage(seq, stage, "confirm", look, **picked(draft))
         assert saved["ok"] is True, saved

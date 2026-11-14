@@ -77,8 +77,8 @@ def _opening(seq: str) -> str:
 
 
 def _through(seq: str) -> None:
-    look = _opening(seq)
     for stage in ("1", "2", "3", "4a", "4b"):
+        look = _opening(seq) + f"\nThis sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, draft
         if stage == "4a":

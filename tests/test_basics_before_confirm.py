@@ -99,14 +99,16 @@ def test_ac1_basics_first_lines_before_confirm(workspace):
     assert alone.get("basics_seeded") is True
     assert not (work_dir(seq) / "output" / "annotation.docx").exists()
 
-    draft = essay_stage(seq, "1", "draft", opened)
+    draft = essay_stage(seq, "1", "draft", opened + "\nThe corridor is the case.")
     assert draft["ok"] is True, draft
     assert draft["basics_pass"] == list(lines)
     saved = essay_stage(seq, "1", "confirm", opened, **picked(draft))
     assert saved["stored"] is True, saved
 
     for stage in ("2", "3", "4a", "4b"):
-        drafted = essay_stage(seq, stage, "draft", opened)
+        drafted = essay_stage(
+            seq, stage, "draft", opened + f"\nThis sentence belongs to stage {stage}."
+        )
         assert drafted["ok"] is True, drafted
         assert drafted["basics_pass"] == list(lines)
         if stage == "4a":

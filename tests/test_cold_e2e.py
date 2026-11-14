@@ -35,9 +35,9 @@ def _look_body(seq: str, stage: str) -> str:
 
 def test_ac1_typed_confirm_saves_the_waiting_card(workspace):
     """A typed Confirm, yes, or ok on a waiting card saves it and advances."""
-    for typed in ("Confirm", "yes", "ok", "Yes", "OK"):
+    for index, typed in enumerate(("Confirm", "yes", "ok", "Yes", "OK"), start=1):
         seq = open_sequence()
-        look = "The task is a short report."
+        look = f"The task is a short report. Pass {index}."
         draft = front_office_call(
             "essay.stage",
             {"essay_id": seq, "stage": "1", "confirmPhase": "draft", "look": look},
@@ -117,9 +117,10 @@ def _assert_stage1_pass(module: str, brief: str, question: str) -> None:
     assert "question" in missed["missing"]
     look = "\n".join(basics_pass_lines(seq))
     assert question in look
+    stored_look = look + "\nThe corridor is the case."
     passed = assignment_gate(seq, look, seat="grok_bot")
     assert passed["ok"] is True, passed
-    draft = essay_stage(seq, "1", "draft", look)
+    draft = essay_stage(seq, "1", "draft", stored_look)
     assert draft["ok"] is True, draft
     saved = essay_stage(seq, "1", "confirm", **picked(draft))
     assert saved["stored"] is True, saved
@@ -128,8 +129,8 @@ def _assert_stage1_pass(module: str, brief: str, question: str) -> None:
 
 
 def _save_through(seq: str, stop: str) -> None:
-    look = "Saved from the brief."
     for stage in STAGE_ORDER:
+        look = f"Saved from the brief. This sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, draft
         if stage == "4a":

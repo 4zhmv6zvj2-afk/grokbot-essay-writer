@@ -69,9 +69,17 @@ def _confirm_plan(workspace: Path) -> tuple[str, dict]:
     _plant_brief(workspace)
     seq = open_sequence()
     for stage in ("1", "2"):
-        draft = essay_stage(seq, stage, "draft", _look(seq, "Kept."))
+        draft = essay_stage(
+            seq, stage, "draft", _look(seq, f"Kept. This sentence belongs to stage {stage}.")
+        )
         assert draft["ok"] is True, draft
-        saved = essay_stage(seq, stage, "confirm", _look(seq, "Kept."), **picked(draft))
+        saved = essay_stage(
+            seq,
+            stage,
+            "confirm",
+            _look(seq, f"Kept. This sentence belongs to stage {stage}."),
+            **picked(draft),
+        )
         assert saved["stored"] is True, saved
     draft = essay_stage(seq, "3", "draft", _look(seq, PLAN))
     assert draft["ok"] is True, draft
@@ -171,9 +179,12 @@ def test_ac3_skip_and_silence_do_not_block_or_invent(workspace):
     """AC3. Skip and silence leave the stage saved. Later stages gain no invented detail."""
     seq = open_sequence()
     answered = open_sequence()
-    look = "Saved from the brief."
     for stage in ("1", "2", "3", "4a", "4b", "5"):
-        text = PLAN if stage == "3" else look
+        text = (
+            PLAN
+            if stage == "3"
+            else f"Saved from the brief. This sentence belongs to stage {stage}."
+        )
         draft = essay_stage(seq, stage, "draft", text)
         assert draft["ok"] is True, draft
         if stage == "4a":
@@ -197,8 +208,9 @@ def test_ac3_skip_and_silence_do_not_block_or_invent(workspace):
             assert load_pointer(seq)["current"] == "4a"
 
     for stage in ("1", "2"):
-        draft = essay_stage(answered, stage, "draft", look)
-        saved = essay_stage(answered, stage, "confirm", look, **picked(draft))
+        text = f"Saved from the brief. This sentence belongs to stage {stage}."
+        draft = essay_stage(answered, stage, "draft", text)
+        saved = essay_stage(answered, stage, "confirm", text, **picked(draft))
         assert saved["stored"] is True, saved
     draft = essay_stage(answered, "3", "draft", PLAN)
     saved = essay_stage(answered, "3", "confirm", PLAN, **picked(draft))
@@ -217,12 +229,15 @@ def test_ac3_skip_and_silence_do_not_block_or_invent(workspace):
     assert "example" not in student_facts(answered)
     assert INVENTED not in student_facts(answered).values()
     for stage in ("4a", "4b"):
-        draft = essay_stage(answered, stage, "draft", look)
+        text = f"Saved from the brief. This sentence belongs to stage {stage}."
+        draft = essay_stage(answered, stage, "draft", text)
         if stage == "4a":
             plant_gathered_source(answered)
-        saved = essay_stage(answered, stage, "confirm", look, **picked(draft))
+        saved = essay_stage(answered, stage, "confirm", text, **picked(draft))
         assert saved["stored"] is True, saved
-    stage5 = essay_stage(answered, "5", "draft", look)
+    stage5 = essay_stage(
+        answered, "5", "draft", "Saved from the brief. This sentence belongs to stage 5."
+    )
     assert stage5["ok"] is True, stage5
     assert stage5["student_detail"] == {"depth": OWN}
     assert INVENTED not in json.dumps(stage5["student_detail"])

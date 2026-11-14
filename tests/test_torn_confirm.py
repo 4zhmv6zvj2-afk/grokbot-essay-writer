@@ -161,18 +161,16 @@ def test_ac2_note_and_pointer_fields_commit_together(workspace, monkeypatch):
     assert NEWER in confirm_journal["note_text"]
     assert confirm_journal["pointer"]["current"] == "2"
     assert confirm_journal["pointer"]["saved"] == ["1"]
-    assert confirm_journal["pointer"]["waiting_stage"] == "2"
-    next_digest = confirm_journal["pointer"]["waiting_digest"]
-    assert isinstance(next_digest, str) and len(next_digest) == 64
-    assert next_digest != digest
+    assert confirm_journal["pointer"]["waiting_stage"] is None
+    assert confirm_journal["pointer"]["waiting_digest"] is None
     assert _raw_pointer(seq)["current"] == "1"
     assert _raw_pointer(seq)["saved"] == []
     assert "Status: final" in _note(seq, "1")
     finished = load_pointer(seq)
     assert finished["current"] == "2"
     assert finished["saved"] == ["1"]
-    assert finished["waiting_stage"] == "2"
-    assert finished["waiting_digest"] == next_digest
+    assert finished["waiting_stage"] is None
+    assert finished["waiting_digest"] is None
     assert "Status: final" in _note(seq, "1")
     assert NEWER in _note(seq, "1")
 

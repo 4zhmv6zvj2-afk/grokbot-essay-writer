@@ -1490,4 +1490,9 @@ def essay_sequence_new(
         nxt = opened.get("next")
         if isinstance(nxt, str) and nxt.strip():
             body["next"] = nxt
+    else:
+        from essay_writer.specialists.grok_bot import saved_next
+        from essay_writer.stage_llm import brief_genre, stage_title
+
+        body["next"] = saved_next("1", stage_title("1", brief_genre(child_id)))
     return body

@@ -353,7 +353,12 @@ def test_ac5_stored_confirm_and_stage5_quiet_use_the_done_line(workspace, monkey
     for stage in ("1", "2", "3", "4a", "4b"):
         draft = front_office_call(
             "essay.stage",
-            {"essay_id": fresh, "stage": stage, "confirmPhase": "draft", "look": LOOK},
+            {
+                "essay_id": fresh,
+                "stage": stage,
+                "confirmPhase": "draft",
+                "look": f"{LOOK} This sentence belongs to stage {stage}.",
+            },
         )
         assert draft["ok"] is True, draft
         if stage == "4a":

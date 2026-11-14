@@ -52,7 +52,7 @@ def _through(seq: str, stop: str) -> None:
     for stage in STAGE_ORDER:
         if stage == stop:
             return
-        draft = essay_stage(seq, stage, "draft", LOOK)
+        draft = essay_stage(seq, stage, "draft", f"{LOOK} This sentence belongs to stage {stage}.")
         assert draft["ok"] is True, draft
         if stage == "4a":
             plant_gathered_source(seq)
@@ -221,9 +221,10 @@ def test_ac2_stage7_answers_present_confirm(workspace):
 
 def test_ac3_typed_confirm_saves_the_waiting_card(workspace):
     """AC3: a typed Confirm, yes, or ok on a waiting card saves that stage."""
-    for typed in ("Confirm", "yes", "ok", "Yes", "OK"):
+    for index, typed in enumerate(("Confirm", "yes", "ok", "Yes", "OK"), start=1):
         seq = open_sequence()
-        look = "The task is a short report."
+        # A later sequence copies the last save. The parent's look is guidance.
+        look = f"The task is a short report, note {index}."
         draft = essay_stage(seq, "1", "draft", look)
         assert draft["ok"] is True, draft
         spoken = front_office_call(
@@ -237,7 +238,7 @@ def test_ac3_typed_confirm_saves_the_waiting_card(workspace):
 
     # A card field that is not the Confirm action still refuses.
     seq = open_sequence()
-    look = "The task is a short report."
+    look = "The task is a short report, and this note is its own."
     draft = essay_stage(seq, "1", "draft", look)
     refused = front_office_call(
         "essay.stage",

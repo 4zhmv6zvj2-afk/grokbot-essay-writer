@@ -26,7 +26,7 @@ def test_daily_use_does_not_block_and_does_not_invent_a_band(workspace):
     assert report["format"] is None
     assert report["question"] is None
     assert report["highest_band"] is None
-    drafted = essay_stage(seq, "1", "draft", "")
+    drafted = essay_stage(seq, "1", "draft", "Pass.")
     assert drafted["ok"] is True
     assert essay_stage(seq, "1", "confirm", "", **picked(drafted))["stored"] is True
     draft = essay_review(seq, "6", "PASS", "draft")
@@ -51,8 +51,8 @@ def test_brief_without_a_mark_scheme_asks_format_and_question(workspace):
     assert seen["format"] == "report"
     assert seen["highest_band"] is None
     empty = essay_stage(seq, "1", "draft", "")
-    assert empty["ok"] is True, empty
-    assert empty.get("basics_seeded") is True
+    assert empty["ok"] is False, empty
+    assert empty["refused"] == "guidance-only"
     assert "band" not in str(empty.get("reason", "")).casefold()
     bare = essay_review(seq, "6", "PASS", "draft")
     assert bare["ok"] is False
@@ -60,7 +60,7 @@ def test_brief_without_a_mark_scheme_asks_format_and_question(workspace):
     assert "answers the assignment question" in bare["reason"]
     from essay_writer.specialists.grok_bot import basics_pass_lines
 
-    note = "\n".join(basics_pass_lines(seq))
+    note = "\n".join(basics_pass_lines(seq)) + "\nThe report answers the question."
     drafted = essay_stage(seq, "1", "draft", note)
     assert drafted["ok"] is True
     assert essay_stage(seq, "1", "confirm", note, **picked(drafted))["stored"] is True
@@ -125,4 +125,7 @@ def test_mark_scheme_alone_does_not_invent_a_question(workspace):
     seeded = essay_stage(seq, "1", "draft", "Pass.")
     assert seeded["ok"] is True
     assert seeded.get("basics_seeded") is True
-    assert essay_stage(seq, "1", "draft", "\n".join(basics_pass_lines(seq)))["ok"] is True
+    assert (
+        essay_stage(seq, "1", "draft", "\n".join(basics_pass_lines(seq)))["refused"]
+        == "guidance-only"
+    )

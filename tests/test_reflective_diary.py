@@ -180,7 +180,7 @@ def test_ac2_brief_table_is_extracted_and_the_top_band_is_printed(workspace):
     assert lines[1] == "Format: reflective diary."
     for invented in ("Distinction", "Merit", "First"):
         assert invented not in lines[0]
-    note = "\n".join(lines)
+    note = "\n".join(lines) + "\nThe diary names one decision."
     drafted = essay_stage(seq, "1", "draft", note)
     assert drafted["ok"] is True, drafted
     assert essay_stage(seq, "1", "confirm", note, **picked(drafted))["stored"] is True

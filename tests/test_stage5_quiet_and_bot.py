@@ -36,8 +36,8 @@ SHARE = REPO / "docs" / "templates" / "essay-bot.share.json"
 def _save_through(seq: str, stop: str) -> None:
     from essay_writer.writing_basics import STAGE_ORDER
 
-    look = "Saved from the brief."
     for stage in STAGE_ORDER:
+        look = f"Saved from the brief. This sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, draft
         if stage == "4a":

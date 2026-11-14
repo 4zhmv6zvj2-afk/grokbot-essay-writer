@@ -76,7 +76,8 @@ def _walk(seq: str, stop: str, *, stage3: str, start: str | None = None) -> None
                 continue
         if stage == stop:
             return
-        look = stage3 if stage == "3" else "Saved from the brief."
+        base = stage3 if stage == "3" else "Saved from the brief."
+        look = f"{base} This sentence belongs to stage {stage}."
         draft = essay_stage(seq, stage, "draft", look)
         assert draft["ok"] is True, (stage, draft)
         if stage == "5":
