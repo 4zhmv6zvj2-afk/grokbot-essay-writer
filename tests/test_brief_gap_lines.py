@@ -6,8 +6,9 @@ rather than that the brief is silent. A mark scheme that lists percentage
 weights without a band says so and names no band.
 
 Ids: essay-brief-a1, essay-brief-a2, essay-brief-a3, essay-brief-a4,
-essay-brief-b1, essay-brief-b2, essay-brief-b3, essay-brief-c1,
-essay-brief-c2, essay-brief-c3, essay-brief-d1.
+essay-brief-b1, essay-brief-b2, essay-brief-b3, essay-brief-b4,
+essay-brief-b5, essay-brief-c1, essay-brief-c2, essay-brief-c3,
+essay-brief-d1.
 """
 
 from __future__ import annotations
@@ -225,6 +226,103 @@ def test_essay_brief_b3_a_named_band_or_range_keeps_todays_reading(case_id, work
         scores = basics_pass_lines(seq)[0]
         assert scores.startswith("The mark scheme scores ")
         assert PERCENTAGE_WEIGHTS not in scores
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-brief-b4", id="essay-brief-b4")])
+def test_essay_brief_b4_the_official_weight_fixture_names_no_band(case_id, workspace):
+    """b4: The official weighted fixture says percentages, and no band is invented."""
+    assert case_id == "essay-brief-b4"
+    fixture = Path(__file__).with_name("fixtures") / "synth-mark-brief-v1.md"
+    brief = fixture.read_text(encoding="utf-8")
+    assert "Section weights:" in brief
+    assert "Mark scheme" not in brief
+    seq = _plant("SYN6004AA", brief)
+    folder = essay_dir("SYN6004AA")
+    before = (folder / "brief.md").read_bytes()
+
+    assert percentage_weights_only(seq) is True
+    scores, _format_line, _question_line = basics_pass_lines(seq)
+    assert scores == PERCENTAGE_WEIGHTS
+    assert scores != NO_MARK_SCHEME
+    record = read_assignment(seq)
+    assert record["highest_band"] is None
+    assert record["mark_scheme"] is False
+
+    reply = essay_stage(seq, "1", "draft", "The corridor is the case here.")
+    assert reply["ok"] is True, reply
+    assert reply["basics_pass"][0] == PERCENTAGE_WEIGHTS
+    assert NO_MARK_SCHEME not in "\n".join(reply["basics_pass"])
+    assert (folder / "brief.md").read_bytes() == before
+    assert "_band_" not in "\n".join(reply["basics_pass"]).casefold()
+    assert not (folder / "brief-meta.json").exists()
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-brief-b5", id="essay-brief-b5")])
+def test_essay_brief_b5_a_section_weights_table_is_read_without_a_scheme_heading(
+    case_id, workspace
+):
+    """b5: A Section weights table with percentages and no band returns the same line."""
+    assert case_id == "essay-brief-b5"
+    table_only = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Section weights:\n"
+        "\n"
+        "| Section | Weight |\n"
+        "| --- | --- |\n"
+        "| Analysis | 60% |\n"
+        "| Evidence | 40% |\n"
+    )
+    assert "Mark scheme" not in table_only
+    assert "Rubric" not in table_only
+    seq = _plant("SYN7101AA", table_only)
+    scores, format_line, question_line = basics_pass_lines(seq)
+    assert percentage_weights_only(seq) is True
+    assert scores == PERCENTAGE_WEIGHTS
+    assert format_line == "Format: report."
+    assert question_line == "Question: How do chokepoints constrain the corridor?"
+
+    plain_rows = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Section weights:\n"
+        "Drivers 20%\n"
+        "Benefits 30%\n"
+        "Conclusion 50%\n"
+    )
+    plain_seq = _plant("SYN7102AA", plain_rows)
+    assert percentage_weights_only(plain_seq) is True
+    assert basics_pass_lines(plain_seq)[0] == PERCENTAGE_WEIGHTS
+
+    ranged = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Section weights:\n"
+        "\n"
+        "| Section | Weight |\n"
+        "| --- | --- |\n"
+        "| Analysis | 70-80 |\n"
+    )
+    ranged_seq = _plant("SYN7103AA", ranged)
+    assert percentage_weights_only(ranged_seq) is False
+    assert basics_pass_lines(ranged_seq)[0] == NO_MARK_SCHEME
+
+    banded = (
+        "Genre: report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+        "\n"
+        "Section weights:\n"
+        "\n"
+        "| Section | Weight |\n"
+        "| --- | --- |\n"
+        "| Distinction analysis | 80% |\n"
+    )
+    banded_seq = _plant("SYN7104AA", banded)
+    assert percentage_weights_only(banded_seq) is False
+    assert basics_pass_lines(banded_seq)[0] == NO_MARK_SCHEME
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-brief-c3", id="essay-brief-c3")])

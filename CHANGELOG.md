@@ -48,6 +48,9 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   signals keeps "the brief does not name one". A mark scheme that lists
   percentage weights without a band says "The brief lists percentage weights,
   not grade bands." No band is invented, and the brief file is not rewritten.
+  A brief that prints its weights under `Section weights:` rather than under a
+  mark scheme heading is read the same way, so a percentage table with no band
+  gets that sentence too.
 
 ## 0.9.1 — 2026-11-12
 

@@ -41,6 +41,7 @@ _SCHEME_NAMES = (
     "marking-table.txt",
 )
 _SCHEME_HEAD = re.compile(r"(?im)^#{0,3}\s*(mark scheme|marking guidelines?|rubric)\s*:?\s*(.*)$")
+_WEIGHTS_HEAD = re.compile(r"(?im)^#{0,3}\s*(section\s+weights?)\s*:?\s*(.*)$")
 _FORMAT_LINE = re.compile(r"(?im)^\s*format\s*:\s*(essay|report)\b")
 # Same question, whichever field the brief uses. Question wins over Title.
 _QUESTION_FIELDS = (
@@ -195,16 +196,31 @@ def _scheme_percentages(essay_id: str) -> list[int]:
 
 
 def _scheme_source(essay_id: str) -> str:
-    """Scheme text the spoken line reads: the filed scheme first, then the brief.
+    """Scheme text the spoken line reads: the filed scheme, then the brief.
 
-    A block of percentage weights has no named band, so the shared scheme
-    reader treats it as absent. This reader still sees it, which is how the
+    A filed scheme is already a mark scheme. A brief may print its weights
+    under a mark scheme heading or under `Section weights:`, so both blocks
+    are read here. A block of percentages has no named band, which the shared
+    scheme reader treats as absent; this reader still sees it, which is how the
     percentage sentence replaces the no-scheme sentence.
     """
     filed = _scheme_file(essay_id)
     if filed:
         return filed
-    return _scheme_block(_brief_text(essay_id))
+    brief = _brief_text(essay_id)
+    return _scheme_block(brief) or _weights_block(brief)
+
+
+def _band_search_text(scheme: str) -> str:
+    """The scheme with table pipes gone and each line stripped.
+
+    A band name often sits in a table row, where a leading pipe and padding
+    would stop a band pattern that starts at the line. Reading the same lines
+    with the pipes replaced and the edges trimmed finds that name. Nothing is
+    added, reordered, or invented.
+    """
+    lines = [line.replace("|", " ").strip() for line in scheme.splitlines()]
+    return "\n".join(lines)
 
 
 def percentage_weights_only(essay_id: str) -> bool:
@@ -221,7 +237,8 @@ def percentage_weights_only(essay_id: str) -> bool:
         return False
     if any(value <= 0 or value > 100 for value in weights):
         return False
-    return _highest_band(scheme) is None and _RANGE.search(scheme) is None
+    searchable = _band_search_text(scheme)
+    return _highest_band(searchable) is None and _RANGE.search(searchable) is None
 
 
 def _read(path) -> str:
@@ -253,25 +270,52 @@ def _scheme_file(essay_id: str) -> str:
     return "\n".join(chunks).strip()
 
 
-def _scheme_block(brief: str) -> str:
-    """Text under a mark scheme heading in the brief, whether or not it names bands."""
+def _block_after(brief: str, head: re.Pattern[str]) -> str:
+    """Lines under one heading, up to a blank line or the next heading.
+
+    The heading pattern names its label in group 1 and any text after the
+    label in group 2. A blank line between the heading and its first content
+    line is skipped, so a heading followed by a table is captured. Once content
+    has started, a blank line or a new heading ends the block. The brief file
+    is only read.
+    """
     if not brief:
         return ""
     taken: list[str] = []
     capture = False
     for line in brief.splitlines():
-        match = _SCHEME_HEAD.match(line.strip())
+        match = head.match(line.strip())
         if match:
             capture = True
             rest = match.group(2).strip()
             if rest:
                 taken.append(rest)
             continue
-        if capture:
-            if not line.strip() or line.startswith("#"):
+        if not capture:
+            continue
+        if not line.strip():
+            if taken:
                 break
-            taken.append(line.strip())
+            continue
+        if line.startswith("#"):
+            break
+        taken.append(line.strip())
     return "\n".join(taken).strip()
+
+
+def _scheme_block(brief: str) -> str:
+    """Text under a mark scheme heading in the brief, whether or not it names bands."""
+    return _block_after(brief, _SCHEME_HEAD)
+
+
+def _weights_block(brief: str) -> str:
+    """Text under a section weights heading in the brief.
+
+    A brief may print its weights under `Section weights:` rather than under a
+    mark scheme heading. That block is a percentage list too, so it is read by
+    the same tests that read a mark scheme block.
+    """
+    return _block_after(brief, _WEIGHTS_HEAD)
 
 
 def _scheme_in_brief(brief: str) -> str:
