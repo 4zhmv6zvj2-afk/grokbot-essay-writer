@@ -296,10 +296,10 @@ def test_setup_pick_persists_and_branches_the_prompt(tmp_path, monkeypatch):
     assert "worker host is not a save folder" in cursor_prompt.casefold()
 
     spoken = say("Save on the Grok Bot cloud computer with SuperGrok, Grok Build, or Cursor.")
-    assert "Grok Bot" not in spoken
+    assert "Grok Bot" in spoken
     assert "SuperGrok" not in spoken
-    assert "Grok Build" not in spoken
-    assert "Cursor" not in spoken
+    assert "Grok Build" in spoken
+    assert "Cursor" in spoken
     assert "cloud computer" in spoken
     worded = for_word("Grok Bot runs a dig for SuperGrok.")
     assert "Grok Bot" not in worded

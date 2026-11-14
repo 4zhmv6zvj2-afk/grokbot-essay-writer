@@ -30,6 +30,10 @@ from essay_writer.student_voice import speak
 
 DRAFT = "draft"
 CONFIRM = "confirm"
+NO_MATCHING_DRAFT = (
+    "This step is not waiting to be saved. Ask me to show it again. "
+    "If it changed, ask me to show the new draft before saving."
+)
 _WRITE_ORDER = threading.Lock()
 _LAST_WRITTEN_NS = 0
 
@@ -77,7 +81,7 @@ def phase_refusal(phase: object) -> dict[str, Any] | None:
     if phase is None:
         return refuse(
             "confirm",
-            "Show this step in the chat first, then save it.",
+            "This step has not been shown yet. Ask me to show it, then save.",
         )
     return refuse("confirm", "That step was not shown in a form this chat can save.")
 
@@ -228,7 +232,7 @@ def _card_refusal(
         return refuse(
             "confirm",
             "This draft was saved before the card was bound to the save. "
-            "Show this step again in the chat, then pick the new card.",
+            "Ask me to show it again, then pick the new card.",
             digest=digest(payload),
         )
     shown = record.get("shown")
@@ -236,7 +240,7 @@ def _card_refusal(
         return refuse(
             "confirm",
             "The card that was shown is no longer part of this draft. "
-            "Show this step again in the chat, then pick the new card.",
+            "Ask me to show it again, then pick the new card.",
             digest=digest(payload),
         )
     rebuilt = card_digest(record["payload"], shown)
@@ -244,7 +248,7 @@ def _card_refusal(
         return refuse(
             "confirm",
             "The card that was shown changed after this step was saved. "
-            "Show this step again in the chat, then pick the new card.",
+            "Ask me to show it again, then pick the new card.",
             digest=digest(payload),
         )
     caller = card_digest_value.strip() if isinstance(card_digest_value, str) else ""
@@ -252,14 +256,14 @@ def _card_refusal(
         return refuse(
             "confirm",
             "Name the card that was shown before this step is saved. "
-            "Show this step again in the chat, then pick the new card.",
+            "Ask me to show it again, then pick the new card.",
             digest=digest(payload),
         )
     if caller != rebuilt:
         return refuse(
             "confirm",
             "That is not the card this step showed. "
-            "Show this step again in the chat, then pick the new card.",
+            "Ask me to show it again, then pick the new card.",
             digest=digest(payload),
         )
     return None
@@ -287,14 +291,13 @@ def confirm_ready(
     if record is None:
         return refuse(
             "confirm",
-            "No matching draft is waiting. Show this step in the chat again before it can be saved. "
-            "If the draft, the topic, or the source list changed, show it again.",
+            NO_MATCHING_DRAFT,
             digest=digest(payload),
         )
     if dump(record.get("fingerprint")) != dump(fingerprint):
         return refuse(
             "confirm",
-            "The saved files changed after that step was shown. Show this step again in this chat.",
+            "The saved files changed after that step was shown. Ask me to show it again.",
             digest=digest(payload),
         )
     if require_card or card_digest is not None:

@@ -52,7 +52,8 @@ def test_confirm_phase_refusal_is_plain():
     assert refused["ok"] is False
     assert "do not" not in refused["reason"].casefold()
     assert "silently" not in refused["reason"].casefold()
-    assert "show this step" in refused["reason"].casefold()
+    assert "has not been shown yet" in refused["reason"].casefold()
+    assert "show this" not in refused["reason"].casefold()
 
 
 def test_server_instructions_offer_the_typed_fallback():

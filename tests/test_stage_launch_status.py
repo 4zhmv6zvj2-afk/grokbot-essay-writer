@@ -277,27 +277,27 @@ def test_ac3_same_run_posts_start_milestone_and_heartbeat(workspace, monkeypatch
     run = start_4a_research(seq)
     assert HEARTBEAT_SECONDS == 300
     assert run["heartbeat_seconds"] == 300
-    assert run["status"] == [start_sentence("gathering", QUESTION)]
+    assert run["status"] == [start_sentence("gathering", "your report")]
     for line in run["status"]:
         _plain(line)
-    assert QUESTION in run["status"][0]
+    assert "your report" in run["status"][0]
     assert run.get("kind") != "watch"
     assert "url" not in run
     assert "watch" not in run
     gathered = note_milestone(seq, "sources")
-    assert gathered == [milestone_sentence("sources", QUESTION)]
-    assert start_sentence("gathering", QUESTION) not in gathered
+    assert gathered == [milestone_sentence("sources", "your report")]
+    assert start_sentence("gathering", "your report") not in gathered
     for line in gathered:
         _plain(line)
     annotated = note_milestone(seq, "annotation", activity="annotating")
-    assert annotated == [milestone_sentence("annotation", QUESTION)]
+    assert annotated == [milestone_sentence("annotation", "your report")]
     assert "annotated the sources" in annotated[0]
     _plain(annotated[0])
     clock["t"] = HEARTBEAT_SECONDS - 1
     assert due_lines(seq) == []
     clock["t"] = HEARTBEAT_SECONDS
     beat = due_lines(seq)
-    assert beat == [heartbeat_sentence("annotating", QUESTION)]
+    assert beat == [heartbeat_sentence("annotating", "your report")]
     assert "still working" in beat[0]
     _plain(beat[0])
     assert run["runner"] == "cursor-cli"
@@ -327,7 +327,7 @@ def test_ac4_status_does_not_skip_basics_or_confirm(workspace, monkeypatch):
     assert seeded["ok"] is True, seeded
     assert seeded.get("basics_seeded") is True
     assert seeded.get("stored") is not True
-    assert seeded["status"] == [start_sentence("gathering", QUESTION)]
+    assert seeded["status"] == [start_sentence("gathering", "your report")]
     for line in seeded["status"]:
         _plain(line)
     assert calls == [["agent", "--model", "grok-4.7-high"]]

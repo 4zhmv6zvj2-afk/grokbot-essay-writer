@@ -111,7 +111,7 @@ def test_setup_same_values_confirm_and_a_changed_key_is_refused(tmp_path, monkey
     assert changed["ok"] is False, changed
     assert changed["refused"] == "confirm"
     assert changed["wrote"] is False
-    assert "show this step" in changed["reason"].casefold()
+    assert "not waiting to be saved" in changed["reason"].casefold()
     assert not (tmp_path / "app").exists()
     assert not (tmp_path / "setup.json").exists()
 
@@ -135,7 +135,7 @@ def test_setup_old_draft_without_hashes_cannot_be_confirmed(tmp_path, monkeypatc
     refused = essay_setup(**{**_setup_args(tmp_path), "confirmPhase": "confirm"})
     assert refused["ok"] is False, refused
     assert refused["refused"] == "confirm"
-    assert "show this step" in refused["reason"].casefold()
+    assert "not waiting to be saved" in refused["reason"].casefold()
     assert not (tmp_path / "app").exists()
 
 
@@ -147,6 +147,7 @@ def _stub_empty_lookups(monkeypatch):
 
 
 def test_dig_card_digest_is_returned_and_a_confirm_without_it_is_refused(workspace, monkeypatch):
+    """essay-copy-b2. The save names cardDigest. The words card digest are not in next."""
     _stub_empty_lookups(monkeypatch)
     seq = open_sequence()
     draft = essay_dig(seq, "corridor", "draft")
@@ -154,12 +155,13 @@ def test_dig_card_digest_is_returned_and_a_confirm_without_it_is_refused(workspa
     assert draft["cardDigest"] == card_digest({"essay_id": seq, "query": "corridor"}, draft["card"])
     record = _read_draft(seq, DIG_TOOL_DIR, draft["digest"])
     assert record["cardDigest"] == draft["cardDigest"]
-    assert "card digest" in draft["next"].casefold()
+    assert isinstance(draft["cardDigest"], str) and len(draft["cardDigest"]) == 64
+    assert "card digest" not in draft["next"].casefold()
 
     refused = essay_dig(seq, "corridor", "confirm")
     assert refused["ok"] is False, refused
     assert refused["refused"] == "confirm"
-    assert "show this step again" in refused["reason"].casefold()
+    assert "show it again" in refused["reason"].casefold()
     assert not (work_dir(seq) / "dig-card.json").exists()
 
 
@@ -177,7 +179,7 @@ def test_dig_legit_card_digest_confirms_and_a_local_shown_edit_is_refused(worksp
     assert tampered["ok"] is False, tampered
     assert tampered["refused"] == "confirm"
     assert "changed" in tampered["reason"].casefold()
-    assert "show this step again" in tampered["reason"].casefold()
+    assert "show it again" in tampered["reason"].casefold()
     assert not (work_dir(seq) / "dig-card.json").exists()
 
     # Remove the edited copy so a *new* draft can be confirmed normally.
@@ -232,11 +234,12 @@ def test_research_summary_card_is_bound(workspace):
     record = _read_draft(seq, SUMMARY_TOOL_DIR, draft["digest"])
     assert draft["cardDigest"] == card_digest(payload, record["shown"])
     assert record["cardDigest"] == draft["cardDigest"]
-    assert "card digest" in draft["next"].casefold()
+    assert isinstance(draft["cardDigest"], str) and len(draft["cardDigest"]) == 64
+    assert "card digest" not in draft["next"].casefold()
 
     missing = essay_research_summary(seq, TOPIC, "confirm", [source()])
     assert missing["ok"] is False, missing
-    assert "show this step again" in missing["reason"].casefold()
+    assert "show it again" in missing["reason"].casefold()
 
     edited = json.loads(json.dumps(record))
     edited["shown"]["preview"]["topic"] = "A locally edited card"
@@ -267,7 +270,7 @@ def test_research_full_card_is_bound(workspace):
 
     missing = essay_research_full(seq, TOPIC, "confirm", [source()], clarify_context=CLARIFY_OPEN)
     assert missing["ok"] is False, missing
-    assert "show this step again" in missing["reason"].casefold()
+    assert "show it again" in missing["reason"].casefold()
 
     confirmed = essay_research_full(
         seq,

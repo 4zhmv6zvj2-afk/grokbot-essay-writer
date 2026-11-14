@@ -337,7 +337,7 @@ def test_ac5_stored_confirm_and_stage5_quiet_use_the_done_line(workspace, monkey
         {"essay_id": seq, "stage": "5", "confirmPhase": "draft", "look": LOOK},
         {"ok": True, "stored": True, "essay_id": seq, "started": {"stage": "6"}},
     )
-    assert finished == [milestone_sentence("draft", QUESTION)]
+    assert finished == [milestone_sentence("draft", "your report")]
     assert start_sentence("drafting", QUESTION) not in finished
     assert "Open the Confirm card" not in finished[0]
     assert session_open(seq) is False
@@ -383,8 +383,8 @@ def test_ac5_stored_confirm_and_stage5_quiet_use_the_done_line(workspace, monkey
     assert stage5["ok"] is True, stage5
     assert stage5["quiet"] is True
     assert stage5["chat"] == STAGE6_OPEN
-    assert stage5["status"] == [milestone_sentence("draft", QUESTION)]
-    assert start_sentence("drafting", QUESTION) not in stage5["status"]
+    assert stage5["status"] == [milestone_sentence("draft", "your report")]
+    assert start_sentence("drafting", "your report") not in stage5["status"]
     assert "Open the Confirm card" not in " ".join(stage5["status"])
     assert load_pointer(fresh)["current"] == "6"
 
