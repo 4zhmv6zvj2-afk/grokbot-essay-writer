@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 # A brief code such as MOD1004AA or RPT5001AA, or a short id minted from a title.
@@ -313,7 +316,41 @@ def load_saved_setup() -> dict | None:
     return data
 
 
-def workspace_root() -> Path:
+# One mid-office reader can still be finishing after ESSAY_WRITER_ROOT moves.
+# That thread keeps the folder it started with. Other threads follow the env.
+_bound_root = threading.local()
+_root_lock = threading.RLock()
+
+
+def bind_workspace_root(root: Path | None) -> None:
+    """Keep this thread on one run folder.
+
+    Pass None to follow ESSAY_WRITER_ROOT again. A mid-office reader binds the
+    folder that was current when it started, so a later root does not receive
+    its log or its sequence files.
+    """
+    if root is None:
+        if hasattr(_bound_root, "path"):
+            del _bound_root.path
+        return
+    _bound_root.path = Path(root).resolve()
+
+
+def bound_workspace_root() -> Path | None:
+    """The folder this thread is bound to, or None when it follows the env."""
+    path = getattr(_bound_root, "path", None)
+    return path if isinstance(path, Path) else None
+
+
+@contextmanager
+def workspace_root_lock() -> Iterator[None]:
+    """Hold a root change until a mid-office finish has left this folder."""
+    with _root_lock:
+        yield
+
+
+def live_workspace_root() -> Path:
+    """The run folder ESSAY_WRITER_ROOT names now, ignoring a thread bind."""
     override = os.environ.get("ESSAY_WRITER_ROOT")
     if override:
         return Path(override).resolve()
@@ -326,6 +363,13 @@ def workspace_root() -> Path:
         if (parent / "pyproject.toml").is_file() and (parent / "src" / "essay_writer").is_dir():
             return parent
     return here.parents[2]
+
+
+def workspace_root() -> Path:
+    bound = bound_workspace_root()
+    if bound is not None:
+        return bound
+    return live_workspace_root()
 
 
 def essay_id_error(value: object) -> str | None:

@@ -4,11 +4,19 @@ from pty_support import pty_reason, pty_required
 
 @pytest.fixture
 def workspace(tmp_path, monkeypatch):
-    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path))
-    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "off")
+    """One run folder. A mid-office reader still finishing stays on the previous folder."""
+    from essay_writer.build_status import reset_status
+    from essay_writer.paths import workspace_root_lock
+
+    with workspace_root_lock():
+        monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path))
+        monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "off")
+        reset_status()
     (tmp_path / "uploads").mkdir()
     (tmp_path / "Essay-writer").mkdir()
-    return tmp_path
+    yield tmp_path
+    with workspace_root_lock():
+        reset_status()
 
 
 @pytest.fixture
