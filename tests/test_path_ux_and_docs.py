@@ -12,9 +12,10 @@ from essay_writer.first_run import (
     grok_config_home,
     install_uploaded_copy,
 )
+from essay_writer.first_run_mac import MAC_NOT_MOUNTED_CHAT
 from essay_writer.projects import essay_project_delete
 from essay_writer.shells import front_office_call
-from essay_writer.student_voice import student_surface_hits
+from essay_writer.student_voice import say, student_surface_hits
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -100,10 +101,15 @@ def test_mac_not_mounted_returns_plain_next(tmp_path, monkeypatch):
     doc = tmp_path / "essay.docx"
     doc.write_bytes(b"x")
     missing = copy_deliverable_to_mac(doc)
+    spoken = say(MAC_NOT_MOUNTED_CHAT)
     assert missing["reason"] == "mac-not-mounted"
-    assert missing.get("next")
+    assert missing.get("next") == spoken
     assert student_surface_hits(missing["next"]) == []
-    assert "stay" in missing["next"].casefold()
+    for line in (MAC_NOT_MOUNTED_CHAT, spoken):
+        assert "ESSAY_WRITER_MAC_DIR" not in line
+        assert "not available now" in line
+        assert "stays in the chat and on this sequence" in line
+        assert "ask the operator to set up the Mac folder" in line
 
 
 def test_docs_batch_d_index_and_cites():
