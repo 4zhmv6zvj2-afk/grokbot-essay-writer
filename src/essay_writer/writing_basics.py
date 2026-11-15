@@ -49,28 +49,28 @@ def revisit_note(stage: str, genre: str | None = None) -> str:
         if genre == "report":
             return (
                 "After research is saved, reopen purpose and scope only if those gathered sources break them. "
-                "A thin edit of the central theme stays on the plan. "
+                "A small wording change of the central theme stays on the plan. "
                 "If purpose and scope or the central theme breaks, approve this stage again and then approve the plan again before the first draft. "
                 "Do not silently rewrite the plan into the draft."
             )
         if genre == "essay":
             return (
                 "After research is saved, reopen the thesis only if those gathered sources break it. "
-                "A thin edit stays on the plan. "
+                "A small wording change stays on the plan. "
                 "If the thesis breaks, approve this stage again and then approve the plan again before the first draft. "
                 "Do not silently rewrite the plan into the draft."
             )
         if genre == "diary":
             return (
                 "After research is saved, reopen the entries only if those gathered sources break a decision or an event. "
-                "A thin edit stays on the plan. "
+                "A small wording change stays on the plan. "
                 "If a decision or an event breaks, approve this stage again and then approve the plan again before the first draft. "
                 "Do not silently rewrite the plan into the draft."
             )
         return (
             "After research is saved, reopen this lock only if those gathered sources break it. "
             "On an essay the lock is the thesis. On a report the lock is purpose and scope. "
-            "A thin edit of the central theme stays on the plan. "
+            "A small wording change of the central theme stays on the plan. "
             "If the lock or the central theme breaks, approve this stage again and then approve the plan again before the first draft. "
             "Do not silently rewrite the plan into the draft."
         )

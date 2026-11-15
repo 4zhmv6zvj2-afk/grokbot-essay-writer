@@ -104,7 +104,7 @@ Approve the save before the plan is locked.
 
 ### After research, revisit the plan
 
-After the annotated bibliography and the critical review are saved, revisit the stage 3 plan before the first draft. Revisit the entries only if the research breaks a decision or an event. A thin edit stays on the plan. A break is not a thin edit. A diary has no thesis.
+After the annotated bibliography and the critical review are saved, revisit the stage 3 plan before the first draft. Revisit the entries only if the research breaks a decision or an event. A small wording change stays on the plan. A break of that claim is not a small change. A diary has no thesis.
 
 Check that each entry’s chain still holds, that the word weights still match the brief, and that each source type is a real title, with gaps named. Leave out anything the research never showed. Do not invent sources. Use only the year printed in the opened source. Do not add a second year.
 

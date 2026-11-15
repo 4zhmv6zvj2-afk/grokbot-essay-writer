@@ -50,7 +50,7 @@ Do not restate this stage. Use the checklist in `docs/academic-writing-helpers.m
 
 ## After research, revisit the plan
 
-After the annotated bibliography and the critical review are saved, revisit the stage 3 plan before the first draft. Revisit the thesis only if the research breaks it. The thesis should still be the best one-sentence answer. A thin edit is allowed. A break is not a thin edit.
+After the annotated bibliography and the critical review are saved, revisit the stage 3 plan before the first draft. Revisit the thesis only if the research breaks it. The thesis should still be the best one-sentence answer. A small wording change is allowed. A break of that claim is not a small change.
 
 Check that the section arguments still hold, that the word weights still match the brief, and that each source type is a real title, with gaps named. Leave out anything the research never showed. Do not invent sources. Use only the year printed in the opened source. Do not add a second year.
 

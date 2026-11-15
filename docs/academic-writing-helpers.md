@@ -70,7 +70,7 @@ The Basics checklist runs internally. Its answers are saved in the tracking note
 
 ## After research, revisit the plan
 
-After the annotated bibliography and the critical review are saved, revisit the stage 3 plan before the first draft. Revisit stage 2 only if the research breaks that lock. On an essay the lock is the thesis. On a report the lock is purpose and scope. On a diary the lock is the entries the brief names. The report’s one-sentence answer is the central theme. A thin edit of that sentence is allowed. A break is not a thin edit. A report has no thesis. A diary has no thesis.
+After the annotated bibliography and the critical review are saved, revisit the stage 3 plan before the first draft. Revisit stage 2 only if the research breaks that lock. On an essay the lock is the thesis. On a report the lock is purpose and scope. On a diary the lock is the entries the brief names. The report’s one-sentence answer is the central theme. A small wording change of that sentence is allowed. A break of that claim is not a small change. A report has no thesis. A diary has no thesis.
 
 Check that the section arguments still hold, that the word weights still match the brief, and that each source type is a real title, with gaps named. The one-sentence answer should still be the best one. Leave out anything the research never showed. Do not invent sources. Use only the year printed in the opened source. Do not add a second year.
 
