@@ -215,8 +215,10 @@ uv run pytest --cov=essay_writer --cov-report=term   # CI floor 85%
 
 Start with [ARCHITECTURE.md](ARCHITECTURE.md), then
 [docs/GLOSSARY.md](docs/GLOSSARY.md) for the private vocabulary (doors, seats,
-spine, shelf, dig, canon, mid-office) and [docs/testing.md](docs/testing.md) for
-how the suite is organised and how the prompt snapshot is regenerated.
+spine, shelf, dig, canon, mid-office). The
+[Student-facing terms](docs/GLOSSARY.md#student-facing-terms) section of that
+page is the same vocabulary in plain English. [docs/testing.md](docs/testing.md)
+covers how the suite is organised and how the prompt snapshot is regenerated.
 
 `uv.lock` is the developer lockfile. `requirements-ci.txt` is the hash-pinned CI
 environment; `requirements-build.txt` pins the build tooling; and

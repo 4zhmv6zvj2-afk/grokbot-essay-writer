@@ -58,6 +58,18 @@ def test_architecture_glossary_link_resolves() -> None:
     assert (ROOT / match.group(1)).is_file()
 
 
+def test_glossary_student_section_is_linked() -> None:
+    """The student terms stay on the glossary page and both docs link to them."""
+    glossary = _read("docs/GLOSSARY.md")
+    assert "## Student-facing terms" in glossary
+    assert "A stage needs one sentence of your own." in glossary
+    assert "is refused" in glossary.split("## Student-facing terms", 1)[1]
+    anchor = "docs/GLOSSARY.md#student-facing-terms"
+    assert anchor in _read("README.md")
+    assert anchor in _read("ARCHITECTURE.md")
+    assert (ROOT / "docs/GLOSSARY.md").is_file()
+
+
 def test_confirm_gate_overclaims_are_gone() -> None:
     readme = _read("README.md")
     assert "Nothing is saved until the Confirm" not in readme
