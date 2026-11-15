@@ -39,6 +39,8 @@ class StageArgs:
     encourageChoice: str | None = None
     paperChoice: dict[str, Any] | None = None
     lockChoice: str | None = None
+    formatAnswer: str | None = None
+    questionAnswer: str | None = None
 
 
 @dataclass(slots=True)

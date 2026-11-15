@@ -5,7 +5,9 @@ and does not invent a mark scheme, a question, a format, or a band.
 
 A brief with no mark scheme: format and question come from the brief. A missing
 mark scheme does not block, and no band is invented. When a label leaves a
-field empty, one obvious cue may fill that field. The brief file is not rewritten.
+field empty, one obvious cue may fill that field. A stored answer beside the
+brief fills a format or a question that is still empty. The brief file is not
+rewritten.
 
 A mark scheme: mark scheme, prescribed format, and assignment ask come first.
 The aim is the highest band on that scheme, not merely a pass. On a conflict
@@ -16,6 +18,8 @@ This is not mechanical gate 1. A missing brief is not a failure.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from collections.abc import Callable
 from typing import Any
@@ -727,6 +731,214 @@ def assignment_silence_gaps(essay_id: str) -> list[str]:
     return _gaps(essay_id)
 
 
+_BRIEF_META = "brief-meta.json"
+_FORMAT_ANSWERS = {
+    "essay": "essay",
+    "report": "report",
+    "reflective diary": "reflective diary",
+}
+_NO_BRIEF_REASON = "There is no brief to store an answer beside."
+_STORE_REASON = "I could not store that answer beside the brief."
+
+
+def _brief_digest(text: str) -> str:
+    """SHA-256 of the brief text ``read_assignment`` already reads."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _brief_meta_path(essay_id: str):
+    return essay_dir(essay_id) / _BRIEF_META
+
+
+def _no_assignment_document(essay_id: str) -> bool:
+    """True when ``read_assignment`` would take the no-document return.
+
+    This does not open ``brief-meta.json``.
+    """
+    if _brief_text(essay_id):
+        return False
+    return not bool(_scheme_file(essay_id))
+
+
+def _allowed_format(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return _FORMAT_ANSWERS.get(re.sub(r"\s+", " ", value).strip().casefold())
+
+
+def _read_brief_meta(essay_id: str) -> dict[str, Any] | None:
+    """The side file when it is a readable object. A bad file is ignored.
+
+    The file is not deleted. ``highest_band``, ``named_entries``, and
+    ``mark_scheme`` in the file are not read.
+    """
+    path = _brief_meta_path(essay_id)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    digest = data.get("brief_sha256")
+    if not isinstance(digest, str) or not digest.strip():
+        return None
+    stored_format = data.get("format")
+    if "format" in data and stored_format is not None and not isinstance(stored_format, str):
+        return None
+    if (
+        "question" in data
+        and data.get("question") is not None
+        and not isinstance(data.get("question"), str)
+    ):
+        return None
+    return data
+
+
+def _accepted_brief_meta(essay_id: str, brief: str) -> dict[str, Any] | None:
+    """A side file whose hash matches this brief text. A mismatch is ignored."""
+    data = _read_brief_meta(essay_id)
+    if data is None:
+        return None
+    if data.get("brief_sha256") != _brief_digest(brief):
+        return None
+    return data
+
+
+def _no_brief_refusal() -> dict[str, Any]:
+    from essay_writer.confirm import refuse
+
+    return refuse(
+        "no-brief",
+        _NO_BRIEF_REASON,
+        next="Add the assignment brief, then answer the format or the question.",
+    )
+
+
+def _store_refusal() -> dict[str, Any]:
+    from essay_writer.confirm import refuse
+
+    return refuse(
+        "answer",
+        _STORE_REASON,
+        next="The brief is unchanged. This stage was not saved.",
+    )
+
+
+def _rollback_brief_meta(path, before: bytes | None) -> None:
+    """Put the previous side file back. Drop a new file that is not the old bytes."""
+    import os
+    import tempfile
+
+    try:
+        if before is None:
+            if path.is_file() or path.is_symlink():
+                path.unlink()
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary = tempfile.mkstemp(
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+        )
+        try:
+            with os.fdopen(descriptor, "wb") as handle:
+                handle.write(before)
+            os.replace(temporary, path)
+        except OSError:
+            try:
+                os.unlink(temporary)
+            except OSError:
+                pass
+            if path.is_file():
+                try:
+                    current = path.read_bytes()
+                except OSError:
+                    current = b""
+                if current != before:
+                    path.unlink()
+    except OSError:
+        return
+
+
+def _publish_brief_meta(path, record: dict[str, Any]) -> None:
+    """Write the side file, or leave the previous bytes when the write fails."""
+    from essay_writer.records import write_json
+
+    before = path.read_bytes() if path.is_file() else None
+    try:
+        write_json(path, record, mkdir=True)
+        written = path.read_bytes()
+        parsed = json.loads(written.decode("utf-8"))
+        if not isinstance(parsed, dict) or parsed.get("brief_sha256") != record["brief_sha256"]:
+            raise OSError("the answer file was not complete")
+        if parsed.get("format") != record.get("format") or parsed.get("question") != record.get(
+            "question"
+        ):
+            raise OSError("the answer file was not complete")
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        _rollback_brief_meta(path, before)
+        raise OSError("the answer file was not complete") from exc
+
+
+def store_brief_answer(
+    essay_id: str,
+    format_answer: str | None,
+    question_answer: str | None,
+) -> dict[str, Any] | None:
+    """Write or clear the answer beside the brief. A refusal writes nothing.
+
+    Called only for a draft that sent ``formatAnswer`` or ``questionAnswer``.
+    An empty string clears that field. Any other format value is ignored.
+    When both fields are empty the side file is removed. The brief file is
+    not opened for writing.
+    """
+    if _no_assignment_document(essay_id):
+        return _no_brief_refusal()
+    brief = _brief_text(essay_id)
+    saved = _accepted_brief_meta(essay_id, brief)
+    kept_format = _allowed_format(saved.get("format")) if saved is not None else None
+    kept_question = None
+    if saved is not None:
+        raw_question = saved.get("question")
+        if isinstance(raw_question, str) and raw_question.strip():
+            kept_question = raw_question.strip()
+    if isinstance(format_answer, str):
+        if format_answer == "":
+            kept_format = None
+        else:
+            allowed = _allowed_format(format_answer)
+            if allowed is not None:
+                kept_format = allowed
+    if isinstance(question_answer, str):
+        if question_answer == "":
+            kept_question = None
+        elif question_answer.strip():
+            kept_question = question_answer.strip()
+    path = _brief_meta_path(essay_id)
+    if kept_format is None and kept_question is None:
+        before = path.read_bytes() if path.is_file() else None
+        if before is None:
+            return None
+        try:
+            path.unlink()
+        except OSError:
+            _rollback_brief_meta(path, before)
+            return _store_refusal()
+        return None
+    record: dict[str, Any] = {"brief_sha256": _brief_digest(brief)}
+    if kept_format is not None:
+        record["format"] = kept_format
+    if kept_question is not None:
+        record["question"] = kept_question
+    try:
+        _publish_brief_meta(path, record)
+    except OSError:
+        return _store_refusal()
+    return None
+
+
 def read_assignment(essay_id: str) -> dict[str, Any]:
     """What the documents actually say. Missing documents stay off."""
     brief = _brief_text(essay_id)
@@ -765,6 +977,11 @@ def read_assignment(essay_id: str) -> dict[str, Any]:
     prescribed = _labelled_choice(scheme_format, brief_format)
     if prescribed is None:
         prescribed = _format_cue(brief_body)
+    # Labels, scheme lines, and obvious cues win. The side file fills only a
+    # field that is still empty, and only when its hash matches this brief.
+    saved_answer = _accepted_brief_meta(essay_id, brief) if prescribed is None else None
+    if prescribed is None and saved_answer is not None:
+        prescribed = _allowed_format(saved_answer.get("format"))
     if (
         brief_format == "reflective diary"
         or scheme_format == "reflective diary"
@@ -777,6 +994,13 @@ def read_assignment(essay_id: str) -> dict[str, Any]:
         )
     else:
         question = _question_of(brief_body) or _question_of(scheme, cues=False)
+    if not question:
+        if saved_answer is None:
+            saved_answer = _accepted_brief_meta(essay_id, brief)
+        if saved_answer is not None:
+            raw_question = saved_answer.get("question")
+            if isinstance(raw_question, str) and raw_question.strip():
+                question = raw_question.strip()
     band = _highest_band(scheme) if has_scheme else None
     if has_scheme:
         mode = "both" if has_brief else "mark_scheme"

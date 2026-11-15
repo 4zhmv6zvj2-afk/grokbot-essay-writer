@@ -73,6 +73,10 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   parses stays as it is. The brief file is not rewritten, no remembered answer
   is stored, and the combined stage title stays when the brief still has no
   Genre or Format label.
+- A format or question the brief leaves empty can be answered once in the
+  chat. The answer is stored beside the brief, and the brief file is not
+  rewritten. A later sequence of the same module sees that answer. An empty
+  answer clears the stored field.
 
 ## 0.9.1 — 2026-11-12
 

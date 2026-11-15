@@ -74,6 +74,10 @@ from essay_writer.stage_state import (
     load_pointer,
 )
 
+ANSWER_NEXT = (
+    "I have stored that answer beside the brief. This stage still needs one sentence of your own."
+)
+
 
 def _continues_inherited_lock(
     essay_id: str,
@@ -119,6 +123,8 @@ def essay_stage(
     encourageChoice: str | None = None,
     paperChoice: dict[str, Any] | None = None,
     lockChoice: str | None = None,
+    formatAnswer: str | None = None,
+    questionAnswer: str | None = None,
 ) -> dict[str, Any]:
     """A card saves the final look. Stage 5 starts stage 6."""
     return _stage_call(
@@ -139,6 +145,8 @@ def essay_stage(
             encourageChoice=encourageChoice,
             paperChoice=paperChoice,
             lockChoice=lockChoice,
+            formatAnswer=formatAnswer,
+            questionAnswer=questionAnswer,
         ),
         minting=False,
     )
@@ -395,19 +403,36 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         from essay_writer.specialists.grok_bot import typed_save_word
         from essay_writer.stage_body import guidance_only_refusal, look_is_confirmable
 
-        answer_call = (
-            getattr(args, "formatAnswer", None) is not None
-            or getattr(args, "questionAnswer", None) is not None
-        )
         if (
             text
             and stage_uses_confirm_card(stage)
-            and not answer_call
             and not typed_save_word(look)
             and not look_is_confirmable(essay_id, stage, genre, text)
         ):
             return guidance_only_refusal()
         return _noop_result(essay_id, stage, confirmPhase, pointer["current"])
+    if (
+        confirmPhase == DRAFT
+        and not minting
+        and (args.formatAnswer is not None or args.questionAnswer is not None)
+    ):
+        from essay_writer.assignment_gate import store_brief_answer
+        from essay_writer.stage_body import look_is_confirmable
+
+        failed = store_brief_answer(essay_id, args.formatAnswer, args.questionAnswer)
+        if failed is not None:
+            return failed
+        if not look_is_confirmable(essay_id, stage, genre, text):
+            return {
+                "ok": True,
+                "essay_id": essay_id,
+                "stage": stage,
+                "confirmPhase": DRAFT,
+                "stored": False,
+                "advanced": False,
+                "wrote": False,
+                "next": ANSWER_NEXT,
+            }
     resolved = replace(
         args,
         confirmPhase=confirmPhase,
