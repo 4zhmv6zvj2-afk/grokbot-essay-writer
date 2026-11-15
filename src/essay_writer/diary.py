@@ -136,7 +136,15 @@ _TITLE_LABELS = (
     ("word count", "word_count"),
     ("name", "name"),
 )
-_PROGRAMME_ASK = re.compile(r"(?i)\b(?:programme name|programme code|partner institution)\b")
+# "programme name", "name of the programme", and "programme's name" ask for the
+# programme. The leftover word "name" is not the student's name.
+_PROGRAMME_NAME = (
+    r"programme name"
+    r"|name of (?:the |a |an )?programme"
+    r"|programme['\u2019]s name"
+)
+_PROGRAMME_ASK = re.compile(rf"(?i)\b(?:{_PROGRAMME_NAME}|programme code|partner institution)\b")
+_PROGRAMME_NAME_ASK = re.compile(rf"(?i)\b(?:{_PROGRAMME_NAME})\b")
 _BANDISH = re.compile(
     r"(?i)\b(?:thin|partial|sound|clear|exact|consistent|coherent|competent|"
     r"satisfactory|appropriate|relevant|poor|good|excellent|adequate|"
@@ -774,14 +782,7 @@ def _known_phrase(phrase: str) -> bool:
         remainder = re.sub(r"\s+", " ", remainder).strip(" .:-")
         if not remainder:
             return True
-    if (
-        _PROGRAMME_ASK.search(folded)
-        and not re.sub(
-            r"(?i)\b(?:programme name|programme code|partner institution)\b",
-            " ",
-            folded,
-        ).strip()
-    ):
+    if _PROGRAMME_ASK.search(folded) and not _PROGRAMME_ASK.sub(" ", folded).strip():
         return True
     return False
 
@@ -988,8 +989,12 @@ def assignment_on_cover(
 
 
 def _without_programme_name(text: str) -> str:
-    """Drop a programme-name ask so the leftover word name is not a student name."""
-    return re.sub(r"(?i)\bprogramme name\b", " ", text)
+    """Drop a programme-name ask so the leftover word name is not a student name.
+
+    ``programme name``, ``name of the programme``, and ``programme's name`` are
+    the same ask. A student-name ask in the same sentence is left in place.
+    """
+    return _PROGRAMME_NAME_ASK.sub(" ", text)
 
 
 def _positive_name_ask(ask: str) -> bool:

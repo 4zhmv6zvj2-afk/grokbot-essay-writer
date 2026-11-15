@@ -443,6 +443,40 @@ def test_the_reply_names_stored_cleared_or_ignored(case_id, workspace):
     assert cleared["next"] == CLEARED_NEXT
     assert not _meta("ASK9103AA").exists()
 
+    mixed = _plant("ASK9105AA", SILENT)
+    essay_stage(mixed, "1", "draft", formatAnswer="report", questionAnswer=QUESTION)
+    one_each = essay_stage(mixed, "1", "draft", formatAnswer="essay", questionAnswer="")
+    assert one_each["ok"] is True, one_each
+    assert one_each["next"] == (
+        "I have stored the format and cleared the question beside the brief. "
+        "This stage still needs one sentence of your own."
+    )
+    assert one_each["stored"] is False
+    kept = _load("ASK9105AA")
+    assert kept["format"] == "essay"
+    assert "question" not in kept
+    other_way = essay_stage(mixed, "1", "draft", formatAnswer="", questionAnswer=QUESTION)
+    assert other_way["next"] == (
+        "I have stored the question and cleared the format beside the brief. "
+        "This stage still needs one sentence of your own."
+    )
+    swapped = _load("ASK9105AA")
+    assert "format" not in swapped
+    assert swapped["question"] == QUESTION
+
+    unused_format = _plant("ASK9106AA", SILENT)
+    novel_and_question = essay_stage(
+        unused_format, "1", "draft", formatAnswer="novel", questionAnswer=QUESTION
+    )
+    assert novel_and_question["ok"] is True, novel_and_question
+    assert novel_and_question["next"] == (
+        "I have stored the question beside the brief. I have not stored the format. "
+        "This stage still needs one sentence of your own."
+    )
+    question_only = _load("ASK9106AA")
+    assert "format" not in question_only
+    assert question_only["question"] == QUESTION
+
     waiting = _plant("ASK9104AA", SILENT)
     draft = essay_stage(waiting, "1", "draft", LOOK)
     assert draft["ok"] is True, draft
@@ -782,3 +816,29 @@ def test_a_linked_answer_file_is_not_followed(case_id, workspace, tmp_path):
     assert link.is_symlink()
     assert outside.read_bytes() == before
     assert read_assignment(seq)["format"] is None
+
+    linked = _plant("ASK1402AA", SILENT)
+    folder = essay_dir("ASK1402AA")
+    held = tmp_path / "linked-module"
+    held.mkdir()
+    for child in list(folder.iterdir()):
+        child.rename(held / child.name)
+    folder.rmdir()
+    folder.symlink_to(held, target_is_directory=True)
+    sentinel = held / "brief-meta.json"
+    sentinel.write_text('{"format": "report", "question": "outside"}\n', encoding="utf-8")
+    sentinel_before = sentinel.read_bytes()
+    brief_before = (held / "brief.md").read_bytes()
+    seen = read_assignment(linked)
+    assert seen["format"] is None
+    assert seen["question"] is None
+    through = essay_stage(linked, "1", "draft", formatAnswer="essay", questionAnswer=QUESTION)
+    assert through["ok"] is False, through
+    assert through["refused"] == "answer"
+    assert through["next"] != ANSWER_NEXT
+    assert folder.is_symlink()
+    assert sentinel.is_file()
+    assert not sentinel.is_symlink()
+    assert sentinel.read_bytes() == sentinel_before
+    assert (held / "brief.md").read_bytes() == brief_before
+    assert read_assignment(linked)["format"] is None

@@ -106,13 +106,16 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   or registration ask stays on the Word cover; the cover does not stop at the
   title. A programme-name ask is not a student name, so the cover does not
   print a blank Name line unless the brief asks for the student's name.
+  "Name of the programme" and "programme's name" are programme asks too.
 - A format or question answer is stored on a draft. A confirm that sends an
   answer field still has to be a real look; guidance alone does not save the
   stage. The reply says whether the answer was stored, cleared, or left
   unused. An empty answer on a fresh brief, or a format that is not essay,
-  report, or reflective diary, does not say it was stored.
+  report, or reflective diary, does not say it was stored. A call that stores
+  one field and clears or skips the other names each field.
 - The answer file beside the brief is read and written only when it is a
-  regular file. A symlink is not followed.
+  regular file in a real folder. A symlink is not followed, and neither is a
+  linked folder that would hold the file.
 - The opening card names the first-full-draft exception: the student decides
   when each other stage is saved, and the first full draft is saved when it
   is written. Word metadata uses a real stored title. A Draft placeholder is

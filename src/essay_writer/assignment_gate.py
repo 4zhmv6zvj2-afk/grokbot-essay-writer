@@ -766,15 +766,21 @@ def _allowed_format(value: object) -> str | None:
     return _FORMAT_ANSWERS.get(re.sub(r"\s+", " ", value).strip().casefold())
 
 
+def _linked_answer_path(path) -> bool:
+    """The side file, or the folder that holds it, is a symlink."""
+    return path.is_symlink() or path.parent.is_symlink()
+
+
 def _regular_file(path) -> bool:
-    """A real side file. A symlink is not the side file and is not followed."""
-    return path.is_file() and not path.is_symlink()
+    """A real side file in a real folder. A symlink is not followed."""
+    return path.is_file() and not _linked_answer_path(path)
 
 
 def _read_brief_meta(essay_id: str) -> dict[str, Any] | None:
     """The side file when it is a readable object. A bad file is ignored.
 
-    The file is not deleted. A symlink is not followed. ``highest_band``,
+    The file is not deleted. A symlink is not followed, including a linked
+    folder that would hold the file. ``highest_band``,
     ``named_entries``, and ``mark_scheme`` in the file are not read.
     """
     path = _brief_meta_path(essay_id)
@@ -836,6 +842,8 @@ def _rollback_brief_meta(path, before: bytes | None) -> None:
     import os
     import tempfile
 
+    if _linked_answer_path(path):
+        return
     try:
         if before is None:
             if path.is_file() or path.is_symlink():
@@ -871,10 +879,11 @@ def _publish_brief_meta(path, record: dict[str, Any]) -> None:
     """Write the side file, or leave the previous bytes when the write fails.
 
     A symlink is refused before any read, so the link's target is not opened.
+    A folder that is itself a link is refused the same way.
     """
     from essay_writer.records import write_json
 
-    if path.is_symlink():
+    if _linked_answer_path(path):
         raise OSError("the answer file is a link")
     before = path.read_bytes() if _regular_file(path) else None
     try:
@@ -894,19 +903,32 @@ def _publish_brief_meta(path, record: dict[str, Any]) -> None:
         raise OSError("the answer file was not complete") from exc
 
 
+def _field_outcome(sent: str | None, kept: str | None, *, allowed: bool) -> str | None:
+    """What this call did to one sent field. ``None`` when the field was not sent."""
+    if not isinstance(sent, str):
+        return None
+    if sent == "":
+        return "cleared" if kept is not None else "ignored"
+    if allowed:
+        return "stored"
+    return "ignored"
+
+
 def store_brief_answer(
     essay_id: str,
     format_answer: str | None,
     question_answer: str | None,
-) -> dict[str, Any] | str:
+) -> dict[str, Any] | tuple[str | None, str | None]:
     """Write or clear the answer beside the brief. A refusal writes nothing.
 
     Called only for a draft that sent ``formatAnswer`` or ``questionAnswer``.
-    Returns ``stored`` when an allowed value is written, ``cleared`` when an
-    empty string removes a stored field, and ``ignored`` when nothing changes.
-    An empty string clears that field. Any other format value is ignored.
-    When both fields are empty the side file is removed. A symlink is not
-    followed. The brief file is not opened for writing.
+    Returns ``(format, question)``. Each side is ``stored`` when an allowed
+    value is written, ``cleared`` when an empty string removes a stored field,
+    ``ignored`` when that field was sent and nothing changes, or ``None`` when
+    the field was not sent. An empty string clears that field. Any other
+    format value is ignored. When both fields are empty the side file is
+    removed. A symlink is not followed, including a linked folder that would
+    hold the file. The brief file is not opened for writing.
     """
     if _no_assignment_document(essay_id):
         return _no_brief_refusal()
@@ -918,48 +940,43 @@ def store_brief_answer(
         raw_question = saved.get("question")
         if isinstance(raw_question, str) and raw_question.strip():
             kept_question = raw_question.strip()
-    stored_value = False
-    cleared_value = False
-    if isinstance(format_answer, str):
-        if format_answer == "":
-            if kept_format is not None:
-                cleared_value = True
-            kept_format = None
-        else:
-            allowed = _allowed_format(format_answer)
-            if allowed is not None:
-                kept_format = allowed
-                stored_value = True
-    if isinstance(question_answer, str):
-        if question_answer == "":
-            if kept_question is not None:
-                cleared_value = True
-            kept_question = None
-        elif question_answer.strip():
-            kept_question = question_answer.strip()
-            stored_value = True
+    format_outcome = _field_outcome(
+        format_answer,
+        kept_format,
+        allowed=_allowed_format(format_answer) is not None,
+    )
+    question_outcome = _field_outcome(
+        question_answer,
+        kept_question,
+        allowed=isinstance(question_answer, str) and bool(question_answer.strip()),
+    )
+    if format_outcome == "cleared":
+        kept_format = None
+    elif format_outcome == "stored" and isinstance(format_answer, str):
+        kept_format = _allowed_format(format_answer)
+    if question_outcome == "cleared":
+        kept_question = None
+    elif question_outcome == "stored" and isinstance(question_answer, str):
+        kept_question = question_answer.strip()
     path = _brief_meta_path(essay_id)
-    if path.is_symlink():
+    if _linked_answer_path(path):
         return _store_refusal()
+    outcome = (format_outcome, question_outcome)
     if kept_format is None and kept_question is None:
         if not _regular_file(path):
-            return "ignored"
+            return outcome
         before = path.read_bytes()
         try:
             path.unlink()
         except OSError:
             _rollback_brief_meta(path, before)
             return _store_refusal()
-        return "cleared"
+        return outcome
     raw_format = saved.get("format") if isinstance(saved, dict) else None
     raw_question = saved.get("question") if isinstance(saved, dict) else None
-    if (
-        not stored_value
-        and not cleared_value
-        and raw_format == kept_format
-        and raw_question == kept_question
-    ):
-        return "ignored"
+    acted = format_outcome in {"stored", "cleared"} or question_outcome in {"stored", "cleared"}
+    if not acted and raw_format == kept_format and raw_question == kept_question:
+        return outcome
     record: dict[str, Any] = {"brief_sha256": _brief_digest(brief)}
     if kept_format is not None:
         record["format"] = kept_format
@@ -969,9 +986,9 @@ def store_brief_answer(
         _publish_brief_meta(path, record)
     except OSError:
         return _store_refusal()
-    if stored_value:
-        return "stored"
-    return "cleared"
+    if acted:
+        return outcome
+    return ("cleared", "cleared")
 
 
 def read_assignment(essay_id: str) -> dict[str, Any]:

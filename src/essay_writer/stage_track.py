@@ -80,14 +80,36 @@ ANSWER_NEXT = (
 CLEARED_NEXT = (
     "I have cleared that answer beside the brief. This stage still needs one sentence of your own."
 )
-IGNORED_NEXT = (
-    "I have not stored that answer. This stage still needs one sentence of your own."
-)
-_ANSWER_NEXTS = {
-    "stored": ANSWER_NEXT,
-    "cleared": CLEARED_NEXT,
-    "ignored": IGNORED_NEXT,
-}
+IGNORED_NEXT = "I have not stored that answer. This stage still needs one sentence of your own."
+_ANSWER_TAIL = "This stage still needs one sentence of your own."
+
+
+def answer_next(format_outcome: str | None, question_outcome: str | None) -> str:
+    """The draft line for this call. A mixed call names each field."""
+    sent = [
+        (label, outcome)
+        for label, outcome in (("format", format_outcome), ("question", question_outcome))
+        if outcome is not None
+    ]
+    kinds = {outcome for _label, outcome in sent}
+    if kinds == {"stored"}:
+        return ANSWER_NEXT
+    if kinds == {"cleared"}:
+        return CLEARED_NEXT
+    if not kinds or kinds == {"ignored"}:
+        return IGNORED_NEXT
+    stored = [label for label, outcome in sent if outcome == "stored"]
+    cleared = [label for label, outcome in sent if outcome == "cleared"]
+    ignored = [label for label, outcome in sent if outcome == "ignored"]
+    if stored and cleared:
+        lead = f"I have stored the {stored[0]} and cleared the {cleared[0]} beside the brief."
+    elif stored:
+        lead = f"I have stored the {stored[0]} beside the brief."
+    else:
+        lead = f"I have cleared the {cleared[0]} beside the brief."
+    if ignored:
+        return f"{lead} I have not stored the {ignored[0]}. {_ANSWER_TAIL}"
+    return f"{lead} {_ANSWER_TAIL}"
 
 
 def _continues_inherited_lock(
@@ -456,7 +478,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
                 "stored": False,
                 "advanced": False,
                 "wrote": False,
-                "next": _ANSWER_NEXTS[outcome],
+                "next": answer_next(outcome[0], outcome[1]),
             }
     resolved = replace(
         args,

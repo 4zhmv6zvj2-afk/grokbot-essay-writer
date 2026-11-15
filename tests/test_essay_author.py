@@ -147,47 +147,73 @@ def author_problems(root: Path) -> list[str]:
 
 
 _SKIP_DIRS = frozenset(
-    {".git", ".venv", "venv", "__pycache__", ".pytest_cache", "dist", "node_modules"}
+    {
+        ".git",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".tox",
+        ".nox",
+        "htmlcov",
+        ".eggs",
+        "build",
+        "dist",
+        "node_modules",
+    }
 )
 
 
-def _listed_names() -> list[str]:
+def _skipped(relative: Path) -> bool:
+    """Build output, tool caches, and virtualenvs are not the package."""
+    return any(part in _SKIP_DIRS or part.endswith(".egg-info") for part in relative.parts)
+
+
+def _listed_names(root: Path | None = None) -> list[str]:
     """Tracked paths when this tree is a git checkout, otherwise the files on disk.
 
-    An unpacked sdist has no ``git`` metadata. The walk leaves out tool caches
-    and virtualenvs so a local junk file is not treated as the package.
+    An unpacked sdist has no ``git`` metadata. The walk leaves out build output,
+    tool caches, and virtualenvs so a local junk file is not treated as the package.
     """
+    root = REPO if root is None else root
     try:
         out = subprocess.check_output(
-            ["git", "-C", str(REPO), "ls-files", "-z"],
+            ["git", "-C", str(root), "ls-files", "-z"],
             stderr=subprocess.DEVNULL,
         )
     except (OSError, subprocess.CalledProcessError):
         names: list[str] = []
-        for path in sorted(REPO.rglob("*")):
+        for path in sorted(root.rglob("*")):
             if not path.is_file() or path.is_symlink():
                 continue
-            relative = path.relative_to(REPO)
-            if any(part in _SKIP_DIRS for part in relative.parts):
+            relative = path.relative_to(root)
+            if _skipped(relative):
                 continue
             names.append(relative.as_posix())
         return names
     return [name for name in out.decode().split("\0") if name]
 
 
-def tracked_text(skip: frozenset[str] = frozenset()) -> list[tuple[str, str]]:
+def tracked_text(
+    skip: frozenset[str] = frozenset(),
+    root: Path | None = None,
+) -> list[tuple[str, str]]:
     """Every tracked file that decodes as text, as (path, contents).
 
     A path in ``skip`` is left out. The caller that skips this test file asserts
     the name is really tracked first, so the walk cannot shrink by a typo.
-    Without git, the same scan reads the files in the tree.
+    Without git, the same scan reads the files in the tree and leaves out build
+    and cache directories.
     """
+    root = REPO if root is None else root
     found: list[tuple[str, str]] = []
-    for name in _listed_names():
+    for name in _listed_names(root):
         if name in skip:
             continue
         try:
-            raw = (REPO / name).read_bytes()
+            raw = (root / name).read_bytes()
         except OSError:
             continue
         if b"\0" in raw:
@@ -280,7 +306,7 @@ def test_version_and_apache_licence_stay_and_no_real_address_ships(case_id):
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-author-a3", id="essay-author-a3")])
-def test_the_address_scan_reads_the_tree_without_git(case_id, monkeypatch):
+def test_the_address_scan_reads_the_tree_without_git(case_id, monkeypatch, tmp_path):
     """essay-author-a3: Without git, the address scan reads the files on disk."""
     assert case_id == "essay-author-a3"
 
@@ -293,6 +319,16 @@ def test_the_address_scan_reads_the_tree_without_git(case_id, monkeypatch):
     skipped = {name for name, _text in tracked_text(skip=frozenset({SELF_NAME}))}
     assert SELF_NAME not in skipped
     assert names - skipped == {SELF_NAME}
+
+    junk = tmp_path / "unpacked"
+    (junk / "notes").mkdir(parents=True)
+    (junk / "notes" / "readme.txt").write_text("kept\n", encoding="utf-8")
+    for folder in ("build/lib", ".mypy_cache", ".ruff_cache", "src/essay_writer.egg-info"):
+        path = junk / folder
+        path.mkdir(parents=True)
+        (path / "secret.txt").write_text("secret@real.example\n", encoding="utf-8")
+    walked = {name for name, _text in tracked_text(root=junk)}
+    assert walked == {"notes/readme.txt"}
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-author-b1", id="essay-author-b1")])

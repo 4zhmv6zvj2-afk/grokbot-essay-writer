@@ -597,6 +597,13 @@ def test_earlier_cover_promise_and_answer_cases_still_hold(case_id, workspace):
     assert "Name:" not in asked_lines
     programme_name = title_page_spec("Title page: programme name and partner institution.")
     assert programme_name["name"] == "silent"
+    for phrase in (
+        "Title page: name of the programme and partner institution.",
+        "Title page: programme's name and partner institution.",
+    ):
+        spec = title_page_spec(phrase)
+        assert spec["name"] == "silent", phrase
+        assert spec["programme"] is True, phrase
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-traps-f1", id="essay-traps-f1")])

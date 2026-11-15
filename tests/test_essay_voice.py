@@ -607,6 +607,13 @@ def _assert_brief_stage5_and_cover(tag: str) -> None:
     assert "Name:" not in asked_lines
     programme_name = title_page_spec("Title page: programme name and partner institution.")
     assert programme_name["name"] == "silent"
+    for phrase in (
+        "Title page: name of the programme and partner institution.",
+        "Title page: programme's name and partner institution.",
+    ):
+        spec = title_page_spec(phrase)
+        assert spec["name"] == "silent", phrase
+        assert spec["programme"] is True, phrase
 
 
 def _assert_parent_cases(tag: str) -> None:

@@ -188,6 +188,49 @@ def test_programme_rows_print_only_when_the_brief_asks(case_id, workspace):
         assert line in asked_lines
     assert "Name:" not in asked_lines
     assert NAME not in asked_lines
+    for phrase in (
+        "Title page: name of the programme and partner institution.",
+        "Title page: name of programme.",
+        "Title page: programme's name and partner institution.",
+        "Title page: programme\u2019s name.",
+    ):
+        spec = title_page_spec(f"Genre: essay\nQuestion: {QUESTION}\n{phrase}\n")
+        assert spec["programme"] is True, phrase
+        assert spec["name"] == "silent", phrase
+        assert "name" not in spec["fields"], phrase
+    of_the = _plant(
+        "CVR1006AA",
+        "Genre: essay\n"
+        f"Question: {QUESTION}\n"
+        "Title page: name of the programme and partner institution.\n",
+    )
+    of_the_body = pack(of_the)
+    of_the_body["title"] = TITLE
+    of_the_body["student_name"] = NAME
+    of_the_lines = cover_lines(of_the, of_the_body, _report(TITLE, of_the_body["sections"]))
+    for line in PROGRAMME_LINES:
+        assert line in of_the_lines
+    assert "Name:" not in of_the_lines
+    assert NAME not in of_the_lines
+    possessive = _plant(
+        "CVR1007AA",
+        "Genre: essay\n"
+        f"Question: {QUESTION}\n"
+        "Title page: programme's name and partner institution.\n",
+    )
+    possessive_body = pack(possessive)
+    possessive_body["title"] = TITLE
+    possessive_body["student_name"] = NAME
+    possessive_lines = cover_lines(
+        possessive, possessive_body, _report(TITLE, possessive_body["sections"])
+    )
+    for line in PROGRAMME_LINES:
+        assert line in possessive_lines
+    assert "Name:" not in possessive_lines
+    student = title_page_spec("Title page: student name and the name of the programme.")
+    assert student["name"] == "required"
+    assert student["programme"] is True
+    assert "name" in student["fields"]
 
     diary = _plant(
         "CVR1003AA",
