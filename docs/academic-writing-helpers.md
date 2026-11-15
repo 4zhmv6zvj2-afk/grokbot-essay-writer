@@ -323,7 +323,7 @@ Submission to the university (the LMS, portal, or other channel named in the bri
 - From the brief: due date and late penalty, where the work goes, and who receives it.
 - A cover sheet only if the brief requires one. Formatting and a readable font as the brief requires.
 - Keep your own copy. Out of MCP — the tool does not submit.
-- Create Documents/<project>-10/ and a new final Word file there. The file name is not the first-draft name.
+- Write the final Word file in the folder the tool returns. The file name is not the first-draft name.
 - Save the independent-review notes and the chat comments as a Word file in that same folder.
 - The person sees that final Word. This step does not submit.
 
