@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import io
+import threading
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,7 @@ from essay_writer.build_status import (
     due_lines,
     exit_reason_sentence,
     finish_mid_process,
+    follow_mid_process,
     join_mid_readers,
     reply_status,
     reset_status,
@@ -27,6 +29,7 @@ from essay_writer.build_status import (
 )
 from essay_writer.cursor_office import report_phase, spawn_agent, start_stage_mid
 from essay_writer.debug_log import debug_log_path, note_mid_office
+from essay_writer.paths import workspace_root_lock
 from essay_writer.setup import SHELL_GROK_BUILD
 from essay_writer.shells import front_office_call
 
@@ -216,6 +219,55 @@ def test_ac4_early_exit_surfaces_exit_reason_to_fo_and_logs(workspace, monkeypat
     text = log_path.read_text(encoding="utf-8")
     assert "Mid-office exit Cursor." in text
     assert "Code 2." in text
+
+
+def test_reader_log_stays_on_the_workspace_that_started_it(workspace, monkeypatch):
+    """A reader that finishes after the run folder moves keeps its log on the first folder."""
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    seq = open_sequence()
+    original = debug_log_path(seq)
+
+    class _Hold:
+        def __init__(self) -> None:
+            self.entered = threading.Event()
+            self.go = threading.Event()
+            self.stderr = None
+
+        def wait(self) -> int:
+            self.entered.set()
+            self.go.wait(timeout=5)
+            return 2
+
+    hold = _Hold()
+    thread = follow_mid_process(
+        seq,
+        io.BytesIO(b""),
+        report=lambda *_args: [],
+        proc=hold,
+        shell="cursor",
+    )
+    assert hold.entered.wait(timeout=5)
+
+    later = workspace / "later-run"
+    (later / "uploads").mkdir(parents=True)
+    (later / "Essay-writer").mkdir()
+    with workspace_root_lock():
+        monkeypatch.setenv("ESSAY_WRITER_ROOT", str(later))
+    hold.go.set()
+    thread.join(timeout=5)
+    assert thread.is_alive() is False
+
+    assert original.is_file()
+    original_text = original.read_text(encoding="utf-8")
+    assert "Mid-office exit Cursor." in original_text
+    assert "Code 2." in original_text
+    assert not (later / "Essay-writer" / ESSAY).exists()
+    assert list(later.rglob("debug.log")) == []
+    assert not any("stopped before it finished" in line.casefold() for line in student_inbox(seq))
+
+    opened = open_sequence()
+    assert opened == f"{ESSAY}-1"
+    assert not debug_log_path(opened).exists()
 
 
 def test_ac5_build_covered_cursor_and_grok_share_rules():

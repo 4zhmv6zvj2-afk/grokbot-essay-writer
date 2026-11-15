@@ -719,6 +719,45 @@ def spawn_exit_status(essay_id: str, spawn_reason: str) -> list[str]:
     return [line] if line else []
 
 
+def _outside_bound_workspace() -> bool:
+    """True when this thread is bound to a folder the env has since left."""
+    from essay_writer.paths import bound_workspace_root, live_workspace_root
+
+    bound = bound_workspace_root()
+    if bound is None:
+        return False
+    try:
+        return live_workspace_root() != bound
+    except OSError:
+        return True
+
+
+def _note_exit_on_bound_folder(
+    essay_id: str,
+    *,
+    exit_code: int,
+    shell: str | None,
+    stderr_line: str,
+) -> None:
+    """Write the exit on the folder this reader started with. Do not touch the new one."""
+    office = {"grok": "Build", "cursor": "Cursor"}.get(str(shell or ""))
+    if not office:
+        return
+    from essay_writer.debug_log import note_mid_office
+
+    if exit_code != 0:
+        note_mid_office(
+            "exit",
+            essay_id,
+            office,
+            reason=exit_reason_sentence("your assignment", exit_code=exit_code),
+            exit_code=exit_code,
+            stderr_line=stderr_line,
+        )
+        return
+    note_mid_office("done", essay_id, office, exit_code=exit_code, stderr_line=stderr_line)
+
+
 def finish_mid_process(
     essay_id: str,
     *,
@@ -731,8 +770,38 @@ def finish_mid_process(
     Closing the session when the draft stores must not drop the exit. A
     non-zero code is a real stop and is said to the student. A zero code
     after that store does not add a second retry line.
+
+    A reader that outlives its run folder still logs on that folder. It does
+    not open a session or speak on the folder ESSAY_WRITER_ROOT names now.
     """
-    code = 0 if exit_code is None else int(exit_code)
+    from essay_writer.paths import workspace_root_lock
+
+    with workspace_root_lock():
+        code = 0 if exit_code is None else int(exit_code)
+        if _outside_bound_workspace():
+            _note_exit_on_bound_folder(
+                essay_id,
+                exit_code=code,
+                shell=shell,
+                stderr_line=stderr_line,
+            )
+            return []
+        return _finish_mid_process(
+            essay_id,
+            exit_code=code,
+            shell=shell,
+            stderr_line=stderr_line,
+        )
+
+
+def _finish_mid_process(
+    essay_id: str,
+    *,
+    exit_code: int,
+    shell: str | None,
+    stderr_line: str,
+) -> list[str]:
+    code = exit_code
     with _lock:
         session = _sessions.get(essay_id)
         if session is not None:
@@ -824,9 +893,18 @@ def follow_mid_process(
 
     shell is captured here. Stage 5 can store the draft and close the
     session before the child exits. The exit record still uses this shell.
+
+    The reader keeps the run folder that was current when it started. A later
+    ESSAY_WRITER_ROOT does not receive its log, its session file, or a spoken
+    line.
     """
+    from essay_writer.paths import bind_workspace_root, live_workspace_root, workspace_root_lock
+
+    with workspace_root_lock():
+        home = live_workspace_root()
 
     def _run() -> None:
+        bind_workspace_root(home)
         exit_code: int | None = None
         stderr_chunks: list[str] = []
         drainer: threading.Thread | None = None
@@ -854,15 +932,18 @@ def follow_mid_process(
                     if parsed is None:
                         continue
                     kind, known = parsed
-                    if not known:
-                        note_milestone(essay_id, kind)
-                        continue
-                    try:
-                        lines = report(essay_id, kind)
-                    except Exception:
-                        continue
-                    if lines:
-                        deliver_student(essay_id, lines)
+                    with workspace_root_lock():
+                        if _outside_bound_workspace():
+                            break
+                        if not known:
+                            note_milestone(essay_id, kind)
+                            continue
+                        try:
+                            lines = report(essay_id, kind)
+                        except Exception:
+                            continue
+                        if lines:
+                            deliver_student(essay_id, lines)
         finally:
             try:
                 if proc is not None and hasattr(proc, "wait"):
@@ -886,6 +967,7 @@ def follow_mid_process(
             except Exception:
                 # Best effort: the thread ends here either way.
                 pass
+            bind_workspace_root(None)
 
     thread = threading.Thread(target=_run, name="essay-writer-mid", daemon=True)
     with _lock:
