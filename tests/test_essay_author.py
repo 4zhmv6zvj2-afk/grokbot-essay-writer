@@ -171,6 +171,22 @@ def _skipped(relative: Path) -> bool:
     return any(part in _SKIP_DIRS or part.endswith(".egg-info") for part in relative.parts)
 
 
+def _product_files(root: Path) -> list[Path]:
+    """Source, fixtures, and docs under root. Generated egg-info is not a product file."""
+    found: list[Path] = []
+    for folder in ("src", "tests/fixtures", "tools/doc_templates", "docs"):
+        base = root / folder
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or path.is_symlink():
+                continue
+            if _skipped(path.relative_to(root)):
+                continue
+            found.append(path)
+    return found
+
+
 def _listed_names(root: Path | None = None) -> list[str]:
     """Tracked paths when this tree is a git checkout, otherwise the files on disk.
 
@@ -332,7 +348,7 @@ def test_the_address_scan_reads_the_tree_without_git(case_id, monkeypatch, tmp_p
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-author-b1", id="essay-author-b1")])
-def test_neighbouring_names_stay_put(case_id):
+def test_neighbouring_names_stay_put(case_id, tmp_path):
     """essay-author-b1: only the author records move; the Apache licence stays."""
     assert case_id == "essay-author-b1"
     project, problems = _read_project(PYPROJECT)
@@ -360,16 +376,25 @@ def test_neighbouring_names_stay_put(case_id):
     assert "irrigation licence" in OKAVANGO.read_text(encoding="utf-8")
 
     # The records belong to package metadata: no product code, prompt, template,
-    # or student fixture carries them.
-    for folder in ("src", "tests/fixtures", "tools/doc_templates", "docs"):
-        for path in sorted((REPO / folder).rglob("*")):
-            if not path.is_file():
-                continue
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                continue
-            assert NOREPLY not in text, path
+    # or student fixture carries them. A generated egg-info beside the source
+    # is build output, so the sdist's PKG-INFO is not a product file.
+    for path in _product_files(REPO):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        assert NOREPLY not in text, path
+
+    planted = tmp_path / "with-egg-info"
+    note = planted / "src" / "note.py"
+    note.parent.mkdir(parents=True)
+    note.write_text("print('kept')\n", encoding="utf-8")
+    egg = planted / "src" / "essay_writer.egg-info" / "PKG-INFO"
+    egg.parent.mkdir(parents=True)
+    egg.write_text(f"Author-email: {NOREPLY}\n", encoding="utf-8")
+    assert _product_files(planted) == [note]
+    assert NOREPLY not in note.read_text(encoding="utf-8")
+    assert egg.is_file()
 
     bullets = _changelog_bullets()
     # The 0.9.2 section may gain a bullet for a later fix; it may not lose one.

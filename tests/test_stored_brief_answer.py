@@ -476,6 +476,28 @@ def test_the_reply_names_stored_cleared_or_ignored(case_id, workspace):
     question_only = _load("ASK9106AA")
     assert "format" not in question_only
     assert question_only["question"] == QUESTION
+    cleared_unused = essay_stage(
+        unused_format, "1", "draft", formatAnswer="novel", questionAnswer=""
+    )
+    assert cleared_unused["ok"] is True, cleared_unused
+    assert cleared_unused["next"] == (
+        "I have cleared the question beside the brief. I have not stored the format. "
+        "This stage still needs one sentence of your own."
+    )
+    assert not _meta("ASK9106AA").exists()
+
+    format_only = _plant("ASK9107AA", SILENT)
+    only_format = essay_stage(format_only, "1", "draft", formatAnswer="report")
+    assert only_format["ok"] is True, only_format
+    assert only_format["next"] == ANSWER_NEXT
+    assert _load("ASK9107AA")["format"] == "report"
+    assert "question" not in _load("ASK9107AA")
+    question_only_call = _plant("ASK9108AA", SILENT)
+    only_question = essay_stage(question_only_call, "1", "draft", questionAnswer=QUESTION)
+    assert only_question["ok"] is True, only_question
+    assert only_question["next"] == ANSWER_NEXT
+    assert _load("ASK9108AA")["question"] == QUESTION
+    assert "format" not in _load("ASK9108AA")
 
     waiting = _plant("ASK9104AA", SILENT)
     draft = essay_stage(waiting, "1", "draft", LOOK)

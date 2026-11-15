@@ -43,10 +43,7 @@ from essay_writer.word import cover_lines
 from essay_writer.writing_basics import CHECKLISTS, STAGE_ORDER
 
 REPO = Path(__file__).resolve().parents[1]
-FRIEND = (
-    "Sound like a helpful friend guiding one step at a time, "
-    "not a help desk or a system log."
-)
+FRIEND = "Sound like a helpful friend guiding one step at a time, not a help desk or a system log."
 WARM = (
     "- **Warm and concise.** Use short, complete sentences. "
     "Sound like a helpful friend guiding one step at a time, not a help desk or a system log."
@@ -89,12 +86,8 @@ LEAD_IN = (
     "This is your turn to read the draft. I will show you what to look for once, "
     "then you can edit it yourself."
 )
-OLD_STAGE9 = (
-    "Do not approve a save if references are unchanged from the last saved draft bundle."
-)
-NEW_STAGE9 = (
-    "If the list is wrong, fix it before approving. If it is right and unchanged, say so and approve."
-)
+OLD_STAGE9 = "Do not approve a save if references are unchanged from the last saved draft bundle."
+NEW_STAGE9 = "If the list is wrong, fix it before approving. If it is right and unchanged, say so and approve."
 SOURCE_NEXT = "Add a gathered source, then press Confirm."
 BIBLIOGRAPHY_NEXT = "Add a bibliography, then press Confirm."
 SOURCE_REASON = "Stage 4a stays here until a gathered source is on the list."
@@ -122,11 +115,7 @@ PROGRAMME_LINES = (
 )
 COVER_NOTED = "Conclusion: noted"
 COVER_OPEN = "Conclusion: open — not a settled finding"
-HEADED_PLAN = (
-    "Central theme: The corridor stays open.\n"
-    "1. Supply chain context\n"
-    "2. Conclusion\n"
-)
+HEADED_PLAN = "Central theme: The corridor stays open.\n1. Supply chain context\n2. Conclusion\n"
 EMPTY_PLAN = (
     "Central theme: The corridor stays open.\n"
     "The draft follows that claim in one pass with no numbered parts.\n"
@@ -216,7 +205,9 @@ def _persona_sources() -> dict[str, str]:
     return {
         "template": _read(REPO / "tools" / "doc_templates" / "bot.md"),
         "sheet": _read(REPO / "docs" / "templates" / "bot.md"),
-        "briefing": _read(REPO / "src" / "essay_writer" / "prompts" / "front_office" / "briefing.md"),
+        "briefing": _read(
+            REPO / "src" / "essay_writer" / "prompts" / "front_office" / "briefing.md"
+        ),
         "snapshot": _read(REPO / "tests" / "snapshots" / "prompts.json"),
     }
 
@@ -590,7 +581,10 @@ def _assert_brief_stage5_and_cover(tag: str) -> None:
     assert COVER_OPEN not in lines
     assert NAME not in lines
     assert NUMBER not in lines
-    assert title_page_spec(f"Module code: {module}\nStudents meet on Tuesdays.\n")["programme"] is False
+    assert (
+        title_page_spec(f"Module code: {module}\nStudents meet on Tuesdays.\n")["programme"]
+        is False
+    )
 
     asked_module = _module(tag, 9)
     asked = _plant(

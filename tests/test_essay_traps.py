@@ -57,12 +57,8 @@ SOURCE_NEXT = "Add a gathered source, then press Confirm."
 BIBLIOGRAPHY_NEXT = "Add a bibliography, then press Confirm."
 SOURCE_REASON = "Stage 4a stays here until a gathered source is on the list."
 BIBLIOGRAPHY_REASON = "Stage 4b stays here until stage 4a has a bibliography."
-OLD_STAGE9 = (
-    "Do not approve a save if references are unchanged from the last saved draft bundle."
-)
-NEW_STAGE9 = (
-    "If the list is wrong, fix it before approving. If it is right and unchanged, say so and approve."
-)
+OLD_STAGE9 = "Do not approve a save if references are unchanged from the last saved draft bundle."
+NEW_STAGE9 = "If the list is wrong, fix it before approving. If it is right and unchanged, say so and approve."
 WHOLE = (
     "We work on the essay in stages: what the assignment asks, the plan, the sources, "
     "then the draft. If you already have the assignment, send it over and we will start "
@@ -128,11 +124,7 @@ ASK_IDS = (
     "essay-ask-d1",
     "essay-ask-d2",
 )
-HEADED_PLAN = (
-    "Central theme: The corridor stays open.\n"
-    "1. Supply chain context\n"
-    "2. Conclusion\n"
-)
+HEADED_PLAN = "Central theme: The corridor stays open.\n1. Supply chain context\n2. Conclusion\n"
 EMPTY_PLAN = (
     "Central theme: The corridor stays open.\n"
     "The draft follows that claim in one pass with no numbered parts.\n"
@@ -585,9 +577,15 @@ def test_earlier_cover_promise_and_answer_cases_still_hold(case_id, workspace):
     assert COVER_OPEN not in silent_lines
     assert NAME not in silent_lines
     assert NUMBER not in silent_lines
-    assert title_page_spec("Module code: TRP1604AA\nStudents meet on Tuesdays.\n")["programme"] is False
+    assert (
+        title_page_spec("Module code: TRP1604AA\nStudents meet on Tuesdays.\n")["programme"]
+        is False
+    )
 
-    asked = _plant("TRP1605AA", "Genre: essay\nQuestion: How does the corridor hold?\nTitle page: programme name and partner institution.\n")
+    asked = _plant(
+        "TRP1605AA",
+        "Genre: essay\nQuestion: How does the corridor hold?\nTitle page: programme name and partner institution.\n",
+    )
     asked_body = pack(asked)
     asked_body["title"] = TITLE
     asked_lines = cover_lines(asked, asked_body, _report(TITLE, asked_body["sections"]))

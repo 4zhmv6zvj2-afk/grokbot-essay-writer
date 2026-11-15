@@ -111,8 +111,9 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   answer field still has to be a real look; guidance alone does not save the
   stage. The reply says whether the answer was stored, cleared, or left
   unused. An empty answer on a fresh brief, or a format that is not essay,
-  report, or reflective diary, does not say it was stored. A call that stores
-  one field and clears or skips the other names each field.
+  report, or reflective diary, does not say it was stored. A call that sends
+  both fields and stores one while clearing or leaving the other unused names
+  each field. A field that was not sent stays on the single line.
 - The answer file beside the brief is read and written only when it is a
   regular file in a real folder. A symlink is not followed, and neither is a
   linked folder that would hold the file.

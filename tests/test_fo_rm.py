@@ -36,7 +36,9 @@ from essay_writer.student_voice import say
 
 
 def test_role_note_is_a_helpful_friend():
-    friend = "Sound like a helpful friend guiding one step at a time, not a help desk or a system log."
+    friend = (
+        "Sound like a helpful friend guiding one step at a time, not a help desk or a system log."
+    )
     assert friend in INSTRUCTIONS
     assert "private banking" not in INSTRUCTIONS
     assert "Relationship Manager" not in INSTRUCTIONS
