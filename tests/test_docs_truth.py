@@ -80,6 +80,9 @@ def test_student_readme_tour_names_the_run_and_the_real_word_places() -> None:
     assert "docs/GLOSSARY.md#student-facing-terms" in student
     assert "The first full draft is saved when it is written, then shown." in student
     assert "Finish the Word file" in student
+    assert "Write an essay plan" in student
+    assert "Write a report plan" in student
+    assert "Write a diary plan" in student
     assert "does not invent a Documents path" in student
     assert "Documents/Essay Bot/<module>/<essay id>/" in student
     assert "Documents/<module>-10/" in student

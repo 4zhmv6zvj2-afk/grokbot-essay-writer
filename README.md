@@ -93,8 +93,10 @@ that stage only.
    scope. A reflective diary locks its entries. Once the brief names the kind
    of writing, the chat uses that label: Establish a thesis, Establish purpose
    and scope, or Establish the entries.
-3. **Write the plan.** An essay plan follows the thesis. A report plan holds
-   the central theme, the one-sentence answer. A diary plan holds the entries.
+3. **Write the plan.** Once the brief names the kind of writing, the chat uses
+   that label: Write an essay plan, Write a report plan, or Write a diary plan.
+   An essay plan follows the thesis. A report plan holds the central theme, the
+   one-sentence answer. A diary plan holds the entries.
 4. **Annotated bibliography**, then the **critical review.** Research finds
    papers. It downloads a PDF when it can, or gives you the title and a link.
 5. **Write your first draft.** This stage is the exception. The first full
