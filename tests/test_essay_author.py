@@ -291,11 +291,16 @@ def test_neighbouring_names_stay_put(case_id):
             assert NOREPLY not in text, path
 
     bullets = _changelog_bullets()
-    assert len(bullets) == 17
+    # The 0.9.2 section may gain a bullet for a later fix; it may not lose one.
+    assert len(bullets) >= 17
     assert any("names the package author and maintainer" in bullet for bullet in bullets)
     # Every bullet already on the tip is still there, including the Apache one.
     for opening in KEPT_BULLETS:
         assert any(bullet.startswith(opening) for bullet in bullets), opening
+    assert any(
+        "A stage 7 draft still asks its questions when a mid step starts" in bullet
+        for bullet in bullets
+    )
     intro = CHANGELOG.read_text(encoding="utf-8").split("## 0.9.2", 1)[1]
     assert "Setup defaults, damaged-record handling" in intro.split("## 0.9.1", 1)[0]
 

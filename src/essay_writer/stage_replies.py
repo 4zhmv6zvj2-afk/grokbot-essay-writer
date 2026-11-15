@@ -185,12 +185,17 @@ def _draft_reply(context: StageContext, *, card_run: CardRun | None = None) -> d
         )
 
         upload_next = upload_reconcile_next(body.get("download_check"))
+        # A stage 7 draft that has not been edited asks the questions, and that
+        # ask is the student's next action whether or not a mid step started.
+        # The wait line never replaces it: the ask names the all-fine answer and
+        # the card the door already returned, so the ask comes first.
+        stage7_ask = stage == "7" and not stage7_edited(essay_id)
         if upload_next:
             body["next"] = upload_next
+        elif stage7_ask:
+            body["next"] = stage7_lead(list(body.get("questions") or []), body["stage_title"])
         elif body.get("mid_started") is True:
             body["next"] = mid_run_wait_next(stage, body["stage_title"])
-        elif stage == "7" and not stage7_edited(essay_id):
-            body["next"] = stage7_lead(list(body.get("questions") or []), body["stage_title"])
         else:
             body["next"] = card_next(stage, body["stage_title"])
         body["card"] = stage_confirm_card(
