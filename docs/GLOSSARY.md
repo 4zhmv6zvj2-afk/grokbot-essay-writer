@@ -29,3 +29,26 @@ are unchanged.
 
 If a term is missing here, treat the module docstring as the definition and
 open an issue so this table can be extended.
+
+## Student-facing terms
+
+The table above is for people reading the code. This section is the same words
+in plain English, for someone writing the essay. The chat is meant to use these
+plain words. It does not change what the tools do.
+
+| Word | In plain English |
+| --- | --- |
+| **Basics pass** | The short opening before a save: what the mark scheme scores, the format the brief names, and the assignment question in your words. Later points stay short. It is not the whole checklist, and it is not the annotated bibliography by itself. |
+| **final look** | A stage needs one sentence of your own. A draft that is only the checklist or guidance is refused. Confirm saves your sentence in the tracking note. |
+| **lock** | The decision later stages keep. On an essay it is the thesis. On a report it is purpose and scope. On a reflective diary it is the entries. A small edit is allowed. A break is not a small edit: that earlier stage is confirmed again. |
+| **central theme** | On a report, the one-sentence answer the plan holds. A report has no thesis. |
+| **Confirm** | The save for the stage you just reviewed. One Confirm saves that stage only. If the card cannot be used, typing yes, ok, or Confirm saves that same waiting stage. |
+| **card** | The message that shows what will be saved and waits for Confirm. The chat shows the card the tool returned for this stage. It does not invent the next stage's card. |
+| **pack** | The checked set of sources and sections for this essay. Its ending is **noted** when it stands on the gathered evidence, and **open** when it does not. The tool does not turn open into noted. |
+| **shelf** | A saved copy of that pack, kept with this essay after you confirm it. |
+| **dig** | The research look-up. It shows papers on a card before anything is saved. The chat is meant to talk about the papers, not this name. |
+| **front office** | The chat you talk to. |
+| **mid-office** | The file work on the computer. Cursor does that work unless setup chose Grok Build. The chat is meant to talk about the work, not this name. |
+| **EQR** | The independent review of the draft. The chat is meant to say independent review. |
+| **MCP** | The local connection the chat uses to call these tools. You do not set it up inside the essay. |
+| **4a and 4b** | The two parts of stage 4: the annotated bibliography, then the critical review. |
