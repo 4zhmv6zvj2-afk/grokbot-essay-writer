@@ -23,16 +23,18 @@ from essay_writer.paths import (
 
 RESEARCH_STAGES = ("4a", "4b")
 
-KNOWN_PATHS_LINE = (
-    "Research file work on this computer opens only a path already allowed for this sequence. "
-    "Allowed: the code checkout, and that checkout is code only, not a student save; "
-    "Essay-writer/<module>/ workflow files; "
-    "uploads/<module>/ when that is the product path; "
-    "a path already named on the download list, the annotation, or a known project file for this sequence; "
-    "local subject notes for this module when the module needs it. "
-    "Do not search the home folder, whole Documents, or whole Volumes for papers. "
-    "Do not invent a student folder path. "
-    "Do not save student work in the code checkout."
+KNOWN_PATHS_LINE = "\n".join(
+    (
+        "Research file work on this computer opens only a path already allowed for this sequence.",
+        "Allowed: the code checkout, and that checkout is code only, not a student save.",
+        "Essay-writer/<module>/ workflow files.",
+        "uploads/<module>/ when that is the product path.",
+        "a path already named on the download list, the annotation, or a known project file for this sequence.",
+        "local subject notes for this module when the module needs it.",
+        "Do not search the home folder, whole Documents, or whole Volumes for papers.",
+        "Do not invent a student folder path.",
+        "Do not save student work in the code checkout.",
+    )
 )
 
 _PATH_KEYS = frozenset({"path", "locator", "file"})

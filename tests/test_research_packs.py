@@ -12,7 +12,7 @@ from helpers import CLARIFY_OPEN, ESSAY, TOPIC, card_digest_for, open_sequence, 
 from essay_writer.doors import DOORS
 from essay_writer.harvard_4a import (
     BOOK_SHAPE,
-    FOUR_A_FORMAT,
+    FOUR_A_PARTS,
     JOURNAL_SHAPE,
     WEB_SHAPE,
     harvard_4a_line,
@@ -74,7 +74,8 @@ def _journal(**extra):
 
 def test_stage_prompt_bakes_the_harvard_line():
     lines = basics_lines("4a")
-    assert FOUR_A_FORMAT in lines
+    for part in FOUR_A_PARTS:
+        assert part in lines
     overlay = stage_settings("4a")["prompt_overlay"]
     assert JOURNAL_SHAPE in overlay
     assert BOOK_SHAPE in overlay
@@ -102,7 +103,8 @@ def test_stage_prompt_bakes_the_harvard_line():
     assert "Cursor" in workflow and "Grok Build" in workflow
     assert "real PDFs only" in workflow or "real PDFs only" in workflow.casefold()
     helpers = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
-    assert FOUR_A_FORMAT in helpers
+    for part in FOUR_A_PARTS:
+        assert part in helpers
 
 
 def test_harvard_journal_line_omits_nothing_it_was_given():

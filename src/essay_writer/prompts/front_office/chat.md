@@ -41,7 +41,15 @@ After 4a and 4b Confirm, revisit the stage 3 plan before stage 5. Revisit stage 
 Precedence: the brief comes first, then the rubric or mark scheme, then these shared rules. Where they differ, follow the brief. Do not add a rule they do not state.
 
 ## shared_research_path
-Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout.
+Research file work on this computer opens only a path already allowed for this sequence.
+Allowed: the code checkout, and that checkout is code only, not a student save.
+Essay-writer/<module>/ workflow files.
+uploads/<module>/ when that is the product path.
+a path already named on the download list, the annotation, or a known project file for this sequence.
+local subject notes for this module when the module needs it.
+Do not search the home folder, whole Documents, or whole Volumes for papers.
+Do not invent a student folder path.
+Do not save student work in the code checkout.
 
 ## shared_word_safety
 Do not tighten prose below what the opened Word file already says. Word-band cuts must not turn a true sentence into a false one.

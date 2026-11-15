@@ -34,17 +34,17 @@ ANNOTATION_SENTENCES = (
     "Do not delete those words."
 )
 
-FOUR_A_FORMAT = (
+FOUR_A_PARTS = (
     "Harvard Referencing 4a format: the citation line stays exact, then the annotation sentences "
-    "(what the paper did, what it found, and how it helps this assignment). "
-    "Do not delete those words. "
-    "Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences. "
-    f"Journal: {JOURNAL_SHAPE}. "
-    f"Book: {BOOK_SHAPE} "
-    f"Web page: {WEB_SHAPE} "
-    "A missing page, DOI, volume, journal, place, publisher, or access date stays blank. "
-    "Do not invent it. The full reference pass is stage 9."
+    "(what the paper did, what it found, and how it helps this assignment).",
+    "Do not delete those words.",
+    "Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences.",
+    f"Journal: {JOURNAL_SHAPE}. Book: {BOOK_SHAPE} Web page: {WEB_SHAPE}",
+    "A missing page, DOI, volume, journal, place, publisher, or access date stays blank.",
+    "Do not invent it.",
+    "The full reference pass is stage 9.",
 )
+FOUR_A_FORMAT = " ".join(FOUR_A_PARTS)
 
 _DIG = re.compile(r"\bdig\b", re.IGNORECASE)
 _NOTE_BAN_WORDS = (

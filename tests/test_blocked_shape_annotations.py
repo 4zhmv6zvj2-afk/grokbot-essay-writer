@@ -15,6 +15,7 @@ from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.harvard_4a import (
     ANNOTATION_SENTENCES,
     FOUR_A_FORMAT,
+    FOUR_A_PARTS,
     harvard_4a_line,
     harvard_4a_parts,
 )
@@ -102,7 +103,8 @@ def test_ac1_full_sentence_annotation_prose(workspace):
     assert "Do not delete those words." in FOUR_A_FORMAT
     overlay = stage_settings("4a")["prompt_overlay"]
     assert ANNOTATION_SENTENCES in overlay
-    assert FOUR_A_FORMAT in overlay
+    for part in FOUR_A_PARTS:
+        assert part in overlay
     assert student_surface_hits(overlay) == []
     assert annotation_prose(GOOD) == GOOD
     assert prose_for_surface(GOOD, "annotation") == GOOD
@@ -210,7 +212,8 @@ def test_ac4_build_covered_shared_annotation_path():
     assert stage_launch("4a")["settings"]["rules"] == rules
     assert cursor_stage_launch("4a")["settings"]["rules"] == rules
     assert ANNOTATION_SENTENCES in rules
-    assert FOUR_A_FORMAT in rules
+    for part in FOUR_A_PARTS:
+        assert part in rules
     assert HANDLERS["essay.research.summary"] is essay_research_summary
     assert (
         cursor_shell()["handlers"]["essay.research.summary"] is HANDLERS["essay.research.summary"]

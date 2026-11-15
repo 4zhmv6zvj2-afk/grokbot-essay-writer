@@ -29,7 +29,13 @@
 - On a diary, the read checks the headings the brief allows, the word counts, the chain in every entry, the voice the brief allows, and learning across the entries when that was asked for.
 
 ## 7
-- On a diary, ask whether each decision or event is explicit and tied to the occasion the brief names, whether a theory or a source is applied to it, whether the impact the brief asks for is judged, including a limit where one is claimed, whether the reasoning holds inside the entry and across the entries, whether there are only the headings the brief allows, whether the word counts sit inside the brief’s allowance, and whether the title page and identity follow the brief.
+- On a diary, ask whether each decision or event is explicit and tied to the occasion the brief names.
+- Ask whether a theory or a source is applied to it.
+- Ask whether the impact the brief asks for is judged, including a limit where one is claimed.
+- Ask whether the reasoning holds inside the entry and across the entries.
+- Ask whether there are only the headings the brief allows.
+- Ask whether the word counts sit inside the brief’s allowance.
+- Ask whether the title page and identity follow the brief.
 
 ## 8
 - The edit improves the diary. It does not turn it into a third-person essay, and it does not add a report conclusion, unless the brief asked for that shape.

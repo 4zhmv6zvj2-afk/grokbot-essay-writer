@@ -69,7 +69,10 @@ def _stage_block(stage: str) -> str:
     block = "\n".join(lines) + "\n"
     if not shared:
         return block
-    shared_lines = "\n".join(f"- {line}" for line in shared)
+    shared_bits: list[str] = []
+    for chunk in shared:
+        shared_bits.extend(part for part in chunk.splitlines() if part.strip())
+    shared_lines = "\n".join(f"- {line}" for line in shared_bits)
     return block + "\n" + SHARED_RULES_MARK + "\n" + shared_lines + "\n\n"
 
 
