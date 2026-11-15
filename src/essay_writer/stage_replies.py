@@ -47,6 +47,10 @@ from essay_writer.stage_state import (
     _waiting_digest,
 )
 
+# A real draft was refused. Name the gap, then Confirm. The card stays.
+_MISSING_SOURCE_NEXT = "Add a gathered source, then press Confirm."
+_MISSING_BIBLIOGRAPHY_NEXT = "Add a bibliography, then press Confirm."
+
 
 def _noop_result(
     essay_id: str,
@@ -278,6 +282,7 @@ def _save_confirm(
                     "Stage 4a stays here until a gathered source is on the list. "
                     "Nothing was saved and the stage did not advance."
                 ),
+                lead=_MISSING_SOURCE_NEXT,
             )
         if isinstance(delivery, dict) and delivery.get("ok") is False:
             return _reoffer_confirm(
@@ -302,6 +307,7 @@ def _save_confirm(
                 "Stage 4b stays here until stage 4a has a bibliography. "
                 "Nothing was saved and the stage did not advance."
             ),
+            lead=_MISSING_BIBLIOGRAPHY_NEXT,
         )
     if stage == "4b":
         from essay_writer.spine import stage_critical_reviews
@@ -319,6 +325,7 @@ def _save_confirm(
                     "Stage 4b stays here until stage 4a has a bibliography. "
                     "Nothing was saved and the stage did not advance."
                 ),
+                lead=_MISSING_BIBLIOGRAPHY_NEXT,
             )
         body["delivery"] = delivery
         body["delivery_speech"] = "4b"

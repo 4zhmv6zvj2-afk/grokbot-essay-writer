@@ -618,8 +618,15 @@ def _reoffer_confirm(
     *,
     reason: str,
     code: str = "confirm-card",
+    lead: str | None = None,
 ) -> dict[str, object]:
-    """A confirm that does not save still leaves the Confirm card, or a next ask."""
+    """A confirm that does not save still leaves the Confirm card, or a next ask.
+
+    ``lead`` is the spoken next when this draft was refused for a missing
+    source or bibliography. It replaces the card ask and keeps the card.
+    Other refusals still name the card. When no card can be replayed, the
+    typed-yes fallback stays.
+    """
     from essay_writer.specialists.grok_bot import missing_confirm_next
 
     replay = _replay_confirm_card(essay_id, stage, genre, pointer, card_digest)
@@ -634,7 +641,9 @@ def _reoffer_confirm(
     }
     if replay:
         extra.update(replay)
-    else:
+    if isinstance(lead, str) and lead.strip():
+        extra["next"] = lead.strip()
+    elif not replay:
         extra["next"] = missing_confirm_next(stage, stage_title(stage, genre))
     return refuse(code, reason, **extra)
 

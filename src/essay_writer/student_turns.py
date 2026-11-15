@@ -48,14 +48,21 @@ _CASES: tuple[tuple[re.Pattern[str], str], ...] = (
         REDIRECT_VOICE,
     ),
     (
-        re.compile(rf"^{_POLITE}(?:skip|skipping)(?: the)? stages?(?: now)?$"),
+        re.compile(
+            rf"^{_POLITE}(?:skip|skipping)(?: the)? stages?(?: now)?$"
+            rf"|^{_POLITE}(?:skip|skipping) ahead$"
+        ),
         REDIRECT_ORDER,
     ),
     (
         re.compile(
-            rf"^{_POLITE}(?:write|draft|do|finish) (?:the |my )?"
+            rf"^{_POLITE}(?:write|writing|draft|drafting|do|finish|finishing) (?:the |my )?"
             rf"(?:whole|entire|full|complete) (?:essay|report)(?: now)?$"
-            rf"|^{_POLITE}write (?:the |my )?(?:essay|report) now$",
+            rf"|^{_POLITE}(?:write|writing) (?:the |my )?(?:essay|report) now$"
+            rf"|^{_POLITE}(?:write|writing|draft|drafting) (?:the |my )?(?:essay|report)"
+            rf"(?: for me)?$"
+            rf"|^{_POLITE}(?:finish|finishing) (?:the |my )?(?:essay|report)(?: for me)?$"
+            rf"|^{_POLITE}(?:write|writing|draft|drafting|finish|finishing) it$"
         ),
         REDIRECT_WHOLE,
     ),

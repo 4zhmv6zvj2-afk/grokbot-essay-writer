@@ -293,7 +293,7 @@ Read the helper the brief picked. An essay conclusion adds nothing new, and each
 
 ### 9. Complete your references and citations
 
-Final in-text citations and reference list — **Harvard Referencing** only. **Do not approve a save** if references are unchanged from the last saved draft bundle (skip that save when refs are unchanged).
+Final in-text citations and reference list — **Harvard Referencing** only. If the list is wrong, fix it before approving. If it is right and unchanged, say so and approve.
 
 **Guideline:** `docs/referencing-harvard.md` — the Harvard Referencing tutorial. **Not** APA and **not** the business-school Harvard PDF.
 
@@ -307,7 +307,7 @@ Final in-text citations and reference list — **Harvard Referencing** only. **D
 - Cite a printed page in the text only. An in-text page appears only when the opened file prints that page. In the reference entry, an article number stays in the article-number slot, after the volume and issue. A page from a matching look-up stays: a range is pp. start-end and a single page is p. N, even when the opened file has no lone printed page lines. A page value with no look-up mark that the opened file does not print stays blank. A look-up page value that is an article number, not a page, is stored and printed in the article-number slot. When neither a page nor an article number is on the opened file or the look-up, the page field stays blank. Do not cite the PDF viewer index as a page.
 - The reference list heading is References. A journal title and a report title are italic. A gathered DOI is printed as Available at: doi:. A missing page, DOI, or other locator stays blank.
 - Do not invent sources on every citation line.
-- Do not approve a save if references are unchanged from the last saved draft bundle.
+- If the list is wrong, fix it before approving. If it is right and unchanged, say so and approve.
 - When this save is done, the next step is the final Word, as its own step. A blocked independent review is shown before that Word is written.
 
 **Shared rules:**

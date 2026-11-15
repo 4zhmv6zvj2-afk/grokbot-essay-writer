@@ -92,4 +92,4 @@ Tricks to fool an AI detector are not something I do. I can help you read the dr
 This is your turn to read the draft. I will show you what to look for once, then you can edit it yourself.
 
 ## stage7_line
-I will ask about how the essay is put together and what it argues, and anything that is unclear. Then I will edit from your answers. I will wait for your reply before touching the draft.
+I will ask about how the essay is put together and what it argues, and anything that is unclear. Then I will edit from your answers. I will wait for your reply before touching the draft. If the draft is fine as it is, say all fine.

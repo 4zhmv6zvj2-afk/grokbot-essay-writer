@@ -350,11 +350,25 @@ def _current_ask(essay_id: str, record: dict[str, Any]) -> dict[str, Any] | None
     if record.get("slots", {}).get(shown) != "open":
         return None
     sections, examples, _locks = _materials(essay_id, str(record.get("plan_text") or ""))
+    if shown == DEPTH and not sections:
+        return None
     return _ask(shown, sections, examples)
 
 
 def _new_record(essay_id: str, plan_text: str) -> dict[str, Any]:
     order = list(ask_order(essay_id))
+    sections, _examples, _locks = _materials(essay_id, plan_text)
+    if not sections:
+        order = [name for name in order if name != DEPTH]
+    if not order:
+        return {
+            "plan_text": plan_text,
+            "order": [],
+            "shown": None,
+            "slots": {},
+            "facts": {},
+            "own": {},
+        }
     slots = {name: "waiting" for name in order}
     slots[order[0]] = "open"
     return {
@@ -512,11 +526,36 @@ def answer_encourage(essay_id: str, choice: str | None) -> dict[str, Any]:
     return _reply(essay_id, record, silence=False, accepted=True)
 
 
+def _section_labels(options: object) -> list[str]:
+    if not isinstance(options, list):
+        return []
+    labels: list[str] = []
+    for item in options:
+        if not isinstance(item, dict):
+            continue
+        label = item.get("label")
+        if isinstance(label, str) and label not in {"Type your own", "Skip"}:
+            labels.append(label)
+    return labels
+
+
 def append_encourage_speech(body: dict[str, Any]) -> dict[str, Any]:
-    """Front-office speech. One question is added to next. The stage line stays."""
+    """Front-office speech. One question is added to next. The stage line stays.
+
+    With no section labels, the depth question is not asked and is not added
+    to the Confirm next line.
+    """
 
     encourage = body.get("encourage")
     if not isinstance(encourage, dict) or encourage.get("count") != 1:
+        return body
+    ask = encourage.get("ask")
+    if (
+        isinstance(ask, dict)
+        and ask.get("prompt") == DEPTH_PROMPT
+        and not _section_labels(ask.get("options"))
+    ):
+        body.pop("encourage", None)
         return body
     speech = encourage.get("speech")
     if not isinstance(speech, str) or not speech.strip():
