@@ -42,9 +42,9 @@ MAC_RESIDUAL = (
     "This helper only copies an existing .docx or .zip."
 )
 MAC_NOT_MOUNTED_CHAT = (
-    "The Mac handoff folder is not available on this computer. "
-    "The Word or zip file stays where it is. "
-    "Set ESSAY_WRITER_MAC_DIR to a mounted Mac folder, or copy the file yourself."
+    "The Mac folder is not available now. "
+    "The file stays in the chat and on this sequence. "
+    "You can ask the operator to set up the Mac folder, or copy the file yourself."
 )
 UPGRADE_REREAD_SPEECH = text("install/operator.md", "upgrade_reread")
 UPGRADE_REREAD_MARKER = ".essay-writer-upgrade-reread.json"
