@@ -224,7 +224,7 @@ The tool drafts. The student directs and confirms. Stage 6 is the student's read
 - Evidence is relevant and tied to the argument. Quotes and paraphrases use Harvard Referencing in the text: family name and year, matching the reference list. The first Word file prints each gathered source as a full reference entry (author, year, title, and publisher or URL when that source has them). A surname alone is not an entry. Stage 9 still checks pages and the final list.
 - Local Word edit. A changed Word upload leaves the parent sequence in place and rolls forward onto the next sequence.
 - When the student supplied an outline or base prose, the structure stays theirs. A cited point stays to one or two sentences, and an ask to shorten the cites is answered on this save, not left for the reader to trim.
-- At the start of the first read, show the short read list once, then stop. The student edits. Do not rewrite the draft for them. Do not add a gate, a score, or a blocker.
+- At the start of the first read, show the short read list once, then stop. The student edits. Do not rewrite the draft for them. Do not add a gate, a score, or a blocker. The next step asks questions and edits from the answers.
 
 **Shared rules:**
 - Do not tighten prose below what the opened Word file already says. Word-band cuts must not turn a true sentence into a false one.

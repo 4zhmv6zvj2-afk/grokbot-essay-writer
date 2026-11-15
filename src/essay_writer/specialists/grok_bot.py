@@ -1,6 +1,6 @@
-"""Grok Bot. Private banking Relationship Manager.
+"""Grok Bot. Helpful friend.
 
-One client-facing personality, whichever stage is calling. The confirm
+One student-facing personality, whichever stage is calling. The confirm
 ledger stays in essay_writer.confirm. confirm_gate runs before a stage save.
 Sequence-delete speech stays here. Mid-build progress sentences are said from
 here. A stage save is a clickable Confirm card from this layer.

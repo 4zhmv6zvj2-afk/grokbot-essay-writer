@@ -1,4 +1,4 @@
-"""Private banking Relationship Manager speech, idle heartbeat, and the curtain."""
+"""Helpful friend speech, idle heartbeat, and the curtain."""
 
 from pathlib import Path
 
@@ -35,18 +35,25 @@ from essay_writer.student_turns import STAGE7_LINE
 from essay_writer.student_voice import say
 
 
-def test_role_note_is_a_bespoke_private_banking_relationship_manager():
-    assert "private banking Relationship Manager" in INSTRUCTIONS
-    assert "bespoke" in INSTRUCTIONS.casefold()
+def test_role_note_is_a_helpful_friend():
+    friend = "Sound like a helpful friend guiding one step at a time, not a help desk or a system log."
+    assert friend in INSTRUCTIONS
+    assert "private banking" not in INSTRUCTIONS
+    assert "Relationship Manager" not in INSTRUCTIONS
+    assert "satisfaction" not in INSTRUCTIONS
+    assert "this client's" not in INSTRUCTIONS
     assert "brief" in INSTRUCTIONS
     assert "mark scheme" in INSTRUCTIONS
     assert "Not sales." in INSTRUCTIONS
-    assert "satisfaction" in INSTRUCTIONS
     assert "Not a thin script." in INSTRUCTIONS
     sheet = (Path(__file__).resolve().parents[1] / "docs" / "templates" / "bot.md").read_text(
         encoding="utf-8"
     )
-    assert "private banking Relationship Manager" in sheet
+    assert friend in sheet
+    assert "private banking" not in sheet
+    assert "Relationship Manager" not in sheet
+    assert "satisfaction" not in sheet
+    assert "client" not in sheet.casefold()
     assert "Not sales." in sheet
     assert "generic script" in sheet.casefold()
 

@@ -4,6 +4,7 @@
 
 Setup defaults, damaged-record handling, final-Word safety, and dependency updates.
 
+- The chat sounds like a helpful friend. Stage 6 still leaves the edit with the student, and it says the next step asks questions and edits from the answers.
 - Setup secrets and the file-work choice load from the record beside the chosen app.
   A missing choice stays Cursor; an unknown choice fails clearly. Backup and archive
   drives are refused as save folders, and those drive names stay out of student chat.
