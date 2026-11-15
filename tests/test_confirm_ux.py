@@ -37,7 +37,7 @@ def test_saved_next_is_student_copy():
         assert "Stage" in text
         assert "The Confirm card for that stage is in this reply." not in text
         assert text.startswith("Start Stage") or text.index("Start Stage") > 0
-    assert saved_next("10", "Submit the final draft").startswith(STAGE9_OWN_WORDS)
+    assert saved_next("10", "Finish the Word file").startswith(STAGE9_OWN_WORDS)
 
 
 def test_missing_confirm_next_names_the_typed_fallback():

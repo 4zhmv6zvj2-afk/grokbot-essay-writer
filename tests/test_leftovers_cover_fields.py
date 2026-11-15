@@ -180,8 +180,9 @@ def test_ac4_silent_mar_names_gaps_on_stage_doors_not_study_table(workspace):
         assert QUESTION_GAP in stage_one["basics_pass"]
         assert stage_one["assignment_gaps"] == gaps
         assert WORD_BAND_GAP in stage_one["assignment_gaps"]
-        assert "Establish a thesis" in stage_one["confirm_line"]
-        assert "Establish purpose and scope" in stage_one["confirm_line"]
+        assert "Establish the focus" in stage_one["confirm_line"]
+        assert "Essay:" not in stage_one["confirm_line"]
+        assert "Establish a thesis" not in stage_one["confirm_line"]
 
         _advance_to_stage_three(seq, look)
         stage_three = essay_stage(
@@ -192,10 +193,7 @@ def test_ac4_silent_mar_names_gaps_on_stage_doors_not_study_table(workspace):
         assert QUESTION_GAP in stage_three["basics_pass"]
         assert stage_three["assignment_gaps"] == gaps
         assert WORD_BAND_GAP in stage_three["assignment_gaps"]
-        title = stage_three["stage_title"]
-        assert "Essay:" in title and "Report:" in title
-        assert "Write an essay plan" in title
-        assert "Write a report plan" in title
+        assert stage_three["stage_title"] == "Write the plan"
 
 
 def test_ac5_build_covered_shared_requirement_record(workspace):

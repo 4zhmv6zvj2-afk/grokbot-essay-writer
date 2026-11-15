@@ -24,10 +24,14 @@ from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_turns import (
     FIRST_TURN_CARD,
+    OPENING_CONTINUE,
+    OPENING_NEW,
+    OPENING_ROLL,
     REDIRECT_CLOSE,
     REDIRECT_ORDER,
     REDIRECT_VOICE,
     REDIRECT_WHOLE,
+    STAGE5_SAVE_LINE,
     STAGE6_LEAD_IN,
     STAGE7_LINE,
     redirect_for,
@@ -37,6 +41,10 @@ from essay_writer.student_voice import say, student_surface_hits
 BOT = Path(__file__).resolve().parents[1] / "docs" / "templates" / "bot.md"
 _APPROVED = (
     FIRST_TURN_CARD,
+    OPENING_NEW,
+    OPENING_CONTINUE,
+    OPENING_ROLL,
+    STAGE5_SAVE_LINE,
     REDIRECT_WHOLE,
     REDIRECT_ORDER,
     REDIRECT_VOICE,
@@ -49,6 +57,8 @@ _APOSTROPHE = re.compile(r"['’]")
 
 def test_ac1_opening_card_is_spoken_before_the_choices(workspace):
     """AC1. The first-turn card is the approved line, before the three choices."""
+    assert STAGE5_SAVE_LINE in FIRST_TURN_CARD
+    assert "nothing is saved until you say so" not in FIRST_TURN_CARD
     assert text("front_office/chat.md", "first_turn_card") == FIRST_TURN_CARD
     assert render_tokens("{{chat:first_turn_card}}") == FIRST_TURN_CARD
     assert FIRST_TURN_CARD in INSTRUCTIONS

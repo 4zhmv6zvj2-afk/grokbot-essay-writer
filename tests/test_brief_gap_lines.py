@@ -481,13 +481,11 @@ def test_essay_brief_c3_the_chat_may_ask_and_claims_no_memory(case_id, workspace
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-brief-c1", id="essay-brief-c1")])
 def test_essay_brief_c1_genre_selection_is_unchanged(case_id, workspace):
-    """c1: A cue does not change the stage title. The walk keeps today's stage 2 title."""
+    """c1: A report cue uses the report title. The walk still names the format and the question."""
     assert case_id == "essay-brief-c1"
     seq = _plant("MOD1004AA", WALK)
-    assert brief_genre(seq) is None
-    assert stage_title("2", brief_genre(seq)) == (
-        "Essay: Establish a thesis. Report: Establish purpose and scope"
-    )
+    assert brief_genre(seq) == "report"
+    assert stage_title("2", brief_genre(seq)) == "Establish purpose and scope"
     folder = essay_dir("MOD1004AA")
     assert not (folder / "brief-meta.json").exists()
     for name in folder.rglob("*"):

@@ -28,7 +28,6 @@ from typing import Any
 
 from essay_writer.assignment_gate import (
     assignment_requirements,
-    labelled_format,
     study_defaults_allowed,
 )
 from essay_writer.paths import module_code
@@ -59,8 +58,8 @@ STAGE_KEYS: tuple[str, ...] = STAGE_ORDER + ("eqr",)
 
 STAGE_TITLES: dict[str, str] = {
     "1": "Analyse the task",
-    "2": "Essay: Establish a thesis. Report: Establish purpose and scope",
-    "3": "Essay: Write an essay plan. Report: Write a report plan",
+    "2": "Establish the focus",
+    "3": "Write the plan",
     "4a": "Annotated bibliography",
     "4b": "Critical review",
     "5": "Write your first draft",
@@ -68,7 +67,7 @@ STAGE_TITLES: dict[str, str] = {
     "7": "Ask for feedback",
     "8": "Edit and redraft",
     "9": "References and citations",
-    "10": "Submit the final draft",
+    "10": "Finish the Word file",
     "eqr": "Independent review",
 }
 
@@ -116,23 +115,28 @@ REASONING: dict[str, str] = {
 }
 
 
-def brief_genre(essay_id: str) -> str | None:
-    """Essay or report from a Genre or Format label.
+def _title_genre(prescribed: object) -> str | None:
+    """Map the format ``read_assignment`` already filled onto a stage-title genre."""
+    if not isinstance(prescribed, str) or not prescribed.strip():
+        return None
+    name = prescribed.strip().casefold()
+    if name == "reflective diary":
+        return "diary"
+    return name
 
-    A studied module default applies only in daily use. A brief with no such
-    label leaves the genre unset, so the stage keeps the combined title. An
-    obvious cue may still fill the shared format. That cue does not change
-    the stage title.
+
+def brief_genre(essay_id: str) -> str | None:
+    """Genre for the stage title, from the format the assignment already fills.
+
+    Labels, then an obvious cue, then a matching stored answer. Essay, report,
+    and diary keep one label each. A brief those still leave empty leaves the
+    genre unset, so stages 2 and 3 use the neutral titles. A studied module
+    default applies only when no brief is active.
     """
 
     record = assignment_requirements(essay_id)
     if record.get("active") is True:
-        prescribed = labelled_format(essay_id)
-        if prescribed == "reflective diary":
-            return "diary"
-        if isinstance(prescribed, str) and prescribed.strip():
-            return prescribed.strip().casefold()
-        return None
+        return _title_genre(record.get("format"))
     parsed = brief_file_genre(essay_id)
     if isinstance(parsed, str) and parsed.strip():
         return parsed.strip().casefold()
@@ -144,7 +148,7 @@ def brief_genre(essay_id: str) -> str | None:
 
 
 def stage_title(stage: str, genre: str | None = None) -> str:
-    """Shared label names both genres. A known brief uses one label."""
+    """A known essay, report, or diary uses one label. An unset genre uses the neutral title."""
     if genre == "diary":
         titled = DIARY_STAGE_TITLES.get(stage)
         if titled:

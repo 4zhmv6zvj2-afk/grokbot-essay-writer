@@ -494,8 +494,8 @@ def _labelled_choice(scheme_format: str | None, brief_format: str | None) -> str
 def labelled_format(essay_id: str) -> str | None:
     """Format named by a Genre or Format label. An obvious cue is not a label.
 
-    Stage titles keep using this label. A cue can fill the shared format
-    without changing the combined title.
+    Stage titles follow the format ``read_assignment`` fills. That format
+    starts with this label, then a cue, then a matching stored answer.
     """
     brief = _brief_text(essay_id)
     scheme = mark_scheme_text(essay_id)

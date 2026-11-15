@@ -1,4 +1,4 @@
-"""Exact student lines for the opening, four redirects, and stages 6 and 7.
+"""Exact student lines for the opening, the three choices, four redirects, and stages 6 and 7.
 
 The wording lives once in front_office/chat.md. A short ask that is one of
 the four cases returns that reply and does not save. A stage note does not.
@@ -12,6 +12,10 @@ from essay_writer.prompt_loader import text
 
 _CHAT = "front_office/chat.md"
 
+OPENING_NEW = text(_CHAT, "opening_new")
+OPENING_CONTINUE = text(_CHAT, "opening_continue")
+OPENING_ROLL = text(_CHAT, "opening_roll")
+STAGE5_SAVE_LINE = text(_CHAT, "stage5_save_line")
 FIRST_TURN_CARD = text(_CHAT, "first_turn_card")
 REDIRECT_WHOLE = text(_CHAT, "redirect_whole")
 REDIRECT_ORDER = text(_CHAT, "redirect_order")

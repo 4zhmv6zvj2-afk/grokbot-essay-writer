@@ -159,17 +159,23 @@ def card_next(stage: str, title: str) -> str:
 
 # One sentence after the stage 9 save. Citations and the brief's person stay.
 STAGE9_OWN_WORDS = text("front_office/chat.md", "stage9_own_words")
+# The one save that happens by itself. Said when stage 5 opens. No Confirm card.
+STAGE5_SAVE_LINE = text("front_office/chat.md", "stage5_save_line")
 
 
 def saved_next(stage: str, title: str) -> str:
     """The student-facing step after a save. Host actions stay in the prompt.
 
     Stage 5 stores on its draft and has no Confirm card between it and stage 6.
-    After stage 9, the student next line names the own-words rewrite.
+    The line that opens stage 5 says the first full draft is saved when it is
+    written, then shown. After stage 9, the student next line names the
+    own-words rewrite.
     """
     lead = f"Start Stage {stage} — {title} in this chat."
     if stage == "10":
         return f"{STAGE9_OWN_WORDS} {lead}"
+    if stage == "5":
+        return f"{lead} {STAGE5_SAVE_LINE}"
     return lead
 
 
