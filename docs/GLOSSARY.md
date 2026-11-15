@@ -39,7 +39,7 @@ plain words. It does not change what the tools do.
 | Word | In plain English |
 | --- | --- |
 | **Basics pass** | The short opening before a save: what the mark scheme scores, the format the brief names, and the assignment question in your words. Later points stay short. It is not the whole checklist, and it is not the annotated bibliography by itself. |
-| **final look** | Your own sentence for this stage. Confirm saves it in the tracking note. Leave it out and that sentence is not written. |
+| **final look** | A stage needs one sentence of your own. A draft that is only the checklist or guidance is refused. Confirm saves your sentence in the tracking note. |
 | **lock** | The decision later stages keep. On an essay it is the thesis. On a report it is purpose and scope. On a reflective diary it is the entries. A small edit is allowed. A break is not a small edit: that earlier stage is confirmed again. |
 | **central theme** | On a report, the one-sentence answer the plan holds. A report has no thesis. |
 | **Confirm** | The save for the stage you just reviewed. One Confirm saves that stage only. If the card cannot be used, typing yes, ok, or Confirm saves that same waiting stage. |

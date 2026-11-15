@@ -62,6 +62,8 @@ def test_glossary_student_section_is_linked() -> None:
     """The student terms stay on the glossary page and both docs link to them."""
     glossary = _read("docs/GLOSSARY.md")
     assert "## Student-facing terms" in glossary
+    assert "A stage needs one sentence of your own." in glossary
+    assert "is refused" in glossary.split("## Student-facing terms", 1)[1]
     anchor = "docs/GLOSSARY.md#student-facing-terms"
     assert anchor in _read("README.md")
     assert anchor in _read("ARCHITECTURE.md")
