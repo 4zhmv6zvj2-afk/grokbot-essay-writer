@@ -440,6 +440,10 @@ def _hydrate_pack_from_docx_cover(
     brief = essay_textutil.module_brief_text(essay_id)
     brief_assignment = assignment_on_cover({}, {}, brief)
     out = dict(pack)
+    # The pack field is the conclusion. A cover sentence fills it only when
+    # that field is empty, for a file written before the sentence left the cover.
+    held = out.get("conclusion") if out.get("conclusion") in {"noted", "open"} else None
+    seen_on_cover: str | None = None
     assignment_lines: list[str] = []
     for line in cover:
         text = line.strip()
@@ -448,10 +452,10 @@ def _hydrate_pack_from_docx_cover(
         if text.casefold() in programme or text == essay_id:
             continue
         if text == "Conclusion: noted":
-            out["conclusion"] = "noted"
+            seen_on_cover = "noted"
             continue
         if text == "Conclusion: open — not a settled finding":
-            out["conclusion"] = "open"
+            seen_on_cover = "open"
             continue
         match = _REGISTRATION_COVER.match(text)
         if match:
@@ -481,6 +485,10 @@ def _hydrate_pack_from_docx_cover(
         out["assessment"] = chosen
         if not _real_title(out.get("title")):
             out["title"] = chosen
+    if held:
+        out["conclusion"] = held
+    elif seen_on_cover:
+        out["conclusion"] = seen_on_cover
     return out
 
 
@@ -702,10 +710,11 @@ def _pack_from_docx(essay_id: str, source: Path) -> dict[str, Any] | None:
         "essay_id": essay_id,
         "title": "Draft",
         "sections": packed,
-        "conclusion": "noted",
         "referencing": "harvard",
     }
     pack = _hydrate_pack_from_docx_cover(essay_id, cover, pack)
+    if pack.get("conclusion") not in {"noted", "open"}:
+        pack["conclusion"] = "noted"
     return _finish_recovered_pack(essay_id, pack, reference_lines)
 
 
@@ -1577,4 +1586,39 @@ def finish_stage_reply(
 
     speak_cite_ask(body)
     in_line(body, "student_outline_line")
+    if stage == "10" and body.get("stored"):
+        final = body.get("final_word")
+        missing = not isinstance(final, dict) or final.get("reason") == MISSING_FINAL_WORD
+        if not missing:
+            _say_written_conclusion(body, essay_id)
     return body
+
+
+def _say_written_conclusion(body: dict[str, Any], essay_id: str) -> None:
+    """One student sentence when Word is already written. It is not a cover line."""
+    from essay_writer.diary import conclusion_chat_line
+    from essay_writer.state import load_state
+    from essay_writer.student_voice import say
+
+    source = work_dir(essay_id) / "output" / f"{essay_id}.docx"
+    if not source.is_file():
+        return
+    saved = load_state(essay_id).get("saved_pack")
+    if not isinstance(saved, dict):
+        return
+    line = say(conclusion_chat_line(saved))
+    if not line:
+        return
+    body["conclusion_line"] = line
+    current = body.get("next")
+    if isinstance(current, str) and current.strip():
+        if line not in current:
+            body["next"] = f"{current.rstrip()} {line}"
+    else:
+        body["next"] = line
+    chat = body.get("chat")
+    if isinstance(chat, str) and chat.strip():
+        if line not in chat:
+            body["chat"] = f"{chat.rstrip()} {line}"
+    else:
+        body["chat"] = line

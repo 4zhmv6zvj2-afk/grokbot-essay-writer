@@ -99,14 +99,17 @@ def test_ac1_essay_cover_prints_custom_field_in_word_bytes(workspace):
     from essay_writer.word import cover_lines, write_docx
 
     joined = "\n".join(cover_lines(seq, body, report))
-    assert "Teaching partner" in joined
-    assert "PROG01" in joined
+    assert "Teaching partner" not in joined
+    assert "Awarding university" not in joined
+    assert "Undergraduate programme" not in joined
+    assert "PROG01" not in joined
     assert ADDRESS in joined
     assert f"Registration number: {NUMBER}" in joined
     path = work_dir(seq) / "output" / f"{seq}.docx"
     write_docx(seq, body, report, path)
     xml = zipfile.ZipFile(path).read("word/document.xml").decode("utf-8")
-    assert "Teaching partner" in xml
+    assert "Teaching partner" not in xml
+    assert "PROG01" not in xml
     assert ADDRESS in xml
 
 

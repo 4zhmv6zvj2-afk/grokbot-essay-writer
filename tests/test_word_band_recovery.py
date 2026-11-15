@@ -126,8 +126,10 @@ def test_short_pack_recovers_into_the_brief_band_from_gathered_files(workspace):
     assert preview["word_count"]["inside"] is True
     assert prepared["sections"][1]["heading"] == "Africa in Roman writing"
     cover = " ".join(preview.get("cover") or [])
-    assert "Teaching partner" in cover
-    assert "Awarding university" in cover
+    assert "Teaching partner" not in cover
+    assert "Awarding university" not in cover
+    assert "Undergraduate programme" not in cover
+    assert "PROG01" not in cover
 
 
 def _report_pack(seq: str, headings: list[str]) -> dict:

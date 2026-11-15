@@ -302,7 +302,8 @@ def test_ac1_do_not_include_your_name_is_forbidden(workspace, monkeypatch, tmp_p
         _diary(MODULE, "Title page: registration number.\nDO NOT include your name."),
     )
     only_lines = diary_cover_lines(seq, filled, _report(pack))
-    assert only_lines == [f"Registration number: {NUMBER}", seq]
+    assert only_lines[0] == "Individual reflective diary"
+    assert only_lines == ["Individual reflective diary", f"Registration number: {NUMBER}", seq]
     assert "Practice module" not in only_lines
     assert "Module title:" not in only_lines
     assert "Counted words:" not in only_lines

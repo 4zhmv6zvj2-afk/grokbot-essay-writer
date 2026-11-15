@@ -57,7 +57,10 @@ def test_docx_layout_preview_matches_file(workspace):
     for ref in preview["references"]:
         assert ref in _plain_text(xml)
     assert "References" in xml
-    assert "Conclusion: noted" in xml
+    assert "Conclusion: noted" not in xml
+    assert "Conclusion: open — not a settled finding" not in xml
+    assert written["wrote"] is True
+    assert "The conclusion is noted." in written["next"]
     assert "Student" not in xml
     assert "doi:" not in xml
     assert 'w:ascii="Arial"' in xml or "Arial" in xml
@@ -70,9 +73,15 @@ def test_docx_layout_preview_matches_file(workspace):
 
 def test_open_conclusion_cover_line(workspace):
     open_pack = pack(conclusion="open")
-    preview, _, xml, _ = _confirm_pipeline(workspace, body=open_pack)
-    assert "Conclusion: open — not a settled finding" in preview["cover"]
-    assert "Conclusion: open — not a settled finding" in xml
+    preview, written, xml, _ = _confirm_pipeline(workspace, body=open_pack)
+    assert open_pack["conclusion"] == "open"
+    assert "Conclusion: open — not a settled finding" not in preview["cover"]
+    assert "Conclusion: noted" not in preview["cover"]
+    assert "Conclusion: open — not a settled finding" not in xml
+    assert "Conclusion: noted" not in xml
+    assert written["wrote"] is True
+    assert "The conclusion is open, not a settled finding." in written["next"]
+    assert written.get("conclusion_line") == "The conclusion is open, not a settled finding."
 
 
 def test_report_refuses_essay_only_headings(workspace):

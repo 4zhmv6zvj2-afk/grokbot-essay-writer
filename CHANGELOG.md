@@ -77,6 +77,10 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   chat. The answer is stored beside the brief, and the brief file is not
   rewritten. A later sequence of the same module sees that answer. An empty
   answer clears the stored field.
+- The Word cover prints a programme row only when the brief asks for it.
+  A real stored title is the first visible line, and a placeholder is left
+  off. The conclusion stays noted or open on the pack. Chat says that in one
+  sentence when Word is written. Neither sentence is printed on the cover.
 
 ## 0.9.1 — 2026-11-12
 
