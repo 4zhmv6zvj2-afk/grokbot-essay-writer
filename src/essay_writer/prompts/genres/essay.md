@@ -1,7 +1,7 @@
 ## 2
 - Record an initial response, possible answers, opinions, and what you already know, including related topics or frameworks, before the thesis is locked.
 - The thesis answers the question in one or two sentences you can discuss throughout.
-- The essay is balanced. Opposing views are examined only when a gathered source states them.
+- The essay is balanced: weigh both sides of the question.
 - The locked thesis is the narrowed claim.
 
 ## 3
