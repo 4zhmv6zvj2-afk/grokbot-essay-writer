@@ -27,6 +27,11 @@ LICENSE = REPO / "LICENSE"
 CHANGELOG = REPO / "CHANGELOG.md"
 README = REPO / "README.md"
 
+# This file is tracked and it names the numeric git form it hunts for, so a
+# whole-tree scan has to skip its own bytes and scan every other file. The skip
+# is asserted below, so it cannot quietly become the whole walk.
+SELF_NAME = "tests/test_essay_author.py"
+
 NOREPLY = "4zhmv6zvj2-afk@users.noreply.github.com"
 AUTHOR_RECORD = {"name": "Ron", "email": NOREPLY}
 AUTHORS_LINE = 'authors = [{ name = "Ron", email = "4zhmv6zvj2-afk@users.noreply.github.com" }]'
@@ -141,12 +146,16 @@ def author_problems(root: Path) -> list[str]:
     return problems
 
 
-def tracked_text() -> list[tuple[str, str]]:
-    """Every tracked file that decodes as text, as (path, contents)."""
+def tracked_text(skip: frozenset[str] = frozenset()) -> list[tuple[str, str]]:
+    """Every tracked file that decodes as text, as (path, contents).
+
+    A path in ``skip`` is left out. The caller that skips this test file asserts
+    the name is really tracked first, so the walk cannot shrink by a typo.
+    """
     out = subprocess.check_output(["git", "-C", str(REPO), "ls-files", "-z"])
     found: list[tuple[str, str]] = []
     for name in out.decode().split("\0"):
-        if not name:
+        if not name or name in skip:
             continue
         try:
             raw = (REPO / name).read_bytes()
@@ -223,7 +232,16 @@ def test_version_and_apache_licence_stay_and_no_real_address_ships(case_id):
     assert "289450915" not in licence
 
     strangers = []
-    for name, text in tracked_text():
+    every = {name for name, _text in tracked_text()}
+    scanned = tracked_text(skip=frozenset({SELF_NAME}))
+    names = {name for name, _text in scanned}
+    # This file is tracked, so it names the numeric git form it hunts for. The
+    # walk leaves out exactly this file and every other tracked text file stays
+    # in, so the exclusion cannot quietly become the whole scan.
+    assert SELF_NAME in every
+    assert names == every - {SELF_NAME}
+    assert {"pyproject.toml", "LICENSE", "README.md", "CHANGELOG.md"} <= names
+    for name, text in scanned:
         if "289450915" in text:
             strangers.append(f"{name}: numeric git form")
         for match in EMAIL.finditer(text):
