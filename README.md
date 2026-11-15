@@ -77,21 +77,58 @@ acceptable at the student's institution, and it never submits anything.
 If Essay Bot is already on your Grok Bot, there is nothing to install — start a
 new essay.
 
-1. Start a new essay for your module and share the assignment.
-2. Research finds papers; it downloads a PDF when it can, or gives you the title
-   and a link.
-3. A draft is written from those sources.
-4. You review each stage in the chat and press Confirm (or type yes if the
-   card cannot be used) before it is saved and the essay moves on.
-5. The finished essay is a Word file (`.docx`).
+Words the chat uses are in
+[Student-facing terms](docs/GLOSSARY.md#student-facing-terms). The stage rules
+are in [docs/workflow.md](docs/workflow.md). Shape notes for an essay, a report,
+or a reflective diary are in
+[docs/academic-writing-helpers.md](docs/academic-writing-helpers.md).
+
+You share the assignment and start a new essay. You review each stage in the
+chat. A save waits on that stage's Confirm card. If the card cannot be used,
+typing yes, ok, or Confirm saves that same waiting stage. One Confirm saves
+that stage only.
+
+1. **Analyse the task.** The brief is read as you wrote it.
+2. **Establish the focus.** An essay locks a thesis. A report locks purpose and
+   scope. A reflective diary locks its entries. Once the brief names the kind
+   of writing, the chat uses that label: Establish a thesis, Establish purpose
+   and scope, or Establish the entries.
+3. **Write the plan.** Once the brief names the kind of writing, the chat uses
+   that label: Write an essay plan, Write a report plan, or Write a diary plan.
+   An essay plan follows the thesis. A report plan holds the central theme, the
+   one-sentence answer. A diary plan holds the entries.
+4. **Annotated bibliography**, then the **critical review.** Research finds
+   papers. It downloads a PDF when it can, or gives you the title and a link.
+5. **Write your first draft.** This stage is the exception. The first full
+   draft is saved when it is written, then shown. There is no Confirm card
+   between that draft and the next stage.
+6. **Re-read and make changes.** This is your read-through. The chat shows a
+   short list once, then you edit. It does not rewrite the draft for you.
+7. **Ask for feedback.** The chat asks about structure, argument, and clarity,
+   then edits from your answers.
+8. **Edit and redraft.** A reflective diary says "Edit and redraft your diary."
+9. **References and citations.** Harvard referencing is checked against the
+   sources already gathered.
+10. **Finish the Word file.** The tool does not submit.
+
+A draft is written from those sources. You own what you submit.
+
+The finished essay is a Word file (`.docx`). Output is Word only. Referencing
+follows Harvard
+([docs/referencing-harvard.md](docs/referencing-harvard.md)).
+
+The chat names the folder the tool wrote. It does not invent a Documents path.
+
+- When a Mac folder was chosen at setup, that place is
+  `Documents/Essay Bot/<module>/<essay id>/`, or the other folder you named.
+- When no Mac folder was chosen and Documents is already on this computer, the
+  fallback place is `Documents/<module>-10/`.
+- When that folder is not on this computer, the file stays in the chat and on
+  this sequence.
 
 A pasted brief is read as you wrote it. Genre: and Question: lines are still
 understood. The chat asks when it cannot tell the format or the question, and
 the answer is stored beside the brief rather than written into it.
-
-Output is Word only (`.docx`); referencing follows Harvard
-([docs/referencing-harvard.md](docs/referencing-harvard.md)). The full stage
-guide is [docs/workflow.md](docs/workflow.md).
 
 ## Citation policy
 
