@@ -26,7 +26,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from essay_writer.assignment_gate import assignment_requirements, study_defaults_allowed
+from essay_writer.assignment_gate import (
+    assignment_requirements,
+    labelled_format,
+    study_defaults_allowed,
+)
 from essay_writer.paths import module_code
 from essay_writer.prompt_content import (
     CRAFT_BY_STAGE,
@@ -113,15 +117,17 @@ REASONING: dict[str, str] = {
 
 
 def brief_genre(essay_id: str) -> str | None:
-    """Essay or report from the assignment requirement list.
+    """Essay or report from a Genre or Format label.
 
-    A studied module default applies only in daily use. A brief that is
-    silent on writing type leaves the genre unset so the stage names the gap.
+    A studied module default applies only in daily use. A brief with no such
+    label leaves the genre unset, so the stage keeps the combined title. An
+    obvious cue may still fill the shared format. That cue does not change
+    the stage title.
     """
 
     record = assignment_requirements(essay_id)
     if record.get("active") is True:
-        prescribed = record.get("format")
+        prescribed = labelled_format(essay_id)
         if prescribed == "reflective diary":
             return "diary"
         if isinstance(prescribed, str) and prescribed.strip():

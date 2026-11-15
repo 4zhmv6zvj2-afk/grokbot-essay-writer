@@ -1,9 +1,10 @@
 """Honest gap lines in the spoken Basics pass.
 
-The brief says what it says. When the reader cannot find a format or a
-question that its prose still shows, the spoken line says the read failed
-rather than that the brief is silent. A mark scheme that lists percentage
-weights without a band says so and names no band.
+The brief says what it says. An obvious cue fills an empty format or question.
+When the prose still shows a format word, a task verb, or a question mark that
+was not accepted as a cue, the spoken line says the read failed rather than
+that the brief is silent. A mark scheme that lists percentage weights without
+a band says so and names no band.
 
 Ids: essay-brief-a1, essay-brief-a2, essay-brief-a3, essay-brief-a4,
 essay-brief-b1, essay-brief-b2, essay-brief-b3, essay-brief-b4,
@@ -39,14 +40,16 @@ from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_llm import brief_genre, stage_title
 from essay_writer.stage_track import essay_stage
 
+EVALUATE = (
+    "Evaluate how a named supply chain should integrate sustainability for competitive advantage."
+)
 WALK = (
     "Module: International Supply Chain Management\n"
     "Module code: MOD1004AA\n"
     "Assessment: Individual report\n"
     "Word count: 2,000 words, plus or minus 10%.\n"
     "\n"
-    "Evaluate how a named supply chain should integrate sustainability "
-    "for competitive advantage.\n"
+    f"{EVALUATE}\n"
     "\n"
     "Referencing: Harvard.\n"
     "\n"
@@ -85,31 +88,39 @@ def _plant(module: str, brief: str) -> str:
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-brief-a1", id="essay-brief-a1")])
 def test_essay_brief_a1_prose_brief_says_the_read_failed(case_id, workspace):
-    """a1: A prose brief with a format word, a task verb, and a question mark.
+    """a1: The walk names a module, an individual report, 2,000 words, Evaluate how, and Harvard.
 
-    The walk names a module, an individual report, 2,000 words, Evaluate how,
-    and Harvard. Neither line says the brief does not name one.
+    Those cues fill the empty format and question. Neither spoken line says the
+    brief does not name one.
     """
     assert case_id == "essay-brief-a1"
     seq = _plant("MOD1004AA", WALK)
     _scores, format_line, question_line = basics_pass_lines(seq)
-    assert format_line == FORMAT_UNREAD
-    assert question_line == QUESTION_UNREAD
+    assert format_line == "Format: report."
+    assert question_line == f"Question: {EVALUATE}"
     assert format_line != FORMAT_NAMED_ONE
     assert question_line != QUESTION_NAMED_ONE
     record = read_assignment(seq)
-    assert record["format"] is None
-    assert record["question"] is None
+    assert record["format"] == "report"
+    assert record["question"] == EVALUATE
     gaps = assignment_silence_gaps(seq)
-    assert FORMAT_UNREAD in gaps
-    assert QUESTION_UNREAD in gaps
+    assert FORMAT_UNREAD not in gaps
+    assert QUESTION_UNREAD not in gaps
+    assert FORMAT_NAMED_ONE not in gaps
+    assert QUESTION_NAMED_ONE not in gaps
 
     reply = essay_stage(seq, "1", "draft", "The corridor is the case here.")
     assert reply["ok"] is True, reply
-    assert reply["basics_pass"] == [PERCENTAGE_WEIGHTS, FORMAT_UNREAD, QUESTION_UNREAD]
-    assert reply["assignment_gaps"] == [FORMAT_UNREAD, QUESTION_UNREAD]
+    assert reply["basics_pass"] == [
+        PERCENTAGE_WEIGHTS,
+        "Format: report.",
+        f"Question: {EVALUATE}",
+    ]
+    assert "assignment_gaps" not in reply
     assert FORMAT_NAMED_ONE not in reply["basics_pass"]
     assert QUESTION_NAMED_ONE not in reply["basics_pass"]
+    assert FORMAT_UNREAD not in reply["basics_pass"]
+    assert QUESTION_UNREAD not in reply["basics_pass"]
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-brief-a2", id="essay-brief-a2")])
@@ -470,7 +481,7 @@ def test_essay_brief_c3_the_chat_may_ask_and_claims_no_memory(case_id, workspace
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-brief-c1", id="essay-brief-c1")])
 def test_essay_brief_c1_genre_selection_is_unchanged(case_id, workspace):
-    """c1: Genre selection stays. The walk keeps no brief genre and today's stage 2 title."""
+    """c1: A cue does not change the stage title. The walk keeps today's stage 2 title."""
     assert case_id == "essay-brief-c1"
     seq = _plant("MOD1004AA", WALK)
     assert brief_genre(seq) is None
@@ -484,10 +495,12 @@ def test_essay_brief_c1_genre_selection_is_unchanged(case_id, workspace):
     shared = assignment_requirements(seq)
     assert shared == build_record(seq)
     assert shared == cursor_record(seq)
+    assert shared["format"] == "report"
+    assert shared["question"] == EVALUATE
     assert basics_pass_lines(seq) == (
         PERCENTAGE_WEIGHTS,
-        FORMAT_UNREAD,
-        QUESTION_UNREAD,
+        "Format: report.",
+        f"Question: {EVALUATE}",
     )
 
 
@@ -541,16 +554,19 @@ def test_essay_brief_d1_a_failed_update_leaves_the_brief_bytes(case_id, workspac
     def unavailable(_essay_id: str):
         raise OSError("the spoken lines are unavailable")
 
+    showing = grok_bot.basics_pass_lines
     monkeypatch.setattr(grok_bot, "basics_pass_lines", unavailable)
     with pytest.raises(OSError, match="spoken lines are unavailable"):
         essay_stage(seq, "1", "draft", "The corridor is the case here.")
-    monkeypatch.undo()
+    monkeypatch.setattr(grok_bot, "basics_pass_lines", showing)
 
     assert brief.read_bytes() == before
     assert brief.read_text(encoding="utf-8") == WALK
+    assert "Genre:" not in brief.read_text(encoding="utf-8")
+    assert "\nQuestion:" not in brief.read_text(encoding="utf-8")
     record = read_assignment(seq)
-    assert record["format"] is None
-    assert record["question"] is None
+    assert record["format"] == "report"
+    assert record["question"] == EVALUATE
     assert record["highest_band"] is None
     written_after = sorted(str(path.relative_to(folder)) for path in folder.rglob("*"))
     assert written_after == written_before
@@ -564,8 +580,8 @@ def test_essay_brief_d1_a_failed_update_leaves_the_brief_bytes(case_id, workspac
     other_before = other_brief.read_bytes()
     lines = list(basics_pass_lines(torn))
     assert lines[0] == PERCENTAGE_WEIGHTS
-    assert lines[1] == FORMAT_UNREAD
-    assert lines[2] == QUESTION_UNREAD
+    assert lines[1] == "Format: report."
+    assert lines[2] == f"Question: {EVALUATE}"
     from essay_writer import stage_state
 
     shared = assignment_requirements(seq)
@@ -591,8 +607,8 @@ def test_essay_brief_d1_a_failed_update_leaves_the_brief_bytes(case_id, workspac
     assert other_brief.read_bytes() == other_before
     assert other_brief.read_text(encoding="utf-8") == WALK
     partial = read_assignment(torn)
-    assert partial["format"] is None
-    assert partial["question"] is None
+    assert partial["format"] == "report"
+    assert partial["question"] == EVALUATE
     assert partial["highest_band"] is None
     assert not (other / "brief-meta.json").exists()
     for path in other.rglob("*.json"):

@@ -4,7 +4,8 @@ No mark scheme and no brief: daily-use essay or report. The gate does not block
 and does not invent a mark scheme, a question, a format, or a band.
 
 A brief with no mark scheme: format and question come from the brief. A missing
-mark scheme does not block, and no band is invented.
+mark scheme does not block, and no band is invented. When a label leaves a
+field empty, one obvious cue may fill that field. The brief file is not rewritten.
 
 A mark scheme: mark scheme, prescribed format, and assignment ask come first.
 The aim is the highest band on that scheme, not merely a pass. On a conflict
@@ -130,6 +131,33 @@ _TASK_VERB = re.compile(
     r"criticise|criticize|define|describe|explain|justify|outline|review|"
     r"summarise|summarize)\b"
 )
+# An obvious format cue. A label still wins; these fill only an empty field.
+# A kind counts only as the assignment type, so a topic that happens to be an
+# annual report, or a type the brief tells the student not to write, is not it.
+_FORMAT_KIND = r"(individual\s+report|reflective\s+diary|essay|report)"
+_ASSIGNMENT_TYPE = re.compile(
+    rf"(?i)(?:"
+    rf"\b(?:assessment|assignment(?:\s+type)?)\s*:\s*(?:an?\s+)?{_FORMAT_KIND}\b"
+    rf"|"
+    rf"\bthis\s+(?:assignment|assessment|task)\s+is\s+an?\s+{_FORMAT_KIND}\b"
+    rf"|"
+    rf"\b(?:write|produce|submit)\s+an?\s+{_FORMAT_KIND}\b"
+    rf")"
+)
+_EITHER_OR = re.compile(rf"(?i)\b{_FORMAT_KIND}[ \t]+or[ \t]+(?:an?[ \t]+)?{_FORMAT_KIND}\b")
+# A heading line that opens with the type is the type, as in "Individual report,
+# 2,000 words, due 12 December 2026." A mention later in a sentence is not.
+_LINE_START_TYPE = re.compile(
+    r"(?im)^[ \t]*(?:[-*•][ \t]*)?(individual[ \t]+report|reflective[ \t]+diary)\b"
+)
+_NEGATION = re.compile(r"(?i)\b(?:not|never|no|cannot|can['’]t|don['’]t|doesn['’]t|won['’]t)\b")
+_BULLET = re.compile(r"^\s*(?:[-*•]|\d{1,2}[.)])\s+")
+_TASK_OPEN = re.compile(
+    r"(?i)^(?:evaluate|analyse|analyze|assess|discuss|compare|contrast|"
+    r"criticise|criticize|define|describe|explain|justify|outline|review|"
+    r"summarise|summarize)\b"
+)
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
 _PERCENT = re.compile(r"(?<!\d)(\d{1,3})\s*%")
 # A plain weight row, a column header such as "Section Weight", and a pipe row
 # open a weights block. A labelled field or ordinary prose does not, whatever
@@ -452,6 +480,110 @@ def _format_of(text: str) -> str | None:
     return None
 
 
+def _labelled_choice(scheme_format: str | None, brief_format: str | None) -> str | None:
+    """A Format or Genre label. The mark scheme wins when the two labels differ."""
+    if scheme_format and brief_format and scheme_format != brief_format:
+        return scheme_format
+    return scheme_format or brief_format
+
+
+def labelled_format(essay_id: str) -> str | None:
+    """Format named by a Genre or Format label. An obvious cue is not a label.
+
+    Stage titles keep using this label. A cue can fill the shared format
+    without changing the combined title.
+    """
+    brief = _brief_text(essay_id)
+    scheme = mark_scheme_text(essay_id)
+    return _labelled_choice(_format_of(scheme), _format_of(_brief_without_scheme(brief)))
+
+
+def _kind_name(raw: str) -> str:
+    name = re.sub(r"\s+", " ", raw).strip().casefold()
+    if name == "individual report":
+        return "report"
+    return name
+
+
+def _sentence_start(text: str, at: int) -> int:
+    """Start of the sentence that contains this position."""
+    start = 0
+    for index in range(at):
+        if text[index] in ".!?\n":
+            start = index + 1
+    return start
+
+
+def _negated(text: str, at: int) -> bool:
+    """True when a refusal such as "not", "no", "cannot", or "don't" comes first in the sentence."""
+    return bool(_NEGATION.search(text[_sentence_start(text, at) : at]))
+
+
+def _format_cue(text: str) -> str | None:
+    """One obvious format, or nothing when two assignment types both match.
+
+    A kind counts where the brief sets the assignment type: an Assessment or
+    Assignment line, "this assignment is ...", "write an ...", or a heading
+    line that opens with the type. So an annual report a student must write
+    about is a topic, not a second format, and a mention later in a sentence
+    is not the type either. A type the brief tells the student not to write
+    is not that type. Words inside the mark scheme are not this cue. Nothing
+    is written back.
+    """
+    if not text or not text.strip():
+        return None
+    body = _brief_without_scheme(unmarked_labels(text))
+    if not body.strip():
+        return None
+    kinds: set[str] = set()
+    for match in _EITHER_OR.finditer(body):
+        if _negated(body, match.start()):
+            continue
+        for raw in match.groups():
+            if raw:
+                kinds.add(_kind_name(raw))
+    for match in _ASSIGNMENT_TYPE.finditer(body):
+        if _negated(body, match.start()):
+            continue
+        for raw in match.groups():
+            if raw:
+                kinds.add(_kind_name(raw))
+    for match in _LINE_START_TYPE.finditer(body):
+        if _negated(body, match.start()):
+            continue
+        kinds.add(_kind_name(match.group(1)))
+    if "reflective diary" in kinds and ("essay" in kinds or "report" in kinds):
+        return None
+    if len(kinds) == 1:
+        return next(iter(kinds))
+    return None
+
+
+def _question_cue(text: str) -> str | None:
+    """One task sentence, or one question that ends in a question mark.
+
+    The mark scheme block is left out, so a bullet under that heading is not
+    the question. A labelled line is left to the label reader. Nothing is written.
+    """
+    if not text or not text.strip():
+        return None
+    body = _brief_without_scheme(unmarked_labels(text))
+    for line in body.splitlines():
+        stripped = _BULLET.sub("", line.strip(), count=1).strip()
+        if not stripped or _FIELD_LINE.match(stripped) or _LABELLED_FIELD.match(stripped):
+            continue
+        for sentence in _SENTENCE_BREAK.split(stripped):
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            words = re.findall(r"[A-Za-z0-9']+", sentence)
+            if len(words) < 3:
+                continue
+            if _TASK_OPEN.match(sentence) or sentence.endswith("?"):
+                return sentence
+    return None
+
+
 def _brief_without_scheme(brief: str) -> str:
     lines: list[str] = []
     skip = False
@@ -467,10 +599,12 @@ def _brief_without_scheme(brief: str) -> str:
     return "\n".join(lines)
 
 
-def _question_of(text: str) -> str | None:
-    """Question from Question, Task, assignment ask, or Title.
+def _question_of(text: str, *, cues: bool = True) -> str | None:
+    """Question from a label, or one obvious cue when the brief left it empty.
 
-    An unlabeled paragraph is not a question. The brief file is not rewritten.
+    Question, Task, assignment ask, and Title win. A cue is one task sentence
+    or one question that ends in a question mark, and it is not taken from a
+    mark-scheme bullet. The brief file is not rewritten.
     """
     if not text:
         return None
@@ -492,7 +626,9 @@ def _question_of(text: str) -> str | None:
                 if nxt.casefold() in _QUESTION_LABELS or _FIELD_LINE.match(nxt):
                     break
                 return nxt
-    return None
+    if not cues:
+        return None
+    return _question_cue(text)
 
 
 def _content_words(text: str) -> list[str]:
@@ -626,17 +762,21 @@ def read_assignment(essay_id: str) -> dict[str, Any]:
     brief_body = _brief_without_scheme(brief)
     scheme_format = _format_of(scheme)
     brief_format = _format_of(brief_body)
-    prescribed: str | None
-    if scheme_format and brief_format and scheme_format != brief_format:
-        prescribed = scheme_format
-    else:
-        prescribed = scheme_format or brief_format
-    if brief_format == "reflective diary" or scheme_format == "reflective diary":
+    prescribed = _labelled_choice(scheme_format, brief_format)
+    if prescribed is None:
+        prescribed = _format_cue(brief_body)
+    if (
+        brief_format == "reflective diary"
+        or scheme_format == "reflective diary"
+        or prescribed == "reflective diary"
+    ):
         from essay_writer.diary import diary_ask
 
-        question = diary_ask(brief_body) or _question_of(brief_body) or _question_of(scheme)
+        question = (
+            diary_ask(brief_body) or _question_of(brief_body) or _question_of(scheme, cues=False)
+        )
     else:
-        question = _question_of(brief_body) or _question_of(scheme)
+        question = _question_of(brief_body) or _question_of(scheme, cues=False)
     band = _highest_band(scheme) if has_scheme else None
     if has_scheme:
         mode = "both" if has_brief else "mark_scheme"
