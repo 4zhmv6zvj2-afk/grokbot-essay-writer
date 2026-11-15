@@ -56,6 +56,9 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   labelled field or prose below it either. Only a table row, a weight row, or a
   column header opens that block, so `Word count: …10%` under an empty weights
   heading keeps "No mark scheme is on this module."
+- `pyproject.toml` names its author and maintainer, the same `name` and GitHub
+  noreply `email` record the python-mcp-bootstrap package carries. The version
+  stays 0.9.2 and the licence stays MIT; no other metadata moves.
 
 ## 0.9.1 — 2026-11-12
 
