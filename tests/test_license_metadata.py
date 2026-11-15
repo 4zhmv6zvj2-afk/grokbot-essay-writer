@@ -21,7 +21,7 @@ HOLDER = "Copyright 2026 4zhmv6zvj2-afk"
 AUTHOR_RECORD = {"name": "Ron", "email": "4zhmv6zvj2-afk@users.noreply.github.com"}
 OLD_HOLDER = "Copyright (c) 2026"
 APACHE_CLASSIFIER = "License :: OSI Approved :: Apache Software License"
-VERSION = "0.9.3"
+VERSION = "0.9.4"
 MIT_MARKS = ("MIT License", "license-MIT", "[MIT]")
 OKAVANGO = REPO / "tests" / "fixtures" / "okavango-strong-v1.md"
 
@@ -214,6 +214,7 @@ def test_neighbouring_names_stay_put(case_id):
 
     changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
     section = changelog.split("## 0.9.1", 1)[0]
+    assert "## 0.9.4" in section
     assert "## 0.9.3" in section
     assert "## 0.9.2" in section
     bullets = [line for line in _lines(section) if line.startswith("- ")]
