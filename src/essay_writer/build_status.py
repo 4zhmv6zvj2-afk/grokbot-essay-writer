@@ -758,6 +758,26 @@ def _note_exit_on_bound_folder(
     note_mid_office("done", essay_id, office, exit_code=exit_code, stderr_line=stderr_line)
 
 
+def _close_bound_session(essay_id: str) -> None:
+    """Close a reader's session on the folder it is bound to.
+
+    The reader thread is bound, so the session file is removed there. The
+    folder ESSAY_WRITER_ROOT names now is not written. This runs even when the
+    exit line cannot be written or the shell is unknown.
+    """
+    _ensure(essay_id)
+    with _lock:
+        if essay_id not in _sessions:
+            return
+    try:
+        _mark_closed(essay_id)
+    except OSError:
+        with _lock:
+            _sessions.pop(essay_id, None)
+            _pending.pop(essay_id, None)
+            _closed.add(essay_id)
+
+
 def finish_mid_process(
     essay_id: str,
     *,
@@ -771,14 +791,16 @@ def finish_mid_process(
     non-zero code is a real stop and is said to the student. A zero code
     after that store does not add a second retry line.
 
-    A reader that outlives its run folder still logs on that folder. It does
-    not open a session or speak on the folder ESSAY_WRITER_ROOT names now.
+    A reader that outlives its run folder still logs on that folder and closes
+    its session there. It does not open a session, keep one open, or speak on
+    the folder ESSAY_WRITER_ROOT names now.
     """
     from essay_writer.paths import workspace_root_lock
 
     with workspace_root_lock():
         code = 0 if exit_code is None else int(exit_code)
         if _outside_bound_workspace():
+            _close_bound_session(essay_id)
             _note_exit_on_bound_folder(
                 essay_id,
                 exit_code=code,
