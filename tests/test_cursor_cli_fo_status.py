@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import inspect
 import io
+import os
+import threading
 from pathlib import Path
 
 import pytest
@@ -15,18 +17,22 @@ from essay_writer.build_status import (
     HEARTBEAT_SECONDS,
     MID_BUILD_STATUS_ID,
     begin_mid_build,
+    bind_job,
     due_lines,
     exit_reason_sentence,
     finish_mid_process,
+    follow_mid_process,
     join_mid_readers,
     reply_status,
     reset_status,
+    session_open,
     spawn_exit_status,
     start_sentence,
     student_inbox,
 )
 from essay_writer.cursor_office import report_phase, spawn_agent, start_stage_mid
 from essay_writer.debug_log import debug_log_path, note_mid_office
+from essay_writer.paths import work_dir, workspace_root_lock
 from essay_writer.setup import SHELL_GROK_BUILD
 from essay_writer.shells import front_office_call
 
@@ -216,6 +222,295 @@ def test_ac4_early_exit_surfaces_exit_reason_to_fo_and_logs(workspace, monkeypat
     text = log_path.read_text(encoding="utf-8")
     assert "Mid-office exit Cursor." in text
     assert "Code 2." in text
+
+
+class _Hold:
+    """A child that stays open until the test releases it, then exits non-zero."""
+
+    stderr = None
+
+    def __init__(self, code: int = 2) -> None:
+        self.code = code
+        self.entered = threading.Event()
+        self.go = threading.Event()
+
+    def wait(self) -> int:
+        self.entered.set()
+        self.go.wait(timeout=5)
+        return self.code
+
+
+def _hold_reader(seq: str, shell: str, code: int = 2) -> tuple[_Hold, threading.Thread]:
+    """Start a reader whose child has not exited yet."""
+    hold = _Hold(code)
+    thread = follow_mid_process(
+        seq,
+        io.BytesIO(b""),
+        report=lambda *_args: [],
+        proc=hold,
+        shell=shell,
+    )
+    assert hold.entered.wait(timeout=5)
+    return hold, thread
+
+
+def _move_root(workspace: Path, monkeypatch) -> Path:
+    """Point ESSAY_WRITER_ROOT at a second, empty run folder."""
+    later = workspace / "later-run"
+    (later / "uploads").mkdir(parents=True)
+    (later / "Essay-writer").mkdir()
+    with workspace_root_lock():
+        monkeypatch.setenv("ESSAY_WRITER_ROOT", str(later))
+    return later
+
+
+def _finish_reader(hold: _Hold, thread: threading.Thread) -> None:
+    hold.go.set()
+    thread.join(timeout=5)
+    assert thread.is_alive() is False
+
+
+def _no_stop_line(seq: str) -> None:
+    inbox = " ".join(student_inbox(seq)).casefold()
+    assert "stopped before it finished" not in inbox
+    assert "try this step again" not in inbox
+
+
+def test_reader_log_stays_on_the_workspace_that_started_it(workspace, monkeypatch):
+    """essay-midlog-a1. A Cursor reader keeps its log on the folder that started it.
+
+    The reader finishes only after ESSAY_WRITER_ROOT points at another folder.
+    Its debug log and exit line stay on the first folder. The new folder gets
+    no debug log, no sequence directory, and no spoken stop line. A later
+    sequence open there is not refused and does not see a log already present.
+    Later work on the new folder follows the new folder.
+    """
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    seq = open_sequence()
+    original = debug_log_path(seq)
+    assert not original.exists()
+
+    hold, thread = _hold_reader(seq, "cursor")
+    later = _move_root(workspace, monkeypatch)
+    _finish_reader(hold, thread)
+
+    assert original.is_file()
+    original_text = original.read_text(encoding="utf-8")
+    assert "Mid-office exit Cursor." in original_text
+    assert "Code 2." in original_text
+    assert not (later / "Essay-writer" / ESSAY).exists()
+    assert list(later.rglob("debug.log")) == []
+    assert not (later / "debug.log").exists()
+    _no_stop_line(seq)
+
+    opened = open_sequence()
+    assert opened == f"{ESSAY}-1"
+    assert not debug_log_path(opened).exists()
+
+    later_log = debug_log_path(opened)
+    hold, thread = _hold_reader(opened, "cursor")
+    _finish_reader(hold, thread)
+    assert later_log.is_file()
+    assert "Mid-office exit Cursor." in later_log.read_text(encoding="utf-8")
+    assert original_text == original.read_text(encoding="utf-8")
+
+
+def test_reader_log_stays_on_its_folder_for_build(workspace, monkeypatch):
+    """essay-midlog-a2. The same hold is true for Grok Build, not only Cursor."""
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    seq = open_sequence()
+    original = debug_log_path(seq)
+
+    hold, thread = _hold_reader(seq, "grok")
+    later = _move_root(workspace, monkeypatch)
+    _finish_reader(hold, thread)
+
+    assert original.is_file()
+    original_text = original.read_text(encoding="utf-8")
+    assert "Mid-office exit Build." in original_text
+    assert "Mid-office exit Cursor." not in original_text
+    assert "Code 2." in original_text
+    assert not (later / "Essay-writer" / ESSAY).exists()
+    assert list(later.rglob("debug.log")) == []
+    _no_stop_line(seq)
+
+    opened = open_sequence()
+    assert opened == f"{ESSAY}-1"
+    assert not debug_log_path(opened).exists()
+
+
+def test_reader_log_stays_put_when_the_folder_does_not_move(workspace, monkeypatch):
+    """essay-midlog-a3. With no root change the reader still writes its exit on that folder."""
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    seq = open_sequence()
+    log_path = debug_log_path(seq)
+
+    hold, thread = _hold_reader(seq, "cursor")
+    _finish_reader(hold, thread)
+
+    assert log_path.is_file()
+    text = log_path.read_text(encoding="utf-8")
+    assert "Mid-office exit Cursor." in text
+    assert "Code 2." in text
+    assert student_inbox(seq)
+
+
+def test_reader_that_cannot_log_still_leaves_the_new_folder_clean(workspace, monkeypatch):
+    """essay-midlog-b1. A refused exit write on the start folder writes nothing on the new one."""
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    seq = open_sequence()
+
+    blocked = debug_log_path(seq)
+    blocked.mkdir(parents=True)
+    assert blocked.is_dir()
+
+    hold, thread = _hold_reader(seq, "cursor")
+    later = _move_root(workspace, monkeypatch)
+    _finish_reader(hold, thread)
+
+    assert blocked.is_dir()
+    assert list(blocked.iterdir()) == []
+    assert not (later / "Essay-writer" / ESSAY).exists()
+    assert list(later.rglob("debug.log")) == []
+    assert list(later.rglob("*.tmp")) == []
+    _no_stop_line(seq)
+
+    opened = open_sequence()
+    assert opened == f"{ESSAY}-1"
+    assert not debug_log_path(opened).exists()
+
+
+def test_bound_reader_closes_its_session_where_it_started(workspace, monkeypatch):
+    """essay-midlog2-a1. A bound reader closes its open session on the folder that started it.
+
+    This is the production setup: the launch opens a session before the reader.
+    After the run folder moves and the reader finishes, that sequence has no
+    open session. A new start in the new folder makes a fresh session with no
+    old subject or stage. The old folder's session file is closed and the new
+    folder has none. The log and folder facts still hold.
+    """
+    from essay_writer import build_status
+
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    seq = open_sequence()
+    original_log = debug_log_path(seq)
+    original_session = work_dir(seq) / "mid-session.json"
+    begin_mid_build(seq, "gathering", subject="The earlier subject")
+    bind_job(seq, pid=os.getpid(), stage="6", shell="cursor")
+    assert original_session.is_file()
+
+    hold, thread = _hold_reader(seq, "cursor")
+    later = _move_root(workspace, monkeypatch)
+    _finish_reader(hold, thread)
+
+    assert seq not in build_status._sessions
+    assert session_open(seq) is False
+    assert original_session.is_file() is False
+    assert list(later.rglob("mid-session.json")) == []
+
+    assert original_log.is_file()
+    assert "Mid-office exit Cursor." in original_log.read_text(encoding="utf-8")
+    assert not (later / "Essay-writer" / ESSAY).exists()
+    assert list(later.rglob("debug.log")) == []
+    _no_stop_line(seq)
+
+    opened = open_sequence()
+    assert opened == f"{ESSAY}-1"
+    begin_mid_build(opened, "notes")
+    fresh = build_status._sessions[opened]
+    assert fresh["subject"] != "The earlier subject"
+    assert "The earlier subject" not in str(fresh["subject"])
+    assert fresh["stage"] == ""
+    assert fresh["shell"] == ""
+    assert not debug_log_path(opened).exists()
+
+
+def test_bound_session_closes_with_no_move_and_unknown_shell(workspace, monkeypatch):
+    """essay-midlog2-a2. The session closes when the folder stays and when the shell is unknown."""
+    from essay_writer import build_status
+
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    seq = open_sequence()
+    session_file = work_dir(seq) / "mid-session.json"
+    begin_mid_build(seq, "gathering", subject=QUESTION)
+    assert session_file.is_file()
+
+    hold, thread = _hold_reader(seq, "cursor")
+    _finish_reader(hold, thread)
+    assert seq not in build_status._sessions
+    assert session_open(seq) is False
+    assert session_file.is_file() is False
+    assert "Mid-office exit Cursor." in debug_log_path(seq).read_text(encoding="utf-8")
+
+    reset_status()
+    begin_mid_build(seq, "gathering", subject=QUESTION)
+    assert session_file.is_file()
+    unknown_log = debug_log_path(seq)
+    before = unknown_log.read_text(encoding="utf-8") if unknown_log.is_file() else ""
+
+    hold, thread = _hold_reader(seq, "")
+    later = _move_root(workspace, monkeypatch)
+    _finish_reader(hold, thread)
+
+    assert seq not in build_status._sessions
+    assert session_open(seq) is False
+    assert session_file.is_file() is False
+    now = unknown_log.read_text(encoding="utf-8") if unknown_log.is_file() else ""
+    assert now == before
+    assert "Mid-office exit Build." not in now
+    assert not (later / "Essay-writer" / ESSAY).exists()
+    assert list(later.rglob("debug.log")) == []
+    assert list(later.rglob("mid-session.json")) == []
+    _no_stop_line(seq)
+
+
+def test_bound_reader_closes_its_session_when_the_log_write_fails(workspace, monkeypatch):
+    """essay-midlog2-b1. A refused exit write still closes the session and leaves the new folder clean."""
+    from essay_writer import build_status
+
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    seq = open_sequence()
+    session_file = work_dir(seq) / "mid-session.json"
+    begin_mid_build(seq, "gathering", subject=QUESTION)
+    assert session_file.is_file()
+
+    blocked = debug_log_path(seq)
+    blocked.mkdir(parents=True)
+    assert blocked.is_dir()
+
+    hold, thread = _hold_reader(seq, "cursor")
+    later = _move_root(workspace, monkeypatch)
+    _finish_reader(hold, thread)
+
+    assert seq not in build_status._sessions
+    assert session_open(seq) is False
+    assert session_file.is_file() is False
+    assert blocked.is_dir()
+    assert list(blocked.iterdir()) == []
+    assert not (later / "Essay-writer" / ESSAY).exists()
+    assert list(later.rglob("debug.log")) == []
+    assert list(later.rglob("mid-session.json")) == []
+    assert list(later.rglob("*.tmp")) == []
+    _no_stop_line(seq)
+
+    opened = open_sequence()
+    assert opened == f"{ESSAY}-1"
+    begin_mid_build(opened, "notes")
+    assert build_status._sessions[opened]["stage"] == ""
+
+
+def test_build_covered_one_bind_for_both_shells():
+    """essay-midlog-c1. Build covered. Cursor and Grok Build share one bind rule.
+
+    The pull request body says Build covered. The launch has one reader call,
+    and that reader binds the run folder before it writes any exit line.
+    """
+    launch = inspect.getsource(start_stage_mid)
+    assert launch.count("follow_mid_process(") == 1
+    reader = inspect.getsource(follow_mid_process)
+    assert "bind_workspace_root(home)" in reader
+    assert "live_workspace_root()" in reader
+    assert "if shell" not in reader
 
 
 def test_ac5_build_covered_cursor_and_grok_share_rules():
