@@ -4,7 +4,7 @@
 [![CI](https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/actions/workflows/ci.yml)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16338/badge)](https://www.bestpractices.dev/projects/16338)
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-blue)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 
 A confirm-gated MCP server that helps a student research a university assignment
 and turn it into a Word essay. It is the backend of the Essay Bot agent product;
@@ -293,4 +293,4 @@ prove, is in [SECURITY.md](SECURITY.md#threat-model). Security reports:
 
 ## License
 
-[MIT](LICENSE) © 2026 `4zhmv6zvj2-afk`
+[Apache License 2.0](LICENSE) © 2026 `4zhmv6zvj2-afk`
