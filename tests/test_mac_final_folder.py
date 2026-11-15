@@ -1,6 +1,7 @@
 """Final Word folder: Mac handoff when configured, project-10 as the fallback.
 
-The findings chat path names the folder that was written. Stable ids: AC1–AC3.
+The findings chat path names the project file. A copy also lands in the
+sequence folder with the final Word. Stable ids: AC1–AC5.
 """
 
 from pathlib import Path
@@ -9,7 +10,7 @@ from docx import Document
 from helpers import ESSAY, ensure_word_refs, mac_handoff_sequence_dir, open_sequence
 
 from essay_writer.late_chain import comments_place, final_place, findings_place, write_stage10
-from essay_writer.paths import essay_dir, work_dir
+from essay_writer.paths import essay_dir, student_chat_path, work_dir
 from essay_writer.prompt_loader import text
 from essay_writer.review import essay_review
 
@@ -44,7 +45,7 @@ def _pass_review(seq: str) -> None:
 
 
 def test_ac1_configured_handoff_names_the_essay_bot_folder(workspace, monkeypatch, tmp_path):
-    """AC1. A Mac handoff writes the sequence folder, and findings chat matches the file."""
+    """AC1. The sequence folder keeps a findings copy. The chat names the project file."""
     handoff = tmp_path / "Documents" / "Essay Bot"
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(handoff))
     _brief()
@@ -104,3 +105,27 @@ def test_ac3_stage10_prompt_names_the_returned_folder_not_a_hardcoded_path():
     helper = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
     assert "Documents/<project>-10/" not in helper
     assert "folder the tool returns" in helper
+
+
+def test_ac4_fallback_findings_path_names_the_passed_documents_folder(tmp_path, monkeypatch):
+    """AC4. findings_place names Documents/<project>/ when that folder is passed."""
+    monkeypatch.delenv("ESSAY_WRITER_MAC_DIR", raising=False)
+    documents = tmp_path / "Documents"
+    documents.mkdir()
+    assert findings_place(ESSAY, documents=documents) == f"Documents/{ESSAY}/{ESSAY}-findings.docx"
+
+
+def test_ac5_custom_mac_dir_is_not_spoken_as_essay_bot(tmp_path, monkeypatch):
+    """AC5. A Mac folder other than Documents/Essay Bot is named from that folder."""
+    named = tmp_path / "Documents" / "Course Copies"
+    named.mkdir(parents=True)
+    monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(named))
+    assert findings_place(ESSAY) == f"Documents/Course Copies/{ESSAY}/{ESSAY}-findings.docx"
+    custom = tmp_path / "Course Copies"
+    custom.mkdir()
+    monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(custom))
+    tail = f"{ESSAY}/{ESSAY}-findings.docx"
+    spoken = findings_place(ESSAY)
+    assert spoken == student_chat_path((custom / tail).as_posix())
+    assert "Essay Bot" not in spoken
+    assert not spoken.startswith("Documents/")

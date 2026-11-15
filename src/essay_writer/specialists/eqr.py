@@ -408,9 +408,10 @@ def _save_findings_docx(path, findings: str) -> None:
 def write_findings_note(essay_id: str, findings: str, *, documents=None) -> dict[str, Any]:
     """Write the findings Word file for chat, Mac, and Documents when mounted.
 
-    The sequence copy under output/ is always written. The project folder under
-    the mounted root is written when that root is visible. The chat names that
-    same folder. The stage 10 folder is not this file.
+    The sequence copy under output/ is always written, and the Mac handoff
+    also places that file in the sequence folder with the final Word. The
+    project folder under the mounted root is written when that root is
+    visible. The chat names the project folder.
     """
     from essay_writer.first_run import copy_deliverable_to_mac
     from essay_writer.late_chain import documents_root, findings_place
