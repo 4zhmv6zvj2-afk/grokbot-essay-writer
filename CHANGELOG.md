@@ -82,6 +82,13 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   A real stored title is the first visible line, and a placeholder is left
   off. The conclusion stays noted or open on the pack. Chat says that in one
   sentence when Word is written. Neither sentence is printed on the cover.
+- The licence is the Apache License, Version 2.0. `LICENSE` carries the
+  Apache text with `Copyright 2026 4zhmv6zvj2-afk` on the appendix line,
+  `pyproject.toml` declares `license = "Apache-2.0"` with
+  `license-files = ["LICENSE"]` and the Apache software licence classifier, and
+  the README badge and License section name Apache 2.0. Licence and metadata
+  only: no product behaviour changes, the version stays 0.9.2, and no NOTICE
+  file is added.
 
 ## 0.9.1 — 2026-11-12
 
