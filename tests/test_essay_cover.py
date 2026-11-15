@@ -512,7 +512,7 @@ def test_parent_packs_still_hold(case_id, workspace):
     assert stage_uses_confirm_card("5") is False
     assert advances_without_confirm("5") == "6"
     assert STAGE5_SAVE_LINE in saved_next("5", stage_title("5"))
-    assert 'version = "0.9.2"' in (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'version = "0.9.3"' in (REPO / "pyproject.toml").read_text(encoding="utf-8")
 
     seq = _plant("CVR1010AA", "Module code: CVR1010AA\nStudents meet on Tuesdays.\n")
     folder = essay_dir("CVR1010AA")

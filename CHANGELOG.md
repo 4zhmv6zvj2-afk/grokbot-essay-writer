@@ -1,26 +1,10 @@
 # Changelog
 
-## 0.9.2 — 2026-11-13
+## 0.9.3 — 2026-11-15
 
-Setup defaults, damaged-record handling, final-Word safety, and dependency updates.
+Brief gap lines, stored answers, cover rules, stage titles, helpful-friend voice, answer-field replies, the mid-office reader-log fix, Apache 2.0, author metadata, and CI fixes.
 
 - The chat sounds like a helpful friend. Stage 6 still leaves the edit with the student, and it says the next step asks questions and edits from the answers.
-- Setup secrets and the file-work choice load from the record beside the chosen app.
-  A missing choice stays Cursor; an unknown choice fails clearly. Backup and archive
-  drives are refused as save folders, and those drive names stay out of student chat.
-- The plagiarism scan and source gathering use one text rule: invalid text is
-  refused, valid UTF-8/BOM/UTF-16 is kept, and no replaced copy continues. The word
-  band and section budgets share one citation-word rule while keeping a tighter
-  pack maximum.
-- Inherited locks stay pending until a save actually stores. A damaged confirm
-  record or state file stops the tool, says so, and is not applied.
-- After the last stage is saved, a missing final Word file is not written again;
-  the tool says it is missing. An unmounted Documents reply stays unmounted. A web
-  link in rules or a longer instruction is not treated as a remote launch; real
-  remote targets and cloud flags are still refused.
-- Dependencies: cosign-installer v4.1.3, codeql upload-sarif v4.39.3, ruff 0.17.4,
-  click 8.5.1, pydantic 2.14.3, pydantic-core 2.50.4, sse-starlette 3.7.0. The
-  hash-pinned CI set and `uv.lock` are updated together; the build set is unchanged.
 - After a save, the next stage's card appears only when that stage is drafted with
   the student's own text. A guidance-only draft is refused and writes no look.
   Both waiting fields stay clear until a real draft. A typed yes still saves only
@@ -82,19 +66,26 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   A real stored title is the first visible line, and a placeholder is left
   off. The conclusion stays noted or open on the pack. Chat says that in one
   sentence when Word is written. Neither sentence is printed on the cover.
+- Until the genre is known, stages 2 and 3 use Establish the focus and Write
+  the plan, and stage 10 is Finish the Word file. The opening card names the
+  first-full-draft exception: the student decides when each other stage is
+  saved, and the first full draft is saved when it is written. Word metadata
+  uses a real stored title. A Draft placeholder is not the document title.
+- A mid-office reader that is still finishing after the run folder moves stays
+  on the folder that started it. The exit line is written there, and the open
+  session is closed there first, so the new folder does not get that log,
+  sequence directory, session file, or spoken stop line.
 - The licence is the Apache License, Version 2.0. `LICENSE` carries the
   Apache text with `Copyright 2026 4zhmv6zvj2-afk` on the appendix line,
   `pyproject.toml` declares `license = "Apache-2.0"` with
   `license-files = ["LICENSE"]`. It does not declare a `License ::` classifier,
   because setuptools 84 rejects that classifier beside a PEP 639 licence
-  expression. The README badge and License section name Apache 2.0. Licence and metadata
-  only: no product behaviour changes, the version stays 0.9.2, and no NOTICE
-  file is added.
+  expression. The README badge and License section name Apache 2.0. Licence and
+  metadata only: no product behaviour changes, and no NOTICE file is added.
 - `pyproject.toml` names the package author and maintainer: `authors` and
   `maintainers` are both the one record `{ name = "Ron", email =
   "4zhmv6zvj2-afk@users.noreply.github.com" }`. Author and maintainer metadata
-  only: the version stays 0.9.2, the licence stays Apache 2.0, and no other
-  metadata moves.
+  only: the licence stays Apache 2.0, and no other metadata moves.
 - A stage 7 draft still asks its questions when a mid step starts in the same
   turn. The reply says the draft question line, including "If the draft is fine
   as it is, say all fine.", and is not only the wait line. The wait line still
@@ -117,10 +108,30 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
 - The answer file beside the brief is read and written only when it is a
   regular file in a real folder. A symlink is not followed, and neither is a
   linked folder that would hold the file.
-- The opening card names the first-full-draft exception: the student decides
-  when each other stage is saved, and the first full draft is saved when it
-  is written. Word metadata uses a real stored title. A Draft placeholder is
-  not the document title.
+- Ruff format is clean across the test files the format check reads. The author
+  address scan ignores generated egg-info, so the sdist suite does not treat
+  PKG-INFO as product code.
+
+## 0.9.2 — 2026-11-13
+
+Setup defaults, damaged-record handling, final-Word safety, and dependency updates.
+
+- Setup secrets and the file-work choice load from the record beside the chosen app.
+  A missing choice stays Cursor; an unknown choice fails clearly. Backup and archive
+  drives are refused as save folders, and those drive names stay out of student chat.
+- The plagiarism scan and source gathering use one text rule: invalid text is
+  refused, valid UTF-8/BOM/UTF-16 is kept, and no replaced copy continues. The word
+  band and section budgets share one citation-word rule while keeping a tighter
+  pack maximum.
+- Inherited locks stay pending until a save actually stores. A damaged confirm
+  record or state file stops the tool, says so, and is not applied.
+- After the last stage is saved, a missing final Word file is not written again;
+  the tool says it is missing. An unmounted Documents reply stays unmounted. A web
+  link in rules or a longer instruction is not treated as a remote launch; real
+  remote targets and cloud flags are still refused.
+- Dependencies: cosign-installer v4.1.3, codeql upload-sarif v4.39.3, ruff 0.17.4,
+  click 8.5.1, pydantic 2.14.3, pydantic-core 2.50.4, sse-starlette 3.7.0. The
+  hash-pinned CI set and `uv.lock` are updated together; the build set is unchanged.
 
 ## 0.9.1 — 2026-11-12
 

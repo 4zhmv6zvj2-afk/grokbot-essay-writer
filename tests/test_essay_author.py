@@ -1,7 +1,7 @@
 """The package names its author and maintainer, and nothing else moves.
 
 ``pyproject.toml`` carries one author record and one maintainer record, both
-pointing at the same GitHub noreply address. The version stays 0.9.2 and the
+pointing at the same GitHub noreply address. The version stays 0.9.3 and the
 licence stays the Apache License, Version 2.0.
 
 The check that reads the record only ever opens the file for reading. A tree
@@ -40,7 +40,7 @@ MAINTAINERS_LINE = (
 )
 FIELD_LINES = {"authors": AUTHORS_LINE, "maintainers": MAINTAINERS_LINE}
 
-VERSION = "0.9.2"
+VERSION = "0.9.3"
 APACHE_CLASSIFIER = "License :: OSI Approved :: Apache Software License"
 HOLDER = "Copyright 2026 4zhmv6zvj2-afk"
 
@@ -82,15 +82,10 @@ NUMERIC_GIT_FORM = re.compile(r"^\d{5,}\+")
 
 OKAVANGO = REPO / "tests" / "fixtures" / "okavango-strong-v1.md"
 
-# The sixteen bullets the 0.9.2 section already carries on the tip this branch
-# starts from, by their opening words. A new bullet may be added; none may go.
+# The nineteen bullets the 0.9.3 section carries on this release tip, by their
+# opening words. A new bullet may be added; none may go.
 KEPT_BULLETS = (
     "- The chat sounds like a helpful friend.",
-    "- Setup secrets and the file-work choice load from the record",
-    "- The plagiarism scan and source gathering use one text rule",
-    "- Inherited locks stay pending until a save actually stores.",
-    "- After the last stage is saved, a missing final Word file",
-    "- Dependencies: cosign-installer v4.1.3",
     "- After a save, the next stage's card appears only when",
     "- Student chat keeps ordinary English",
     "- Research summary and full research drafts carry no card",
@@ -100,7 +95,15 @@ KEPT_BULLETS = (
     "- An obvious cue fills a format or a question the brief left empty.",
     "- A format or question the brief leaves empty can be answered once",
     "- The Word cover prints a programme row only when the brief asks for it.",
+    "- Until the genre is known, stages 2 and 3 use Establish the focus",
+    "- A mid-office reader that is still finishing after the run folder moves",
     "- The licence is the Apache License, Version 2.0.",
+    "- `pyproject.toml` names the package author and maintainer:",
+    "- A stage 7 draft still asks its questions when a mid step starts",
+    "- An unmapped brief still prints the title-page rows it asks for.",
+    "- A format or question answer is stored on a draft.",
+    "- The answer file beside the brief is read and written only when",
+    "- Ruff format is clean across the test files the format check reads.",
 )
 
 
@@ -253,9 +256,9 @@ def _snapshot(root: Path) -> dict[str, object]:
 
 
 def _changelog_bullets() -> list[str]:
-    """The bullets under the 0.9.2 heading, up to the next release heading."""
+    """The bullets under the 0.9.3 heading, up to the next release heading."""
     text = CHANGELOG.read_text(encoding="utf-8")
-    section = text.split("## 0.9.2", 1)[1].split("## 0.9.1", 1)[0]
+    section = text.split("## 0.9.3", 1)[1].split("## 0.9.2", 1)[0]
     return [line for line in _lines(section) if line.startswith("- ")]
 
 
@@ -283,7 +286,7 @@ def test_author_and_maintainer_are_the_one_noreply_record(case_id):
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-author-a2", id="essay-author-a2")])
 def test_version_and_apache_licence_stay_and_no_real_address_ships(case_id):
-    """essay-author-a2: version 0.9.2, Apache 2.0, and no real address in the tree."""
+    """essay-author-a2: version 0.9.3, Apache 2.0, and no real address in the tree."""
     assert case_id == "essay-author-a2"
     project, problems = _read_project(PYPROJECT)
     assert problems == []
@@ -397,8 +400,8 @@ def test_neighbouring_names_stay_put(case_id, tmp_path):
     assert egg.is_file()
 
     bullets = _changelog_bullets()
-    # The 0.9.2 section may gain a bullet for a later fix; it may not lose one.
-    assert len(bullets) >= 17
+    # The 0.9.3 section may gain a bullet for a later fix; it may not lose one.
+    assert len(bullets) >= 19
     assert any("names the package author and maintainer" in bullet for bullet in bullets)
     # Every bullet already on the tip is still there, including the Apache one.
     for opening in KEPT_BULLETS:
@@ -407,8 +410,11 @@ def test_neighbouring_names_stay_put(case_id, tmp_path):
         "A stage 7 draft still asks its questions when a mid step starts" in bullet
         for bullet in bullets
     )
-    intro = CHANGELOG.read_text(encoding="utf-8").split("## 0.9.2", 1)[1]
-    assert "Setup defaults, damaged-record handling" in intro.split("## 0.9.1", 1)[0]
+    released = CHANGELOG.read_text(encoding="utf-8")
+    intro_093 = released.split("## 0.9.3", 1)[1].split("## 0.9.2", 1)[0]
+    assert "Brief gap lines, stored answers, cover rules" in intro_093
+    intro_092 = released.split("## 0.9.2", 1)[1].split("## 0.9.1", 1)[0]
+    assert "Setup defaults, damaged-record handling" in intro_092
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-author-c1", id="essay-author-c1")])
