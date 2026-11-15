@@ -34,6 +34,8 @@ _GRADE_BANDS = frozenset(
         "fail",
     }
 )
+# "Distinction 70-79%" leaves the range start on the label. That remainder is still a band.
+_TRAILING_RANGE = re.compile(r"(?:\s*[:—\-]\s*|\s+)(?:\d{1,3}\s*[-–—]\s*)?\d{1,3}\s*$")
 _HEADER_WORDS = frozenset(
     {
         "section",
@@ -138,7 +140,8 @@ def weighted_sections(text: str) -> list[dict[str, Any]]:
     """Section names and weights the brief prints, in brief order.
 
     A markdown table row and a plain "Drivers 20%" line both count. A row with
-    no percentage, a header row, and a percentage outside 1–100 are left out.
+    no percentage, a header row, a grade band, and a percentage outside 1–100
+    are left out. A band that prints a numeric range is still a band.
     Nothing is added when the brief prints no weight list.
     """
     if not isinstance(text, str) or not text.strip():
@@ -150,11 +153,13 @@ def weighted_sections(text: str) -> list[dict[str, Any]]:
         label = " ".join(str(name).split()).strip(" .:—-|")
         weight = int(pct)
         key = _norm(label)
+        band = _norm(_TRAILING_RANGE.sub("", label).strip(" .:—-|"))
         if (
             not label
             or not key
             or key in seen
             or key in _GRADE_BANDS
+            or band in _GRADE_BANDS
             or weight <= 0
             or weight > 100
         ):

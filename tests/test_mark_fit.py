@@ -475,6 +475,9 @@ def test_highest_band_is_never_a_section_weight(workspace):
     record = read_assignment(seq)
     assert str(record["highest_band"]).casefold() == "distinction"
     assert weighted_sections("Distinction 70%\nMerit 60%\n") == []
+    assert weighted_sections("Distinction 70-79%") == []
+    assert weighted_sections("High Distinction 70-79%") == []
+    assert weighted_sections("Distinction: 70-79%") == []
     assert [row["name"] for row in weighted_sections(assignment_weight_text(seq))] == ["Drivers"]
     found = mark_fit_notes(seq, [{"heading": "Introduction", "body": "Kept."}], [])
     reasons = " ".join(item["reason"] for item in found)
