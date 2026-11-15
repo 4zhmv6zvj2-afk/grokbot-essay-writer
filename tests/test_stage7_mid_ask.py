@@ -156,8 +156,10 @@ def test_the_stage7_ask_is_the_next_when_a_step_starts(case_id, workspace, monke
         mid_started=True,
         status_lines=[],
     )
-    assert ALL_FINE not in cardless.get("next", "")
-    assert "Confirm" not in cardless.get("next", "")
+    assert cardless["next"] == mid_run_wait_next("7")
+    assert cardless["next"] == WAIT_LINE
+    assert ALL_FINE not in cardless["next"]
+    assert "Confirm" not in cardless["next"]
 
     # The wait line keeps its place while a step runs on a stage that has no ask.
     for stage in ("6", "8", "9", "10"):

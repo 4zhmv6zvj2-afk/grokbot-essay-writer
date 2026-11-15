@@ -66,6 +66,7 @@ ASK_IDS = (
     "essay-ask-a6",
     "essay-ask-a7",
     "essay-ask-a8",
+    "essay-ask-a9",
     "essay-ask-b1",
     "essay-ask-b2",
     "essay-ask-b3",
@@ -73,6 +74,7 @@ ASK_IDS = (
     "essay-ask-c1",
     "essay-ask-c2",
     "essay-ask-d1",
+    "essay-ask-d2",
 )
 
 
@@ -93,7 +95,7 @@ def test_the_opening_card_states_both_save_facts(case_id):
     assert case_id == "essay-promise-a1"
     card = text("front_office/chat.md", "first_turn_card")
     assert card == FIRST_TURN_CARD
-    assert "you decide when each stage is saved" in card
+    assert "you decide when each stage is saved, except the first full draft" in card
     assert STAGE5_SAVE_LINE in card
     assert "I do not submit it" in card
     assert COURSE_RULES in card

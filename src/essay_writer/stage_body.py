@@ -429,9 +429,11 @@ def _build_stage_body(
     from essay_writer.spine import stage_uses_confirm_card
 
     # Card-bearing stages only. Stage 5 stores on the draft, including an empty look.
-    # An answer draft is stored before this builder. A confirmable look continues,
-    # so this empty-look refusal does not apply to that call.
-    answer_call = args.formatAnswer is not None or args.questionAnswer is not None
+    # An answer is stored on a draft, before this builder. A confirm does not take
+    # that path, so an answer field on a confirm does not skip this gate.
+    answer_call = confirmPhase == DRAFT and (
+        args.formatAnswer is not None or args.questionAnswer is not None
+    )
     if (
         stage_uses_confirm_card(stage)
         and not answer_call

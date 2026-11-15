@@ -85,8 +85,9 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
 - The licence is the Apache License, Version 2.0. `LICENSE` carries the
   Apache text with `Copyright 2026 4zhmv6zvj2-afk` on the appendix line,
   `pyproject.toml` declares `license = "Apache-2.0"` with
-  `license-files = ["LICENSE"]` and the Apache software licence classifier, and
-  the README badge and License section name Apache 2.0. Licence and metadata
+  `license-files = ["LICENSE"]`. It does not declare a `License ::` classifier,
+  because setuptools 84 rejects that classifier beside a PEP 639 licence
+  expression. The README badge and License section name Apache 2.0. Licence and metadata
   only: no product behaviour changes, the version stays 0.9.2, and no NOTICE
   file is added.
 - `pyproject.toml` names the package author and maintainer: `authors` and
@@ -97,9 +98,25 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
 - A stage 7 draft still asks its questions when a mid step starts in the same
   turn. The reply says the draft question line, including "If the draft is fine
   as it is, say all fine.", and is not only the wait line. The wait line still
-  appears while a step is actually running. Skipping the questions is still
+  appears while a step is actually running on a stage that is not showing that
+  ask, and a stage 7 reply with no card says the wait line. Skipping the questions is still
   refused, and all fine still opens Confirm without saving until Confirm is
   pressed.
+- An unmapped brief still prints the title-page rows it asks for. A programme
+  or registration ask stays on the Word cover; the cover does not stop at the
+  title. A programme-name ask is not a student name, so the cover does not
+  print a blank Name line unless the brief asks for the student's name.
+- A format or question answer is stored on a draft. A confirm that sends an
+  answer field still has to be a real look; guidance alone does not save the
+  stage. The reply says whether the answer was stored, cleared, or left
+  unused. An empty answer on a fresh brief, or a format that is not essay,
+  report, or reflective diary, does not say it was stored.
+- The answer file beside the brief is read and written only when it is a
+  regular file. A symlink is not followed.
+- The opening card names the first-full-draft exception: the student decides
+  when each other stage is saved, and the first full draft is saved when it
+  is written. Word metadata uses a real stored title. A Draft placeholder is
+  not the document title.
 
 ## 0.9.1 — 2026-11-12
 

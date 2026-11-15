@@ -77,6 +77,17 @@ from essay_writer.stage_state import (
 ANSWER_NEXT = (
     "I have stored that answer beside the brief. This stage still needs one sentence of your own."
 )
+CLEARED_NEXT = (
+    "I have cleared that answer beside the brief. This stage still needs one sentence of your own."
+)
+IGNORED_NEXT = (
+    "I have not stored that answer. This stage still needs one sentence of your own."
+)
+_ANSWER_NEXTS = {
+    "stored": ANSWER_NEXT,
+    "cleared": CLEARED_NEXT,
+    "ignored": IGNORED_NEXT,
+}
 
 
 def _continues_inherited_lock(
@@ -412,6 +423,20 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
             return guidance_only_refusal()
         return _noop_result(essay_id, stage, confirmPhase, pointer["current"])
     if (
+        confirmPhase == CONFIRM
+        and not minting
+        and (args.formatAnswer is not None or args.questionAnswer is not None)
+        and text
+        and stage_uses_confirm_card(stage)
+    ):
+        # A waiting card saves its own draft. An answer field does not let a
+        # guidance-only look through that save.
+        from essay_writer.specialists.grok_bot import typed_save_word
+        from essay_writer.stage_body import guidance_only_refusal, look_is_confirmable
+
+        if not typed_save_word(look) and not look_is_confirmable(essay_id, stage, genre, text):
+            return guidance_only_refusal()
+    if (
         confirmPhase == DRAFT
         and not minting
         and (args.formatAnswer is not None or args.questionAnswer is not None)
@@ -419,9 +444,9 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         from essay_writer.assignment_gate import store_brief_answer
         from essay_writer.stage_body import look_is_confirmable
 
-        failed = store_brief_answer(essay_id, args.formatAnswer, args.questionAnswer)
-        if failed is not None:
-            return failed
+        outcome = store_brief_answer(essay_id, args.formatAnswer, args.questionAnswer)
+        if isinstance(outcome, dict):
+            return outcome
         if not look_is_confirmable(essay_id, stage, genre, text):
             return {
                 "ok": True,
@@ -431,7 +456,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
                 "stored": False,
                 "advanced": False,
                 "wrote": False,
-                "next": ANSWER_NEXT,
+                "next": _ANSWER_NEXTS[outcome],
             }
     resolved = replace(
         args,

@@ -74,7 +74,7 @@ Copy an earlier sequence into a new one.
 The first full draft is saved when it is written, then shown.
 
 ## first_turn_card
-We will work through your essay or report in stages: what the assignment asks, the plan, the sources, then the draft. You decide when to move on, and you decide when each stage is saved. The first full draft is saved when it is written, then shown. I do not submit it. Check what your course allows for AI — I do not know the rules for your course.
+We will work through your essay or report in stages: what the assignment asks, the plan, the sources, then the draft. You decide when to move on, and you decide when each stage is saved, except the first full draft. The first full draft is saved when it is written, then shown. I do not submit it. Check what your course allows for AI — I do not know the rules for your course.
 
 ## redirect_whole
 We work on the essay in stages: what the assignment asks, the plan, the sources, then the draft. If you already have the assignment, send it over and we will start with the first stage.

@@ -72,8 +72,10 @@ def _license_problems(root: Path) -> list[str]:
             problems.append(f"pyproject license is {project.get('license')!r}, not Apache-2.0")
         if project.get("license-files") != ["LICENSE"]:
             problems.append("pyproject license-files does not name LICENSE")
-        if APACHE_CLASSIFIER not in project.get("classifiers", []):
-            problems.append("pyproject classifiers do not name the Apache software licence")
+        if APACHE_CLASSIFIER in project.get("classifiers", []):
+            problems.append(
+                "pyproject classifiers still carry the licence classifier setuptools 84 rejects"
+            )
         if project.get("version") != VERSION:
             problems.append(f"pyproject version is {project.get('version')!r}, not {VERSION}")
         for field in ("authors", "maintainers"):
@@ -175,7 +177,7 @@ def test_metadata_and_docs_name_the_apache_license(case_id):
     project = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     assert project["license"] == "Apache-2.0"
     assert project["license-files"] == ["LICENSE"]
-    assert APACHE_CLASSIFIER in project["classifiers"]
+    assert APACHE_CLASSIFIER not in project["classifiers"]
     assert project["version"] == VERSION
     assert project["authors"] == [AUTHOR_RECORD]
     assert project["maintainers"] == [AUTHOR_RECORD]

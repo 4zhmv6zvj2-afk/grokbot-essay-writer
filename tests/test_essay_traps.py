@@ -88,6 +88,7 @@ COVER_OPEN = "Conclusion: open — not a settled finding"
 COVER_IDS = (
     "essay-cover-a1",
     "essay-cover-a2",
+    "essay-cover-a3",
     "essay-cover-b1",
     "essay-cover-b2",
     "essay-cover-c1",
@@ -117,6 +118,7 @@ ASK_IDS = (
     "essay-ask-a6",
     "essay-ask-a7",
     "essay-ask-a8",
+    "essay-ask-a9",
     "essay-ask-b1",
     "essay-ask-b2",
     "essay-ask-b3",
@@ -124,6 +126,7 @@ ASK_IDS = (
     "essay-ask-c1",
     "essay-ask-c2",
     "essay-ask-d1",
+    "essay-ask-d2",
 )
 HEADED_PLAN = (
     "Central theme: The corridor stays open.\n"
@@ -591,6 +594,9 @@ def test_earlier_cover_promise_and_answer_cases_still_hold(case_id, workspace):
     for line in PROGRAMME_LINES:
         assert line in asked_lines
     assert asked_lines[0] == TITLE
+    assert "Name:" not in asked_lines
+    programme_name = title_page_spec("Title page: programme name and partner institution.")
+    assert programme_name["name"] == "silent"
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-traps-f1", id="essay-traps-f1")])

@@ -8,7 +8,6 @@ maintainers = [{ name = "Ron", email = "4zhmv6zvj2-afk@users.noreply.github.com"
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Education",
-  "License :: OSI Approved :: Apache Software License",
   "Operating System :: POSIX",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",

@@ -987,10 +987,15 @@ def assignment_on_cover(
     return match.group(1).strip()
 
 
+def _without_programme_name(text: str) -> str:
+    """Drop a programme-name ask so the leftover word name is not a student name."""
+    return re.sub(r"(?i)\bprogramme name\b", " ", text)
+
+
 def _positive_name_ask(ask: str) -> bool:
     """True when a title-page sentence asks for the name and does not ban it."""
     for sentence in re.split(r"[\n.!?]+", ask):
-        if not _has_label(sentence.casefold(), "name"):
+        if not _has_label(_without_programme_name(sentence.casefold()), "name"):
             continue
         if _NAME_OFF.search(sentence) or _NEG_START.search(sentence):
             continue
@@ -1465,15 +1470,13 @@ def title_page_cover_lines(
     essay_id: str,
     pack: dict[str, Any],
     report: dict[str, Any],
-    *,
-    always_programme: bool = False,
 ) -> list[str]:
     """Title-page lines the brief asks for. A missing value stays a blank label.
 
-    Programme rows print only when the brief asks, including when the caller
-    asks for the essay house rows.
+    Programme rows print only when the brief asks. House sequence and
+    word-count rows are not added on this path.
     """
-    rows = cover_field_rows(essay_id, pack, report, essay=always_programme)
+    rows = cover_field_rows(essay_id, pack, report, essay=False)
     return cover_lines_from_field_rows(essay_id, pack, rows)
 
 

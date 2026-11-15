@@ -64,6 +64,7 @@ ASK_IDS = (
     "essay-ask-a6",
     "essay-ask-a7",
     "essay-ask-a8",
+    "essay-ask-a9",
     "essay-ask-b1",
     "essay-ask-b2",
     "essay-ask-b3",
@@ -71,6 +72,7 @@ ASK_IDS = (
     "essay-ask-c1",
     "essay-ask-c2",
     "essay-ask-d1",
+    "essay-ask-d2",
 )
 PROMISE_IDS = (
     "essay-promise-a1",
@@ -174,12 +176,18 @@ def test_programme_rows_print_only_when_the_brief_asks(case_id, workspace):
     assert title_page_spec(_essay_brief())["programme"] is False
 
     asked = _plant("CVR1002AA", _essay_brief(programme=True))
-    assert title_page_spec(_essay_brief(programme=True))["programme"] is True
+    programme_spec = title_page_spec(_essay_brief(programme=True))
+    assert programme_spec["programme"] is True
+    assert programme_spec["name"] == "silent"
+    assert "name" not in programme_spec["fields"]
     asked_body = pack(asked)
     asked_body["title"] = TITLE
+    asked_body["student_name"] = NAME
     asked_lines = cover_lines(asked, asked_body, _report(TITLE, asked_body["sections"]))
     for line in PROGRAMME_LINES:
         assert line in asked_lines
+    assert "Name:" not in asked_lines
+    assert NAME not in asked_lines
 
     diary = _plant(
         "CVR1003AA",
@@ -224,6 +232,39 @@ def test_programme_values_are_not_filler(case_id, workspace):
     assert health["programme"] == PROGRAMME
     assert health["programme"]["code"] == "PROG01"
     assert "student" not in json.dumps(health["programme"]).casefold()
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-cover-a3", id="essay-cover-a3")])
+def test_an_unmapped_brief_keeps_the_rows_it_asks_for(case_id, workspace):
+    """essay-cover-a3: An unmapped brief still prints the programme and title-page rows it asks for."""
+    assert case_id == "essay-cover-a3"
+    from essay_writer.assignment_gate import read_assignment
+
+    brief = (
+        "Genre: fieldnote\n"
+        f"Question: {QUESTION}\n"
+        "Title page: programme name and partner institution.\n"
+        "Title page: module title and registration number.\n"
+    )
+    seq = _plant("CVR1005AA", brief)
+    record = read_assignment(seq)
+    assert record["active"] is True
+    assert record["mapped"] is False
+    spec = title_page_spec(brief)
+    assert spec["programme"] is True
+    assert spec["name"] == "silent"
+    body = pack(seq)
+    body["title"] = TITLE
+    body["student_name"] = NAME
+    body["registration_number"] = NUMBER
+    lines = cover_lines(seq, body, _report(TITLE, body["sections"]))
+    assert lines[0] == TITLE
+    assert lines != [TITLE]
+    for line in PROGRAMME_LINES:
+        assert line in lines
+    assert f"Registration number: {NUMBER}" in lines
+    assert "Name:" not in lines
+    assert NAME not in lines
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-cover-b1", id="essay-cover-b1")])
@@ -371,6 +412,9 @@ def test_a_placeholder_title_stays_off_the_cover(case_id, workspace):
     cover, headings = _visible(path)
     assert QUESTION not in cover
     assert "Draft" not in cover
+    document = Document(str(path))
+    assert document.core_properties.title != "Draft"
+    assert document.core_properties.title == seq
     assert headings[:3] == ["Introduction", "Supply chain context", "Conclusion"]
     assert headings[-1] == "References"
 

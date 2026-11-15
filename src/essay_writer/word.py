@@ -132,9 +132,6 @@ def cover_lines(essay_id: str, pack: dict[str, Any], report: dict[str, Any]) -> 
     """One cover for stages 6, 7, 9, and the stage 10 final. All of them call write_docx."""
 
     record = assignment_requirements(essay_id)
-    if record.get("active") is True and record.get("mapped") is False:
-        title = stored_cover_title(pack, report)
-        return [title] if title else []
     lock = record.get("lock")
     if isinstance(lock, str) and lock not in {"thesis", "purpose_and_scope"}:
         essay = False
@@ -384,7 +381,8 @@ def write_docx(
     _style_document(document, essay_id)
     if not _footer_has_page(document):
         raise EmptyFooter()
-    document.core_properties.title = strip_word_labels(str(report.get("title") or essay_id))
+    visible_title = stored_cover_title(pack, report)
+    document.core_properties.title = strip_word_labels(visible_title or str(essay_id))
     stored_cover = report.get("cover")
     lines = stored_cover if isinstance(stored_cover, list) else cover_lines(essay_id, pack, report)
     for index, line in enumerate(lines):

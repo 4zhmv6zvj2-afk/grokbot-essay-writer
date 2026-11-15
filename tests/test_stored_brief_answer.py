@@ -37,7 +37,7 @@ from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_context import StageArgs
 from essay_writer.stage_llm import stage_tool_description
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import ANSWER_NEXT, essay_stage
+from essay_writer.stage_track import ANSWER_NEXT, CLEARED_NEXT, IGNORED_NEXT, essay_stage
 from essay_writer.textutil import module_brief_text
 
 REPO = Path(__file__).resolve().parents[1]
@@ -415,6 +415,50 @@ def test_a_confirmable_look_stores_the_answer_and_drafts(case_id, workspace, mon
     assert _load("ASK8001AA")["format"] == "essay"
 
 
+@pytest.mark.parametrize("case_id", [pytest.param("essay-ask-a9", id="essay-ask-a9")])
+def test_the_reply_names_stored_cleared_or_ignored(case_id, workspace):
+    """essay-ask-a9: The next line says stored, cleared, or ignored, and a confirm does not skip the gate."""
+    assert case_id == "essay-ask-a9"
+    fresh = _plant("ASK9101AA", SILENT)
+    empty = essay_stage(fresh, "1", "draft", formatAnswer="")
+    assert empty["ok"] is True, empty
+    assert empty["next"] == IGNORED_NEXT
+    assert empty["stored"] is False
+    assert not _meta("ASK9101AA").exists()
+
+    unused = _plant("ASK9102AA", SILENT)
+    novel = essay_stage(unused, "1", "draft", formatAnswer="novel")
+    assert novel["ok"] is True, novel
+    assert novel["next"] == IGNORED_NEXT
+    assert read_assignment(unused)["format"] is None
+    assert not _meta("ASK9102AA").exists()
+
+    seq = _plant("ASK9103AA", SILENT)
+    stored = essay_stage(seq, "1", "draft", formatAnswer="report", questionAnswer=QUESTION)
+    assert stored["ok"] is True, stored
+    assert stored["next"] == ANSWER_NEXT
+    assert _load("ASK9103AA")["format"] == "report"
+    cleared = essay_stage(seq, "1", "draft", formatAnswer="", questionAnswer="")
+    assert cleared["ok"] is True, cleared
+    assert cleared["next"] == CLEARED_NEXT
+    assert not _meta("ASK9103AA").exists()
+
+    waiting = _plant("ASK9104AA", SILENT)
+    draft = essay_stage(waiting, "1", "draft", LOOK)
+    assert draft["ok"] is True, draft
+    look = "\n".join(basics_pass_lines(waiting))
+    blocked = essay_stage(waiting, "1", "confirm", look, formatAnswer="report", **picked(draft))
+    assert blocked["ok"] is False, blocked
+    assert blocked["refused"] == "guidance-only"
+    assert blocked.get("stored") is not True
+    assert not _meta("ASK9104AA").exists()
+    assert load_pointer(waiting)["saved"] == []
+    saved = essay_stage(waiting, "1", "confirm", LOOK, formatAnswer="report", **picked(draft))
+    assert saved["ok"] is True, saved
+    assert saved["stored"] is True
+    assert not _meta("ASK9104AA").exists()
+
+
 @pytest.mark.parametrize("case_id", [pytest.param("essay-ask-b1", id="essay-ask-b1")])
 def test_the_stage_description_names_the_stored_answer(case_id):
     """essay-ask-b1: The stage description says an answer is stored and does not advance."""
@@ -715,3 +759,26 @@ def test_a_failed_write_leaves_the_brief_and_invents_no_band(case_id, workspace,
     assert seen["named_entries"] == []
     assert torn.is_file()
     assert brief.read_bytes() == before
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-ask-d2", id="essay-ask-d2")])
+def test_a_linked_answer_file_is_not_followed(case_id, workspace, tmp_path):
+    """essay-ask-d2: A symlink beside the brief is not read or written through."""
+    assert case_id == "essay-ask-d2"
+    seq = _plant("ASK1401AA", SILENT)
+    outside = tmp_path / "outside.json"
+    payload = '{"format": "report", "question": "outside"}\n'
+    outside.write_text(payload, encoding="utf-8")
+    link = _meta("ASK1401AA")
+    link.symlink_to(outside)
+    before = outside.read_bytes()
+    seen = read_assignment(seq)
+    assert seen["format"] is None
+    assert seen["question"] is None
+    reply = essay_stage(seq, "1", "draft", formatAnswer="essay", questionAnswer=QUESTION)
+    assert reply["ok"] is False, reply
+    assert reply["refused"] == "answer"
+    assert reply["next"] != ANSWER_NEXT
+    assert link.is_symlink()
+    assert outside.read_bytes() == before
+    assert read_assignment(seq)["format"] is None

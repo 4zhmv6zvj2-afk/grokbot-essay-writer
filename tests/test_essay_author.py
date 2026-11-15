@@ -146,16 +146,45 @@ def author_problems(root: Path) -> list[str]:
     return problems
 
 
+_SKIP_DIRS = frozenset(
+    {".git", ".venv", "venv", "__pycache__", ".pytest_cache", "dist", "node_modules"}
+)
+
+
+def _listed_names() -> list[str]:
+    """Tracked paths when this tree is a git checkout, otherwise the files on disk.
+
+    An unpacked sdist has no ``git`` metadata. The walk leaves out tool caches
+    and virtualenvs so a local junk file is not treated as the package.
+    """
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(REPO), "ls-files", "-z"],
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        names: list[str] = []
+        for path in sorted(REPO.rglob("*")):
+            if not path.is_file() or path.is_symlink():
+                continue
+            relative = path.relative_to(REPO)
+            if any(part in _SKIP_DIRS for part in relative.parts):
+                continue
+            names.append(relative.as_posix())
+        return names
+    return [name for name in out.decode().split("\0") if name]
+
+
 def tracked_text(skip: frozenset[str] = frozenset()) -> list[tuple[str, str]]:
     """Every tracked file that decodes as text, as (path, contents).
 
     A path in ``skip`` is left out. The caller that skips this test file asserts
     the name is really tracked first, so the walk cannot shrink by a typo.
+    Without git, the same scan reads the files in the tree.
     """
-    out = subprocess.check_output(["git", "-C", str(REPO), "ls-files", "-z"])
     found: list[tuple[str, str]] = []
-    for name in out.decode().split("\0"):
-        if not name or name in skip:
+    for name in _listed_names():
+        if name in skip:
             continue
         try:
             raw = (REPO / name).read_bytes()
@@ -220,7 +249,7 @@ def test_version_and_apache_licence_stay_and_no_real_address_ships(case_id):
     assert project["version"] == VERSION
     assert project["license"] == "Apache-2.0"
     assert project["license-files"] == ["LICENSE"]
-    assert APACHE_CLASSIFIER in project["classifiers"]
+    assert APACHE_CLASSIFIER not in project["classifiers"]
 
     licence = LICENSE.read_text(encoding="utf-8")
     lines = _lines(licence)
@@ -250,6 +279,22 @@ def test_version_and_apache_licence_stay_and_no_real_address_ships(case_id):
     assert strangers == []
 
 
+@pytest.mark.parametrize("case_id", [pytest.param("essay-author-a3", id="essay-author-a3")])
+def test_the_address_scan_reads_the_tree_without_git(case_id, monkeypatch):
+    """essay-author-a3: Without git, the address scan reads the files on disk."""
+    assert case_id == "essay-author-a3"
+
+    def unavailable(*_args, **_kwargs):
+        raise subprocess.CalledProcessError(128, ["git", "ls-files"])
+
+    monkeypatch.setattr(subprocess, "check_output", unavailable)
+    names = {name for name, _text in tracked_text()}
+    assert {"pyproject.toml", "LICENSE", "README.md", SELF_NAME} <= names
+    skipped = {name for name, _text in tracked_text(skip=frozenset({SELF_NAME}))}
+    assert SELF_NAME not in skipped
+    assert names - skipped == {SELF_NAME}
+
+
 @pytest.mark.parametrize("case_id", [pytest.param("essay-author-b1", id="essay-author-b1")])
 def test_neighbouring_names_stay_put(case_id):
     """essay-author-b1: only the author records move; the Apache licence stays."""
@@ -262,7 +307,7 @@ def test_neighbouring_names_stay_put(case_id):
     assert project["version"] == VERSION
     assert project["license"] == "Apache-2.0"
     assert project["license-files"] == ["LICENSE"]
-    assert APACHE_CLASSIFIER in project["classifiers"]
+    assert APACHE_CLASSIFIER not in project["classifiers"]
 
     readme = README.read_text(encoding="utf-8")
     badge = next(line for line in _lines(readme) if "shields.io/badge/license-" in line)

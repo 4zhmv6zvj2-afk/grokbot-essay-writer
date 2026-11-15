@@ -824,7 +824,6 @@ def _missed_cover_fields(essay_id: str, text: str) -> list[str]:
         essay_id,
         {},
         {"title": "", "word_count": {}},
-        always_programme=False,
     )
     folded = text.casefold() if isinstance(text, str) else ""
     missed: list[str] = []
