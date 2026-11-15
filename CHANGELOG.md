@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.4 — 2026-11-15
+
+Student docs, the final-folder scheme, mark-fit notes, the unmounted-Mac line, the prompt-density pass, and the mid-office session-token fix.
+
+- The README and `docs/GLOSSARY.md` explain the words a student meets, and the README walks a student through the run: the ten stages, where the student confirms, the stage 5 save, and the folder the tool returns.
+- Stage 10 names the folder `final_place` returns. `Documents/<project>-10/` stays the fallback when no Mac handoff is configured. A findings note under a mounted Mac folder is spoken from that folder, and a copy also lands in the sequence folder with the final Word. Existing files are not moved.
+- When the Mac folder is not available, the chat says so in student words: the file stays in the chat and on this sequence, and the student can ask the operator to set it up or copy the file. The four-way card, the sign-in card, and FIRST-RUN.txt are unchanged.
+- Mark-fit notes still read section names and weights only. A grade band is never a section weight, including a range such as `Distinction 70-79%`. A reflective diary and a brief with no weights stay silent.
+- Front-office paragraphs and the long stage bullets are one sentence or one rule per line. Every clause stays. “The essay is balanced” is glossed as weighing both sides, without repeating the shared opposing-views sentence. “A thin edit” in the stage rules is glossed as a small wording change. The reopen rule stays. `review/eqr.md`, `install/operator.md`, `status/mid.md`, `seats/write.md`, `voice.md`, and the Harvard page are unchanged.
+- A mid-office reader can close only the session it started. Each session has its own token, captured before the reader thread starts. A later session under the same sequence id keeps a new token and is left alone, including after a reset in the same folder and after the run folder moves. A direct finish still closes with no token, and a stage-5 draft that closes its own job still records the child exit code. This stops a late reader from clearing the next session and replacing the stage-7 Confirm line with the wait line.
+
 ## 0.9.3 — 2026-11-15
 
 Brief gap lines, stored answers, cover rules, stage titles, helpful-friend voice, answer-field replies, the mid-office reader-log fix, Apache 2.0, author metadata, and CI fixes.
