@@ -23,6 +23,7 @@ from essay_writer.build_status import (
     finish_mid_process,
     follow_mid_process,
     join_mid_readers,
+    live_mid_job,
     reply_status,
     reset_status,
     session_open,
@@ -337,6 +338,49 @@ def test_reader_log_stays_on_its_folder_for_build(workspace, monkeypatch):
     opened = open_sequence()
     assert opened == f"{ESSAY}-1"
     assert not debug_log_path(opened).exists()
+
+
+def test_a_reader_does_not_close_the_session_opened_after_reset(workspace):
+    """Resetting status starts a new session. The old reader must not close it."""
+    del workspace
+    seq = open_sequence()
+    begin_mid_build(seq, "work")
+    bind_job(seq, pid=os.getpid(), stage="6", shell="cursor")
+    hold, thread = _hold_reader(seq, "cursor")
+    reset_status()
+    begin_mid_build(seq, "work")
+    bind_job(seq, pid=os.getpid(), stage="7", shell="cursor")
+
+    _finish_reader(hold, thread)
+
+    live = live_mid_job(seq)
+    assert live is not None
+    assert live["stage"] == "7"
+
+
+def test_a_finishing_reader_leaves_a_newer_session_open(workspace, monkeypatch):
+    """A reader from the previous run must not clear the next session.
+
+    Sequence ids start again at the same name in the next workspace. The
+    reader is still bound to the folder it started in. When it exits, the
+    session opened for that same id in the new run stays live. Stage 7 can
+    then keep the Confirm line instead of replacing it with the wait line.
+    """
+    seq = open_sequence()
+    begin_mid_build(seq, "work")
+    bind_job(seq, pid=os.getpid(), stage="6", shell="cursor")
+    hold, thread = _hold_reader(seq, "cursor")
+    _move_root(workspace, monkeypatch)
+    reset_status()
+    begin_mid_build(seq, "work")
+    bind_job(seq, pid=os.getpid(), stage="7", shell="cursor")
+
+    _finish_reader(hold, thread)
+
+    live = live_mid_job(seq)
+    assert live is not None
+    assert live["stage"] == "7"
+    assert live["pid"] == os.getpid()
 
 
 def test_reader_log_stays_put_when_the_folder_does_not_move(workspace, monkeypatch):
