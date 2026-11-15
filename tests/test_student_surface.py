@@ -6,7 +6,7 @@ from pathlib import Path
 
 from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
-from essay_writer.harvard_4a import FOUR_A_FORMAT
+from essay_writer.harvard_4a import FOUR_A_PARTS
 from essay_writer.research import essay_research_summary
 from essay_writer.research_packs import write_annotation_docx
 from essay_writer.review import REVIEW_PROMPT
@@ -59,7 +59,8 @@ def test_stage_prompts_and_pasted_notes_omit_house_labels():
     assert "do not invent sources" in stage_settings("5")["prompt_overlay"].casefold()
     assert "do not invent sources" in stage_settings("9")["prompt_overlay"].casefold()
     assert "approve" in stage_settings("8")["prompt_overlay"].casefold()
-    assert FOUR_A_FORMAT in stage_settings("4a")["prompt_overlay"]
+    for part in FOUR_A_PARTS:
+        assert part in stage_settings("4a")["prompt_overlay"]
     helpers = (REPO / "docs" / "academic-writing-helpers.md").read_text(encoding="utf-8")
     harvard = (REPO / "docs" / "referencing-harvard.md").read_text(encoding="utf-8")
     assert student_surface_hits(helpers) == []

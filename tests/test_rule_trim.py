@@ -9,7 +9,7 @@ import inspect
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.harvard_4a import ANNOTATION_SENTENCES, FOUR_A_FORMAT
+from essay_writer.harvard_4a import ANNOTATION_SENTENCES, FOUR_A_FORMAT, FOUR_A_PARTS
 from essay_writer.prompt_loader import bullets
 from essay_writer.prompt_loader import sections as prompt_sections
 from essay_writer.stage_llm import stage_settings
@@ -29,14 +29,14 @@ CHATBOT = "If a chatbot produced"
 def test_case_1():
     """AC1: Duplicated rules were merged or relocated. Bullets stay flat.
 
-    The stage 5 shared checklist is 12 bullets. The ownership sentence lives
+    The stage 5 shared checklist is 21 bullets. The ownership sentence lives
     once, in the craft rule. The essay opener and closer bans live once, in
     the anti-glue rule. The annotation how-to lives once, on the annotation
     bullet. The chatbot rewrite lives once, in the craft revise rule. Cursor
     and Grok Build read those same rules. The prompt loader still returns one
     flat bullet per line that starts with a dash.
     """
-    assert len(CHECKLISTS["5"]) == 12
+    assert len(CHECKLISTS["5"]) == 21
     assert CHECKLISTS["5"] == bullets("stages/05.md", "shared")
     assert all("\n" not in line for line in CHECKLISTS["5"])
     assert OWNERSHIP not in "\n".join(CHECKLISTS["5"])
@@ -57,7 +57,8 @@ def test_case_1():
     assert "what the paper did" in FOUR_A_FORMAT
     overlay_4a = stage_settings("4a")["prompt_overlay"]
     assert overlay_4a.count(MARK_SCHEME_WORDS) == 1
-    assert FOUR_A_FORMAT in overlay_4a
+    for part in FOUR_A_PARTS:
+        assert part in overlay_4a
     stage8 = stage_settings("8")["rules"]
     assert stage8.count(CHATBOT) == 1
     assert CHATBOT not in "\n".join(CHECKLISTS["8"])

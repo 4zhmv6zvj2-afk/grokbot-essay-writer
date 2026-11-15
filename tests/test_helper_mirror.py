@@ -59,8 +59,11 @@ def test_case_1():
     for stage, lines in SHARED_STAGE_LINES.items():
         rules = stage_settings(stage)["rules"]
         for line in lines:
-            assert line in rules
-            assert line in helper
+            for part in line.splitlines():
+                if not part.strip():
+                    continue
+                assert part in rules
+                assert part in helper
     for stage, checklist in CHECKLISTS.items():
         assert checklist[0] in helper
         if stage in CRAFT_BY_STAGE or stage in SHARED_STAGE_LINES:

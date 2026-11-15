@@ -70,7 +70,7 @@ The Basics checklist runs internally. Its answers are saved in the tracking note
 
 ## After research, revisit the plan
 
-After the annotated bibliography and the critical review are saved, revisit the stage 3 plan before the first draft. Revisit stage 2 only if the research breaks that lock. On an essay the lock is the thesis. On a report the lock is purpose and scope. On a diary the lock is the entries the brief names. The report’s one-sentence answer is the central theme. A thin edit of that sentence is allowed. A break is not a thin edit. A report has no thesis. A diary has no thesis.
+After the annotated bibliography and the critical review are saved, revisit the stage 3 plan before the first draft. Revisit stage 2 only if the research breaks that lock. On an essay the lock is the thesis. On a report the lock is purpose and scope. On a diary the lock is the entries the brief names. The report’s one-sentence answer is the central theme. A small wording change of that sentence is allowed. A break of that claim is not a small change. A report has no thesis. A diary has no thesis.
 
 Check that the section arguments still hold, that the word weights still match the brief, and that each source type is a real title, with gaps named. The one-sentence answer should still be the best one. Leave out anything the research never showed. Do not invent sources. Use only the year printed in the opened source. Do not add a second year.
 
@@ -136,7 +136,13 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - Gathered sources only (do not invent sources). Choose sources that answer the question, cover more than one view, and include the key works.
 - Each annotation is a few full sentences after the citation, written so a student can read them aloud: what the paper did, what it found, and how it helps this assignment. Keep mark-scheme words the brief uses, and gloss each one in plain English the first time. Do not delete those words.
 - Evidence vs claim: what the source shows versus what you will argue.
-- Harvard Referencing 4a format: the citation line stays exact, then the annotation sentences (what the paper did, what it found, and how it helps this assignment). Do not delete those words. Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences. Journal: Surname, Initial. (Year) 'Article title', Journal Title, volume(issue), pp. start-end. Available at: doi:10.xxxx/xxxxx. Book: Surname, Initial. (Year) Title. Place: Publisher. Web page: Organisation (Year) Title. Available at: URL (Accessed: date). A missing page, DOI, volume, journal, place, publisher, or access date stays blank. Do not invent it. The full reference pass is stage 9.
+- Harvard Referencing 4a format: the citation line stays exact, then the annotation sentences (what the paper did, what it found, and how it helps this assignment).
+- Do not delete those words.
+- Do not replace that paragraph with a shortened bibliography or a citation line that has no sentences.
+- Journal: Surname, Initial. (Year) 'Article title', Journal Title, volume(issue), pp. start-end. Available at: doi:10.xxxx/xxxxx. Book: Surname, Initial. (Year) Title. Place: Publisher. Web page: Organisation (Year) Title. Available at: URL (Accessed: date).
+- A missing page, DOI, volume, journal, place, publisher, or access date stays blank.
+- Do not invent it.
+- The full reference pass is stage 9.
 - download-list.docx is leftovers only: gathered sources not already in the papers zip, plus failed look-up addresses that are not saved PDFs. Do not repeat citation lines from annotation.docx.
 - When you name other gathered sources or free alternatives already found after this save, speech only. Do not open a new look-up or free-alt download in this step.
 - After this save is approved, a later download step can fetch leftover free alternatives already found. That step does not open a new look-up and does not invent an address.
@@ -147,7 +153,15 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - A database the brief names is not a look-up. The file the student holds fills that slot. Do not store a folder path.
 
 **Shared rules:**
-- Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout.
+- Research file work on this computer opens only a path already allowed for this sequence.
+- Allowed: the code checkout, and that checkout is code only, not a student save.
+- Essay-writer/<module>/ workflow files.
+- uploads/<module>/ when that is the product path.
+- a path already named on the download list, the annotation, or a known project file for this sequence.
+- local subject notes for this module when the module needs it.
+- Do not search the home folder, whole Documents, or whole Volumes for papers.
+- Do not invent a student folder path.
+- Do not save student work in the code checkout.
 
 **4b — Critical review.** Deep read of selected papers (aim, methods, scope, evaluation, fit to the argument). Output is one Word file per paper in `critical-reviews.zip`. **Approve the save** when that review is ready to lock.
 
@@ -155,7 +169,10 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 
 **Basics checklist (4b):**
 - When you offer the step into critical review after 4a, include option C: Download leftovers first. The library guide is for after the person fetches those files; do not fetch those files for them during file work.
-- Before the step into the critical review is saved, compare download-list.docx with PDF files already on disk and in Documents only when that path is already named. Do not search the home folder, whole Documents, or whole Volumes. Do not treat the papers zip as the only copy. When a listed source now has a PDF, refresh the annotated bibliography and the papers zip, say what is saved and what is still leftover, then ask to save.
+- Before the step into the critical review is saved, compare download-list.docx with PDF files already on disk and in Documents only when that path is already named.
+- Do not search the home folder, whole Documents, or whole Volumes.
+- Do not treat the papers zip as the only copy.
+- When a listed source now has a PDF, refresh the annotated bibliography and the papers zip, say what is saved and what is still leftover, then ask to save.
 - Open each critical-review markdown file on disk before that note is kept, including when a subagent writes the note. The critical note names grok-4.7.
 - A critical review judges the text. It is not a negative attack. Read the content, the purpose, the audience, and how the text is built.
 - Record the aim, the methods, the scope, what the text adds, what it leaves out, and whether the conclusions follow from the evidence.
@@ -164,7 +181,15 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - When the assignment is itself a critical review: introduction with author, title, topic, aim, findings, and your overall judgement; a summary of about a quarter to a third; a critique ordered by importance or by criterion; a conclusion that restates the judgement. The brief wins on structure.
 
 **Shared rules:**
-- Research file work on this computer opens only a path already allowed for this sequence. Allowed: the code checkout, and that checkout is code only, not a student save; Essay-writer/<module>/ workflow files; uploads/<module>/ when that is the product path; a path already named on the download list, the annotation, or a known project file for this sequence; local subject notes for this module when the module needs it. Do not search the home folder, whole Documents, or whole Volumes for papers. Do not invent a student folder path. Do not save student work in the code checkout.
+- Research file work on this computer opens only a path already allowed for this sequence.
+- Allowed: the code checkout, and that checkout is code only, not a student save.
+- Essay-writer/<module>/ workflow files.
+- uploads/<module>/ when that is the product path.
+- a path already named on the download list, the annotation, or a known project file for this sequence.
+- local subject notes for this module when the module needs it.
+- Do not search the home folder, whole Documents, or whole Volumes for papers.
+- Do not invent a student folder path.
+- Do not save student work in the code checkout.
 
 Steps **4a–4b** feed the saved research files (`docs/workflow.md`, research steps).
 
@@ -184,8 +209,17 @@ The name is the same for both genres. Essay shape is in `docs/essay-writing-help
 - Opposing views only from gathered material. Do not invent sources. Approve the draft before treating it as locked for Word.
 - Do not set the conclusion label to noted or open on the Word cover. The person chooses that on validate before Word.
 - Do not write an independent re-review or mark your own essay passed. Only the separate reviewer records a pass.
-- Chat for this step stays quiet. Do not paste this checklist into the chat, and do not name a file path. The person does not read or edit Word in this stage. The person sees the finished first draft after the save. A middle pass stays quiet unless the draft is blocked.
-- When the critical-review notes are too long for this step, drop only a repeated model line, then take whole notes in groups that fit, then re-open a source only for a gap that note does not cover. Do not cut off the end of a note without saying so. Do not invent a quotation that is not in the full note. Keep going while a group or a re-opened passage still fits. Stop and tell the person only when none of those ways fits.
+- Chat for this step stays quiet.
+- Do not paste this checklist into the chat.
+- Do not name a file path.
+- The person does not read or edit Word in this stage.
+- The person sees the finished first draft after the save.
+- A middle pass stays quiet unless the draft is blocked.
+- When the critical-review notes are too long for this step, drop only a repeated model line, then take whole notes in groups that fit, then re-open a source only for a gap that note does not cover.
+- Do not cut off the end of a note without saying so.
+- Do not invent a quotation that is not in the full note.
+- Keep going while a group or a re-opened passage still fits.
+- Stop and tell the person only when none of those ways fits.
 - When the student supplied an outline or base prose, its headings and their order stay. Add no section and no body text around whatever was gathered, and weave a short cite only where a gathered paper supports the student's own sentence.
 
 **Shared rules:**
@@ -304,7 +338,14 @@ Final in-text citations and reference list — **Harvard Referencing** only. If 
 - The list includes every source you cited, with every author, in file order. The tool does not sort the list and does not add 2018a or 2018b. Do not invent a missing field.
 - Open the gathered PDF, including a file larger than 2MB. Do not reject a .pdf or a file over 2MB. Verify the author, the year, and the page against the opened paper. A page with no extractable text is recorded and is not quoted. When pdf-read-gaps.json is present, use that record and do not quote the missing part.
 - Keep the surname from the article's own author line when a download cover or a please-cite token inverts a compound surname. Fosso Wamba stays Fosso Wamba and must not become Wamba, S.F.
-- Cite a printed page in the text only. An in-text page appears only when the opened file prints that page. In the reference entry, an article number stays in the article-number slot, after the volume and issue. A page from a matching look-up stays: a range is pp. start-end and a single page is p. N, even when the opened file has no lone printed page lines. A page value with no look-up mark that the opened file does not print stays blank. A look-up page value that is an article number, not a page, is stored and printed in the article-number slot. When neither a page nor an article number is on the opened file or the look-up, the page field stays blank. Do not cite the PDF viewer index as a page.
+- Cite a printed page in the text only.
+- An in-text page appears only when the opened file prints that page.
+- In the reference entry, an article number stays in the article-number slot, after the volume and issue.
+- A page from a matching look-up stays: a range is pp. start-end and a single page is p. N, even when the opened file has no lone printed page lines.
+- A page value with no look-up mark that the opened file does not print stays blank.
+- A look-up page value that is an article number, not a page, is stored and printed in the article-number slot.
+- When neither a page nor an article number is on the opened file or the look-up, the page field stays blank.
+- Do not cite the PDF viewer index as a page.
 - The reference list heading is References. A journal title and a report title are italic. A gathered DOI is printed as Available at: doi:. A missing page, DOI, or other locator stays blank.
 - Do not invent sources on every citation line.
 - If the list is wrong, fix it before approving. If it is right and unchanged, say so and approve.

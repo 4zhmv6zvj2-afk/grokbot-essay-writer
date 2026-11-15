@@ -13,6 +13,7 @@ ends when the process or the job ends.
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import re
@@ -67,6 +68,11 @@ _readers: list[threading.Thread] = []
 _mcp_session: dict[str, Any] = {}
 _lock = threading.RLock()
 _clock_started = False
+# One token per session object. A reader captures the token it started with
+# and may close only that session. A later session for the same sequence id
+# keeps a new token, so a reader still finishing cannot clear it.
+_session_tokens = itertools.count(1)
+_READER_UNOWNED = object()
 _sheet: dict[str, dict[str, str]] | None = None
 
 _TIP_SECTIONS = ("sources", "deep_read", "draft", "quality", "ask_edit", "word_final", "phases")
@@ -379,6 +385,7 @@ def _fresh_session(activity: str, subject: str) -> dict[str, Any]:
         "pid": None,
         "stage": "",
         "shell": "",
+        "token": next(_session_tokens),
     }
 
 
@@ -686,12 +693,23 @@ def _subject_of(essay_id: str) -> str:
     return subject_for(essay_id)
 
 
-def _mark_closed(essay_id: str) -> None:
+def _mark_closed(essay_id: str, *, reader_token: Any = _READER_UNOWNED) -> bool:
+    """Close this session. A reader closes only the session it started with.
+
+    A direct finish passes no token and always closes. A reader that returns
+    False left a newer session alone: same sequence id, later run.
+    """
     with _lock:
+        session = _sessions.get(essay_id)
+        if reader_token is not _READER_UNOWNED and (
+            session is None or session.get("token") != reader_token
+        ):
+            return False
         _sessions.pop(essay_id, None)
         _pending.pop(essay_id, None)
         _closed.add(essay_id)
     _persist(essay_id)
+    return True
 
 
 def complete_job(essay_id: str) -> list[str]:
@@ -758,21 +776,21 @@ def _note_exit_on_bound_folder(
     note_mid_office("done", essay_id, office, exit_code=exit_code, stderr_line=stderr_line)
 
 
-def _close_bound_session(essay_id: str) -> None:
+def _close_bound_session(essay_id: str, reader_token: Any) -> None:
     """Close a reader's session on the folder it is bound to.
 
     The reader thread is bound, so the session file is removed there. The
-    folder ESSAY_WRITER_ROOT names now is not written. This runs even when the
-    exit line cannot be written or the shell is unknown.
+    folder ESSAY_WRITER_ROOT names now is not written. A newer in-memory
+    session for this sequence id is left open. This runs even when the exit
+    line cannot be written or the shell is unknown.
     """
-    _ensure(essay_id)
-    with _lock:
-        if essay_id not in _sessions:
-            return
     try:
-        _mark_closed(essay_id)
+        _mark_closed(essay_id, reader_token=reader_token)
     except OSError:
         with _lock:
+            session = _sessions.get(essay_id)
+            if session is None or session.get("token") != reader_token:
+                return
             _sessions.pop(essay_id, None)
             _pending.pop(essay_id, None)
             _closed.add(essay_id)
@@ -784,6 +802,7 @@ def finish_mid_process(
     exit_code: int | None = None,
     shell: str | None = None,
     stderr_line: str = "",
+    reader_token: Any = _READER_UNOWNED,
 ) -> list[str]:
     """The child exited. Record the code even if stage 5 already stored the draft.
 
@@ -800,7 +819,7 @@ def finish_mid_process(
     with workspace_root_lock():
         code = 0 if exit_code is None else int(exit_code)
         if _outside_bound_workspace():
-            _close_bound_session(essay_id)
+            _close_bound_session(essay_id, reader_token)
             _note_exit_on_bound_folder(
                 essay_id,
                 exit_code=code,
@@ -813,6 +832,7 @@ def finish_mid_process(
             exit_code=code,
             shell=shell,
             stderr_line=stderr_line,
+            reader_token=reader_token,
         )
 
 
@@ -822,10 +842,22 @@ def _finish_mid_process(
     exit_code: int,
     shell: str | None,
     stderr_line: str,
+    reader_token: Any = _READER_UNOWNED,
 ) -> list[str]:
     code = exit_code
     with _lock:
         session = _sessions.get(essay_id)
+        if (
+            reader_token is not _READER_UNOWNED
+            and session is not None
+            and session.get("token") != reader_token
+        ):
+            # The session this reader started is already gone, and a later
+            # run opened another one under the same sequence id. Say nothing
+            # here and leave that session open. A missing session still
+            # records the exit, which is how stage 5 keeps the child code
+            # after the draft store closes the job.
+            return []
         if session is not None:
             stage = str(session.get("stage") or "")
             subject = str(session.get("subject") or "your assignment")
@@ -835,8 +867,8 @@ def _finish_mid_process(
             stage = ""
             subject = subject_for(essay_id)
     office = {"grok": "Build", "cursor": "Cursor"}.get(str(shell or ""))
-    if session is not None:
-        _mark_closed(essay_id)
+    if session is not None and not _mark_closed(essay_id, reader_token=reader_token):
+        return []
     if office:
         from essay_writer.debug_log import note_mid_office
 
@@ -924,6 +956,9 @@ def follow_mid_process(
 
     with workspace_root_lock():
         home = live_workspace_root()
+    with _lock:
+        current = _sessions.get(essay_id)
+        reader_token = current.get("token") if current else None
 
     def _run() -> None:
         bind_workspace_root(home)
@@ -985,6 +1020,7 @@ def follow_mid_process(
                     exit_code=exit_code,
                     shell=shell,
                     stderr_line=" ".join(stderr_chunks),
+                    reader_token=reader_token,
                 )
             except Exception:
                 # Best effort: the thread ends here either way.
@@ -1286,6 +1322,7 @@ def _ensure(essay_id: str) -> None:
         return
     with _lock:
         if essay_id not in _sessions and essay_id not in _closed:
+            loaded["token"] = next(_session_tokens)
             _sessions[essay_id] = loaded
             _known.add(essay_id)
 
