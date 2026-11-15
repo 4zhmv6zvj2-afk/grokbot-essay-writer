@@ -376,3 +376,133 @@ def test_ac13_target_a_also_holds_on_the_locked_weak_fixture(workspace):
     if "mark-fit-chain" not in codes:
         text = "\n".join(section["body"] for section in lifted["pack"]["sections"])
         assert "Inditex" in text
+
+
+def _hundred_word_name() -> list[str]:
+    return [f"word{index:02d}" for index in range(100)]
+
+
+def test_the_heading_match_boundary_is_seventy_percent():
+    """A heading matches at 70% of the brief name's content words, and not at 69%."""
+    words = _hundred_word_name()
+    weights = [{"name": " ".join(words), "weight": 10}]
+
+    def heading(count: int) -> list[dict[str, str]]:
+        return [{"heading": " ".join(words[:count]), "body": "Kept."}]
+
+    assert missing_weighted_sections(heading(69), weights)
+    assert missing_weighted_sections(heading(70), weights) == []
+    assert missing_weighted_sections(heading(71), weights) == []
+
+
+def test_normalization_and_a_brief_name_inside_the_heading_both_match():
+    """Case, hyphens, and a longer heading still match the brief's section name."""
+    weights = [{"name": "Drivers of sustainability-centric SCM", "weight": 20}]
+    exact = [{"heading": "Drivers of sustainability-centric SCM", "body": "Kept."}]
+    folded = [{"heading": "DRIVERS OF SUSTAINABILITY CENTRIC SCM", "body": "Kept."}]
+    inside = [{"heading": "The drivers of sustainability-centric SCM today", "body": "Kept."}]
+    assert missing_weighted_sections(exact, weights) == []
+    assert missing_weighted_sections(folded, weights) == []
+    assert missing_weighted_sections(inside, weights) == []
+    assert unweighted_headings(inside, weights) == []
+
+
+def test_one_heading_can_match_two_weighted_sections():
+    """A heading that contains two brief names satisfies both, and is not an extra heading."""
+    weights = [
+        {"name": "Context", "weight": 20},
+        {"name": "Context and drivers", "weight": 30},
+    ]
+    sections = [{"heading": "Context and drivers", "body": "Kept."}]
+    assert missing_weighted_sections(sections, weights) == []
+    assert unweighted_headings(sections, weights) == []
+
+
+def test_a_duplicate_weighted_section_is_read_once():
+    """The first printed weight wins. A repeated name is not a second section."""
+    text = "Drivers 20%\nDrivers 30%\n| Drivers | 40% |\n"
+    assert weighted_sections(text) == [{"name": "Drivers", "weight": 20}]
+
+
+def test_presentation_referencing_overall_and_total_are_not_body_sections():
+    """Those rows are not sections a draft is asked to add."""
+    text = "\n".join(
+        (
+            "Presentation 10%",
+            "Referencing 5%",
+            "Overall 10%",
+            "Total 100%",
+            "Introduction 70%",
+        )
+    )
+    missing = missing_weighted_sections([], weighted_sections(text))
+    assert [row["name"] for row in missing] == ["Introduction"]
+
+
+def test_a_reflective_diary_stays_silent(workspace):
+    """A diary keeps its own parts. A weight table on that brief adds no note."""
+    seq = _plant(
+        workspace,
+        "Genre: reflective diary\nQuestion: Reflect on the decisions in the watch.\nDrivers 20%\n",
+    )
+    assert mark_fit_notes(seq, [{"heading": "Other", "body": "Kept."}], []) == []
+
+
+def test_a_brief_with_no_weights_stays_silent(workspace):
+    """No weight list means no section note and no extra-heading note."""
+    seq = _plant(
+        workspace,
+        "Genre: report\nQuestion: How do chokepoints constrain the corridor?\n",
+    )
+    assert mark_fit_notes(seq, [{"heading": "Literature review", "body": "Kept."}], []) == []
+
+
+def test_highest_band_is_never_a_section_weight(workspace):
+    """A distinction or merit line is a grade band. It is not a weighted section."""
+    import inspect
+
+    from essay_writer.assignment_gate import read_assignment
+    from essay_writer.mark_fit import assignment_weight_text
+
+    seq = _plant(
+        workspace,
+        "Genre: report\nQuestion: How do chokepoints constrain the corridor?\n",
+    )
+    (essay_dir(MODULE) / "mark-scheme.md").write_text(
+        "Distinction 70-100\nMerit 60-69\nDrivers 20%\nDistinction 70%\n",
+        encoding="utf-8",
+    )
+    record = read_assignment(seq)
+    assert str(record["highest_band"]).casefold() == "distinction"
+    assert weighted_sections("Distinction 70%\nMerit 60%\n") == []
+    assert weighted_sections("Distinction 70-79%") == []
+    assert weighted_sections("High Distinction 70-79%") == []
+    assert weighted_sections("Distinction: 70-79%") == []
+    assert [row["name"] for row in weighted_sections(assignment_weight_text(seq))] == ["Drivers"]
+    found = mark_fit_notes(seq, [{"heading": "Introduction", "body": "Kept."}], [])
+    reasons = " ".join(item["reason"] for item in found)
+    assert "Drivers" in reasons
+    assert "20%" in reasons
+    assert "Distinction" not in reasons
+    assert "Merit" not in reasons
+    source = inspect.getsource(mark_fit_notes)
+    assert "highest_band" not in source
+    assert "_weights_block" not in source
+    assert "_scheme_percentages" not in source
+
+
+def test_chain_case_and_source_notes_stay_notes(workspace):
+    """The chain, named-case, and specialist-source notes stay notes."""
+    from essay_writer.mark_fit import generic_case_note
+
+    seq = _plant(workspace)
+    notes = mark_fit_notes(seq, _sections("weak"), GENERIC_SOURCES)
+    codes = [item["code"] for item in notes]
+    assert "mark-fit-chain" in codes
+    assert "mark-fit-source" in codes
+    case_brief = "Discuss one named company. For example: Acme or Northwind."
+    case = generic_case_note([{"heading": "Draft", "body": "A company in general."}], case_brief)
+    assert case is not None
+    assert "one named company" in case
+    assert "Acme" in case
+    assert "Northwind" in case

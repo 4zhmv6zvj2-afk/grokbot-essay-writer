@@ -19,6 +19,23 @@ _PERCENT = re.compile(r"(\d{1,3})\s*%")
 _PLAIN_WEIGHT = re.compile(
     r"^\s*(?:[-*]\s*)?(?P<name>[A-Za-z][^|%]{2,64}?)\s*(?:—|-|:)?\s*(?P<pct>\d{1,3})\s*%\s*$"
 )
+# Grade-band labels. A percentage on one of these is not a section weight.
+_GRADE_BANDS = frozenset(
+    {
+        "high distinction",
+        "outstanding",
+        "excellent",
+        "distinction",
+        "first class",
+        "first",
+        "merit",
+        "credit",
+        "pass",
+        "fail",
+    }
+)
+# "Distinction 70-79%" leaves the range start on the label. That remainder is still a band.
+_TRAILING_RANGE = re.compile(r"(?:\s*[:—\-]\s*|\s+)(?:\d{1,3}\s*[-–—]\s*)?\d{1,3}\s*$")
 _HEADER_WORDS = frozenset(
     {
         "section",
@@ -123,7 +140,8 @@ def weighted_sections(text: str) -> list[dict[str, Any]]:
     """Section names and weights the brief prints, in brief order.
 
     A markdown table row and a plain "Drivers 20%" line both count. A row with
-    no percentage, a header row, and a percentage outside 1–100 are left out.
+    no percentage, a header row, a grade band, and a percentage outside 1–100
+    are left out. A band that prints a numeric range is still a band.
     Nothing is added when the brief prints no weight list.
     """
     if not isinstance(text, str) or not text.strip():
@@ -135,7 +153,16 @@ def weighted_sections(text: str) -> list[dict[str, Any]]:
         label = " ".join(str(name).split()).strip(" .:—-|")
         weight = int(pct)
         key = _norm(label)
-        if not label or not key or key in seen or weight <= 0 or weight > 100:
+        band = _norm(_TRAILING_RANGE.sub("", label).strip(" .:—-|"))
+        if (
+            not label
+            or not key
+            or key in seen
+            or key in _GRADE_BANDS
+            or band in _GRADE_BANDS
+            or weight <= 0
+            or weight > 100
+        ):
             return
         seen.add(key)
         found.append({"name": label, "weight": weight})
@@ -388,6 +415,24 @@ def specialist_source_note(
     )
 
 
+def assignment_weight_text(essay_id: str) -> str:
+    """Brief and scheme text ``read_assignment`` already opens.
+
+    ``weighted_sections`` is the only reader of section names and weights.
+    Grade-band labels are left out. ``highest_band`` is not a weight.
+    """
+    brief = essay_textutil.module_brief_text(essay_id)
+    scheme = essay_assignment_gate.mark_scheme_text(essay_id)
+    parts: list[str] = []
+    for part in (brief, scheme):
+        if not isinstance(part, str) or not part.strip():
+            continue
+        text = part.strip()
+        if text not in parts:
+            parts.append(text)
+    return "\n".join(parts)
+
+
 def mark_fit_notes(
     essay_id: str,
     sections: list[dict[str, Any]],
@@ -404,7 +449,7 @@ def mark_fit_notes(
     }:
         # A diary keeps its own entry parts. The weight table is not its shape.
         return []
-    weights = weighted_sections(brief)
+    weights = weighted_sections(assignment_weight_text(essay_id))
     notes: list[dict[str, str]] = []
     for row in missing_weighted_sections(sections, weights):
         notes.append(
