@@ -41,7 +41,7 @@ For editing habits when the brief does not name a module writing guide, use `doc
 
 ## Presentation (Word, when used)
 
-- [ ] Cover carries programme, module code, counted words, and noted/open — **no** student name and **no** student number (`docs/workflow.md`).
+- [ ] Programme rows appear only when the brief asks. A real stored title is the first cover line. The conclusion is not printed on the cover — **no** student name and **no** student number unless the brief asks (`docs/workflow.md`).
 - [ ] Preview and `.docx` tell the same story (no second body in the preview).
 
 ## Out of this checklist

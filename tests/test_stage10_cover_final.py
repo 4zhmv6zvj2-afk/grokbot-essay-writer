@@ -260,18 +260,20 @@ def _polluted(path: Path) -> None:
     document.save(str(path))
 
 
-def _assert_clean(path: Path) -> str:
+def _assert_clean(path: Path, *, title_first: bool = False) -> str:
     texts = _texts(path)
     cover = _cover(path)
-    assert cover == [
-        MODULE_TITLE,
-        MODULE,
-        ASSIGNMENT,
+    tail = [
         f"Registration number: {NUMBER}",
         "Counted words: 40",
         ADDRESS,
         f"{MODULE}-1",
     ]
+    if title_first:
+        expected = [ASSIGNMENT, MODULE_TITLE, MODULE, *tail]
+    else:
+        expected = [MODULE_TITLE, MODULE, ASSIGNMENT, *tail]
+    assert cover == expected
     assert texts.count(f"Registration number: {NUMBER}") == 1
     assert texts.count(ASSIGNMENT) == 1
     assert texts.count(MODULE_TITLE) == 1
@@ -310,7 +312,7 @@ def test_ac1_ac2_ac4_polluted_rewrite_has_one_cover(workspace):
     final = write_stage10(seq)
     assert final["ok"] is True, final
     assert final["sequence_written"] is True
-    digest = _assert_clean(stage)
+    digest = _assert_clean(stage, title_first=True)
     sequence_final = stage.parent / f"{MODULE}-10" / f"{MODULE}-final.docx"
     assert sequence_final.is_file()
     assert (
@@ -320,7 +322,7 @@ def test_ac1_ac2_ac4_polluted_rewrite_has_one_cover(workspace):
     again = write_stage10(seq)
     assert again["ok"] is True, again
     assert _texts(stage) == _texts(sequence_final)
-    assert _assert_clean(stage) == digest
+    assert _assert_clean(stage, title_first=True) == digest
 
 
 def test_ac2_clean_docx_is_not_wrapped_under_draft(workspace):

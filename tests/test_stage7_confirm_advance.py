@@ -70,6 +70,8 @@ def _ask_stage7(seq: str) -> dict:
     assert asked["ok"] is True, asked
     assert asked["questions"]
     assert "Please answer these questions" in asked["next"]
+    assert "If the draft is fine as it is, say all fine." in asked["next"]
+    assert "all fine saves" not in asked["next"].casefold()
     return asked
 
 

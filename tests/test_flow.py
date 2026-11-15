@@ -36,7 +36,9 @@ def test_research_validate_word_and_local_shelf(workspace):
 
     preview = essay_pack_render_word(seq, pack(), "draft")
     assert preview["wrote"] is False
-    assert "Conclusion: noted" in preview["cover"]
+    assert "Conclusion: noted" not in preview["cover"]
+    assert "Conclusion: open — not a settled finding" not in preview["cover"]
+    assert pack()["conclusion"] == "noted"
     target = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output" / f"{seq}.docx"
     assert not target.exists()
     assert not (workspace / "Essay-writer" / ESSAY / "output" / f"{ESSAY}.docx").exists()
@@ -47,7 +49,9 @@ def test_research_validate_word_and_local_shelf(workspace):
     xml = zipfile.ZipFile(target).read("word/document.xml").decode("utf-8")
     assert "References" in xml
     assert "Smith, J." in xml
-    assert "Conclusion: noted" in xml
+    assert "Conclusion: noted" not in xml
+    assert "The conclusion is noted." in written["next"]
+    assert written.get("conclusion_line") == "The conclusion is noted."
     assert "Student" not in xml
     assert "doi:" not in xml
 

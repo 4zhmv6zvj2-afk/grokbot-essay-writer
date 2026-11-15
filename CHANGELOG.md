@@ -4,6 +4,7 @@
 
 Setup defaults, damaged-record handling, final-Word safety, and dependency updates.
 
+- The chat sounds like a helpful friend. Stage 6 still leaves the edit with the student, and it says the next step asks questions and edits from the answers.
 - Setup secrets and the file-work choice load from the record beside the chosen app.
   A missing choice stays Cursor; an unknown choice fails clearly. Backup and archive
   drives are refused as save folders, and those drive names stay out of student chat.
@@ -73,6 +74,14 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   parses stays as it is. The brief file is not rewritten, no remembered answer
   is stored, and the combined stage title stays when the brief still has no
   Genre or Format label.
+- A format or question the brief leaves empty can be answered once in the
+  chat. The answer is stored beside the brief, and the brief file is not
+  rewritten. A later sequence of the same module sees that answer. An empty
+  answer clears the stored field.
+- The Word cover prints a programme row only when the brief asks for it.
+  A real stored title is the first visible line, and a placeholder is left
+  off. The conclusion stays noted or open on the pack. Chat says that in one
+  sentence when Word is written. Neither sentence is printed on the cover.
 
 ## 0.9.1 — 2026-11-12
 

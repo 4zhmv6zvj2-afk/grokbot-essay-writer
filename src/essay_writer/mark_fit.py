@@ -13,7 +13,6 @@ from typing import Any
 
 from essay_writer import assignment_gate as essay_assignment_gate
 from essay_writer import textutil as essay_textutil
-from essay_writer.textutil import genre_from_brief_text
 
 _TABLE_ROW = re.compile(r"^\s*\|(.+)\|\s*$")
 _PERCENT = re.compile(r"(\d{1,3})\s*%")
@@ -397,11 +396,12 @@ def mark_fit_notes(
     """Notes about how the draft fits the brief's weight table. Never a block."""
 
     brief = essay_textutil.module_brief_text(essay_id)
-    genre = (genre_from_brief_text(brief) or "").casefold()
-    if (
-        genre in {"reflective", "reflective diary", "diary"}
-        or "reflective diary" in brief.casefold()
-    ):
+    prescribed = essay_assignment_gate.read_assignment(essay_id).get("format")
+    if isinstance(prescribed, str) and prescribed.strip().casefold() in {
+        "reflective",
+        "reflective diary",
+        "diary",
+    }:
         # A diary keeps its own entry parts. The weight table is not its shape.
         return []
     weights = weighted_sections(brief)

@@ -56,13 +56,25 @@ When a reply includes heading, post that line as the standing chat heading. The 
 Rewrite the title, the opening, and one body paragraph in your own words, and keep the citations and the person the brief names.
 
 ## stage6_read_list
-Read the draft and edit it yourself. Look for a fact made smoother or more important than the source, a line that says experts say or research shows with no source you opened, and a quotation, page, or finding you cannot find in the opened file. Also look for empty praise, an empty contrast, a decorative list of three, and serves as where is would do. A real contrast stays. This is not a score, and the draft is not rewritten for you.
+Read the draft and edit it yourself. Look for a fact made smoother or more important than the source, a line that says experts say or research shows with no source you opened, and a quotation, page, or finding you cannot find in the opened file. Also look for empty praise, an empty contrast, a decorative list of three, and use *is* instead of *serves as*. A real contrast stays. This is not a score, and the draft is not rewritten for you.
 
 ## eqr_first_run_speech
 Independent review runs in a separate specialist review. That review is not a writer-stage save in this chat.
 
+## opening_new
+Start a new essay.
+
+## opening_continue
+Continue a sequence you name.
+
+## opening_roll
+Copy an earlier sequence into a new one.
+
+## stage5_save_line
+The first full draft is saved when it is written, then shown.
+
 ## first_turn_card
-We will work through your essay or report in stages: what the assignment asks, the plan, the sources, then the draft. You decide when to move on, and nothing is saved until you say so. I do not submit it. Check what your course allows for AI — I do not know the rules for your course.
+We will work through your essay or report in stages: what the assignment asks, the plan, the sources, then the draft. You decide when to move on, and you decide when each stage is saved. The first full draft is saved when it is written, then shown. I do not submit it. Check what your course allows for AI — I do not know the rules for your course.
 
 ## redirect_whole
 We work on the essay in stages: what the assignment asks, the plan, the sources, then the draft. If you already have the assignment, send it over and we will start with the first stage.
@@ -80,4 +92,4 @@ Tricks to fool an AI detector are not something I do. I can help you read the dr
 This is your turn to read the draft. I will show you what to look for once, then you can edit it yourself.
 
 ## stage7_line
-I will ask about how the essay is put together and what it argues, and anything that is unclear. Then I will edit from your answers. I will wait for your reply before touching the draft.
+I will ask about how the essay is put together and what it argues, and anything that is unclear. Then I will edit from your answers. I will wait for your reply before touching the draft. If the draft is fine as it is, say all fine.

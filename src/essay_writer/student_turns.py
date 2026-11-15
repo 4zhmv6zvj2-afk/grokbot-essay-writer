@@ -1,4 +1,4 @@
-"""Exact student lines for the opening, four redirects, and stages 6 and 7.
+"""Exact student lines for the opening, the three choices, four redirects, and stages 6 and 7.
 
 The wording lives once in front_office/chat.md. A short ask that is one of
 the four cases returns that reply and does not save. A stage note does not.
@@ -12,6 +12,10 @@ from essay_writer.prompt_loader import text
 
 _CHAT = "front_office/chat.md"
 
+OPENING_NEW = text(_CHAT, "opening_new")
+OPENING_CONTINUE = text(_CHAT, "opening_continue")
+OPENING_ROLL = text(_CHAT, "opening_roll")
+STAGE5_SAVE_LINE = text(_CHAT, "stage5_save_line")
 FIRST_TURN_CARD = text(_CHAT, "first_turn_card")
 REDIRECT_WHOLE = text(_CHAT, "redirect_whole")
 REDIRECT_ORDER = text(_CHAT, "redirect_order")
@@ -44,14 +48,21 @@ _CASES: tuple[tuple[re.Pattern[str], str], ...] = (
         REDIRECT_VOICE,
     ),
     (
-        re.compile(rf"^{_POLITE}(?:skip|skipping)(?: the)? stages?(?: now)?$"),
+        re.compile(
+            rf"^{_POLITE}(?:skip|skipping)(?: the)? stages?(?: now)?$"
+            rf"|^{_POLITE}(?:skip|skipping) ahead$"
+        ),
         REDIRECT_ORDER,
     ),
     (
         re.compile(
-            rf"^{_POLITE}(?:write|draft|do|finish) (?:the |my )?"
+            rf"^{_POLITE}(?:write|writing|draft|drafting|do|finish|finishing) (?:the |my )?"
             rf"(?:whole|entire|full|complete) (?:essay|report)(?: now)?$"
-            rf"|^{_POLITE}write (?:the |my )?(?:essay|report) now$",
+            rf"|^{_POLITE}(?:write|writing) (?:the |my )?(?:essay|report) now$"
+            rf"|^{_POLITE}(?:write|writing|draft|drafting) (?:the |my )?(?:essay|report)"
+            rf"(?: for me)?$"
+            rf"|^{_POLITE}(?:finish|finishing) (?:the |my )?(?:essay|report)(?: for me)?$"
+            rf"|^{_POLITE}(?:write|writing|draft|drafting|finish|finishing) it$"
         ),
         REDIRECT_WHOLE,
     ),

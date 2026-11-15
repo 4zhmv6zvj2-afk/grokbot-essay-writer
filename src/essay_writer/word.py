@@ -23,7 +23,13 @@ from essay_writer.confirm import (
     refuse,
     save_draft,
 )
-from essay_writer.diary import cover_field_rows, cover_lines_from_field_rows, layout_for
+from essay_writer.diary import (
+    conclusion_chat_line,
+    cover_field_rows,
+    cover_lines_from_field_rows,
+    layout_for,
+    stored_cover_title,
+)
 from essay_writer.draft_from_review import CRITICAL_REVIEW
 from essay_writer.known_paths import guard_write_door, refuse_repo_write
 from essay_writer.paths import (
@@ -104,12 +110,31 @@ def _footer_has_page(document: DocumentType) -> bool:
     return "PAGE" in xml and "instrText" in xml
 
 
+def attach_conclusion_chat(body: dict[str, Any], pack: dict[str, Any]) -> dict[str, Any]:
+    """Say the pack conclusion in chat once Word is written. It is not a cover line."""
+    if body.get("wrote") is not True:
+        return body
+    line = say(conclusion_chat_line(pack))
+    if not line:
+        return body
+    body["conclusion_line"] = line
+    for key in ("next", "chat"):
+        current = body.get(key)
+        if isinstance(current, str) and current.strip():
+            if line not in current:
+                body[key] = f"{current.rstrip()} {line}"
+        elif key == "chat":
+            body["chat"] = line
+    return body
+
+
 def cover_lines(essay_id: str, pack: dict[str, Any], report: dict[str, Any]) -> list[str]:
     """One cover for stages 6, 7, 9, and the stage 10 final. All of them call write_docx."""
 
     record = assignment_requirements(essay_id)
     if record.get("active") is True and record.get("mapped") is False:
-        return []
+        title = stored_cover_title(pack, report)
+        return [title] if title else []
     lock = record.get("lock")
     if isinstance(lock, str) and lock not in {"thesis", "purpose_and_scope"}:
         essay = False
@@ -708,5 +733,5 @@ def essay_pack_render_word(
     if stage is None:
         from essay_writer.late_chain import quiet_word_step
 
-        return quiet_word_step(body, pack)
-    return body
+        body = quiet_word_step(body, pack)
+    return attach_conclusion_chat(body, pack)

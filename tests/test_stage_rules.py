@@ -66,10 +66,7 @@ def test_every_stage_loads_its_guidance_as_rules():
 
 
 def test_cursor_briefing_and_tools_load_the_same_rules():
-    assert (
-        "Rules for stage 2 — Essay: Establish a thesis. "
-        "Report: Establish purpose and scope. Apply every line."
-    ) in INSTRUCTIONS
+    assert ("Rules for stage 2 — Establish the focus. Apply every line.") in INSTRUCTIONS
     assert "Rules for stage 7 — Ask for feedback. Apply every line." in INSTRUCTIONS
     assert CHECKLISTS["2"][0] in INSTRUCTIONS
     assert "central theme" in INSTRUCTIONS
@@ -96,7 +93,7 @@ def test_cursor_briefing_and_tools_load_the_same_rules():
     assert stage_settings("3")["tracking_file"] == "tracking/3.md"
     assert "Ask for feedback" in stage_settings("7")["rules"]
     assert stage_settings("7")["tracking_file"] == "tracking/7.md"
-    assert "Submit the final draft" in stage_settings("10")["rules"]
+    assert "Finish the Word file" in stage_settings("10")["rules"]
     assert "Apply stage 1" not in _door("essay.health")
     reviewer = build_review_server()
     tools = reviewer._tool_manager.list_tools()
@@ -477,7 +474,10 @@ def test_a_broken_lock_confirms_stage_2_before_the_plan(workspace):
     planned = essay_stage(seq, "3", "draft", plan)
     saved_plan = essay_stage(seq, "3", "confirm", plan, **picked(planned))
     assert saved_plan["current"] == "5"
-    assert saved_plan["next"] == "Start Stage 5 — Write your first draft in this chat."
+    assert saved_plan["next"] == (
+        "Start Stage 5 — Write your first draft in this chat. "
+        "The first full draft is saved when it is written, then shown."
+    )
     ready = essay_stage(seq, "5", "draft", "Now the draft.")
     assert ready["ok"] is True
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "tracking"

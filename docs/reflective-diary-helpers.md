@@ -166,7 +166,7 @@ The tool does not submit. It prepares the final Word file and tells the student 
 
 ## Title page, identity, and module id
 
-The brief’s title page wins over the usual cover. A programme name, a programme code, the sequence id, and a conclusion line appear only when this brief asks for them.
+The brief’s title page wins over the usual cover. A programme name, a programme code, and the sequence id appear only when this brief asks for them. The conclusion is not printed on the cover.
 
 The title page carries the fields the brief lists. If the brief asks for a registration number or a student number, that number is shown. The name appears only when the brief asks for it. When the brief says the name must be left off, the name stays off the title page and off the rest of the file.
 

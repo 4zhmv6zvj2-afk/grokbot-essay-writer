@@ -574,7 +574,8 @@ def test_ac_nt4_title_page_identity(workspace, monkeypatch):
     present["student_number"] = NUMBER
     ask_lines = "\n".join(cover_lines(asked, present, ask_report))
     assert f"Registration number: {NUMBER}" in ask_lines
-    assert "Teaching partner" in ask_lines
+    assert "Teaching partner" not in ask_lines
+    assert "PROG01" not in ask_lines
     assert "Ada Example" not in ask_lines
 
     register_mapping("fieldnote", _map_fieldnote)

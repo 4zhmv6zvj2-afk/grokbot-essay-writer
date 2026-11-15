@@ -55,7 +55,7 @@ Both synthetic briefs require Harvard. The product uses the checked handbook sha
 
 ## Pattern 6 — Word shape is shared, with brief overrides
 
-The synthetic examples share a cover shape: programme, module code, counted words, and whether the conclusion is noted or open. Body text is Arial 12, 1.5 line spacing, justified, with a page number where the brief says. Figures and tables are numbered, mentioned in the text, titled, and sourced. The reference list follows the body; appendices follow that.
+The synthetic examples share a cover shape: module code and counted words, and programme rows only when the brief asks. A real stored title is the first line. The conclusion stays on the pack, not on the cover. Body text is Arial 12, 1.5 line spacing, justified, with a page number where the brief says. Figures and tables are numbered, mentioned in the text, titled, and sourced. The reference list follows the body; appendices follow that.
 
 **Product rule:** the brief overrides the shared shape. No student name unless the brief requires one. The student owns what they submit and must follow their school's rules.
 

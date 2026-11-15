@@ -81,7 +81,7 @@ Paid resolvers are refused. Free look-ups may fill blanks on a gathered source u
 - Output is Word `.docx` only.
 - The draft is model-assisted; the student owns what they submit and must follow their school's rules.
 - No chat-app integration. A bot template is not this tool.
-- Programme text on the cover is the Teaching partner award: Undergraduate programme (PROG01), Awarding university. No student name and no student number.
+- Programme values (Teaching partner, Awarding university, Undergraduate programme, PROG01) are an example with no student name and no student number. They are printed on the cover only when the brief asks.
 
 ## What does not transfer
 

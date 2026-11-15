@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from essay_writer import stage_track
 from essay_writer.server import HANDLERS
 from essay_writer.spine import (
@@ -21,7 +23,10 @@ def test_stage_door_is_the_track_export():
     assert stage_bibliography.__module__ == "essay_writer.spine"
 
 
-def test_spine_does_not_keep_a_second_constitution_check():
+@pytest.mark.parametrize("case_id", [pytest.param("essay-left-a1", id="essay-left-a1")])
+def test_spine_does_not_keep_a_second_constitution_check(case_id):
+    """essay-left-a1: The spine keeps no second constitution check, and stage 4a still stores a brief answer."""
+    assert case_id == "essay-left-a1"
     spine = (
         Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
     )
@@ -48,7 +53,9 @@ def test_spine_does_not_keep_a_second_constitution_check():
     )
     trio = stage + landing + replies
     assert "def assignment_gate" not in spine
-    assert "assignment_gate" not in stage
+    assert "def assignment_gate(" not in stage
+    # The brief-answer store rides in on its own import; a second check does not.
+    assert "from essay_writer.assignment_gate import store_brief_answer" in stage
     assert trio.count("essay_writer.spine import gate_save") == 1
     assert (stage + body).count("essay_writer.spine import final_review") == 1
     assert trio.count("essay_writer.spine import stage_bibliography") == 1

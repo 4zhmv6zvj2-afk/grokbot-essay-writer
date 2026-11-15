@@ -7,6 +7,7 @@ and the reply still names the Confirm card.
 
 from pathlib import Path
 
+import pytest
 from helpers import OTHER, open_sequence, picked, plant_gathered_source
 
 from essay_writer.build_office import stage_launch
@@ -137,8 +138,10 @@ def test_ac1_stage_confirm_saves_only_that_stage(workspace):
     assert "does not save stage N+1" in STAGE_CONFIRM_EACH
 
 
-def test_ac2_stage_4a_needs_its_own_confirm(workspace, monkeypatch):
-    """AC2: stage 4a is saved only by its own Confirm, and only then does current become 4b."""
+@pytest.mark.parametrize("case_id", [pytest.param("essay-left-b1", id="essay-left-b1")])
+def test_ac2_stage_4a_needs_its_own_confirm(case_id, workspace, monkeypatch):
+    """essay-left-b1: stage 4a is saved only by its own Confirm; an empty-list confirm is refused with the source line and keeps the card."""
+    assert case_id == "essay-left-b1"
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_GROK_BUILD)
     seq = open_sequence()
     _through(seq, "4a")
@@ -159,7 +162,9 @@ def test_ac2_stage_4a_needs_its_own_confirm(workspace, monkeypatch):
     assert typed["ok"] is False
     assert typed["stored"] is not True
     assert typed["waiting_confirm"] is True
-    assert "Confirm card" in typed["next"]
+    # Refused for the missing source, not for the card. The card still waits.
+    assert typed["next"] == "Add a gathered source, then press Confirm."
+    assert typed["card"]["kind"] == "confirm"
     assert "4a" not in load_pointer(seq)["saved"]
     assert load_pointer(seq)["current"] == "4a"
 

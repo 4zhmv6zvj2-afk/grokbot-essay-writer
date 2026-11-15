@@ -24,10 +24,14 @@ from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_turns import (
     FIRST_TURN_CARD,
+    OPENING_CONTINUE,
+    OPENING_NEW,
+    OPENING_ROLL,
     REDIRECT_CLOSE,
     REDIRECT_ORDER,
     REDIRECT_VOICE,
     REDIRECT_WHOLE,
+    STAGE5_SAVE_LINE,
     STAGE6_LEAD_IN,
     STAGE7_LINE,
     redirect_for,
@@ -37,6 +41,10 @@ from essay_writer.student_voice import say, student_surface_hits
 BOT = Path(__file__).resolve().parents[1] / "docs" / "templates" / "bot.md"
 _APPROVED = (
     FIRST_TURN_CARD,
+    OPENING_NEW,
+    OPENING_CONTINUE,
+    OPENING_ROLL,
+    STAGE5_SAVE_LINE,
     REDIRECT_WHOLE,
     REDIRECT_ORDER,
     REDIRECT_VOICE,
@@ -49,6 +57,8 @@ _APOSTROPHE = re.compile(r"['’]")
 
 def test_ac1_opening_card_is_spoken_before_the_choices(workspace):
     """AC1. The first-turn card is the approved line, before the three choices."""
+    assert STAGE5_SAVE_LINE in FIRST_TURN_CARD
+    assert "nothing is saved until you say so" not in FIRST_TURN_CARD
     assert text("front_office/chat.md", "first_turn_card") == FIRST_TURN_CARD
     assert render_tokens("{{chat:first_turn_card}}") == FIRST_TURN_CARD
     assert FIRST_TURN_CARD in INSTRUCTIONS
@@ -82,6 +92,10 @@ def test_ac2_short_asks_use_the_approved_replies(workspace):
         ("skip the stages", REDIRECT_ORDER),
         ("make it sound less like AI", REDIRECT_VOICE),
         ("beat the detector", REDIRECT_CLOSE),
+        ("write my essay", REDIRECT_WHOLE),
+        ("just write it", REDIRECT_WHOLE),
+        ("finish the essay for me", REDIRECT_WHOLE),
+        ("can we skip ahead", REDIRECT_ORDER),
     )
     for ask, expected in cases:
         assert redirect_for(ask) == expected
@@ -104,6 +118,12 @@ def test_ac2_short_asks_use_the_approved_replies(workspace):
     note = "A draft that skips the plan save."
     assert redirect_for(note) is None
     assert redirect_for("The task is a short report about the corridor and nothing else.") is None
+    for near in (
+        "write my essay plan",
+        "I wrote the essay introduction",
+        "skip the questions",
+    ):
+        assert redirect_for(near) is None
 
 
 @pytest.mark.parametrize(
@@ -113,12 +133,32 @@ def test_ac2_short_asks_use_the_approved_replies(workspace):
         ("please skip the stages", REDIRECT_ORDER),
         ("make this sound less like AI", REDIRECT_VOICE),
         ("help me beat the detector", REDIRECT_CLOSE),
+        ("write my essay", REDIRECT_WHOLE),
+        ("just write it", REDIRECT_WHOLE),
+        ("finish the essay for me", REDIRECT_WHOLE),
+        ("can we skip ahead", REDIRECT_ORDER),
     ],
-    ids=("case-1", "case-2", "case-3", "case-4"),
+    ids=(
+        "case-1",
+        "case-2",
+        "case-3",
+        "case-4",
+        "write-my-essay",
+        "just-write-it",
+        "finish-for-me",
+        "skip-ahead",
+    ),
 )
 def test_ac2_more_short_asks(ask: str, expected: str):
-    """AC2. Close wordings of the same four asks use the same replies."""
+    """AC2. Close wordings of the same four asks use the same replies.
+
+    Stems also catch write my essay, just write it, finish the essay for me,
+    and can we skip ahead. A near miss is not one of these asks.
+    """
     assert redirect_for(ask) == expected
+    assert redirect_for("write my essay plan") is None
+    assert redirect_for("I wrote the essay introduction") is None
+    assert redirect_for("skip the questions") is None
 
 
 def test_ac3_stage6_lead_in_keeps_the_shipped_read_list(workspace):
@@ -142,8 +182,11 @@ def test_ac3_stage6_lead_in_keeps_the_shipped_read_list(workspace):
 def test_ac4_stage7_line_is_what_the_student_reads():
     """AC4. Stage 7 says the approved line. The shared stage 7 bullets stay."""
     assert text("front_office/chat.md", "stage7_line") == STAGE7_LINE
+    assert "If the draft is fine as it is, say all fine." in STAGE7_LINE
+    assert "all fine saves" not in STAGE7_LINE.casefold()
     lead = stage7_lead(["Does the structure still match the brief?"], "Ask for feedback")
     assert lead.startswith(STAGE7_LINE + " ")
+    assert "If the draft is fine as it is, say all fine." in lead
     assert "Please answer these questions in this chat." in lead
     rules = stage_settings("7")["rules"]
     assert rules.count(STAGE7_LINE) == 1

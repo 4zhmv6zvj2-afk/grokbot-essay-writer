@@ -1,8 +1,8 @@
 """Obvious cues fill an empty format or question.
 
 A label still wins. A cue fills only a field the brief left empty. The brief
-file is not rewritten, and the combined stage title stays when no Genre or
-Format label is set.
+file is not rewritten. A cue that names essay, report, or diary uses that
+label. A brief the cues leave unset keeps the neutral stage title.
 
 Ids: essay-cues-a1, essay-cues-a2, essay-cues-a3, essay-cues-a4, essay-cues-a5,
 essay-cues-a6, essay-cues-a7, essay-cues-a8, essay-cues-b1, essay-cues-b2,
@@ -57,8 +57,8 @@ WALK = (
     "Analysis and judgement 40%\n"
     "Presentation and referencing 30%\n"
 )
-COMBINED_STAGE_TWO = "Essay: Establish a thesis. Report: Establish purpose and scope"
-COMBINED_STAGE_THREE = "Essay: Write an essay plan. Report: Write a report plan"
+NEUTRAL_STAGE_TWO = "Establish the focus"
+NEUTRAL_STAGE_THREE = "Write the plan"
 MEMORY_CLAIMS = (
     "will be remembered",
     "remember this",
@@ -159,7 +159,8 @@ def test_essay_cues_a6_a_mention_or_negation_is_not_the_assignment_type(case_id,
     )
     assert read_assignment(negation)["format"] == "essay"
     assert _lines(negation)[1] == "Format: essay."
-    assert brief_genre(negation) is None
+    assert brief_genre(negation) == "essay"
+    assert stage_title("2", brief_genre(negation)) == "Establish a thesis"
 
     for module, line, expected in (
         ("CUE2103AA", "Assessment: Individual report\n", "report"),
@@ -421,11 +422,11 @@ def test_essay_cues_b2_the_chat_may_ask_and_stores_no_answer(case_id, workspace)
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-cues-b3", id="essay-cues-b3")])
-def test_essay_cues_b3_an_unset_brief_keeps_the_combined_title(case_id, workspace):
-    """b3: Stage titles stay. A brief the cues leave unset keeps the combined title."""
+def test_essay_cues_b3_an_unset_brief_keeps_the_neutral_title(case_id, workspace):
+    """b3: A brief the cues leave unset keeps the neutral title. A report cue uses that label."""
     assert case_id == "essay-cues-b3"
-    assert stage_title("2", None) == COMBINED_STAGE_TWO
-    assert stage_title("3", None) == COMBINED_STAGE_THREE
+    assert stage_title("2", None) == NEUTRAL_STAGE_TWO
+    assert stage_title("3", None) == NEUTRAL_STAGE_THREE
 
     both = _plant(
         "CUE8001AA",
@@ -433,13 +434,13 @@ def test_essay_cues_b3_an_unset_brief_keeps_the_combined_title(case_id, workspac
     )
     assert read_assignment(both)["format"] is None
     assert brief_genre(both) is None
-    assert stage_title("2", brief_genre(both)) == COMBINED_STAGE_TWO
-    assert stage_title("3", brief_genre(both)) == COMBINED_STAGE_THREE
+    assert stage_title("2", brief_genre(both)) == NEUTRAL_STAGE_TWO
+    assert stage_title("3", brief_genre(both)) == NEUTRAL_STAGE_THREE
 
     walk = _plant("CUE8002AA", WALK)
     assert read_assignment(walk)["format"] == "report"
-    assert brief_genre(walk) is None
-    assert stage_title("2", brief_genre(walk)) == COMBINED_STAGE_TWO
+    assert brief_genre(walk) == "report"
+    assert stage_title("2", brief_genre(walk)) == "Establish purpose and scope"
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-cues-b4", id="essay-cues-b4")])

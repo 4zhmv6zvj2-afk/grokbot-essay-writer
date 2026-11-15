@@ -85,6 +85,10 @@ new essay.
    card cannot be used) before it is saved and the essay moves on.
 5. The finished essay is a Word file (`.docx`).
 
+A pasted brief is read as you wrote it. Genre: and Question: lines are still
+understood. The chat asks when it cannot tell the format or the question, and
+the answer is stored beside the brief rather than written into it.
+
 Output is Word only (`.docx`); referencing follows Harvard
 ([docs/referencing-harvard.md](docs/referencing-harvard.md)). The full stage
 guide is [docs/workflow.md](docs/workflow.md).

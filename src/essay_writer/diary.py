@@ -929,6 +929,33 @@ def _cover_stored_title(value: object) -> str:
     return text
 
 
+def stored_cover_title(pack: dict[str, Any], report: dict[str, Any]) -> str:
+    """A real title already on the pack or the report.
+
+    A placeholder such as Draft, a gate tip, the brief, and the question are
+    not a stored title. Nothing is invented.
+    """
+    for source in (pack, report):
+        if not isinstance(source, dict):
+            continue
+        found = _cover_stored_title(source.get("title"))
+        if found:
+            return found
+    return ""
+
+
+def conclusion_chat_line(pack: dict[str, Any]) -> str:
+    """One student sentence for the conclusion already stored on the pack."""
+    if not isinstance(pack, dict):
+        return ""
+    conclusion = pack.get("conclusion")
+    if conclusion == "noted":
+        return "The conclusion is noted."
+    if conclusion == "open":
+        return "The conclusion is open, not a settled finding."
+    return ""
+
+
 def assignment_on_cover(
     pack: dict[str, Any],
     report: dict[str, Any],
@@ -1180,6 +1207,19 @@ def _row_present(rows: list[CoverFieldRow], text: str) -> bool:
     return False
 
 
+def _put_stored_title_first(
+    rows: list[CoverFieldRow],
+    pack: dict[str, Any],
+    report: dict[str, Any],
+) -> list[CoverFieldRow]:
+    """A real stored title is the first visible line. A placeholder stays off."""
+    title = stored_cover_title(pack, report)
+    if not title:
+        return rows
+    kept = [row for row in rows if print_cover_row(row).strip() != title]
+    return [CoverFieldRow("", title, "house", "assignment_title"), *kept]
+
+
 def cover_field_rows(
     essay_id: str,
     pack: dict[str, Any],
@@ -1187,7 +1227,11 @@ def cover_field_rows(
     *,
     essay: bool,
 ) -> list[CoverFieldRow]:
-    """Brief plus marking table → ordered cover rows. Diary is asked only; essay adds house rows."""
+    """Brief plus marking table → ordered cover rows.
+
+    Programme rows print only when the brief asks. A diary cover and an essay
+    cover use that same rule. A real stored title is the first line.
+    """
     from essay_writer.assignment_gate import assignment_requirements, read_assignment
     from essay_writer.programme import PROGRAMME
 
@@ -1198,7 +1242,7 @@ def cover_field_rows(
     fields = list(spec.get("fields") or [])
     rows: list[CoverFieldRow] = []
 
-    if essay or spec.get("programme"):
+    if spec.get("programme"):
         for programme_key in ("partner", "award", "title", "code"):
             rows.append(CoverFieldRow("", str(PROGRAMME[programme_key]), "house", "programme"))
 
@@ -1271,11 +1315,11 @@ def cover_field_rows(
                 sequence_label = str(module_id_from_brief(brief) or module_code(essay_id) or "")
             if sequence_label and not _row_present(rows, sequence_label):
                 rows.append(CoverFieldRow("", sequence_label, "house", "sequence_id"))
-        return rows
+        return _put_stored_title_first(rows, pack, report)
 
     record = read_assignment(essay_id)
     if record.get("active") is True and record.get("mapped") is False:
-        return rows
+        return _put_stored_title_first(rows, pack, report)
     lock = record.get("lock")
 
     if lock in {None, "thesis", "purpose_and_scope"}:
@@ -1298,13 +1342,7 @@ def cover_field_rows(
     if isinstance(stated, int) and not any(row.key == "stated_word_count" for row in rows):
         rows.append(CoverFieldRow("Stated word count", str(stated), "house", "stated_word_count"))
 
-    conclusion = pack.get("conclusion")
-    if conclusion == "noted" and not any(row.key == "conclusion_noted" for row in rows):
-        rows.append(CoverFieldRow("", "", "house", "conclusion_noted"))
-    elif conclusion == "open" and not any(row.key == "conclusion_open" for row in rows):
-        rows.append(CoverFieldRow("", "", "house", "conclusion_open"))
-
-    return rows
+    return _put_stored_title_first(rows, pack, report)
 
 
 def cover_lines_from_field_rows(
@@ -1430,7 +1468,11 @@ def title_page_cover_lines(
     *,
     always_programme: bool = False,
 ) -> list[str]:
-    """Title-page lines the brief asks for. A missing value stays a blank label."""
+    """Title-page lines the brief asks for. A missing value stays a blank label.
+
+    Programme rows print only when the brief asks, including when the caller
+    asks for the essay house rows.
+    """
     rows = cover_field_rows(essay_id, pack, report, essay=always_programme)
     return cover_lines_from_field_rows(essay_id, pack, rows)
 
