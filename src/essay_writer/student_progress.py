@@ -25,6 +25,7 @@ _PHANTOM_STAGE = re.compile(
     re.IGNORECASE,
 )
 _GATHERING = re.compile(r"\bgathering\b", re.IGNORECASE)
+_STAGE7_ASK = re.compile(r"\bplease answer these questions\b", re.IGNORECASE)
 
 _MID_WAIT: dict[str, str] = {
     "4a": "Wait while the sources are gathered for this step.",
@@ -147,7 +148,17 @@ def shape_student_reply(
     else:
         nxt = body.get("next")
         if isinstance(nxt, str):
-            if mid_started or not allow_confirm:
+            # The stage 7 questions ask is the student's next action. A mid step
+            # that just started does not swallow it: the door returned the card
+            # in this same reply, and the ask names the all-fine answer. Say it
+            # as given. Without the card on the reply the ask is not spoken, so
+            # no Confirm line is invented.
+            stage7_ask = (
+                stage == "7" and waiting_confirm_card(body) and _STAGE7_ASK.search(say(nxt))
+            )
+            if stage7_ask:
+                body["next"] = say(nxt)
+            elif mid_started or not allow_confirm:
                 if _CARD_NEXT.match(say(nxt)) or _CONFIRM_SPEECH.search(nxt):
                     body["next"] = mid_run_wait_next(stage or "") if stage else say(wait_fallback())
                 else:

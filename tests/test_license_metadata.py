@@ -18,6 +18,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 HOLDER = "Copyright 2026 4zhmv6zvj2-afk"
+AUTHOR_RECORD = {"name": "Ron", "email": "4zhmv6zvj2-afk@users.noreply.github.com"}
 OLD_HOLDER = "Copyright (c) 2026"
 APACHE_CLASSIFIER = "License :: OSI Approved :: Apache Software License"
 VERSION = "0.9.2"
@@ -75,8 +76,9 @@ def _license_problems(root: Path) -> list[str]:
             problems.append("pyproject classifiers do not name the Apache software licence")
         if project.get("version") != VERSION:
             problems.append(f"pyproject version is {project.get('version')!r}, not {VERSION}")
-        if "authors" in project or "maintainers" in project:
-            problems.append("pyproject added an authors or maintainers field")
+        for field in ("authors", "maintainers"):
+            if project.get(field) != [AUTHOR_RECORD]:
+                problems.append(f"pyproject {field} is not the one author record")
 
     readme_path = root / "README.md"
     try:
@@ -175,8 +177,8 @@ def test_metadata_and_docs_name_the_apache_license(case_id):
     assert project["license-files"] == ["LICENSE"]
     assert APACHE_CLASSIFIER in project["classifiers"]
     assert project["version"] == VERSION
-    assert "authors" not in project
-    assert "maintainers" not in project
+    assert project["authors"] == [AUTHOR_RECORD]
+    assert project["maintainers"] == [AUTHOR_RECORD]
 
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     badge = next(line for line in _lines(readme) if "shields.io/badge/license-" in line)
@@ -199,8 +201,8 @@ def test_neighbouring_names_stay_put(case_id):
     """essay-license-b1: The licence change leaves the neighbouring names alone."""
     assert case_id == "essay-license-b1"
     project = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    assert "authors" not in project
-    assert "maintainers" not in project
+    assert project["authors"] == [AUTHOR_RECORD]
+    assert project["maintainers"] == [AUTHOR_RECORD]
     assert project["name"] == "essay-writer"
     assert project["version"] == VERSION
     assert "include LICENSE" in (REPO / "MANIFEST.in").read_text(encoding="utf-8")
