@@ -272,17 +272,25 @@ def test_ac5_build_covered_reviewer_seat_writer_cannot_self_pass(workspace):
     assert writer_clears_left() == 0
     settings = stage_settings("eqr")
     assert REVIEW_PROMPT in settings["rules"]
-    assert "Documents/<project>/<project>-findings.docx" in settings["rules"]
+    assert (
+        "the place the tool returns, in the project folder, not the stage 10 folder"
+        in settings["rules"]
+    )
     assert settings["fast"] is False
     grok = stage_launch("eqr")
     cursor = cursor_stage_launch("eqr")
     assert grok["source"] == cursor["source"]
-    assert "Documents/<project>/<project>-findings.docx" in " ".join(grok["command"])
+    assert "the place the tool returns, in the project folder, not the stage 10 folder" in " ".join(
+        grok["command"]
+    )
     assert cursor["settings"]["rules"] == settings["rules"]
     reviewer = build_review_server()
     tools = list(reviewer._tool_manager.list_tools())
     assert [tool.name for tool in tools] == ["essay.review"]
-    assert "Documents/<project>/<project>-findings.docx" in tools[0].description
+    assert (
+        "the place the tool returns, in the project folder, not the stage 10 folder"
+        in tools[0].description
+    )
     seq = open_sequence()
     refused = essay_review(seq, "9", "PASS", "confirm", seat="writer")
     assert refused["ok"] is False

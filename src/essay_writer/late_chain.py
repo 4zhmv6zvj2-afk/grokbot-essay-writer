@@ -2,7 +2,9 @@
 
 One call does not run the later stages. A blocked independent review is
 shown. Stage 10 writes the sequence Word file, refreshes that sequence's
--10 final from those bytes, and writes Documents/<project>-10/ when mounted.
+-10 final from those bytes, and writes the Mac handoff folder when one is
+configured. Documents/<project>-10/ is the fallback when Documents is mounted
+and no handoff folder is configured.
 """
 
 from __future__ import annotations
@@ -82,10 +84,31 @@ def comments_place(essay_id: str) -> str:
     return f"Documents/{project}-10/{project}-comments.docx"
 
 
-def findings_place(essay_id: str) -> str:
-    """Independent-review findings. The project folder, not the stage 10 folder."""
+def _chat_path_under_root(root: Path, tail: str) -> str:
+    """Student path for a file under the mounted root. No invented Documents path."""
+    parts = root.expanduser().parts
+    folded = [part.casefold() for part in parts]
+    if "documents" in folded:
+        index = max(i for i, name in enumerate(folded) if name == "documents")
+        head = "/".join(parts[index:])
+        return f"{head}/{tail}"
+    from essay_writer.paths import student_chat_path
+
+    return student_chat_path((root / tail).as_posix())
+
+
+def findings_place(essay_id: str, *, documents: Path | None = None) -> str:
+    """Independent-review findings. The project folder, not the stage 10 folder.
+
+    The chat names the folder the write uses. An unmounted root does not
+    invent a Documents path.
+    """
     project = module_code(essay_id)
-    return f"Documents/{project}/{project}-findings.docx"
+    tail = f"{project}/{project}-findings.docx"
+    root = documents_root(documents)
+    if root is None:
+        return ""
+    return _chat_path_under_root(root, tail)
 
 
 def next_run(essay_id: str, stage: str, *, armed: bool) -> dict[str, Any] | None:

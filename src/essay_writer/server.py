@@ -261,7 +261,7 @@ def build_review_server() -> MCPServer:
             "The writer seat is refused. This door does not draft the essay. "
             "When the finished Word file is already saved, the review opens that file "
             "and the Documents copy when one exists. "
-            "The findings note is Documents/<project>/<project>-findings.docx, "
+            "The findings note is the place the tool returns, in the project folder, "
             "not the stage 10 folder. "
             "A pass with no findings note does not clear. "
             "Apply these independent-review rules. Follow every line.\n"
