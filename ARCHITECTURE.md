@@ -51,8 +51,10 @@ validation, and Word output.
 
 The module names use a small private vocabulary — doors, seats, spine, shelf,
 dig, canon, mid-office. The names are stable and are not being renamed; the
-mapping to plain terms is in [docs/GLOSSARY.md](docs/GLOSSARY.md). Start there
-before reading the modules.
+mapping to plain terms is in [docs/GLOSSARY.md](docs/GLOSSARY.md). Words the
+chat uses with a student are in the
+[Student-facing terms](docs/GLOSSARY.md#student-facing-terms) section of that
+page. Start there before reading the modules.
 
 ## Entry points and lockfiles
 
