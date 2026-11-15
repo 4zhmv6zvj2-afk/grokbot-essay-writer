@@ -68,6 +68,28 @@ def test_glossary_student_section_is_linked() -> None:
     assert (ROOT / "docs/GLOSSARY.md").is_file()
 
 
+def test_student_readme_tour_names_the_run_and_the_real_word_places() -> None:
+    """The student tour names the stages, the stage 5 save, and only real folders."""
+    student = " ".join(
+        _read("README.md").split("## Using Essay Bot (students)", 1)[1].split("## ", 1)[0].split()
+    )
+    assert "docs/workflow.md" in student
+    assert "docs/academic-writing-helpers.md" in student
+    assert "docs/GLOSSARY.md#student-facing-terms" in student
+    assert "The first full draft is saved when it is written, then shown." in student
+    assert "Finish the Word file" in student
+    assert "does not invent a Documents path" in student
+    assert "Documents/Essay Bot/<module>/<essay id>/" in student
+    assert "Documents/<module>-10/" in student
+    for name in (
+        "docs/workflow.md",
+        "docs/academic-writing-helpers.md",
+        "docs/GLOSSARY.md",
+        "docs/referencing-harvard.md",
+    ):
+        assert (ROOT / name).is_file(), name
+
+
 def test_confirm_gate_overclaims_are_gone() -> None:
     readme = _read("README.md")
     assert "Nothing is saved until the Confirm" not in readme
