@@ -89,6 +89,11 @@ Setup defaults, damaged-record handling, final-Word safety, and dependency updat
   the README badge and License section name Apache 2.0. Licence and metadata
   only: no product behaviour changes, the version stays 0.9.2, and no NOTICE
   file is added.
+- `pyproject.toml` names the package author and maintainer: `authors` and
+  `maintainers` are both the one record `{ name = "Ron", email =
+  "4zhmv6zvj2-afk@users.noreply.github.com" }`. Author and maintainer metadata
+  only: the version stays 0.9.2, the licence stays Apache 2.0, and no other
+  metadata moves.
 
 ## 0.9.1 — 2026-11-12
 

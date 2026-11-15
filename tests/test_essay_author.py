@@ -1,0 +1,357 @@
+"""The package names its author and maintainer, and nothing else moves.
+
+``pyproject.toml`` carries one author record and one maintainer record, both
+pointing at the same GitHub noreply address. The version stays 0.9.2 and the
+licence stays the Apache License, Version 2.0.
+
+The check that reads the record only ever opens the file for reading. A tree
+whose ``pyproject.toml`` is missing, malformed, or unreadable is reported, not
+repaired: no file appears, no byte changes, and no author line is invented.
+
+Each hyphen id is seated once, in the docstring of the test that proves it.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import subprocess
+import tomllib
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parents[1]
+PYPROJECT = REPO / "pyproject.toml"
+LICENSE = REPO / "LICENSE"
+CHANGELOG = REPO / "CHANGELOG.md"
+README = REPO / "README.md"
+
+NOREPLY = "4zhmv6zvj2-afk@users.noreply.github.com"
+AUTHOR_RECORD = {"name": "Ron", "email": NOREPLY}
+AUTHORS_LINE = 'authors = [{ name = "Ron", email = "4zhmv6zvj2-afk@users.noreply.github.com" }]'
+MAINTAINERS_LINE = (
+    'maintainers = [{ name = "Ron", email = "4zhmv6zvj2-afk@users.noreply.github.com" }]'
+)
+FIELD_LINES = {"authors": AUTHORS_LINE, "maintainers": MAINTAINERS_LINE}
+
+VERSION = "0.9.2"
+APACHE_CLASSIFIER = "License :: OSI Approved :: Apache Software License"
+HOLDER = "Copyright 2026 4zhmv6zvj2-afk"
+
+# The [project] keys the tip already carries, plus the two this slice adds.
+PROJECT_KEYS = frozenset(
+    {
+        "name",
+        "version",
+        "description",
+        "keywords",
+        "authors",
+        "maintainers",
+        "classifiers",
+        "readme",
+        "requires-python",
+        "license",
+        "license-files",
+        "dependencies",
+        "optional-dependencies",
+        "scripts",
+        "urls",
+    }
+)
+
+# Addresses the committed tree may carry: this author's noreply address and the
+# domains the RFC reserves for documentation and tests, which belong to nobody.
+ALLOWED_DOMAINS = frozenset(
+    {
+        "users.noreply.github.com",
+        "example.com",
+        "example.net",
+        "example.org",
+        "example.test",
+        "example.invalid",
+    }
+)
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)")
+NUMERIC_GIT_FORM = re.compile(r"^\d{5,}\+")
+
+OKAVANGO = REPO / "tests" / "fixtures" / "okavango-strong-v1.md"
+
+# The sixteen bullets the 0.9.2 section already carries on the tip this branch
+# starts from, by their opening words. A new bullet may be added; none may go.
+KEPT_BULLETS = (
+    "- The chat sounds like a helpful friend.",
+    "- Setup secrets and the file-work choice load from the record",
+    "- The plagiarism scan and source gathering use one text rule",
+    "- Inherited locks stay pending until a save actually stores.",
+    "- After the last stage is saved, a missing final Word file",
+    "- Dependencies: cosign-installer v4.1.3",
+    "- After a save, the next stage's card appears only when",
+    "- Student chat keeps ordinary English",
+    "- Research summary and full research drafts carry no card",
+    "- The host sheet and the `essay.pack.validate` description",
+    '- The leftover free-alternative reply keeps "Nothing was fetched."',
+    "- The spoken Basics pass stops calling a brief silent",
+    "- An obvious cue fills a format or a question the brief left empty.",
+    "- A format or question the brief leaves empty can be answered once",
+    "- The Word cover prints a programme row only when the brief asks for it.",
+    "- The licence is the Apache License, Version 2.0.",
+)
+
+
+def _lines(text: str) -> list[str]:
+    return text.splitlines()
+
+
+def _read_project(path: Path) -> tuple[dict | None, list[str]]:
+    """The ``[project]`` table and every read problem, open for reading only."""
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        return None, [f"pyproject.toml is missing or unreadable: {exc.__class__.__name__}"]
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        return None, [f"pyproject.toml is not valid UTF-8: {exc.__class__.__name__}"]
+    try:
+        data = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        return None, [f"pyproject.toml is malformed: {exc.__class__.__name__}"]
+    project = data.get("project")
+    if not isinstance(project, dict):
+        return None, ["pyproject.toml has no [project] table"]
+    return project, []
+
+
+def author_problems(root: Path) -> list[str]:
+    """Problems with the author and maintainer record under root. Reads only."""
+    project, problems = _read_project(root / "pyproject.toml")
+    if project is None:
+        return problems
+    for field in ("authors", "maintainers"):
+        if project.get(field) != [AUTHOR_RECORD]:
+            problems.append(
+                f"pyproject {field} is {project.get(field)!r}, not the one author record"
+            )
+    text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    present = _lines(text)
+    for field, line in FIELD_LINES.items():
+        if present.count(line) != 1:
+            problems.append(f"pyproject {field} line is missing, repeated, or spelled differently")
+    return problems
+
+
+def tracked_text() -> list[tuple[str, str]]:
+    """Every tracked file that decodes as text, as (path, contents)."""
+    out = subprocess.check_output(["git", "-C", str(REPO), "ls-files", "-z"])
+    found: list[tuple[str, str]] = []
+    for name in out.decode().split("\0"):
+        if not name:
+            continue
+        try:
+            raw = (REPO / name).read_bytes()
+        except OSError:
+            continue
+        if b"\0" in raw:
+            continue
+        found.append((name, raw.decode("utf-8", "replace")))
+    return found
+
+
+def _snapshot(root: Path) -> dict[str, object]:
+    """Every file under root and what it holds. An unreadable file is recorded by its stat."""
+    snapshot: dict[str, object] = {}
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        stat = path.stat()
+        try:
+            snapshot[str(path.relative_to(root))] = path.read_bytes()
+        except OSError:
+            snapshot[str(path.relative_to(root))] = ("unreadable", stat.st_size, stat.st_mtime_ns)
+    return snapshot
+
+
+def _changelog_bullets() -> list[str]:
+    """The bullets under the 0.9.2 heading, up to the next release heading."""
+    text = CHANGELOG.read_text(encoding="utf-8")
+    section = text.split("## 0.9.2", 1)[1].split("## 0.9.1", 1)[0]
+    return [line for line in _lines(section) if line.startswith("- ")]
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-author-a1", id="essay-author-a1")])
+def test_author_and_maintainer_are_the_one_noreply_record(case_id):
+    """essay-author-a1: authors and maintainers are both the Ron noreply record."""
+    assert case_id == "essay-author-a1"
+    project, problems = _read_project(PYPROJECT)
+    assert problems == []
+    assert project is not None
+    assert project["authors"] == [AUTHOR_RECORD]
+    assert project["maintainers"] == [AUTHOR_RECORD]
+    assert project["authors"] == project["maintainers"]
+
+    lines = _lines(PYPROJECT.read_text(encoding="utf-8"))
+    assert lines.count(AUTHORS_LINE) == 1
+    assert lines.count(MAINTAINERS_LINE) == 1
+    assert author_problems(REPO) == []
+
+    email = project["authors"][0]["email"]
+    assert email == NOREPLY
+    assert not NUMERIC_GIT_FORM.match(email.split("@")[0])
+    assert "+" not in email.split("@")[0]
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-author-a2", id="essay-author-a2")])
+def test_version_and_apache_licence_stay_and_no_real_address_ships(case_id):
+    """essay-author-a2: version 0.9.2, Apache 2.0, and no real address in the tree."""
+    assert case_id == "essay-author-a2"
+    project, problems = _read_project(PYPROJECT)
+    assert problems == []
+    assert project is not None
+    assert project["version"] == VERSION
+    assert project["license"] == "Apache-2.0"
+    assert project["license-files"] == ["LICENSE"]
+    assert APACHE_CLASSIFIER in project["classifiers"]
+
+    licence = LICENSE.read_text(encoding="utf-8")
+    lines = _lines(licence)
+    assert lines[0].strip() == "Apache License"
+    assert lines[1].strip() == "Version 2.0, January 2004"
+    assert "TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION" in licence
+    assert "END OF TERMS AND CONDITIONS" in licence
+    assert [line for line in lines if line.strip() == HOLDER] == [HOLDER]
+    assert "289450915" not in licence
+
+    strangers = []
+    for name, text in tracked_text():
+        if "289450915" in text:
+            strangers.append(f"{name}: numeric git form")
+        for match in EMAIL.finditer(text):
+            if match.group(1).casefold() not in ALLOWED_DOMAINS:
+                strangers.append(f"{name}: {match.group(0)}")
+    assert strangers == []
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-author-b1", id="essay-author-b1")])
+def test_neighbouring_names_stay_put(case_id):
+    """essay-author-b1: only the author records move; the Apache licence stays."""
+    assert case_id == "essay-author-b1"
+    project, problems = _read_project(PYPROJECT)
+    assert problems == []
+    assert project is not None
+    assert set(project) == PROJECT_KEYS
+    assert project["name"] == "essay-writer"
+    assert project["version"] == VERSION
+    assert project["license"] == "Apache-2.0"
+    assert project["license-files"] == ["LICENSE"]
+    assert APACHE_CLASSIFIER in project["classifiers"]
+
+    readme = README.read_text(encoding="utf-8")
+    badge = next(line for line in _lines(readme) if "shields.io/badge/license-" in line)
+    assert "apache" in badge.casefold()
+    assert "2.0" in badge
+    assert "MIT" not in badge
+    assert "[Apache License 2.0](LICENSE)" in readme
+    assert "© 2026 `4zhmv6zvj2-afk`" in readme
+
+    assert "include LICENSE" in (REPO / "MANIFEST.in").read_text(encoding="utf-8")
+    assert not (REPO / "NOTICE").exists()
+    assert not (REPO / "NOTICE.txt").exists()
+
+    assert "irrigation licence" in OKAVANGO.read_text(encoding="utf-8")
+
+    # The records belong to package metadata: no product code, prompt, template,
+    # or student fixture carries them.
+    for folder in ("src", "tests/fixtures", "tools/doc_templates", "docs"):
+        for path in sorted((REPO / folder).rglob("*")):
+            if not path.is_file():
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            assert NOREPLY not in text, path
+
+    bullets = _changelog_bullets()
+    assert len(bullets) == 17
+    assert any("names the package author and maintainer" in bullet for bullet in bullets)
+    # Every bullet already on the tip is still there, including the Apache one.
+    for opening in KEPT_BULLETS:
+        assert any(bullet.startswith(opening) for bullet in bullets), opening
+    intro = CHANGELOG.read_text(encoding="utf-8").split("## 0.9.2", 1)[1]
+    assert "Setup defaults, damaged-record handling" in intro.split("## 0.9.1", 1)[0]
+
+
+@pytest.mark.parametrize("case_id", [pytest.param("essay-author-c1", id="essay-author-c1")])
+def test_a_broken_author_input_reports_and_writes_nothing(case_id, tmp_path):
+    """essay-author-c1: A missing, malformed, or unreadable file reports and writes nothing."""
+    assert case_id == "essay-author-c1"
+
+    missing = tmp_path / "missing"
+    missing.mkdir()
+    before = _snapshot(missing)
+    problems = author_problems(missing)
+    assert problems
+    assert any("pyproject.toml" in problem for problem in problems)
+    assert _snapshot(missing) == before
+    assert os.listdir(missing) == []
+
+    malformed = tmp_path / "malformed"
+    malformed.mkdir()
+    (malformed / "pyproject.toml").write_text("[project\nauthors = [{]\n", encoding="utf-8")
+    before = _snapshot(malformed)
+    problems = author_problems(malformed)
+    assert problems
+    assert any("malformed" in problem for problem in problems)
+    assert _snapshot(malformed) == before
+
+    not_utf8 = tmp_path / "not-utf8"
+    not_utf8.mkdir()
+    (not_utf8 / "pyproject.toml").write_bytes(b'[project]\nname = "essay-writer"\n\xff\xfe\n')
+    before = _snapshot(not_utf8)
+    problems = author_problems(not_utf8)
+    assert problems
+    assert any("UTF-8" in problem for problem in problems)
+    assert _snapshot(not_utf8) == before
+
+    no_table = tmp_path / "no-table"
+    no_table.mkdir()
+    (no_table / "pyproject.toml").write_text("[build-system]\nrequires = []\n", encoding="utf-8")
+    before = _snapshot(no_table)
+    problems = author_problems(no_table)
+    assert problems
+    assert any("[project]" in problem for problem in problems)
+    assert _snapshot(no_table) == before
+
+    a_directory = tmp_path / "a-directory"
+    (a_directory / "pyproject.toml").mkdir(parents=True)
+    before = _snapshot(a_directory)
+    problems = author_problems(a_directory)
+    assert problems
+    assert any("pyproject.toml" in problem for problem in problems)
+    assert _snapshot(a_directory) == before
+    assert (a_directory / "pyproject.toml").is_dir()
+
+    if os.geteuid() == 0:
+        pytest.skip("an unreadable file cannot be planted as root")
+    unreadable = tmp_path / "unreadable"
+    unreadable.mkdir()
+    project_path = unreadable / "pyproject.toml"
+    project_path.write_bytes(PYPROJECT.read_bytes())
+    project_path.chmod(0o000)
+    try:
+        before = _snapshot(unreadable)
+        problems = author_problems(unreadable)
+        assert problems
+        assert any("pyproject.toml" in problem for problem in problems)
+        assert _snapshot(unreadable) == before
+    finally:
+        project_path.chmod(0o644)
+
+    for root in (missing, malformed, not_utf8, no_table, a_directory):
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            assert NOREPLY not in text
+            assert HOLDER not in text
