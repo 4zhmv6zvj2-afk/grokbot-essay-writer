@@ -4,11 +4,17 @@ Keep the person the brief names. A diary keeps that brief voice and is not force
 ## voice_limit
 Vary the sentence rhythm. Cut AI connectors such as Furthermore, Moreover, In conclusion, and It is important to note. Do not open a diary with a polished line such as In this reflective diary I will. A diary may be slightly fragmented. An essay or a report body stays academic and uses Harvard Referencing. Prefer a concrete detail over an abstract line. Do not plant grammar errors. Use words the writer can define out loud. Do not nominalize a verb into -ion, -ment, or -ance to sound scientific, and do not swap in a rarer synonym the writer does not use.
 
+## dash_connectors
+Do not use an em dash or a double hyphen as a connector between clauses. Prefer a comma, a colon, a parenthesis, or a full stop. A hyphen stays inside a compound word the writer would say aloud.
+
 ## plain_words
 Cut words that do no work in the sentence. Empty intensifiers such as very, really, quite, and extremely add nothing, and significantly adds nothing when no figure follows it. Filler phrases such as in order to, due to the fact that, and it is worth noting that have a short plain form: to, because, and nothing. Keep at most one hedge in a sentence. A stack such as it could perhaps be argued that or it may possibly be the case that is not more careful, it is only less clear. A single hedge stays only when the writer means it.
 
 ## template_openers
 Do not start more than one paragraph with the same words. An opener such as In today's world, Throughout history, or This essay will discuss could sit on any assignment, so cut it and start on the claim. Repeating a key term is not the same thing.
+
+## staged_runup
+Cut a run-up before the claim: Let's dive in, Here's what you need to know, Here's the thing, Great question, and I hope this helps. Keep the content that follows. A closer that only restates the point stays under the anti-glue rule.
 
 ## student_voice
 The draft is model-assisted; the student owns what they submit. Write as the student, not as the tool. Do not add a model self-reference or an apology for a model limit.
@@ -18,6 +24,9 @@ A claim is no stronger than the evidence under it. One case does not show a gene
 
 ## open_gap
 When the sources you opened do not settle a point, say that the evidence is mixed or thin. Do not fill the gap with an assertion, and do not present one source as the settled view. A gap is part of the answer, not a line to hide.
+
+## model_gap
+When a detail is missing from the opened sources and from what the writer supplied, say that the source does not cover it, or cut the sentence. Do not write While specific details are limited, and do not guess with it likely, when that guess is not in the opened file. These checks keep the claim honest. They are not a detector score.
 
 ## mark_table_lean
 When the brief or the mark scheme lists marking criteria, each part of the draft serves one of them. Use the criteria it lists and no others: do not add a criterion, a weighting, or a band the brief does not print. A point that serves no listed criterion still has to answer the question.
@@ -30,6 +39,9 @@ Tie each claim to one thing the writer can point at: a passage, a figure, a date
 
 ## craft_revise
 Revise for what a reader still cannot see: cut, reorder, and add. If a chatbot produced the paragraph, rewrite the ideas in the writer's sentences. Change the words, reorder, delete, and add. Do not polish the model's sentences in place.
+
+## decorated_format
+Do not decorate the draft with bold labels, emoji headings, or a list where every item is a bold label and a colon. Use plain prose and ordinary headings. The Word file is not a chat reply.
 
 ## craft_sources
 Every source sentence comes from a source the writer opened. A paraphrase keeps that source's specific claim. Delete a citation or a paraphrase they cannot find in the opened file. Do not list a writing tool as an author.
@@ -47,4 +59,4 @@ Keep the specific finding from the opened source. If that source is mixed, limit
 For a cautious claim, a named source, a comparison, or a criticism, the student may adapt a short stem from phrasebank.manchester.ac.uk. Do not copy phrase lists into the draft. Methods and results phrasing from that site is only for a research report when the brief is that genre. A short essay does not take a dissertation claim. A diary keeps the voice the brief names and is not rewritten into a third-person essay.
 
 ## edit_recheck
-On the clarity and tone pass, apply the check that keeps the specific finding and drops empty importance, then read each changed sentence against the opened Word file and the opened source. A true sentence must not become a false one. A real contrast stays. A hedge the writer meant stays.
+On the clarity and tone pass, apply the check that keeps the specific finding and drops empty importance, then read each changed sentence against the opened Word file and the opened source. A true sentence must not become a false one. A name, number, date, quote, or citation must not change. A real contrast stays. A hedge the writer meant stays.

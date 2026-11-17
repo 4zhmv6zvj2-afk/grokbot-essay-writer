@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Craft voice adds four short prose-habit rules (dashes, staged run-ups, decorated formatting, model knowledge guesses), written in-house from patterns in [blader/humanizer](https://github.com/blader/humanizer) (MIT). They ride the existing stage rules; there is no rewrite pass and no detector chase. `edit_recheck` also keeps names, numbers, dates, quotes, and citations unchanged.
 - The releases-feed fallback reads the first Atom entry's alternate link and accepts only a plain `X.Y.Z` tag at the end of that path. A note that names another tag cannot choose the version, and a prerelease such as `v0.9.12-rc1` is ignored.
 - `--update` downloads a release asset only over https from `github.com`, `release-assets.githubusercontent.com`, or `objects.githubusercontent.com`. It verifies SHA-256, not the Sigstore signature.
 - Crossref, when no year or author was gathered, accepts a row only when exactly one returned row has that exact title. Several exact titles, or none, are a miss. A gathered year or author still checks every row and still asks for journal articles.
