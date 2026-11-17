@@ -9,6 +9,7 @@ Cursor CLI installer is consent-gated, then hash-pinned before anything runs.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -16,6 +17,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import tomllib
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
@@ -90,6 +92,10 @@ def _safe_extract(archive: zipfile.ZipFile, dest: Path) -> None:
         target.write_bytes(archive.read(info))
 
 
+def _declares_essay_writer(text: str) -> bool:
+    return 'name = "essay-writer"' in text or "name = 'essay-writer'" in text
+
+
 def _project_root(dest: Path) -> Path | None:
     matches = [path.parent for path in dest.rglob("pyproject.toml")]
     if (dest / "pyproject.toml").is_file() and dest not in matches:
@@ -100,13 +106,55 @@ def _project_root(dest: Path) -> Path | None:
             text = (root / "pyproject.toml").read_text(encoding="utf-8")
         except OSError:
             continue
-        if 'name = "essay-writer"' in text or "name = 'essay-writer'" in text:
+        if _declares_essay_writer(text):
             named.append(root)
     pool = named or matches
     if not pool:
         return None
     pool.sort(key=lambda path: len(path.resolve().relative_to(dest.resolve()).parts))
     return pool[0]
+
+
+def _archive_project_root(source: Path, dest: Path) -> Path | None:
+    """The project folder this zip creates, read from the archive itself.
+
+    The install folder may already hold an older copy from an earlier upload or
+    first-run unpack. Scanning the folder after unpacking used to pick whichever
+    project root sorted first, so an update could pip install the older tree and
+    still report success. The archive names the root unambiguously.
+    """
+    candidates: list[tuple[Path, bool]] = []
+    with zipfile.ZipFile(source) as archive:
+        for info in archive.infolist():
+            if not info.filename or info.filename.endswith("/") or _is_symlink(info):
+                continue
+            target = _member_target(dest, info.filename)
+            if target.name != "pyproject.toml":
+                continue
+            try:
+                text = archive.read(info).decode("utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            candidates.append((target.parent, _declares_essay_writer(text)))
+    if not candidates:
+        return None
+    pool = [path for path, named in candidates if named] or [path for path, _named in candidates]
+    base = dest.resolve()
+    return min(pool, key=lambda path: (len(path.relative_to(base).parts), path.as_posix()))
+
+
+def _project_version(root: Path) -> str | None:
+    """The version the unpacked copy declares, or None when it declares none."""
+    try:
+        with (root / "pyproject.toml").open("rb") as handle:
+            body = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    project = body.get("project")
+    version = project.get("version") if isinstance(project, dict) else None
+    if isinstance(version, str) and version.strip():
+        return version.strip()
+    return None
 
 
 def _saved_app_folder() -> Path | None:
@@ -678,14 +726,14 @@ def install_uploaded_copy(
                 )
             folder.mkdir(parents=True, exist_ok=True)
             try:
+                found = _archive_project_root(source, folder)
                 with zipfile.ZipFile(source) as archive:
                     _safe_extract(archive, folder)
             except (OSError, zipfile.BadZipFile, ValueError) as exc:
                 return _fail(
                     f"The upload was not unpacked: {exc}", upload=str(source), dest=str(folder)
                 )
-            found = _project_root(folder)
-            if found is None:
+            if found is None or not (found / "pyproject.toml").is_file():
                 return _fail(
                     "That upload does not contain the essay-writer project.",
                     upload=str(source),
@@ -751,7 +799,16 @@ def install_uploaded_copy(
         else None
     )
     unpack_parent = install_folder(dest) if unpacked else None
-    health_check = install_self_check()
+    expected_version = _project_version(root)
+    if pip_runner is None:
+        # The running process still holds the package it started with. Ask a
+        # fresh interpreter what is installed now, so an update that did not
+        # replace the old copy fails loudly instead of reporting success.
+        health_check = _health_summary(_installed_health())
+    else:
+        # An injected runner simulates the install, so there is no new package
+        # to probe. Keep the in-process check the caller can fake.
+        health_check = install_self_check()
     if not health_check.get("ok"):
         return _fail(
             "essay.health did not pass after install.",
@@ -761,6 +818,20 @@ def install_uploaded_copy(
             pip_steps=pip_steps,
             prompt_present=prompt_present,
             health_check=health_check,
+        )
+    if pip_runner is None and expected_version and health_check.get("version") != expected_version:
+        return _fail(
+            (
+                f"The installed copy reports version {health_check.get('version') or 'unknown'}, "
+                f"not the uploaded {expected_version}. The old copy would still start."
+            ),
+            unpacked=unpacked,
+            root=str(root),
+            pip=pip_body,
+            pip_steps=pip_steps,
+            prompt_present=prompt_present,
+            health_check=health_check,
+            expected_version=expected_version,
         )
     payload: dict[str, Any] = {
         "ok": True,
@@ -818,3 +889,42 @@ def install_self_check() -> dict[str, Any]:
         "alive": health.get("alive"),
         "tool_count": tool_count,
     }
+
+
+def _health_summary(health: dict[str, Any]) -> dict[str, Any]:
+    """The install report's view of a health payload from a fresh interpreter."""
+    doors = health.get("doors")
+    tool_count = len(doors) if isinstance(doors, list) else 0
+    version = health.get("version")
+    return {
+        "ok": bool(health.get("ok") and health.get("alive") and tool_count > 0),
+        "tool": "essay.health",
+        "alive": health.get("alive"),
+        "tool_count": tool_count,
+        "version": version if isinstance(version, str) else None,
+    }
+
+
+def _installed_health() -> dict[str, Any]:
+    """essay.health from a new interpreter, which sees the package pip installed.
+
+    The caller's interpreter already imported the old package, so its in-process
+    health report cannot prove an update landed.
+    """
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-m", "essay_writer", "--health"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ok": False, "reason": str(exc)}
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return {"ok": False, "reason": "essay.health did not return JSON"}
+    if not isinstance(payload, dict):
+        return {"ok": False, "reason": "essay.health did not return an object"}
+    return payload

@@ -151,6 +151,100 @@ def test_unpack_then_pip_install_on_the_cloud_computer(tmp_path, monkeypatch):
     assert all(cwd == root for _command, cwd in calls)
 
 
+def test_upload_into_a_folder_with_an_older_copy_installs_the_new_tree(tmp_path, monkeypatch):
+    """An older copy already in the install folder is not the install target."""
+    cloud = tmp_path / "workspace"
+    cloud.mkdir()
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
+    install = cloud / "essay-writer-install"
+    older = install / "grokbot-essay-writer-0.9.4"
+    older.mkdir(parents=True)
+    (older / "pyproject.toml").write_text(
+        '[project]\nname = "essay-writer"\nversion = "0.9.4"\n', encoding="utf-8"
+    )
+    (older / "requirements-runtime.txt").write_text("mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n")
+    upload = tmp_path / "essay-writer-0.9.6.zip"
+    _zip(
+        upload,
+        {
+            "grokbot-essay-writer-0.9.6/pyproject.toml": _pyproject().encode(),
+            "grokbot-essay-writer-0.9.6/FIRST-RUN.txt": b"pip install -e .\n",
+            "grokbot-essay-writer-0.9.6/requirements-runtime.txt": _requirements(),
+            "grokbot-essay-writer-0.9.6/src/essay_writer/__init__.py": b"",
+        },
+    )
+    calls: list[tuple[list[str], Path]] = []
+
+    result = install_uploaded_copy(
+        upload,
+        pip_runner=_runner(calls),
+        attach=False,
+        upload_sha256=_sha(upload),
+        path_exposer=_no_path_expose,
+        allow_cursor_install=False,
+    )
+
+    assert result["ok"] is True, result
+    newest = install / "grokbot-essay-writer-0.9.6"
+    assert Path(result["root"]) == newest
+    assert Path(result["code_install_folder"]) == newest
+    assert calls and all(cwd == newest for _command, cwd in calls)
+    assert "0.9.4" in (older / "pyproject.toml").read_text(encoding="utf-8")
+
+
+def test_upload_reports_when_health_still_names_the_old_version(tmp_path, monkeypatch):
+    """A real install fails loudly when a fresh interpreter still runs the old copy."""
+    cloud = tmp_path / "workspace"
+    cloud.mkdir()
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
+    upload = tmp_path / "essay-writer.zip"
+    _zip(
+        upload,
+        {
+            "essay-writer-main/pyproject.toml": b'[project]\nname = "essay-writer"\nversion = "0.9.6"\n',
+            "essay-writer-main/FIRST-RUN.txt": b"pip install -e .\n",
+            "essay-writer-main/requirements-runtime.txt": _requirements(),
+            "essay-writer-main/src/essay_writer/__init__.py": b"",
+        },
+    )
+    health: dict[str, object] = {
+        "ok": True,
+        "alive": True,
+        "version": "0.9.4",
+        "doors": [{"name": "essay.health"}],
+    }
+    monkeypatch.setattr(
+        "essay_writer.first_run_install._run_pip",
+        lambda _command, _cwd: {"returncode": 0, "stdout": "", "stderr": ""},
+    )
+    monkeypatch.setattr("essay_writer.first_run_install._installed_health", lambda: dict(health))
+    monkeypatch.setattr("essay_writer.first_run_host.expose_writer_on_path", lambda: None)
+
+    result = install_uploaded_copy(
+        upload,
+        attach=False,
+        upload_sha256=_sha(upload),
+        path_exposer=_no_path_expose,
+        allow_cursor_install=False,
+    )
+    assert result["ok"] is False
+    assert result["installed"] is False
+    assert "0.9.4" in result["reason"]
+    assert "0.9.6" in result["reason"]
+    assert result["expected_version"] == "0.9.6"
+
+    health["version"] = "0.9.6"
+    accepted = install_uploaded_copy(
+        upload,
+        attach=False,
+        upload_sha256=_sha(upload),
+        path_exposer=_no_path_expose,
+        allow_cursor_install=False,
+    )
+    assert accepted["ok"] is True, accepted
+    assert accepted["health_check"]["version"] == "0.9.6"
+
+
 def test_zip_slip_and_clone_urls_do_not_install(tmp_path, monkeypatch):
     cloud = tmp_path / "workspace"
     cloud.mkdir()
