@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.10 — 2026-11-18
 
 - `essay-writer --check-update` and `--update` fall back to the public GitHub releases feed when the REST API is blocked or rate-limited. The tag comes from the feed and the sdist/`SHA256SUMS` URLs are built from it, so an update no longer depends on `api.github.com`.
 
