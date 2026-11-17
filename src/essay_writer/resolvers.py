@@ -232,10 +232,11 @@ def crossref_lookup(
 ) -> LookupRecord | None:
     """One exact Crossref match, checked against the gathered year and author.
 
-    With no year or author, only the first row is read, as before. With either
-    one, the query carries the citation so Crossref ranks the work above
-    recommendation rows, and every returned row must also agree on what is
-    known. A same-title work from another year or author is not a match.
+    With no year or author, every returned row is read and a row is accepted
+    only when it is the only exact title. With either one, the query carries
+    the citation so Crossref ranks the work above recommendation rows, and
+    every returned row must also agree on what is known. A same-title work
+    from another year or author is not a match.
     """
     wanted_year = _year_int(year)
     surname = _surname(author)
@@ -274,13 +275,13 @@ def crossref_lookup(
     items = message.get("items", []) if isinstance(message, dict) else []
     if not items:
         return None
-    rows = items if (wanted_year is not None or wanted_author) else items[:1]
-    for item in rows:
-        if not isinstance(item, dict):
-            continue
-        titles = item.get("title") or []
-        title = titles[0] if titles else ""
-        if not isinstance(title, str) or not _title_matches(query, title):
+    if wanted_year is None and not wanted_author:
+        matches = [item for item in items if _exact_crossref_title(item, query)]
+        if len(matches) != 1:
+            return None
+        return _record_from_crossref_message(matches[0])
+    for item in items:
+        if not _exact_crossref_title(item, query):
             continue
         if wanted_year is not None and _crossref_year(item) != wanted_year:
             continue
@@ -288,6 +289,14 @@ def crossref_lookup(
             continue
         return _record_from_crossref_message(item)
     return None
+
+
+def _exact_crossref_title(item: object, query: str) -> bool:
+    if not isinstance(item, dict):
+        return False
+    titles = item.get("title") or []
+    title = titles[0] if titles else ""
+    return isinstance(title, str) and _title_matches(query, title)
 
 
 def fixture_crossref_fetch(query: str) -> dict[str, object]:

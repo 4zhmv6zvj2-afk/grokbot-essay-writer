@@ -239,8 +239,8 @@ def test_crossref_http_error_is_a_miss_not_an_exception(monkeypatch):
     assert resolvers.crossref_lookup("Deep learning", year="2015") is None
 
 
-def test_crossref_without_a_citation_still_reads_only_the_first_row():
-    payload = {
+def test_crossref_without_a_citation_accepts_only_one_exact_title():
+    two = {
         "message": {
             "items": [
                 {"title": ["Deep learning"], "DOI": "10.1/first"},
@@ -248,9 +248,20 @@ def test_crossref_without_a_citation_still_reads_only_the_first_row():
             ]
         }
     }
-    record = crossref_lookup("Deep learning", fetch=lambda query: payload)
+    assert crossref_lookup("Deep learning", fetch=lambda query: two) is None
+    one = {
+        "message": {
+            "items": [
+                {"title": ["A different paper"], "DOI": "10.1/other"},
+                {"title": ["  Deep   Learning "], "DOI": "10.1/only"},
+            ]
+        }
+    }
+    record = crossref_lookup("Deep learning", fetch=lambda query: one)
     assert record is not None
-    assert record["doi"] == "10.1/first"
+    assert record["doi"] == "10.1/only"
+    none = {"message": {"items": [{"title": ["Something else"], "DOI": "10.1/no"}]}}
+    assert crossref_lookup("Deep learning", fetch=lambda query: none) is None
 
 
 def test_lookups_send_the_stored_email_as_the_polite_pool_contact(monkeypatch):
