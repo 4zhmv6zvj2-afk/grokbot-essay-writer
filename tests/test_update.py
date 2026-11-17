@@ -93,6 +93,57 @@ def test_check_update_keeps_the_current_copy(monkeypatch):
     assert body["update_available"] is False
 
 
+def test_feed_tag_reads_a_normal_atom_entry():
+    feed = (
+        '<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+        "<title>v9.9.9</title>"
+        '<link rel="alternate" type="text/html" '
+        'href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v9.9.9"/>'
+        "</entry></feed>"
+    )
+    assert update._feed_tag(feed) == LATEST
+
+
+def test_feed_tag_ignores_a_note_that_appears_before_the_link():
+    feed = (
+        "<feed><title>Also see releases/tag/v8.8.8</title><entry>"
+        "<content>Ship notes mention releases/tag/v1.2.3 before the real link.</content>"
+        '<link rel="alternate" '
+        'href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v0.9.12"/>'
+        "</entry>"
+        "<entry><link rel=\"alternate\" "
+        'href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v9.9.9"/>'
+        "</entry></feed>"
+    )
+    assert update._feed_tag(feed) == "0.9.12"
+
+
+def test_feed_tag_rejects_a_prerelease_suffix():
+    feed = (
+        "<feed><entry><link rel=\"alternate\" "
+        'href="https://github.com/org/repo/releases/tag/v0.9.12-rc1"/>'
+        "</entry></feed>"
+    )
+    assert update._feed_tag(feed) is None
+    longer = (
+        "<feed><entry><link rel=\"alternate\" "
+        'href="https://github.com/org/repo/releases/tag/v0.9.12/notes"/>'
+        "</entry></feed>"
+    )
+    assert update._feed_tag(longer) is None
+
+
+def test_feed_tag_rejects_malformed_or_missing_xml():
+    assert update._feed_tag("") is None
+    assert update._feed_tag("<feed>") is None
+    assert update._feed_tag("not xml") is None
+    assert update._feed_tag("<feed><entry><title>v9.9.9</title></entry></feed>") is None
+    missing_href = '<feed><entry><link rel="alternate"/></entry></feed>'
+    assert update._feed_tag(missing_href) is None
+    declared = '<!DOCTYPE feed [<!ENTITY x "v9.9.9">]><feed>&x;</feed>'
+    assert update._feed_tag(declared) is None
+
+
 def test_check_update_falls_back_to_the_releases_feed(monkeypatch):
     monkeypatch.setattr(update, "__version__", CURRENT)
 

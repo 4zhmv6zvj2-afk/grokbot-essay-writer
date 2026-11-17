@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The releases-feed fallback reads the first Atom entry's alternate link and accepts only a plain `X.Y.Z` tag at the end of that path. A note that names another tag cannot choose the version, and a prerelease such as `v0.9.12-rc1` is ignored.
+
 ## 0.9.12 — 2026-11-18
 
 - `ESSAY_WRITER_TRUSTED_EGRESS` accepts only subnets of `198.18.0.0/15`. One invalid or out-of-range token disables the opt-in. A proxy that uses another range is not supported.

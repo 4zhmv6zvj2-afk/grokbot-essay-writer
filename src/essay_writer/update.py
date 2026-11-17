@@ -15,6 +15,8 @@ import sys
 import tarfile
 import tempfile
 import urllib.error
+import urllib.parse
+import xml.etree.ElementTree as ElementTree
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -32,6 +34,7 @@ FEED_BYTES = 2 * 1024 * 1024
 ARCHIVE_BYTES = 32 * 1024 * 1024
 PIP_TIMEOUT = 600
 _VERSION = re.compile(r"^v?(\d+(?:\.\d+)*)$")
+_PLAIN_VERSION = re.compile(r"^v?(\d+\.\d+\.\d+)$")
 
 
 class UpdateError(RuntimeError):
@@ -109,15 +112,52 @@ def _get_text(url: str) -> str:
         raise UpdateError("the release feed was not text") from None
 
 
-def _feed_tag(text: str) -> str | None:
-    """The newest release tag in the public releases feed."""
-    match = re.search(r"releases/tag/(v?\d+(?:\.\d+)+)", text)
+def _local_name(tag: str) -> str:
+    if tag.startswith("{") and "}" in tag:
+        return tag.rsplit("}", 1)[-1]
+    return tag
+
+
+def _version_from_release_href(href: str) -> str | None:
+    """A plain X.Y.Z tag when it is the last segment of a releases/tag path."""
+    try:
+        path = urllib.parse.urlsplit(href).path.rstrip("/")
+    except ValueError:
+        return None
+    marker = "/releases/tag/"
+    if marker not in path:
+        return None
+    tag = path.rsplit(marker, 1)[-1]
+    if not tag or "/" in tag:
+        return None
+    match = _PLAIN_VERSION.fullmatch(tag)
     if match is None:
         return None
-    parts = version_tuple(match.group(1))
-    if parts is None:
+    return match.group(1)
+
+
+def _feed_tag(text: str) -> str | None:
+    """The version in the first Atom entry's alternate link. Notes are ignored."""
+    if len(text) > FEED_BYTES or re.search(r"<!DOCTYPE|<!ENTITY", text, re.IGNORECASE):
         return None
-    return ".".join(str(part) for part in parts)
+    try:
+        # DTD and entity declarations are rejected above. The feed is also size-capped.
+        root = ElementTree.fromstring(text)  # noqa: S314
+    except ElementTree.ParseError:
+        return None
+    entry = next((child for child in root if _local_name(child.tag) == "entry"), None)
+    if entry is None:
+        return None
+    for link in entry:
+        if _local_name(link.tag) != "link":
+            continue
+        if link.attrib.get("rel", "alternate") != "alternate":
+            continue
+        href = link.attrib.get("href")
+        if not isinstance(href, str) or not href.strip():
+            continue
+        return _version_from_release_href(href.strip())
+    return None
 
 
 def _release_from_tag(latest: str) -> dict[str, Any]:
