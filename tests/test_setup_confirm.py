@@ -150,7 +150,7 @@ def test_a_later_setup_keeps_the_secrets_it_was_not_given(tmp_path, monkeypatch)
     assert first["wrote"] is True
     secret_path = tmp_path / "setup.secrets.json"
     stored = json.loads(secret_path.read_text(encoding="utf-8"))
-    stored["ESSAY_WRITER_MAC_DIR"] = "/Users/reader/Documents/Essay Bot"
+    stored["ESSAY_WRITER_MAC_DIR"] = "/Users/student/Documents/Essay Bot"
     secret_path.write_text(json.dumps(stored) + "\n", encoding="utf-8")
     essay_setup(
         app_path=str(app),
@@ -174,7 +174,7 @@ def test_a_later_setup_keeps_the_secrets_it_was_not_given(tmp_path, monkeypatch)
     assert stored["ESSAY_WRITER_CONSENSUS_PAID"] == "0"
     assert stored["ESSAY_WRITER_UNPAYWALL_EMAIL"] == "reader@example.com"
     assert stored["OPENALEX_API_KEY"] == "first-openalex-key"
-    assert stored["ESSAY_WRITER_MAC_DIR"] == "/Users/reader/Documents/Essay Bot"
+    assert stored["ESSAY_WRITER_MAC_DIR"] == "/Users/student/Documents/Essay Bot"
     record = json.loads((tmp_path / "setup.json").read_text(encoding="utf-8"))
     assert record["consensus_key"] is True
     assert record["unpaywall_email"] is True
