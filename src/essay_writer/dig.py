@@ -11,7 +11,9 @@ invent-forbid holds. The same handler serves every writing type.
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
 import urllib.error
 import urllib.parse
 from typing import Any
@@ -42,6 +44,9 @@ from essay_writer.student_voice import say
 TOOL = "essay.dig"
 OPENALEX_URL = "https://api.openalex.org/works"
 CONSENSUS_URL = "https://api.consensus.app/v1/search"
+_OPERATOR = logging.getLogger("essay_writer.dig")
+_NON_PUBLIC_ADDRESS = re.compile(r"the host resolves to a non-public address \([^)]*\)")
+
 UNPAYWALL_URL = "https://api.unpaywall.org/v2/"
 MAX_API_BYTES = 2 * 1024 * 1024
 API_TIMEOUT = 20.0
@@ -143,6 +148,21 @@ def _refusal_detail(status: int, body: bytes) -> str:
     return f"HTTP {status}" if status else "the look-up did not answer"
 
 
+def _student_lookup_detail(detail: str) -> str:
+    """Card text. A resolved internal address is logged for the operator and removed here."""
+    match = _NON_PUBLIC_ADDRESS.search(detail)
+    if match is None:
+        return detail[:200]
+    _OPERATOR.warning("look-up refused: %s", detail)
+    rest = detail[match.end() :].lstrip(" .")
+    if rest.endswith(">"):
+        rest = rest[:-1].rstrip()
+    student = "the host resolves to a non-public address"
+    if rest:
+        student = f"{student}. {rest}"
+    return student[:200]
+
+
 def _get_json(url: str, headers: dict[str, str] | None = None) -> dict[str, Any] | None:
     """GET one look-up URL through safe_url. A refusal raises LookupRefused.
 
@@ -166,7 +186,8 @@ def _get_json(url: str, headers: dict[str, str] | None = None) -> dict[str, Any]
     except json.JSONDecodeError:
         raise LookupRefused(0, "the look-up did not return JSON") from None
     except (safe_url.Refused, urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise LookupRefused(0, str(exc).strip()[:200] or "the look-up did not answer") from None
+        detail = str(exc).strip() or "the look-up did not answer"
+        raise LookupRefused(0, _student_lookup_detail(detail)) from None
     if not isinstance(payload, dict):
         return None
     return payload

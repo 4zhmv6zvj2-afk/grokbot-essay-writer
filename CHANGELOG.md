@@ -7,6 +7,7 @@
 - Crossref, when no year or author was gathered, accepts a row only when exactly one returned row has that exact title. Several exact titles, or none, are a miss. A gathered year or author still checks every row and still asks for journal articles.
 - `safe_url` connects to an address that passed validation and sends the original hostname as TLS SNI and the HTTP Host header. A trusted fake-IP address is still reached that way.
 - `--update` takes a process-wide lock around the install. A second update while one is running reports that another update is already running, and the lock is released on every path.
+- A dig refusal card tells the student that the host resolves to a non-public address and does not include the resolved address. The address, and the fake-IP hint, stay in the operator log. The hint may still name `198.18.0.0/15`.
 
 ## 0.9.12 — 2026-11-18
 

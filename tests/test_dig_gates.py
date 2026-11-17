@@ -2,8 +2,10 @@
 
 import ast
 import json
+import logging
 from pathlib import Path
 
+import pytest
 from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer import build_office
@@ -314,6 +316,43 @@ def test_a_refused_lookup_is_not_reported_as_no_hits(monkeypatch):
     assert openalex["hits"] == []
     assert consensus["refused"]["status"] == 429
     assert "key-not-echoed" not in json.dumps({"openalex": openalex, "consensus": consensus})
+
+
+@pytest.mark.parametrize(
+    "address",
+    ["10.1.2.3", "192.168.4.5", "169.254.169.254", "198.18.0.1"],
+)
+def test_a_refusal_card_hides_the_resolved_address(monkeypatch, caplog, address):
+    """The student card names a non-public address. The operator log keeps the address."""
+    from essay_writer import dig
+
+    monkeypatch.setattr(dig.safe_url, "_resolve_addresses", lambda host, port: [address])
+    with caplog.at_level(logging.WARNING, logger="essay_writer.dig"):
+        with pytest.raises(LookupRefused) as caught:
+            dig._get_json("https://api.openalex.org/works?search=x")
+    detail = caught.value.detail
+    card = {
+        "openalex": {"called": True, "hits": [], "refused": caught.value.record()},
+        "consensus": {
+            "called": False,
+            "hits": [],
+            "switch": "unset",
+            "enabled": False,
+            "key_present": False,
+            "tier": None,
+            "remind": "Consensus is off.",
+        },
+        "unpaywall": [],
+    }
+    text = _card_markdown("chokepoints", "MOD1004AA-1", card)
+    reply = _dig_reply("MOD1004AA-1", "chokepoints", "draft", card)
+    for shown in (detail, text, reply.get("lookup_note", ""), json.dumps(card)):
+        assert address not in shown
+        assert "non-public address" in shown
+    assert address in caplog.text
+    if address == "198.18.0.1":
+        assert "198.18.0.0/15" in text
+        assert "198.18.0.0/15" in caplog.text
 
 
 def test_the_dig_card_and_reply_name_a_refusal():
