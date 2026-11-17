@@ -247,8 +247,8 @@ def crossref_lookup(
             "query.bibliographic": " ".join(terms),
             "rows": 5,
             "select": (
-                "DOI,title,container-title,volume,issue,page,publisher,"
-                "publisher-location,issued,author"
+                "DOI,title,container-title,volume,issue,page,article-number,"
+                "publisher,publisher-location,issued,author"
             ),
         }
         if wanted_year is not None or wanted_author:
@@ -309,10 +309,57 @@ def fixture_crossref_fetch(query: str) -> dict[str, object]:
     }
 
 
-def openalex_lookup(query: str) -> LookupRecord | None:
+def _openalex_has_author(work: dict[str, Any], wanted: str) -> bool:
+    authorships = work.get("authorships")
+    if not isinstance(authorships, list):
+        return False
+    for item in authorships:
+        if not isinstance(item, dict):
+            continue
+        author = item.get("author")
+        display = author.get("display_name") if isinstance(author, dict) else author
+        name = _surname(display)
+        if name and _name_key(name) == wanted:
+            return True
+    return False
+
+
+def _record_from_openalex_work(work: dict[str, Any]) -> LookupRecord:
+    record: LookupRecord = {}
+    doi = work.get("doi") or ""
+    if isinstance(doi, str) and doi.startswith("https://doi.org/"):
+        record["doi"] = doi.removeprefix("https://doi.org/")
+    primary = work.get("primary_location") or {}
+    if isinstance(primary, dict):
+        source = primary.get("source") or {}
+        if isinstance(source, dict):
+            name = source.get("display_name")
+            if isinstance(name, str) and name.strip():
+                record["container"] = name.strip()
+    oa_url = openalex_oa_url(work)
+    if oa_url:
+        record["url"] = oa_url
+    return record
+
+
+def openalex_lookup(
+    query: str,
+    *,
+    year: object = None,
+    author: object = None,
+) -> LookupRecord | None:
+    """One exact OpenAlex match, checked against the gathered year and author.
+
+    With no year or author, only the first row is read. With either one, a
+    same-title work from another year or author is not a match, including
+    when it is the first row.
+    """
     # OpenAlex is optional enrichment; fixture mode returns nothing (Crossref carries tests).
     if resolver_mode() == "fixture":
         return None
+    wanted_year = _year_int(year)
+    surname = _surname(author)
+    wanted_author = _name_key(surname) if surname else ""
     params = {"search": query, "per_page": 3}
     key = openalex_api_key()
     if key:
@@ -325,29 +372,19 @@ def openalex_lookup(query: str) -> LookupRecord | None:
     if payload is None:
         return None
     results = payload.get("results") or []
-    if not results:
-        return None
-    first = results[0]
-    if not isinstance(first, dict):
-        return None
-    title = first.get("title") or ""
-    if not isinstance(title, str) or not _title_matches(query, title):
-        return None
-    record: LookupRecord = {}
-    doi = first.get("doi") or ""
-    if isinstance(doi, str) and doi.startswith("https://doi.org/"):
-        record["doi"] = doi.removeprefix("https://doi.org/")
-    primary = first.get("primary_location") or {}
-    if isinstance(primary, dict):
-        source = primary.get("source") or {}
-        if isinstance(source, dict):
-            name = source.get("display_name")
-            if isinstance(name, str) and name.strip():
-                record["container"] = name.strip()
-    oa_url = openalex_oa_url(first)
-    if oa_url:
-        record["url"] = oa_url
-    return record
+    rows = results if (wanted_year is not None or wanted_author) else results[:1]
+    for work in rows:
+        if not isinstance(work, dict):
+            continue
+        title = work.get("title") or ""
+        if not isinstance(title, str) or not _title_matches(query, title):
+            continue
+        if wanted_year is not None and _year_int(work.get("publication_year")) != wanted_year:
+            continue
+        if wanted_author and not _openalex_has_author(work, wanted_author):
+            continue
+        return _record_from_openalex_work(work)
+    return None
 
 
 def doi_org_lookup(doi: str) -> LookupRecord | None:
@@ -450,7 +487,7 @@ def _lookup_chain(
             _merge_record(merged, record)
         else:
             calls.append({"name": "crossref", "looked_up": looked_up, "result": "missed"})
-        oa = openalex_lookup(looked_up)
+        oa = openalex_lookup(looked_up, year=year, author=author)
         if oa:
             calls.append({"name": "openalex", "looked_up": looked_up, "result": "matched"})
             _merge_record(merged, oa)

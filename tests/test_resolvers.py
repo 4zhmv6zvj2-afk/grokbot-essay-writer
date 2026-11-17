@@ -118,6 +118,110 @@ def test_crossref_refuses_a_same_title_work_by_another_author():
     assert crossref_lookup("Deep learning", fetch=lambda query: payload, author="LeCun, Y.") is None
 
 
+def test_live_lookup_sends_the_gathered_year_and_author(monkeypatch):
+    from essay_writer import resolvers
+
+    seen: list[str] = []
+    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+    monkeypatch.delenv("ESSAY_WRITER_UNPAYWALL_EMAIL", raising=False)
+    monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
+
+    def fake(url: str):
+        seen.append(url)
+        return {"message": {"items": []}, "results": []}
+
+    monkeypatch.setattr(resolvers, "_lookup_json", fake)
+    record, calls = resolvers._lookup_chain(
+        "Deep learning",
+        None,
+        year="2015",
+        author="LeCun, Y.",
+    )
+    assert record is None
+    crossref = next(url for url in seen if "api.crossref.org" in url)
+    assert "LeCun" in crossref
+    assert "2015" in crossref
+    assert "type%3Ajournal-article" in crossref or "type:journal-article" in crossref
+    assert any(item["name"] == "crossref" and item["result"] == "missed" for item in calls)
+
+
+def test_openalex_skips_a_same_title_work_from_another_year(monkeypatch):
+    from essay_writer import resolvers
+
+    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+    monkeypatch.setattr(
+        resolvers,
+        "_lookup_json",
+        lambda url: {
+            "results": [
+                {
+                    "title": "Deep learning",
+                    "publication_year": 2019,
+                    "doi": "https://doi.org/10.1/wrong",
+                    "authorships": [{"author": {"display_name": "Yann LeCun"}}],
+                },
+                {
+                    "title": "Deep learning",
+                    "publication_year": 2015,
+                    "doi": "https://doi.org/10.1/right",
+                    "authorships": [{"author": {"display_name": "Yann LeCun"}}],
+                },
+            ]
+        },
+    )
+    record = resolvers.openalex_lookup("Deep learning", year="2015", author="LeCun, Y.")
+    assert record is not None
+    assert record["doi"] == "10.1/right"
+    assert (
+        resolvers.openalex_lookup("Deep learning", year="2014", author="LeCun, Y.") is None
+    )
+
+
+def test_lookup_chain_does_not_keep_an_openalex_doi_crossref_rejected(monkeypatch):
+    from essay_writer import resolvers
+
+    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+    monkeypatch.delenv("ESSAY_WRITER_UNPAYWALL_EMAIL", raising=False)
+    monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
+
+    def fake(url: str):
+        if "api.crossref.org" in url:
+            return {
+                "message": {
+                    "items": [
+                        {
+                            "title": ["Deep learning"],
+                            "DOI": "10.1/wrong-year",
+                            "issued": {"date-parts": [[2019]]},
+                            "author": [{"family": "LeCun"}],
+                        }
+                    ]
+                }
+            }
+        if "api.openalex.org" in url:
+            return {
+                "results": [
+                    {
+                        "title": "Deep learning",
+                        "publication_year": 2019,
+                        "doi": "https://doi.org/10.1/also-wrong",
+                        "authorships": [{"author": {"display_name": "Yann LeCun"}}],
+                    }
+                ]
+            }
+        return None
+
+    monkeypatch.setattr(resolvers, "_lookup_json", fake)
+    record, calls = resolvers._lookup_chain(
+        "Deep learning",
+        None,
+        year="2015",
+        author="LeCun, Y.",
+    )
+    assert record is None
+    assert [item["result"] for item in calls] == ["missed", "missed"]
+
+
 def test_crossref_without_a_citation_still_reads_only_the_first_row():
     payload = {
         "message": {
@@ -142,6 +246,7 @@ def test_lookups_send_the_stored_email_as_the_polite_pool_contact(monkeypatch):
     assert resolvers.openalex_lookup("Deep learning") is None
     assert len(seen) == 2
     assert all("mailto=reader%40example.com" in url for url in seen)
+    assert "article-number" in seen[0]
 
 
 def test_crossref_sample_does_not_match_other_titles():
