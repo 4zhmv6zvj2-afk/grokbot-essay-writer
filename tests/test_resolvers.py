@@ -172,9 +172,7 @@ def test_openalex_skips_a_same_title_work_from_another_year(monkeypatch):
     record = resolvers.openalex_lookup("Deep learning", year="2015", author="LeCun, Y.")
     assert record is not None
     assert record["doi"] == "10.1/right"
-    assert (
-        resolvers.openalex_lookup("Deep learning", year="2014", author="LeCun, Y.") is None
-    )
+    assert resolvers.openalex_lookup("Deep learning", year="2014", author="LeCun, Y.") is None
 
 
 def test_lookup_chain_does_not_keep_an_openalex_doi_crossref_rejected(monkeypatch):

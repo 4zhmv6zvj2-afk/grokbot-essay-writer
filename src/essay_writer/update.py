@@ -450,9 +450,7 @@ def apply_update(
                 requirements_done = index > 0
                 reason = "the release install did not finish"
                 if requirements_done:
-                    reason += (
-                        ". The runtime dependencies were installed and were not rolled back."
-                    )
+                    reason += ". The runtime dependencies were installed and were not rolled back."
                 body: dict[str, Any] = {
                     "ok": False,
                     "updated": False,

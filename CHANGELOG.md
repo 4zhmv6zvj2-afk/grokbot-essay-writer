@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.12 — 2026-11-18
 
 - `ESSAY_WRITER_TRUSTED_EGRESS` accepts only subnets of `198.18.0.0/15`. One invalid or out-of-range token disables the opt-in. A proxy that uses another range is not supported.
 - OpenAlex applies the same gathered year and author check as Crossref, so a same-title row Crossref refused does not become the citation. The Crossref `select` list includes `article-number`. A resolver HTTP error is a miss.
