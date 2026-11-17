@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.11 — 2026-11-18
+
+- `safe_url` accepts an operator-trusted egress range through `ESSAY_WRITER_TRUSTED_EGRESS` (environment or the setup secrets file), as a comma-separated list of CIDRs. A host whose proxy resolves every external name to a fake-IP range such as `198.18.0.0/15` can opt in; every other address check stays. The refusal message names the setting when the blocked address is in that range.
+
 ## 0.9.10 — 2026-11-18
 
 - `essay-writer --check-update` and `--update` fall back to the public GitHub releases feed when the REST API is blocked or rate-limited. The tag comes from the feed and the sdist/`SHA256SUMS` URLs are built from it, so an update no longer depends on `api.github.com`.

@@ -251,6 +251,45 @@ def test_a_cross_host_redirect_drops_sensitive_headers(monkeypatch):
     assert "user-agent" in lowered
 
 
+def test_a_trusted_egress_network_allows_a_fake_ip(monkeypatch):
+    monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    raw = FakeRaw(b"{}")
+    _fake_open(monkeypatch, raw)
+    with safe_url.open_url("https://api.openalex.org/works", max_bytes=1024) as response:
+        assert response.status == 200
+    assert raw.closed is True
+
+
+def test_trusted_egress_can_come_from_the_setup_secret(monkeypatch):
+    monkeypatch.delenv(safe_url.TRUSTED_EGRESS_ENV, raising=False)
+    monkeypatch.setattr(
+        "essay_writer.setup.read_setup_secret",
+        lambda name: "198.18.0.0/15" if name == safe_url.TRUSTED_EGRESS_ENV else None,
+    )
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    assert (
+        safe_url.validate_url("https://api.openalex.org/works") == "https://api.openalex.org/works"
+    )
+
+
+def test_trusted_egress_does_not_allow_another_private_range(monkeypatch):
+    monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["10.0.0.1"])
+    with pytest.raises(safe_url.BlockedURL):
+        safe_url.validate_url("https://api.openalex.org/works")
+
+
+def test_unset_trusted_egress_refuses_the_fake_ip_and_names_the_setting(monkeypatch):
+    monkeypatch.delenv(safe_url.TRUSTED_EGRESS_ENV, raising=False)
+    monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    with pytest.raises(safe_url.BlockedURL) as caught:
+        safe_url.validate_url("https://api.openalex.org/works")
+    assert "198.18.0.0/15" in str(caught.value)
+    assert safe_url.TRUSTED_EGRESS_ENV in str(caught.value)
+
+
 def test_the_private_opener_carries_the_guarded_redirect_handler(monkeypatch):
     monkeypatch.setattr(safe_url, "_DEFAULT_OPENER", None)
     opener = safe_url._opener()

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import re
 import socket
 import ssl
 import urllib.error
@@ -33,6 +34,8 @@ DEFAULT_PORTS = {"http": 80, "https": 443}
 MAX_REDIRECTS = 3
 MAX_URL_LENGTH = 4096
 DEFAULT_TIMEOUT = 20.0
+TRUSTED_EGRESS_ENV = "ESSAY_WRITER_TRUSTED_EGRESS"
+_FAKE_IP_NETWORK = ipaddress.ip_network("198.18.0.0/15")
 _READ_CHUNK = 64 * 1024
 _SENSITIVE_HEADERS = frozenset({"authorization", "proxy-authorization", "x-api-key", "cookie"})
 
@@ -68,8 +71,41 @@ class Response:
         return None
 
 
-def _public_address(raw: str) -> bool:
-    """True when a resolved address is a public unicast address."""
+def _trusted_networks() -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
+    """Operator-trusted egress networks, such as a proxy's fake-IP range.
+
+    Empty by default. Set ESSAY_WRITER_TRUSTED_EGRESS (environment or the
+    setup secrets file) only on a host whose proxy or DNS is trusted.
+    """
+    raw = os.environ.get(TRUSTED_EGRESS_ENV, "").strip()
+    if not raw:
+        try:
+            from essay_writer.setup import read_setup_secret
+        except ImportError:
+            raw = ""
+        else:
+            try:
+                raw = (read_setup_secret(TRUSTED_EGRESS_ENV) or "").strip()
+            except Exception:  # noqa: BLE001 - a missing setting is not fatal
+                raw = ""
+    if not raw:
+        return ()
+    networks: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+    for part in re.split(r"[,\s]+", raw):
+        if not part:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(part, strict=False))
+        except ValueError:
+            continue
+    return tuple(networks)
+
+
+def _public_address(
+    raw: str,
+    trusted: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...] = (),
+) -> bool:
+    """True when a resolved address is public, or in a trusted egress network."""
     try:
         address = ipaddress.ip_address(raw)
     except ValueError:
@@ -78,6 +114,8 @@ def _public_address(raw: str) -> bool:
         mapped = address.ipv4_mapped
         if mapped is not None:
             address = mapped
+    if any(address.version == network.version and address in network for network in trusted):
+        return True
     if (
         address.is_private
         or address.is_loopback
@@ -143,9 +181,20 @@ def validate_url(url: object) -> str:
         port = default_port
     elif port != default_port:
         raise BlockedURL("only the default port is allowed")
+    trusted = _trusted_networks()
     for address in _resolve_addresses(host, port):
-        if not _public_address(address):
-            raise BlockedURL("the host resolves to a non-public address")
+        if _public_address(address, trusted):
+            continue
+        hint = ""
+        try:
+            if ipaddress.ip_address(address) in _FAKE_IP_NETWORK:
+                hint = (
+                    " If this host uses a trusted proxy with fake-IP DNS, set "
+                    "ESSAY_WRITER_TRUSTED_EGRESS=198.18.0.0/15."
+                )
+        except ValueError:
+            pass
+        raise BlockedURL(f"the host resolves to a non-public address ({address}).{hint}")
     return urllib.parse.urlunsplit((scheme, parts.netloc, parts.path, parts.query, ""))
 
 

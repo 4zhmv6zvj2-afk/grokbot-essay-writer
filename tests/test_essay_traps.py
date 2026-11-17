@@ -536,7 +536,7 @@ def test_earlier_cover_promise_and_answer_cases_still_hold(case_id, workspace):
     assert stage_title("3", None) == "Write the plan"
     assert stage_title("10") == "Finish the Word file"
     assert "does not submit" in confirm_line("10", None)
-    assert 'version = "0.9.10"' in (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'version = "0.9.11"' in (REPO / "pyproject.toml").read_text(encoding="utf-8")
 
     seq = _plant("TRP1601AA", SILENT_BRIEF)
     folder = essay_dir("TRP1601AA")

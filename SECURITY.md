@@ -106,6 +106,13 @@ Recommendations, in order of value:
   `curl` from the fixed vendor URL `https://cursor.com/install` and is
   hash-gated before execution, and `pip`/`uv` fetch the pinned packages at
   install time.
+- `safe_url` also accepts an operator-trusted egress range through
+  `ESSAY_WRITER_TRUSTED_EGRESS` (the environment or the setup secrets file), as
+  a comma-separated list of CIDRs. A host whose proxy resolves every external
+  name to a fake-IP range such as `198.18.0.0/15` can opt in; addresses in that
+  list skip the public-address test, and every other rule stays. Set it only on
+  a host whose proxy or DNS is trusted, because the app then connects to that
+  proxy for any host; leave it empty everywhere else.
 - `essay.debug.export` redacts each zip member before it is written: absolute
   `/Users/<name>/...`, `/Volumes/<name>/...`, and `/home/<name>/...` paths,
   email addresses, `Bearer` values, `x-api-key` values, and common token
