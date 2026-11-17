@@ -184,14 +184,25 @@ essay-writer --check-update
 essay-writer --update
 ```
 
-`--check-update` asks the release API for the newest version and prints the
-current version, the newest one, and whether an update is available. `--update`
-downloads the release source archive and `SHA256SUMS`, verifies the checksum,
+`--check-update` asks the GitHub release API for the newest version and prints
+the current version, the newest one, and whether an update is available. When
+that API is blocked or rate-limited, it reads the public releases feed and
+builds the archive and `SHA256SUMS` URLs from the tag. `--update` downloads
+those files, verifies the SHA-256, and does not check the Sigstore signature.
+The signature check stays manual; see "Verify a release" below. It then
 installs the hash-pinned runtime and the new package into the existing
-environment, then runs `essay.health`. The essay tree
-(`/workspace/Essay-writer`: setup record, stored keys, remembered Mac folder,
-essays) is not touched, and setup cards are not shown again. Start a new chat
-after the update so the host launches the new code.
+environment and runs `essay.health`. If the requirements install succeeds and
+a later step fails, the result says the environment changed and was not rolled
+back. The essay tree (`/workspace/Essay-writer`: setup record, stored keys,
+remembered Mac folder, essays) is not touched, and setup cards are not shown
+again. Start a new chat after the update so the host launches the new code.
+
+On a host whose proxy resolves external names to the standard fake-IP range,
+set `ESSAY_WRITER_TRUSTED_EGRESS` to a subnet of `198.18.0.0/15` in the
+environment or in the setup secrets file. One invalid token, or any network
+outside that range, disables the opt-in. A proxy that uses another range, such
+as `10.0.0.0/8` or `100.64.0.0/10`, is not supported: turn that routing off, or
+use the standard fake-IP range. Leave the setting empty on every other host.
 
 A git checkout updates with `git pull`; `--update` refuses a source checkout and
 says so. Pass `--force` to replace a source checkout with the release package.
@@ -204,8 +215,10 @@ the first-run download above. After that, the CLI handles updates.
 On the Grok Bot computer, setup will:
 
 - Install the runtime dependencies from the hash-pinned `requirements-runtime.txt`
-  first, then Essay Writer itself. A hash mismatch stops the install; nothing is
-  left half-installed. The `essay-writer --install-upload` offline path requires
+  first, then Essay Writer itself. A hash mismatch stops the requirements
+  install before the package install. If the requirements install succeeds and
+  the package install then fails, the result says those dependencies were
+  installed and were not rolled back. The `essay-writer --install-upload` offline path requires
   a `requirements-runtime.txt` in the zip before it unpacks anything, and never
   falls back to an unpinned install. A zip checksum is optional: pass
   `--upload-sha256`, or put a matching `essay-writer.zip.sha256` / `SHA256SUMS`

@@ -107,12 +107,23 @@ Recommendations, in order of value:
   hash-gated before execution, and `pip`/`uv` fetch the pinned packages at
   install time.
 - `safe_url` also accepts an operator-trusted egress range through
-  `ESSAY_WRITER_TRUSTED_EGRESS` (the environment or the setup secrets file), as
-  a comma-separated list of CIDRs. A host whose proxy resolves every external
-  name to a fake-IP range such as `198.18.0.0/15` can opt in; addresses in that
-  list skip the public-address test, and every other rule stays. Set it only on
-  a host whose proxy or DNS is trusted, because the app then connects to that
-  proxy for any host; leave it empty everywhere else.
+  `ESSAY_WRITER_TRUSTED_EGRESS` (the environment or the setup secrets file).
+  The value is a comma-separated list of networks, and every network must be a
+  subnet of the standard fake-IP range `198.18.0.0/15` (`198.18.0.0/15` and
+  `198.18.0.1/32` pass; a supernet such as `198.16.0.0/12`, a private range,
+  loopback, link-local, or any other text does not). One invalid or
+  out-of-range token disables the whole opt-in. Addresses in an accepted
+  network skip the public-address test, and every other rule stays. Set it
+  only on a host whose proxy or DNS is trusted, because the app then connects
+  to that proxy for any host. A proxy that uses another range, such as
+  `10.0.0.0/8` or `100.64.0.0/10`, is not supported. Leave the setting empty
+  everywhere else.
+- `essay-writer --update` verifies the release archive against `SHA256SUMS`.
+  It does not verify the Sigstore signature. That check remains the manual
+  one in the "Verify a release" section of [README.md](README.md). A conflicting
+  or non-hex checksum entry refuses the update. If the requirements install
+  succeeds and a later step fails, the result says the environment changed and
+  was not rolled back.
 - `essay.debug.export` redacts each zip member before it is written: absolute
   `/Users/<name>/...`, `/Volumes/<name>/...`, and `/home/<name>/...` paths,
   email addresses, `Bearer` values, `x-api-key` values, and common token

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `ESSAY_WRITER_TRUSTED_EGRESS` accepts only subnets of `198.18.0.0/15`. One invalid or out-of-range token disables the opt-in. A proxy that uses another range is not supported.
+- OpenAlex applies the same gathered year and author check as Crossref, so a same-title row Crossref refused does not become the citation. The Crossref `select` list includes `article-number`. A resolver HTTP error is a miss.
+- An environment-only Consensus key is no longer described as a search that will not run. The setup reply still reports only a key this call passed or stored.
+- A failed `--update` or upload install says when the requirements or package step already changed the environment and was not rolled back. `SHA256SUMS` entries must be 64 hex digits, and two different hashes for one name refuse the update. `--update` checks SHA-256; the Sigstore signature stays a manual check.
+
 ## 0.9.11 — 2026-11-18
 
 - `safe_url` accepts an operator-trusted egress range through `ESSAY_WRITER_TRUSTED_EGRESS` (environment or the setup secrets file), as a comma-separated list of CIDRs. A host whose proxy resolves every external name to a fake-IP range such as `198.18.0.0/15` can opt in; every other address check stays. The refusal message names the setting when the blocked address is in that range.
@@ -14,7 +21,7 @@
 
 ## 0.9.8 — 2026-11-17
 
-- Crossref enrichment follows the documented REST API guidance: the stored Unpaywall email goes with each request as the polite-pool `mailto`, the query asks for five rows with a `select` field list, and a row is accepted only when its title, year, and author agree with the gathered citation. With a citation the query filters to `type:journal-article`, so "Faculty Opinions recommendation" datasets no longer crowd out the work. OpenAlex requests send the same contact email. Without a year or author, the resolver still reads only the first row.
+- Crossref enrichment follows the documented REST API guidance: the stored Unpaywall email goes with each request as the polite-pool `mailto`, the query asks for five rows with a `select` field list, and a row is accepted when its title matches and any gathered year or author also matches. With a year or author the query filters to `type:journal-article`, so "Faculty Opinions recommendation" datasets no longer crowd out the work. OpenAlex requests send the same contact email. Without a year or author, the resolver still reads only the first row.
 
 ## 0.9.7 — 2026-11-17
 
