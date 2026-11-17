@@ -145,6 +145,44 @@ def test_apply_says_up_to_date(monkeypatch):
     assert body["reason"] == "up-to-date"
 
 
+def test_sum_for_refuses_a_conflicting_or_unusable_entry():
+    name = f"essay_writer-{LATEST}.tar.gz"
+    real = "ab" * 32
+    other = "cd" * 32
+    assert update._sum_for(f"{real}  {name}\n{real}  *{name}\n", name) == real
+    assert update._sum_for(f"{real}  {name}.evil\n", name) is None
+    with pytest.raises(update.UpdateError, match="conflicting"):
+        update._sum_for(f"{real}  {name}\n{other}  {name}\n", name)
+    with pytest.raises(update.UpdateError, match="unusable"):
+        update._sum_for(f"deadbeef  {name}\n{real}  {name}\n", name)
+
+
+def test_apply_refuses_conflicting_checksums(monkeypatch, tmp_path):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+    monkeypatch.setattr(update, "is_developer_checkout", lambda: False)
+    archive_bytes = _sdist_bytes(tmp_path)
+    real = hashlib.sha256(archive_bytes).hexdigest()
+
+    def download(url, path: Path):
+        if path.name == "SHA256SUMS":
+            path.write_text(
+                f"{real}  essay_writer-{LATEST}.tar.gz\n{'cd' * 32}  essay_writer-{LATEST}.tar.gz\n",
+                encoding="utf-8",
+            )
+        else:
+            path.write_bytes(archive_bytes)
+
+    pip_calls: list[list[str]] = []
+    body = update.apply_update(
+        fetcher=lambda url: _release(),
+        downloader=download,
+        pip_runner=lambda command, cwd: pip_calls.append(command) or {"returncode": 0},
+    )
+    assert body["ok"] is False
+    assert "conflicting" in body["reason"]
+    assert pip_calls == []
+
+
 def test_apply_refuses_a_checksum_mismatch(monkeypatch, tmp_path):
     monkeypatch.setattr(update, "__version__", CURRENT)
     monkeypatch.setattr(update, "is_developer_checkout", lambda: False)

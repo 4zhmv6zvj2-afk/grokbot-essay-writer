@@ -219,11 +219,19 @@ def _sha256(path: Path) -> str:
 
 
 def _sum_for(text: str, name: str) -> str | None:
+    """The SHA-256 for name. Conflicting or non-hex entries are refused."""
+    found: str | None = None
     for line in text.splitlines():
         parts = line.split()
-        if len(parts) >= 2 and parts[1].lstrip("*").strip() == name:
-            return parts[0].casefold()
-    return None
+        if len(parts) < 2 or parts[1].lstrip("*").strip() != name:
+            continue
+        digest = parts[0].casefold()
+        if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
+            raise UpdateError(f"SHA256SUMS has an unusable entry for {name}")
+        if found is not None and found != digest:
+            raise UpdateError(f"SHA256SUMS has conflicting entries for {name}")
+        found = digest
+    return found
 
 
 def _download(url: str, path: Path) -> None:
