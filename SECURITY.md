@@ -118,9 +118,11 @@ Recommendations, in order of value:
   to that proxy for any host. A proxy that uses another range, such as
   `10.0.0.0/8` or `100.64.0.0/10`, is not supported. Leave the setting empty
   everywhere else.
-- `essay-writer --update` verifies the release archive against `SHA256SUMS`.
-  It does not verify the Sigstore signature. That check remains the manual
-  one in the "Verify a release" section of [README.md](README.md). A conflicting
+- `essay-writer --update` downloads a release asset only over https from
+  `github.com`, `release-assets.githubusercontent.com`, or
+  `objects.githubusercontent.com`. It verifies the release archive against
+  `SHA256SUMS`. It does not verify the Sigstore signature. That check remains
+  the manual one in the "Verify a release" section of [README.md](README.md). A conflicting
   or non-hex checksum entry refuses the update. If the requirements install
   succeeds and a later step fails, the result says the environment changed and
   was not rolled back.

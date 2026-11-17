@@ -35,6 +35,13 @@ ARCHIVE_BYTES = 32 * 1024 * 1024
 PIP_TIMEOUT = 600
 _VERSION = re.compile(r"^v?(\d+(?:\.\d+)*)$")
 _PLAIN_VERSION = re.compile(r"^v?(\d+\.\d+\.\d+)$")
+_ASSET_HOSTS = frozenset(
+    {
+        "github.com",
+        "release-assets.githubusercontent.com",
+        "objects.githubusercontent.com",
+    }
+)
 
 
 class UpdateError(RuntimeError):
@@ -274,10 +281,23 @@ def _sum_for(text: str, name: str) -> str | None:
     return found
 
 
+def _checked_asset_url(url: str) -> str:
+    """An https asset URL on a GitHub release host, or an UpdateError naming the host."""
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        raise UpdateError("the release asset host is not allowed: missing host") from None
+    host = (parts.hostname or "").casefold().rstrip(".")
+    if parts.scheme != "https" or host not in _ASSET_HOSTS:
+        raise UpdateError(f"the release asset host is not allowed: {host or 'missing host'}")
+    return url
+
+
 def _download(url: str, path: Path) -> None:
+    allowed = _checked_asset_url(url)
     try:
         with safe_url.open_url(
-            url,
+            allowed,
             timeout=API_TIMEOUT,
             max_bytes=ARCHIVE_BYTES,
             headers={"User-Agent": "essay-writer"},

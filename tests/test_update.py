@@ -196,6 +196,43 @@ def test_apply_says_up_to_date(monkeypatch):
     assert body["reason"] == "up-to-date"
 
 
+def test_download_refuses_a_non_github_asset_host(monkeypatch, tmp_path):
+    seen: list[str] = []
+
+    def fake(url, **kwargs):
+        seen.append(url)
+        return update.safe_url.Response(200, {}, b"archive")
+
+    monkeypatch.setattr(update.safe_url, "open_url", fake)
+    with pytest.raises(update.UpdateError, match="evil.example"):
+        update._download("https://evil.example/essay_writer-9.9.9.tar.gz", tmp_path / "asset")
+    with pytest.raises(update.UpdateError, match="github.com"):
+        update._download("http://github.com/owner/repo/archive.tar.gz", tmp_path / "asset")
+    assert seen == []
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "github.com",
+        "release-assets.githubusercontent.com",
+        "objects.githubusercontent.com",
+    ],
+)
+def test_download_accepts_a_github_asset_host(monkeypatch, tmp_path, host):
+    seen: list[str] = []
+
+    def fake(url, **kwargs):
+        seen.append(url)
+        return update.safe_url.Response(200, {}, b"archive")
+
+    monkeypatch.setattr(update.safe_url, "open_url", fake)
+    dest = tmp_path / "asset"
+    update._download(f"https://{host}/owner/repo/releases/download/v9.9.9/file.tar.gz", dest)
+    assert seen == [f"https://{host}/owner/repo/releases/download/v9.9.9/file.tar.gz"]
+    assert dest.read_bytes() == b"archive"
+
+
 def test_sum_for_refuses_a_conflicting_or_unusable_entry():
     name = f"essay_writer-{LATEST}.tar.gz"
     real = "ab" * 32

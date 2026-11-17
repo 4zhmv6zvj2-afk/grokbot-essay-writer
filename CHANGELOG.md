@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The releases-feed fallback reads the first Atom entry's alternate link and accepts only a plain `X.Y.Z` tag at the end of that path. A note that names another tag cannot choose the version, and a prerelease such as `v0.9.12-rc1` is ignored.
+- `--update` downloads a release asset only over https from `github.com`, `release-assets.githubusercontent.com`, or `objects.githubusercontent.com`. It verifies SHA-256, not the Sigstore signature.
 
 ## 0.9.12 — 2026-11-18
 
