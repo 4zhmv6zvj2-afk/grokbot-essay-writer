@@ -78,7 +78,10 @@ def test_check_update_reports_an_unreachable_release(monkeypatch):
     def refused(url):
         raise update.UpdateError("the release check returned HTTP 403")
 
-    body = update.check_update(refused)
+    def feed_refused(url):
+        raise update.UpdateError("the release feed returned HTTP 403")
+
+    body = update.check_update(refused, feed_fetcher=feed_refused)
     assert body["ok"] is False
     assert "403" in body["reason"]
     assert body["url"] == update.RELEASES_PAGE
@@ -88,6 +91,40 @@ def test_check_update_keeps_the_current_copy(monkeypatch):
     monkeypatch.setattr(update, "__version__", LATEST)
     body = update.check_update(lambda url: _release(tag=f"v{LATEST}"))
     assert body["update_available"] is False
+
+
+def test_check_update_falls_back_to_the_releases_feed(monkeypatch):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+
+    def refused(url):
+        raise update.UpdateError("the release check returned HTTP 403")
+
+    feed = (
+        "<feed><entry><title>v9.9.9</title>"
+        '<link href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v9.9.9"/>'
+        "</entry></feed>"
+    )
+    body = update.check_update(refused, feed_fetcher=lambda url: feed)
+    assert body["ok"] is True
+    assert body["latest"] == LATEST
+    assert body["update_available"] is True
+    assets = {asset["name"]: asset["url"] for asset in body["assets"]}
+    assert f"essay_writer-{LATEST}.tar.gz" in assets
+    assert assets["SHA256SUMS"].endswith(f"/v{LATEST}/SHA256SUMS")
+
+
+def test_check_update_reports_when_both_sources_fail(monkeypatch):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+
+    def refused(url):
+        raise update.UpdateError("the release check returned HTTP 403")
+
+    def feed_refused(url):
+        raise update.UpdateError("the release feed returned HTTP 403")
+
+    body = update.check_update(refused, feed_fetcher=feed_refused)
+    assert body["ok"] is False
+    assert "403" in body["reason"]
 
 
 def test_apply_refuses_a_developer_checkout(monkeypatch):

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `essay-writer --check-update` and `--update` fall back to the public GitHub releases feed when the REST API is blocked or rate-limited. The tag comes from the feed and the sdist/`SHA256SUMS` URLs are built from it, so an update no longer depends on `api.github.com`.
+
 ## 0.9.9 — 2026-11-18
 
 - `essay.health` reports `unpaywall.email_present` as a boolean, beside `consensus.key_present` and `openalex.key_present`. The update path does not ask for keys; one health call now shows whether all three are stored, without echoing any value.

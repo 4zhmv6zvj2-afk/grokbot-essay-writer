@@ -24,9 +24,11 @@ from essay_writer import __version__, safe_url
 REPO = "4zhmv6zvj2-afk/grokbot-essay-writer"
 LATEST_API = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases/latest"
+RELEASES_FEED = f"https://github.com/{REPO}/releases.atom"
 RUNTIME_REQUIREMENTS = "requirements-runtime.txt"
 API_TIMEOUT = 20.0
 JSON_BYTES = 1024 * 1024
+FEED_BYTES = 2 * 1024 * 1024
 ARCHIVE_BYTES = 32 * 1024 * 1024
 PIP_TIMEOUT = 600
 _VERSION = re.compile(r"^v?(\d+(?:\.\d+)*)$")
@@ -86,13 +88,58 @@ def _get_json(url: str) -> dict[str, Any]:
     return payload
 
 
+def _get_text(url: str) -> str:
+    """GET one public text page, such as the releases feed."""
+    try:
+        with safe_url.open_url(
+            url,
+            timeout=API_TIMEOUT,
+            max_bytes=FEED_BYTES,
+            headers={"User-Agent": "essay-writer"},
+        ) as response:
+            body = response.read()
+            status = int(getattr(response, "status", 200) or 200)
+    except (safe_url.Refused, urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise UpdateError(f"the release feed did not answer: {exc}") from None
+    if status != 200:
+        raise UpdateError(f"the release feed returned HTTP {status}")
+    try:
+        return body.decode("utf-8")
+    except UnicodeDecodeError:
+        raise UpdateError("the release feed was not text") from None
+
+
+def _feed_tag(text: str) -> str | None:
+    """The newest release tag in the public releases feed."""
+    match = re.search(r"releases/tag/(v?\d+(?:\.\d+)+)", text)
+    if match is None:
+        return None
+    parts = version_tuple(match.group(1))
+    if parts is None:
+        return None
+    return ".".join(str(part) for part in parts)
+
+
+def _release_from_tag(latest: str) -> dict[str, Any]:
+    """A release record built from the tag when only the feed is reachable."""
+    base = f"https://github.com/{REPO}/releases/download/v{latest}"
+    return {
+        "tag_name": f"v{latest}",
+        "html_url": f"https://github.com/{REPO}/releases/tag/v{latest}",
+        "assets": [
+            {"name": _archive_name(latest), "url": f"{base}/{_archive_name(latest)}"},
+            {"name": "SHA256SUMS", "url": f"{base}/SHA256SUMS"},
+        ],
+    }
+
+
 def _release_assets(release: dict[str, Any]) -> list[dict[str, str]]:
     assets: list[dict[str, str]] = []
     for asset in release.get("assets") or []:
         if not isinstance(asset, dict):
             continue
         name = asset.get("name")
-        url = asset.get("browser_download_url")
+        url = asset.get("browser_download_url") or asset.get("url")
         if isinstance(name, str) and isinstance(url, str):
             assets.append({"name": name, "url": url})
     return assets
@@ -100,18 +147,30 @@ def _release_assets(release: dict[str, Any]) -> list[dict[str, str]]:
 
 def check_update(
     fetcher: Callable[[str], dict[str, Any]] | None = None,
+    feed_fetcher: Callable[[str], str] | None = None,
 ) -> dict[str, Any]:
-    """Name the newest release and whether this copy is behind it. Reads only."""
+    """Name the newest release and whether this copy is behind it. Reads only.
+
+    The REST API is the first source. When it is blocked or rate-limited, the
+    public releases feed gives the tag, and the asset URLs are built from it.
+    """
     get = fetcher or _get_json
     try:
         release = get(LATEST_API)
     except UpdateError as exc:
-        return {
-            "ok": False,
-            "current": __version__,
-            "reason": str(exc),
-            "url": RELEASES_PAGE,
-        }
+        feed = feed_fetcher or _get_text
+        try:
+            latest_from_feed = _feed_tag(feed(RELEASES_FEED))
+        except UpdateError:
+            latest_from_feed = None
+        if latest_from_feed is None:
+            return {
+                "ok": False,
+                "current": __version__,
+                "reason": str(exc),
+                "url": RELEASES_PAGE,
+            }
+        release = _release_from_tag(latest_from_feed)
     latest = version_tuple(release.get("tag_name"))
     if latest is None:
         return {
