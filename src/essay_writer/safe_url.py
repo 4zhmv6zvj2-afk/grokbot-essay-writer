@@ -13,13 +13,15 @@ returning a truncated payload. Callers map a refusal onto their existing
 empty download / None behaviour, so nothing here reaches an MCP tool as an
 exception.
 
-Residual risk: the host is resolved once for validation and again when the
-connection is made, so a DNS answer that changes between those two lookups
-could still reach a private address. The https certificate check stays on.
+The connection is opened to an address that passed that check. TLS SNI and
+the HTTP Host header stay the original hostname, including when the address
+is in the trusted fake-IP range. The https certificate check stays on.
 """
 
 from __future__ import annotations
 
+import errno
+import http.client
 import ipaddress
 import os
 import re
@@ -174,12 +176,8 @@ def _resolve_addresses(host: str, port: int) -> list[str]:
     return found
 
 
-def validate_url(url: object) -> str:
-    """Return the URL with its fragment removed, or raise BlockedURL.
-
-    Only http(s), a default port, a host with no userinfo, and a host whose
-    every resolved address is public are allowed.
-    """
+def _checked_url(url: object) -> tuple[str, tuple[str, ...]]:
+    """The fragment-free URL and the addresses that passed validation."""
     if not isinstance(url, str) or not url.strip():
         raise BlockedURL("the address is empty")
     raw = url.strip()
@@ -207,12 +205,24 @@ def validate_url(url: object) -> str:
     elif port != default_port:
         raise BlockedURL("only the default port is allowed")
     trusted = _trusted_networks()
-    for address in _resolve_addresses(host, port):
+    addresses = tuple(_resolve_addresses(host, port))
+    for address in addresses:
         if _public_address(address, trusted):
             continue
         hint = _fake_ip_hint(address)
         raise BlockedURL(f"the host resolves to a non-public address ({address}).{hint}")
-    return urllib.parse.urlunsplit((scheme, parts.netloc, parts.path, parts.query, ""))
+    clean = urllib.parse.urlunsplit((scheme, parts.netloc, parts.path, parts.query, ""))
+    return clean, addresses
+
+
+def validate_url(url: object) -> str:
+    """Return the URL with its fragment removed, or raise BlockedURL.
+
+    Only http(s), a default port, a host with no userinfo, and a host whose
+    every resolved address is public are allowed.
+    """
+    clean, _addresses = _checked_url(url)
+    return clean
 
 
 class _GuardedRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -239,9 +249,10 @@ class _GuardedRedirectHandler(urllib.request.HTTPRedirectHandler):
             raise BlockedURL("the redirect target could not be parsed") from None
         if target.scheme.casefold() != base.scheme.casefold():
             raise BlockedURL("a cross-scheme redirect is not allowed")
-        clean = validate_url(urllib.parse.urlunsplit(target))
+        clean, addresses = _checked_url(urllib.parse.urlunsplit(target))
         new = super().redirect_request(req, fp, code, msg, headers, clean)
         if new is not None:
+            new._safe_url_addresses = addresses  # type: ignore[attr-defined]
             if (target.hostname or "").casefold() != (base.hostname or "").casefold():
                 for key in list(new.headers):
                     if key.casefold() in _SENSITIVE_HEADERS:
@@ -296,13 +307,127 @@ def _ssl_context() -> ssl.SSLContext:
     return _SSL_CONTEXT
 
 
+def _tcp_connect(
+    address: tuple[str, int],
+    timeout: Any,
+    source_address: Any = None,
+) -> socket.socket:
+    """Open the TCP connection. Tests replace this with a local socket double."""
+    return socket.create_connection(address, timeout, source_address)
+
+
+def _wrap_tls(context: ssl.SSLContext, sock: socket.socket, server_hostname: str) -> socket.socket:
+    """TLS with the original hostname as SNI. The certificate check stays on."""
+    return context.wrap_socket(sock, server_hostname=server_hostname)
+
+
+def _pin_targets(connection: http.client.HTTPConnection) -> tuple[str, ...]:
+    """Addresses from validation. The hostname is only a fallback."""
+    addresses = getattr(connection, "_safe_url_addresses", ())
+    if isinstance(addresses, tuple) and addresses:
+        return addresses
+    return (connection.host,)
+
+
+def _set_tcp_nodelay(sock: socket.socket) -> None:
+    try:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    except OSError as exc:
+        if exc.errno != errno.ENOPROTOOPT:
+            raise
+
+
+def _open_pinned_socket(connection: http.client.HTTPConnection) -> None:
+    """Connect to a validated address. Do not look the hostname up again."""
+    port = connection.port
+    if not isinstance(port, int):
+        raise OSError("the host has no port")
+    error: OSError | None = None
+    for target in _pin_targets(connection):
+        try:
+            sock = _tcp_connect(
+                (target, port),
+                connection.timeout,
+                getattr(connection, "source_address", None),
+            )
+        except OSError as exc:
+            error = exc
+            continue
+        _set_tcp_nodelay(sock)
+        connection.sock = sock
+        return
+    raise error if error is not None else OSError("the host did not connect")
+
+
+class _PinnedHTTPConnection(http.client.HTTPConnection):
+    """HTTP connection pinned to the addresses stored on the request."""
+
+    _safe_url_addresses: tuple[str, ...] = ()
+
+    def connect(self) -> None:
+        _open_pinned_socket(self)
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """HTTPS connection pinned to the validated address. SNI stays the hostname."""
+
+    _safe_url_addresses: tuple[str, ...] = ()
+
+    def connect(self) -> None:
+        _open_pinned_socket(self)
+        context = getattr(self, "_context", None)
+        if not isinstance(context, ssl.SSLContext):
+            raise OSError("the https connection has no TLS context")
+        sock = self.sock
+        if sock is None:
+            raise OSError("the host did not connect")
+        # No proxy CONNECT tunnel. A fake-IP proxy is reached by connecting to
+        # the validated address while SNI stays the original hostname.
+        self.sock = _wrap_tls(context, sock, self.host)
+
+
+def _bind_pin(
+    connection: _PinnedHTTPConnection | _PinnedHTTPSConnection,
+    request: urllib.request.Request,
+) -> None:
+    addresses = getattr(request, "_safe_url_addresses", ())
+    if isinstance(addresses, tuple):
+        connection._safe_url_addresses = addresses
+
+
+class _PinningHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req: urllib.request.Request) -> Any:
+        def factory(host: str, **kwargs: Any) -> _PinnedHTTPConnection:
+            connection = _PinnedHTTPConnection(host, **kwargs)
+            _bind_pin(connection, req)
+            return connection
+
+        return self.do_open(factory, req)
+
+
+class _PinningHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, context: ssl.SSLContext) -> None:
+        super().__init__(context=context)
+        self._pin_context = context
+
+    def https_open(self, req: urllib.request.Request) -> Any:
+        def factory(host: str, **kwargs: Any) -> _PinnedHTTPSConnection:
+            kwargs["context"] = self._pin_context
+            connection = _PinnedHTTPSConnection(host, **kwargs)
+            _bind_pin(connection, req)
+            return connection
+
+        return self.do_open(factory, req, context=self._pin_context)
+
+
 def _opener() -> urllib.request.OpenerDirector:
     """One private opener with the guarded redirect handler. Tests patch this."""
     global _DEFAULT_OPENER
     if _DEFAULT_OPENER is None:
         _DEFAULT_OPENER = urllib.request.build_opener(
             _GuardedRedirectHandler(),
-            urllib.request.HTTPSHandler(context=_ssl_context()),
+            _PinningHTTPHandler(),
+            _PinningHTTPSHandler(context=_ssl_context()),
         )
     return _DEFAULT_OPENER
 
@@ -385,12 +510,13 @@ def open_url(
     """
     if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or max_bytes <= 0:
         raise ValueError("max_bytes must be a positive integer")
-    clean = validate_url(url)
+    clean, addresses = _checked_url(url)
     request = urllib.request.Request(  # noqa: S310 - the scheme and host are validated above
         clean,
         headers=dict(headers or {}),
         method="GET",
     )
+    request._safe_url_addresses = addresses  # type: ignore[attr-defined]
     try:
         raw = _open(request, timeout=timeout)
     except urllib.error.HTTPError as exc:

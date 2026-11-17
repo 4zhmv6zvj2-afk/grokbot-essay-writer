@@ -99,9 +99,9 @@ Recommendations, in order of value:
   (25 MiB for a paper, 2 MiB for a research API, 1 MiB for a look-up); an
   over-cap body is refused, not truncated, and maps to the existing
   empty-download or `None` result instead of an exception to the MCP tool. The
-  address is resolved once for validation and again when the connection is
-  made, so a DNS answer that changes between those two lookups remains a
-  residual risk. Two fetches are outside that opener, both in the setup CLI and
+  connection is opened to an address from that check, while TLS SNI and the
+  HTTP Host header stay the original hostname, including for a trusted
+  fake-IP address in `198.18.0.0/15`. Two fetches are outside that opener, both in the setup CLI and
   not reachable from the MCP tools: the Cursor installer is downloaded with
   `curl` from the fixed vendor URL `https://cursor.com/install` and is
   hash-gated before execution, and `pip`/`uv` fetch the pinned packages at

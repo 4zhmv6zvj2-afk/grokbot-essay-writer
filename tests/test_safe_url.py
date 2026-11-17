@@ -355,6 +355,81 @@ def test_the_https_context_still_verifies_certificates(monkeypatch):
     assert context.check_hostname is True
 
 
+class _ScriptedSocket:
+    """A local socket double. It records the request and returns one HTTP response."""
+
+    def __init__(self, payload: bytes) -> None:
+        self.sent = bytearray()
+        self._payload = io.BytesIO(payload)
+
+    def setsockopt(self, *args: object, **kwargs: object) -> None:
+        return None
+
+    def sendall(self, data: bytes, *args: object, **kwargs: object) -> None:
+        self.sent.extend(data)
+
+    def send(self, data: bytes, *args: object, **kwargs: object) -> int:
+        self.sent.extend(data)
+        return len(data)
+
+    def makefile(self, *args: object, **kwargs: object) -> io.BytesIO:
+        return self._payload
+
+    def close(self) -> None:
+        return None
+
+
+def test_open_connects_to_the_validated_address(monkeypatch):
+    """The TCP target is the address that passed validation. SNI and Host stay the name."""
+    monkeypatch.setattr(safe_url, "_DEFAULT_OPENER", None)
+    monkeypatch.setattr(
+        safe_url,
+        "_resolve_addresses",
+        lambda host, port: ["93.184.216.34", "1.1.1.1"],
+    )
+    seen: dict[str, object] = {}
+    sock = _ScriptedSocket(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
+
+    def connect(address, timeout, source_address=None):
+        seen["address"] = address
+        return sock
+
+    def wrap(context, raw, server_hostname):
+        seen["sni"] = server_hostname
+        return sock
+
+    monkeypatch.setattr(safe_url, "_tcp_connect", connect)
+    monkeypatch.setattr(safe_url, "_wrap_tls", wrap)
+    with safe_url.open_url("https://api.example.org/works?q=1", max_bytes=100) as response:
+        assert response.read() == b"ok"
+    assert seen["address"] == ("93.184.216.34", 443)
+    assert seen["sni"] == "api.example.org"
+    assert b"Host: api.example.org" in sock.sent
+    assert b"93.184.216.34" not in sock.sent
+
+    monkeypatch.setattr(safe_url, "_DEFAULT_OPENER", None)
+    monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    fake = _ScriptedSocket(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
+
+    def connect_fake(address, timeout, source_address=None):
+        seen["fake_address"] = address
+        return fake
+
+    def wrap_fake(context, raw, server_hostname):
+        seen["fake_sni"] = server_hostname
+        return fake
+
+    monkeypatch.setattr(safe_url, "_tcp_connect", connect_fake)
+    monkeypatch.setattr(safe_url, "_wrap_tls", wrap_fake)
+    with safe_url.open_url("https://api.example.org/works", max_bytes=100) as response:
+        assert response.read() == b"ok"
+    assert seen["fake_address"] == ("198.18.0.1", 443)
+    assert seen["fake_sni"] == "api.example.org"
+    assert b"Host: api.example.org" in fake.sent
+    assert b"198.18.0.1" not in fake.sent
+
+
 def test_the_https_opener_uses_that_context(monkeypatch):
     monkeypatch.setattr(safe_url, "_DEFAULT_OPENER", None)
     monkeypatch.setattr(safe_url, "_SSL_CONTEXT", None)
