@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.13 — 2026-11-18
 
 - Craft voice adds four short prose-habit rules (dashes, staged run-ups, decorated formatting, model knowledge guesses), written in-house from patterns in [blader/humanizer](https://github.com/blader/humanizer) (MIT). They ride the existing stage rules; there is no rewrite pass and no detector chase. `edit_recheck` also keeps names, numbers, dates, quotes, and citations unchanged.
 - The releases-feed fallback reads the first Atom entry's alternate link and accepts only a plain `X.Y.Z` tag at the end of that path. A note that names another tag cannot choose the version, and a prerelease such as `v0.9.12-rc1` is ignored.
