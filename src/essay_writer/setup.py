@@ -505,14 +505,18 @@ def essay_setup(
     existing_secrets = _read_secret_dict(secret_path)
     # A secret already on disk counts as present, so adding one key later does
     # not warn about the keys and the email that setup already stored.
+    # The reply boolean stays "passed or stored". The warning follows what
+    # essay.dig will call, so an environment-only Consensus key is not described
+    # as a search that will not run.
     has_key = bool(key) or "CONSENSUS_API_KEY" in existing_secrets
     has_email = bool(email) or "ESSAY_WRITER_UNPAYWALL_EMAIL" in existing_secrets
     has_openalex = bool(oa) or "OPENALEX_API_KEY" in existing_secrets
-    warning = search_warning(has_key, has_email, has_openalex)
+    consensus_will_run = has_key or bool(os.environ.get("CONSENSUS_API_KEY", "").strip())
+    warning = search_warning(consensus_will_run, has_email, has_openalex)
     skipped = [
         name
         for name, present in (
-            ("consensus", has_key),
+            ("consensus", consensus_will_run),
             ("unpaywall", has_email),
             ("openalex", has_openalex),
         )

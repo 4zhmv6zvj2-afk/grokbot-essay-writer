@@ -264,6 +264,8 @@ def test_setup_preview_sees_an_environment_consensus_key(tmp_path, monkeypatch):
     # It is not stored or passed, so setup does not report or record it.
     assert draft["consensus_key"] is False
     assert "env-only-key" not in json.dumps(draft)
+    assert "Consensus dig will not run" not in draft["search_warning"]
+    assert draft["skipped_searches"] == ["unpaywall"]
 
 
 def test_named_save_on_the_cloud_computer_is_the_record_later_tools_read(tmp_path, monkeypatch):
