@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.5 — 2026-11-17
+## 0.9.6 — 2026-11-17
 
 Free look-ups that the app could not make were reported as empty results, and every HTTPS call failed on a Python build with no CA bundle of its own.
 
