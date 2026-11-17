@@ -247,6 +247,25 @@ def test_a_first_setup_with_only_the_openalex_key_still_warns(tmp_path, monkeypa
     assert draft["skipped_searches"] == ["consensus", "unpaywall"]
 
 
+def test_setup_preview_sees_an_environment_consensus_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
+    monkeypatch.setenv("CONSENSUS_API_KEY", "env-only-key")
+    monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
+    draft = essay_setup(
+        app_path=str(tmp_path / "app"),
+        kb1_path=str(tmp_path / "KB1"),
+        confirmPhase="draft",
+        openalex_api_key="openalex-key",
+    )
+    # essay.dig will use the environment key, so the preview says it is on.
+    assert draft["consensus"]["key_present"] is True
+    assert draft["consensus"]["enabled"] is True
+    # It is not stored or passed, so setup does not report or record it.
+    assert draft["consensus_key"] is False
+    assert "env-only-key" not in json.dumps(draft)
+
+
 def test_named_save_on_the_cloud_computer_is_the_record_later_tools_read(tmp_path, monkeypatch):
     """A named folder still writes the record where later tools read it."""
     from essay_writer.paths import load_saved_setup

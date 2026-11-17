@@ -573,9 +573,12 @@ def essay_setup(
         body["skipped_searches"] = skipped
     if key and paid is None:
         body["needs_consensus_plan"] = True
+    from essay_writer.dig import consensus_api_key as stored_consensus_key
     from essay_writer.dig import consensus_paid_flag, consensus_status_for
 
-    preview = consensus_status_for(has_key)
+    # The preview follows what essay.dig will use, including an environment key.
+    # The stored-or-passed check above decides what setup warns about and records.
+    preview = consensus_status_for(stored_consensus_key() is not None or bool(key))
     body["consensus"] = {
         "switch": preview["switch"],
         "enabled": preview["enabled"],
