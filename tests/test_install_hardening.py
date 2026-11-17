@@ -439,6 +439,7 @@ def test_optional_secrets_are_created_0600(tmp_path, monkeypatch):
         "kb1_path": str(tmp_path / "KB1"),
         "consensus_api_key": "consensus-value",
         "unpaywall_email": "reader@example.com",
+        "openalex_api_key": "openalex-value",
         "consensus_plan": "pro",
     }
     draft = essay_setup(confirmPhase="draft", **arguments)
@@ -448,7 +449,10 @@ def test_optional_secrets_are_created_0600(tmp_path, monkeypatch):
     assert result["wrote"] is True
     secret = tmp_path / "setup.secrets.json"
     assert stat.S_IMODE(secret.stat().st_mode) == 0o600
-    assert json.loads(secret.read_text(encoding="utf-8"))["CONSENSUS_API_KEY"] == "consensus-value"
+    stored = json.loads(secret.read_text(encoding="utf-8"))
+    assert stored["CONSENSUS_API_KEY"] == "consensus-value"
+    assert stored["OPENALEX_API_KEY"] == "openalex-value"
+    assert "openalex-value" not in json.dumps(result)
 
 
 def test_mac_handoff_store_is_created_0600(tmp_path, monkeypatch):

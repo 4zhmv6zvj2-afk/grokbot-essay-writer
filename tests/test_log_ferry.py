@@ -444,6 +444,8 @@ def test_redact_text_handles_each_source_kind():
         '  "ESSAY_WRITER_UNPAYWALL_EMAIL": "second@example.com"\n'
         "Authorization: Bearer opaque-token\n"
         "x-api-key: header-token\n"
+        "https://api.openalex.org/works?search=x&api_key=url-key-value\n"
+        "OPENALEX_API_KEY=env-openalex-value\n"
     )
     cleaned = debug_log.redact_text(text)
     assert "/Users/alice" not in cleaned
@@ -454,6 +456,10 @@ def test_redact_text_handles_each_source_kind():
     assert "arbitrary-value" not in cleaned
     assert "opaque-token" not in cleaned
     assert "header-token" not in cleaned
+    assert "url-key-value" not in cleaned
+    assert "env-openalex-value" not in cleaned
+    assert "api_key=[redacted]" in cleaned
+    assert "OPENALEX_API_KEY=[redacted]" in cleaned
     assert "CONSENSUS_API_KEY=[redacted]" in cleaned
     assert '"ESSAY_WRITER_UNPAYWALL_EMAIL": "[redacted]"' in cleaned
     assert "Bearer [redacted]" in cleaned

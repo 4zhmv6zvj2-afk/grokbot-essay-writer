@@ -1,6 +1,6 @@
 [project]
 name = "essay-writer"
-version = "0.9.4"
+version = "0.9.5"
 description = "Confirm-gated MCP server for university essays. Word only."
 keywords = ["mcp", "essay", "education", "agent"]
 authors = [{ name = "Ron", email = "4zhmv6zvj2-afk@users.noreply.github.com" }]
@@ -51,7 +51,6 @@ where = ["src"]
 essay_writer = [
   "py.typed",
   "FIRST-RUN.txt",
-  "FRIEND-PROMPT.txt",
   "_vendor/*.json",
   "prompts/*.toml",
   "prompts/stages/*.md",

@@ -1,0 +1,216 @@
+"""Check the GitHub release and upgrade this copy in place.
+
+The checks are hermetic: the release JSON, the archive, pip, and essay.health
+are injected, so no test reaches GitHub or changes the environment.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import tarfile
+from pathlib import Path
+
+import pytest
+
+from essay_writer import update
+
+CURRENT = "0.9.4"
+LATEST = "9.9.9"
+
+
+def _release(tag: str = "v9.9.9", *, with_assets: bool = True) -> dict:
+    assets = []
+    if with_assets:
+        assets = [
+            {
+                "name": f"essay_writer-{LATEST}.tar.gz",
+                "browser_download_url": f"https://example.org/essay_writer-{LATEST}.tar.gz",
+            },
+            {
+                "name": "SHA256SUMS",
+                "browser_download_url": "https://example.org/SHA256SUMS",
+            },
+        ]
+    return {"tag_name": tag, "html_url": "https://example.org/release", "assets": assets}
+
+
+def _sdist_bytes(tmp_path: Path) -> bytes:
+    root = tmp_path / f"essay_writer-{LATEST}"
+    root.mkdir()
+    (root / "pyproject.toml").write_text(
+        '[project]\nname = "essay-writer"\nversion = "9.9.9"\n', encoding="utf-8"
+    )
+    (root / "requirements-runtime.txt").write_text("", encoding="utf-8")
+    archive = tmp_path / f"essay_writer-{LATEST}.tar.gz"
+    with tarfile.open(archive, "w:gz") as bundle:
+        bundle.add(root, arcname=root.name)
+    return archive.read_bytes()
+
+
+def test_version_compare_reads_a_tag_and_ignores_noise():
+    assert update.version_tuple("v0.9.5") == (0, 9, 5)
+    assert update.version_tuple("0.9.5") == (0, 9, 5)
+    assert update.version_tuple("release") is None
+    assert update.is_newer("0.9.10", "0.9.9")
+    assert update.is_newer("0.10.0", "0.9.9")
+    assert not update.is_newer("0.9.4", "0.9.4")
+    assert not update.is_newer("0.9.3", "0.9.4")
+
+
+def test_check_update_names_the_newer_release(monkeypatch):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+    body = update.check_update(lambda url: _release())
+    assert body["ok"] is True
+    assert body["current"] == CURRENT
+    assert body["latest"] == LATEST
+    assert body["update_available"] is True
+    assert body["url"] == "https://example.org/release"
+    assert {asset["name"] for asset in body["assets"]} == {
+        f"essay_writer-{LATEST}.tar.gz",
+        "SHA256SUMS",
+    }
+
+
+def test_check_update_reports_an_unreachable_release(monkeypatch):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+
+    def refused(url):
+        raise update.UpdateError("the release check returned HTTP 403")
+
+    body = update.check_update(refused)
+    assert body["ok"] is False
+    assert "403" in body["reason"]
+    assert body["url"] == update.RELEASES_PAGE
+
+
+def test_check_update_keeps_the_current_copy(monkeypatch):
+    monkeypatch.setattr(update, "__version__", LATEST)
+    body = update.check_update(lambda url: _release(tag=f"v{LATEST}"))
+    assert body["update_available"] is False
+
+
+def test_apply_refuses_a_developer_checkout(monkeypatch):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+    monkeypatch.setattr(update, "is_developer_checkout", lambda: True)
+    body = update.apply_update(fetcher=lambda url: _release())
+    assert body["ok"] is False
+    assert body["updated"] is False
+    assert "source checkout" in body["reason"].casefold()
+    assert "git pull" in body["reason"]
+
+
+def test_apply_says_up_to_date(monkeypatch):
+    monkeypatch.setattr(update, "__version__", LATEST)
+    body = update.apply_update(fetcher=lambda url: _release(tag=f"v{LATEST}"))
+    assert body["ok"] is True
+    assert body["updated"] is False
+    assert body["reason"] == "up-to-date"
+
+
+def test_apply_refuses_a_checksum_mismatch(monkeypatch, tmp_path):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+    monkeypatch.setattr(update, "is_developer_checkout", lambda: False)
+    archive_bytes = _sdist_bytes(tmp_path)
+
+    def download(url, path: Path):
+        if path.name == "SHA256SUMS":
+            path.write_text(f"{'0' * 64}  essay_writer-{LATEST}.tar.gz\n", encoding="utf-8")
+        else:
+            path.write_bytes(archive_bytes)
+
+    pip_calls: list[list[str]] = []
+
+    def pip_runner(command, cwd):
+        pip_calls.append(command)
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    body = update.apply_update(
+        fetcher=lambda url: _release(),
+        downloader=download,
+        pip_runner=pip_runner,
+    )
+    assert body["ok"] is False
+    assert body["updated"] is False
+    assert "SHA-256" in body["reason"]
+    assert pip_calls == []
+
+
+def test_apply_installs_the_archive_and_checks_health(monkeypatch, tmp_path):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+    monkeypatch.setattr(update, "is_developer_checkout", lambda: False)
+    archive_bytes = _sdist_bytes(tmp_path)
+    digest = hashlib.sha256(archive_bytes).hexdigest()
+
+    def download(url, path: Path):
+        if path.name == "SHA256SUMS":
+            path.write_text(f"{digest}  essay_writer-{LATEST}.tar.gz\n", encoding="utf-8")
+        else:
+            path.write_bytes(archive_bytes)
+
+    calls: list[tuple[list[str], Path]] = []
+
+    def pip_runner(command, cwd):
+        calls.append((command, Path(cwd)))
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    body = update.apply_update(
+        fetcher=lambda url: _release(),
+        downloader=download,
+        pip_runner=pip_runner,
+        health_runner=lambda: {"ok": True, "version": LATEST},
+    )
+    assert body["ok"] is True
+    assert body["updated"] is True
+    assert body["from"] == CURRENT
+    assert body["to"] == LATEST
+    assert body["restart_required"] is True
+    assert "--require-hashes" in calls[0][0]
+    assert "-r" in calls[0][0]
+    assert "--no-deps" in calls[1][0]
+    assert "--upgrade" in calls[1][0]
+    assert calls[1][1].name == f"essay_writer-{LATEST}"
+
+
+def test_apply_refuses_when_health_names_the_old_version(monkeypatch, tmp_path):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+    monkeypatch.setattr(update, "is_developer_checkout", lambda: False)
+    archive_bytes = _sdist_bytes(tmp_path)
+    digest = hashlib.sha256(archive_bytes).hexdigest()
+
+    def download(url, path: Path):
+        if path.name == "SHA256SUMS":
+            path.write_text(f"{digest}  essay_writer-{LATEST}.tar.gz\n", encoding="utf-8")
+        else:
+            path.write_bytes(archive_bytes)
+
+    body = update.apply_update(
+        fetcher=lambda url: _release(),
+        downloader=download,
+        pip_runner=lambda command, cwd: {"returncode": 0, "stdout": "", "stderr": ""},
+        health_runner=lambda: {"ok": True, "version": CURRENT},
+    )
+    assert body["ok"] is False
+    assert body["updated"] is False
+    assert "new version" in body["reason"]
+
+
+def test_the_cli_prints_the_check(monkeypatch, capsys):
+    from essay_writer import server
+
+    monkeypatch.setattr(update, "check_update", lambda: {"ok": True, "latest": LATEST})
+    server.main(["--check-update"])
+    printed = json.loads(capsys.readouterr().out)
+    assert printed["latest"] == LATEST
+
+
+def test_a_symlink_in_the_archive_is_refused(tmp_path):
+    archive = tmp_path / "bad.tar.gz"
+    with tarfile.open(archive, "w:gz") as bundle:
+        link = tarfile.TarInfo("essay_writer-9.9.9/link")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "/etc/passwd"
+        bundle.addfile(link)
+    with pytest.raises(update.UpdateError):
+        with tarfile.open(archive, "r:gz") as bundle:
+            update._safe_extract(bundle, tmp_path / "out")

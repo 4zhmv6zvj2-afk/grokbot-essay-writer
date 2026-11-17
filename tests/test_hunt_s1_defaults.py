@@ -111,6 +111,7 @@ def test_ew_hunt_s1_ac1(case_id, tmp_path, monkeypatch):
         consensus_api_key=KEY,
         unpaywall_email=EMAIL,
         consensus_plan="free",
+        acknowledge_skipped_searches=True,
     )
     record = app.parent / "setup.json"
     secret = app.parent / "setup.secrets.json"
@@ -235,6 +236,7 @@ def test_ew_hunt_s1_ac3(case_id, tmp_path, monkeypatch):
         consensus_api_key=KEY,
         unpaywall_email=EMAIL,
         consensus_plan="free",
+        acknowledge_skipped_searches=True,
     )
     assert os.environ.get("ESSAY_WRITER_ROOT")
     assert consensus_api_key() == KEY

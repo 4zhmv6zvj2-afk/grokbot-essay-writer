@@ -75,21 +75,14 @@ def test_ac2_first_run_documents_mac_four_way_ask():
     assert FIRST_RUN_MAC_SPEECH in CURSOR_SETUP_PROMPT
 
 
-def test_ac3_friend_prompt_ships_and_readme_points_hybrid():
-    """AC3. FRIEND-PROMPT ships. The README tells Grok Bot to read FIRST-RUN.txt."""
+def test_ac3_readme_points_setup_at_first_run():
+    """AC3. The public tree ships FIRST-RUN; the README tells Grok Bot to read it."""
     root = package_root()
-    packaged = root / "src" / "essay_writer" / "FRIEND-PROMPT.txt"
-    assert (root / "FRIEND-PROMPT.txt").is_file()
-    assert packaged.is_file()
-    prompt = (root / "FRIEND-PROMPT.txt").read_text(encoding="utf-8")
-    assert prompt == packaged.read_text(encoding="utf-8")
-    assert "FIRST-RUN" in prompt
-    assert "essay-reviewer" not in prompt.casefold()
-    assert "mcp.json" not in prompt
-    assert "python first_run" not in prompt
     readme = (root / "README.md").read_text(encoding="utf-8")
     assert "grokbot-essay-writer" in readme
     assert "FIRST-RUN.txt" in readme
+    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+    assert "FRIEND-PROMPT" not in pyproject
 
 
 def test_remember_mac_handoff_dir_uses_setup_secrets(tmp_path, monkeypatch):

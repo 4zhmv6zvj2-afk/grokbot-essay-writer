@@ -49,6 +49,7 @@ _OFF = frozenset({"0", "false", "off", "no"})
 _SECRET_NAMES = frozenset(
     {
         "consensus_api_key",
+        "openalex_api_key",
         "unpaywall_email",
         "api_key",
         "apikey",
@@ -62,7 +63,7 @@ _SECRET_NAMES = frozenset(
         "bearer",
     }
 )
-_ENV_SECRETS = ("CONSENSUS_API_KEY", "ESSAY_WRITER_UNPAYWALL_EMAIL")
+_ENV_SECRETS = ("CONSENSUS_API_KEY", "ESSAY_WRITER_UNPAYWALL_EMAIL", "OPENALEX_API_KEY")
 _EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 _BEARER = re.compile(r"Bearer\s+\S+", re.IGNORECASE)
 _TOKEN = re.compile(r"\b(?:sk|pk)[_-][A-Za-z0-9_\-]{8,}\b")
@@ -75,10 +76,13 @@ _GITHUB_TOKEN = re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{16,}\b")
 _AWS_KEY = re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")
 _SLACK_TOKEN = re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b")
 _SECRET_KV = re.compile(
-    r"(?im)^(\s*(?:export\s+)?(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL)\s*[:=]\s*).+$"
+    r"(?im)^(\s*(?:export\s+)?(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL|OPENALEX_API_KEY)\s*[:=]\s*).+$"
 )
-_SECRET_JSON = re.compile(r'("(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL)"\s*:\s*")[^"]*(")')
+_SECRET_JSON = re.compile(
+    r'("(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL|OPENALEX_API_KEY)"\s*:\s*")[^"]*(")'
+)
 _X_API_KEY = re.compile(r"(?i)(x-api-key\s*[:=]\s*)\S+")
+_QUERY_KEY = re.compile(r"(?i)([?&](?:api_key|apikey)=)[^&\s#]+")
 _DEBUG_WIPE_SPEECH = re.compile(
     r"^(?:please\s+)?(?:"
     r"delete\s+(?:the\s+)?(?:debug\s+)?logs?"
@@ -403,6 +407,7 @@ def redact_text(text: str) -> str:
     cleaned = _SECRET_KV.sub(lambda match: match.group(1) + REDACTED, cleaned)
     cleaned = _SECRET_JSON.sub(lambda match: match.group(1) + REDACTED + match.group(2), cleaned)
     cleaned = _X_API_KEY.sub(lambda match: match.group(1) + REDACTED, cleaned)
+    cleaned = _QUERY_KEY.sub(lambda match: match.group(1) + REDACTED, cleaned)
     cleaned = _BEARER.sub("Bearer " + REDACTED, cleaned)
     cleaned = _GITHUB_PAT.sub(REDACTED, cleaned)
     cleaned = _GITHUB_TOKEN.sub(REDACTED, cleaned)
@@ -1182,6 +1187,12 @@ def _format(tool: str, arguments: dict[str, Any], result: Any, error: BaseExcept
             "Unpaywall email present."
             if _present(arguments.get("unpaywall_email"))
             else "Unpaywall email absent."
+        )
+    if "openalex_api_key" in arguments:
+        extras.append(
+            "OpenAlex key present."
+            if _present(arguments.get("openalex_api_key"))
+            else "OpenAlex key absent."
         )
     query = arguments.get("query")
     if isinstance(query, str) and query.strip():

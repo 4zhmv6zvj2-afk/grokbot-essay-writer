@@ -204,8 +204,10 @@ def test_mounted_call_writes_a_line_and_keeps_the_door_arguments(workspace, monk
     tools, health, review = asyncio.run(run())
     setup = next(tool for tool in tools if tool.name == "essay.setup")
     assert "consensus_api_key" in setup.input_schema["properties"]
+    assert "openalex_api_key" in setup.input_schema["properties"]
     assert "confirmPhase" in setup.input_schema["properties"]
     assert "consensus_api_key" in inspect.signature(essay_setup).parameters
+    assert "openalex_api_key" in inspect.signature(essay_setup).parameters
     from essay_writer.paths import work_dir
 
     global_text = _log(workspace).read_text(encoding="utf-8") if _log(workspace).is_file() else ""

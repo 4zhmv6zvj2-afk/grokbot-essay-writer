@@ -445,6 +445,7 @@ def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, 
             confirmPhase="draft",
             consensus_api_key=key,
             unpaywall_email="reader@example.com",
+            openalex_api_key="openalex-secret-value",
             consensus_plan=plan,
         )
         kept = essay_setup(
@@ -453,13 +454,17 @@ def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, 
             confirmPhase="confirm",
             consensus_api_key=key,
             unpaywall_email="reader@example.com",
+            openalex_api_key="openalex-secret-value",
             consensus_plan=plan,
         )
         assert kept["ok"] is True, kept
         assert kept["consensus_paid"] == flag
+        assert kept["openalex_key"] is True
         assert key not in json.dumps(kept)
+        assert "openalex-secret-value" not in json.dumps(kept)
         secrets = json.loads((tmp_path / "setup.secrets.json").read_text(encoding="utf-8"))
         assert secrets["ESSAY_WRITER_CONSENSUS_PAID"] == flag
+        assert secrets["OPENALEX_API_KEY"] == "openalex-secret-value"
         assert "search_warning" not in kept
 
     email_only = essay_setup(
@@ -480,6 +485,39 @@ def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, 
     assert "Unpaywall free PDF lookup will not run" in key_only["search_warning"]
     assert "Consensus dig will not run" not in key_only["search_warning"]
     assert key not in json.dumps(key_only)
+    missing_openalex = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        consensus_api_key=key,
+        unpaywall_email="reader@example.com",
+        consensus_plan="free",
+    )
+    assert missing_openalex["skipped_searches"] == ["openalex"]
+    assert "OpenAlex still runs." in missing_openalex["search_warning"]
+    assert "rate-limited" in missing_openalex["search_warning"]
+    assert "Consensus dig will not run" not in missing_openalex["search_warning"]
+    assert "Unpaywall free PDF lookup will not run" not in missing_openalex["search_warning"]
+    refused_openalex = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        consensus_api_key=key,
+        unpaywall_email="reader@example.com",
+        consensus_plan="free",
+    )
+    assert refused_openalex["ok"] is False
+    assert refused_openalex["wrote"] is False
+    with_openalex = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        unpaywall_email="reader@example.com",
+        openalex_api_key="openalex-secret-value",
+    )
+    assert "OpenAlex uses the stored key." in with_openalex["search_warning"]
+    assert "OpenAlex still runs." not in with_openalex["search_warning"]
+    assert "openalex-secret-value" not in json.dumps(with_openalex)
 
 
 def test_free_pdf_lookup_uses_the_doi_endpoint_and_openalex_best_oa_location():

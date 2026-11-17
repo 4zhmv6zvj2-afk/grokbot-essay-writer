@@ -1,7 +1,7 @@
 """Confirm binds the side effects of stage 2, not just the arguments.
 
-Setup binds the Consensus key and the Unpaywall email by SHA-256, so a draft
-made with one value cannot be confirmed with another. Dig and research bind
+Setup binds the Consensus key, the Unpaywall email, and the OpenAlex key by
+SHA-256, so a draft made with one value cannot be confirmed with another. Dig and research bind
 the card that was shown with cardDigest, so a local edit to the draft
 record's `shown` field cannot change what confirm writes. Stage 5 is the one
 stage that stores on its draft and advances with no card; that exception is
@@ -38,7 +38,9 @@ FULL_TOOL_DIR = "essay.research.full"
 
 SETUP_KEY = "consensus-key-alpha"
 SETUP_EMAIL = "reader@example.com"
+SETUP_OPENALEX = "openalex-key-alpha"
 OTHER_KEY = "consensus-key-beta"
+OTHER_OPENALEX = "openalex-key-beta"
 
 
 def _draft_path(essay_id: str, tool: str, payload_digest: str):
@@ -68,6 +70,7 @@ def _setup_args(tmp_path):
         "kb1_path": str(tmp_path / "KB1"),
         "consensus_api_key": SETUP_KEY,
         "unpaywall_email": SETUP_EMAIL,
+        "openalex_api_key": SETUP_OPENALEX,
         "consensus_plan": "pro",
     }
 
@@ -84,19 +87,24 @@ def test_setup_draft_binds_key_and_email_by_hash(tmp_path, monkeypatch):
     assert draft["ok"] is True, draft
     assert draft["consensus_key"] is True
     assert draft["unpaywall_email"] is True
+    assert draft["openalex_key"] is True
     dumped = json.dumps(draft)
     assert SETUP_KEY not in dumped
     assert SETUP_EMAIL not in dumped
+    assert SETUP_OPENALEX not in dumped
 
     record = _read_draft("setup", SETUP_TOOL_DIR, draft["digest"])
     payload = record["payload"]
     assert payload["consensus_key"] is True
     assert payload["unpaywall_email"] is True
+    assert payload["openalex_key"] is True
     assert payload["consensus_key_sha256"] == hashlib.sha256(SETUP_KEY.encode()).hexdigest()
     assert payload["unpaywall_email_sha256"] == hashlib.sha256(SETUP_EMAIL.encode()).hexdigest()
+    assert payload["openalex_key_sha256"] == hashlib.sha256(SETUP_OPENALEX.encode()).hexdigest()
     record_text = json.dumps(record)
     assert SETUP_KEY not in record_text
     assert SETUP_EMAIL not in record_text
+    assert SETUP_OPENALEX not in record_text
 
 
 def test_setup_same_values_confirm_and_a_changed_key_is_refused(tmp_path, monkeypatch):
@@ -112,6 +120,12 @@ def test_setup_same_values_confirm_and_a_changed_key_is_refused(tmp_path, monkey
     assert changed["refused"] == "confirm"
     assert changed["wrote"] is False
     assert "not waiting to be saved" in changed["reason"].casefold()
+    changed_openalex = essay_setup(
+        **{**_setup_args(tmp_path), "openalex_api_key": OTHER_OPENALEX, "confirmPhase": "confirm"}
+    )
+    assert changed_openalex["ok"] is False, changed_openalex
+    assert changed_openalex["refused"] == "confirm"
+    assert OTHER_OPENALEX not in json.dumps(changed_openalex)
     assert not (tmp_path / "app").exists()
     assert not (tmp_path / "setup.json").exists()
 
@@ -130,6 +144,7 @@ def test_setup_old_draft_without_hashes_cannot_be_confirmed(tmp_path, monkeypatc
     record = _read_draft("setup", SETUP_TOOL_DIR, draft["digest"])
     del record["payload"]["consensus_key_sha256"]
     del record["payload"]["unpaywall_email_sha256"]
+    del record["payload"]["openalex_key_sha256"]
     _write_draft("setup", SETUP_TOOL_DIR, record)
 
     refused = essay_setup(**{**_setup_args(tmp_path), "confirmPhase": "confirm"})

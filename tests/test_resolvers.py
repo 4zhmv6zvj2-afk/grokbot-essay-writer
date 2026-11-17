@@ -16,6 +16,39 @@ def test_free_and_paid_allow_lists():
     assert "scopus" in PAID_RESOLVERS
 
 
+def test_openalex_lookup_sends_the_key_when_one_is_stored(monkeypatch):
+    from essay_writer import resolvers
+
+    seen: dict[str, str] = {}
+    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+    monkeypatch.setenv("OPENALEX_API_KEY", "oa-key-not-echoed")
+
+    def fake(url):
+        seen["url"] = url
+        return None
+
+    monkeypatch.setattr(resolvers, "_lookup_json", fake)
+    resolvers.openalex_lookup("chokepoints")
+    assert "api_key=oa-key-not-echoed" in seen["url"]
+
+
+def test_openalex_lookup_sends_no_key_when_none_is_stored(monkeypatch):
+    from essay_writer import resolvers
+
+    seen: dict[str, str] = {}
+    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+    monkeypatch.delenv("OPENALEX_API_KEY", raising=False)
+    monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
+
+    def fake(url):
+        seen["url"] = url
+        return None
+
+    monkeypatch.setattr(resolvers, "_lookup_json", fake)
+    resolvers.openalex_lookup("chokepoints")
+    assert "api_key" not in seen["url"]
+
+
 def test_saved_crossref_sample_matches_title():
     record = crossref_lookup(FIXTURE_TITLE, fetch=fixture_crossref_fetch)
     assert record is not None

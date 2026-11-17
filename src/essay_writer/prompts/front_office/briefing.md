@@ -214,11 +214,11 @@ essay.dig writes a local dig card (dig-card.json and dig-card.md) after draft th
 After that bibliography is confirmed, essay.download.leftovers fetches leftover free-alternative addresses already stored.
 Draft lists them and writes nothing.
 Confirm does not open a new look-up, does not call Consensus or Unpaywall, and does not invent an address.
-OpenAlex needs no key.
+OpenAlex runs without a key. Keyless calls share a small daily budget with everyone on the network address, and OpenAlex can rate-limit them. Ordinary setup collects a free OpenAlex key on the secret card; that key raises the budget. When essay.dig returns lookup_note, say it. A refused look-up is not an empty result.
 Unpaywall runs only when an email is stored.
 A Consensus key turns Consensus on for the search. No key leaves Consensus off and the search stays on OpenAlex.
 ESSAY_WRITER_CONSENSUS=0 turns Consensus off and health says so.
-Ordinary setup collects the Consensus key, the Consensus plan, and the Unpaywall email on the secret card, then passes them to essay.setup.
+Ordinary setup collects the Consensus key, the Consensus plan, the Unpaywall email, and the OpenAlex key on the secret card, then passes them to essay.setup.
 
 The Consensus key is for academic research search: it finds papers for the research step. Consensus's help center says the API is how a tool programmatically searches academic research and retrieves relevant papers: https://help.consensus.app/en/articles/16516328-the-consensus-api
 
@@ -228,9 +228,11 @@ Ask which Consensus plan they have. Free stores ESSAY_WRITER_CONSENSUS_PAID as 0
 
 The email is for Unpaywall free-PDF lookup. Unpaywall's API docs say a request must include the email as ?email=YOUR_EMAIL, and they ask for at most 100,000 calls a day: https://unpaywall.org/products/api . OpenAlex, from the same team, asks for an email where they can contact you if a script goes wrong, and says that approach is copied from Crossref: https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md . Crossref's REST API FAQ answers "Will you spam me with marketing bumf once you have our contact info?" with "No. We will only use it to contact you about problems with your scripts." https://github.com/CrossRef/rest-api-doc/blob/master/README.md . Say that limit, attributed to the Crossref FAQ by way of OpenAlex. Do not say that Unpaywall's own page promised never to email.
 
-If the user skips the Consensus key, the Unpaywall email, or both, show the warning before the skip is accepted. Consensus is not used when the key is missing. Unpaywall free PDF lookup will not run when the email is missing. OpenAlex still runs. After an explicit yes to that warning, call essay.setup with confirmPhase draft, acknowledge_skipped_searches true, and the same other arguments. Show that result. After another explicit yes, call essay.setup with confirmPhase confirm and those same arguments. A confirm that skips without acknowledge_skipped_searches writes nothing.
+The OpenAlex key raises the free look-up budget. OpenAlex's authentication page says to make an account at openalex.org, then copy the key from Settings → API key: https://help.openalex.org/api/authentication/ . The settings page is https://openalex.org/settings/api . A free key includes $1 of usage per day. Calls with no key share $0.10 per day on that network address, and OpenAlex can rate-limit them: https://help.openalex.org/access/pricing/ . Pass that key to essay.setup as openalex_api_key.
 
-Do not ask the user to edit a .env file. Do not repeat the key or the email.
+If the user skips the Consensus key, the Unpaywall email, the OpenAlex key, or any of them, show the warning before the skip is accepted. Consensus is not used when the key is missing. Unpaywall free PDF lookup will not run when the email is missing. OpenAlex still runs without a key, on a small daily budget shared with everyone on the same network address, and that budget can be rate-limited. A free OpenAlex key raises that budget. After an explicit yes to that warning, call essay.setup with confirmPhase draft, acknowledge_skipped_searches true, and the same other arguments. Show that result. After another explicit yes, call essay.setup with confirmPhase confirm and those same arguments. A confirm that skips without acknowledge_skipped_searches writes nothing.
+
+Do not ask the user to edit a .env file. Do not repeat the key, the email, or the OpenAlex key.
 
 ESSAY_WRITER_CONSENSUS=1 turns it on when a key is present. Do not invent a paper the look-up did not return.
 When Unpaywall returns an open address, confirm downloads it and keeps the file only when the

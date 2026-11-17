@@ -76,20 +76,15 @@ def test_ac1_first_run_installs_agent_on_grok_bot_computer_only():
     assert "hash mismatch or a network failure stops the install" in text
 
 
-def test_ac2_friend_prompt_stays_short_and_names_the_chat():
-    """AC2. FRIEND-PROMPT names Essay Bot, Cursor, Build, and agent install, and omits operator filenames."""
-    text, _copy = _both("FRIEND-PROMPT.txt")
-    assert "Essay Bot" in text
-    assert "defaults to Cursor" in text
-    assert "Grok Build" in text
-    assert "prefer" in text.casefold()
-    assert "missing" in text.casefold()
-    assert "install" in text.casefold()
-    assert "FIRST-RUN" in text
-    assert "python" not in text.casefold()
-    assert "mcp" not in text.casefold()
-    assert "CreateBotShareJson" not in text
-    assert "essay-reviewer" not in text.casefold()
+def test_ac2_the_public_package_does_not_ship_a_friend_prompt():
+    """AC2. The friend prompt is local-only. FIRST-RUN is the public setup manual."""
+    root = package_root()
+    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+    manifest = (root / "MANIFEST.in").read_text(encoding="utf-8")
+    assert "FRIEND-PROMPT" not in pyproject
+    assert "FRIEND-PROMPT" not in manifest
+    assert "FIRST-RUN.txt" in pyproject
+    assert "FIRST-RUN.txt" in manifest
 
 
 def test_ac3_installer_runs_only_when_agent_is_absent(monkeypatch):
@@ -299,29 +294,25 @@ def test_ac6_reviewer_mac_four_way_and_secret_skip_stay():
     assert "acknowledge_skipped_searches" in text
 
 
-def test_login_consensus_and_mac_cards_are_in_both_prompts():
+def test_login_consensus_and_mac_cards_are_in_first_run():
     """Takeover login card, host handoff, skip, Grok Build skip, Consensus, Mac."""
     first, _packaged = _both("FIRST-RUN.txt")
-    friend, _friend_copy = _both("FRIEND-PROMPT.txt")
-    for text in (first, friend):
-        assert LOGIN_CARD in text
-        assert HOST_HANDOFF in text
-        assert OLD_LOGIN_WINDOW not in text
-        assert "Wait for that yes before" in text
-        assert "setup confirm" in text
-        assert "agent status" in text
-        assert "CURSOR_API_KEY is already on the machine" in text
-        assert "Do not put a key in chat." in text
-        assert "Do not put a login URL in chat." in text
-        assert GROK_BUILD_SKIP in text
-        assert MAC_CARD in text
-        assert CONSENSUS_CARD in text
+    assert LOGIN_CARD in first
+    assert HOST_HANDOFF in first
+    assert OLD_LOGIN_WINDOW not in first
+    assert "Wait for that yes before" in first
+    assert "setup confirm" in first
+    assert "agent status" in first
+    assert "CURSOR_API_KEY is already on the machine" in first
+    assert "Do not put a key in chat." in first
+    assert "Do not put a login URL in chat." in first
+    assert GROK_BUILD_SKIP in first
+    assert MAC_CARD in first
+    assert CONSENSUS_CARD in first
     assert "before essay.setup confirm" in first
     assert "run agent login while the person holds that desktop" in first
     assert "run agent status before essay.setup confirm" in first
     assert "use the same cursor account as essay bot" in first.casefold()
-    assert "CreateBotShareJson" not in friend
-    assert "mcp" not in friend.casefold()
 
 
 def test_enable_mcp_server_runs_the_real_branch_with_a_fake_runner():

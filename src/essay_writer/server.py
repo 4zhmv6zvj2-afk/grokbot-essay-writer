@@ -302,6 +302,24 @@ def main(argv: list[str] | None = None) -> None:
         json.dump(essay_health(), sys.stdout, indent=2)
         sys.stdout.write("\n")
         return
+    if args == ["--check-update"]:
+        from essay_writer.update import check_update
+
+        payload = check_update()
+        json.dump(payload, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        if payload.get("ok") is not True:
+            raise SystemExit(1)
+        return
+    if args in (["--update"], ["--update", "--force"]):
+        from essay_writer.update import apply_update
+
+        payload = apply_update(force=args[-1] == "--force")
+        json.dump(payload, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        if payload.get("ok") is not True:
+            raise SystemExit(1)
+        return
     if args == ["--debug-export"]:
         payload = essay_debug_export()
         json.dump(payload, sys.stdout, indent=2)
@@ -353,7 +371,8 @@ def main(argv: list[str] | None = None) -> None:
         return
     if args:
         raise SystemExit(
-            "usage: essay-writer [--health | --debug-export | --reviewer | --stage-launch STAGE | "
+            "usage: essay-writer [--health | --check-update | --update [--force] | "
+            "--debug-export | --reviewer | --stage-launch STAGE | "
             "--cursor-stage-launch STAGE | "
             "--read-photo PATH | --install-upload ZIP [--upload-sha256 SHA256] [--no-reviewer] "
             "[--install-cursor] [--cursor-sha256 SHA256] | "

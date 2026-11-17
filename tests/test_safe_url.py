@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import io
 import socket
+import ssl
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 import pytest
 
@@ -260,6 +262,30 @@ def test_the_private_opener_carries_the_guarded_redirect_handler(monkeypatch):
     assert guarded
 
 
+def test_the_https_context_still_verifies_certificates(monkeypatch):
+    monkeypatch.setattr(safe_url, "_SSL_CONTEXT", None)
+    context = safe_url._ssl_context()
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+
+
+def test_the_https_opener_uses_that_context(monkeypatch):
+    monkeypatch.setattr(safe_url, "_DEFAULT_OPENER", None)
+    monkeypatch.setattr(safe_url, "_SSL_CONTEXT", None)
+    opener = safe_url._opener()
+    handlers = [
+        handler for handler in opener.handlers if isinstance(handler, urllib.request.HTTPSHandler)
+    ]
+    assert handlers
+    assert handlers[0]._context.verify_mode == ssl.CERT_REQUIRED
+
+
+def test_a_discovered_ca_bundle_is_a_readable_file():
+    bundle = safe_url._ca_bundle()
+    if bundle is not None:
+        assert Path(bundle).is_file()
+
+
 def test_downloads_map_a_blocked_url_to_an_empty_download():
     assert downloads.fetch_url("http://127.0.0.1/paper.pdf") == (0, None, b"")
     assert downloads.fetch_url("file:///etc/passwd") == (0, None, b"")
@@ -288,15 +314,40 @@ def test_downloads_map_an_oversize_paper_to_an_empty_download(monkeypatch):
     assert downloads.fetch_url("https://api.example.org/paper.pdf") == (0, None, b"")
 
 
-def test_dig_maps_a_blocked_url_to_none():
-    assert dig._get_json("http://169.254.169.254/latest/meta-data/") is None
+def test_dig_maps_a_blocked_url_to_a_refusal():
+    with pytest.raises(dig.LookupRefused) as caught:
+        dig._get_json("http://169.254.169.254/latest/meta-data/")
+    assert caught.value.status == 0
+    assert "non-public" in caught.value.detail
 
 
-def test_dig_maps_an_oversize_lookup_to_none(monkeypatch):
+def test_dig_maps_an_oversize_lookup_to_a_refusal(monkeypatch):
     _public_dns(monkeypatch)
     monkeypatch.setattr(dig, "MAX_API_BYTES", 8)
     _fake_open(monkeypatch, FakeRaw(b'{"results": []}'))
-    assert dig._get_json("https://api.openalex.org/works?search=x") is None
+    with pytest.raises(dig.LookupRefused):
+        dig._get_json("https://api.openalex.org/works?search=x")
+
+
+def test_a_refused_lookup_keeps_its_status_and_detail(monkeypatch):
+    _public_dns(monkeypatch)
+
+    def refused(request, timeout):
+        raise urllib.error.HTTPError(
+            request.full_url,
+            401,
+            "Unauthorized",
+            {"Content-Type": "application/json"},
+            io.BytesIO(b'{"detail": "Invalid authentication credentials."}'),
+        )
+
+    monkeypatch.setattr(safe_url, "_open", refused)
+    with pytest.raises(dig.LookupRefused) as caught:
+        dig._get_json("https://api.consensus.app/v1/search?query=x")
+    assert caught.value.record() == {
+        "status": 401,
+        "detail": "Invalid authentication credentials.",
+    }
 
 
 def test_resolvers_map_a_blocked_or_oversize_lookup_to_none(monkeypatch):

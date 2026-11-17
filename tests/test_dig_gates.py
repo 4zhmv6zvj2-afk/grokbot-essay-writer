@@ -7,7 +7,15 @@ from pathlib import Path
 from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer import build_office
-from essay_writer.dig import consensus_status, essay_dig
+from essay_writer.dig import (
+    LookupRefused,
+    _card_markdown,
+    _dig_reply,
+    consensus_search,
+    consensus_status,
+    essay_dig,
+    openalex_search,
+)
 from essay_writer.doors import DOORS
 from essay_writer.gates import essay_gates
 from essay_writer.health import essay_health
@@ -260,6 +268,79 @@ def test_missing_key_leaves_consensus_off_for_dig(workspace, monkeypatch):
     health = essay_health()
     assert health["consensus"]["enabled"] is False
     assert health["ok"] is True
+
+
+def test_health_reports_whether_an_openalex_key_is_stored(monkeypatch):
+    monkeypatch.delenv("OPENALEX_API_KEY", raising=False)
+    monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
+    assert essay_health()["openalex"] == {"key_present": False}
+    monkeypatch.setenv("OPENALEX_API_KEY", "oa-key-not-echoed")
+    health = essay_health()
+    assert health["openalex"] == {"key_present": True}
+    assert "oa-key-not-echoed" not in json.dumps(health)
+
+
+def test_an_openalex_key_is_sent_only_when_one_is_stored(monkeypatch):
+    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+    monkeypatch.setenv("OPENALEX_API_KEY", "oa-key-not-echoed")
+    seen: dict[str, str] = {}
+
+    def fake(url, headers=None):
+        seen["url"] = url
+        return {"results": []}
+
+    monkeypatch.setattr("essay_writer.dig._get_json", fake)
+    openalex_search("chokepoints")
+    assert "api_key=oa-key-not-echoed" in seen["url"]
+    monkeypatch.delenv("OPENALEX_API_KEY")
+    monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
+    openalex_search("chokepoints")
+    assert "api_key" not in seen["url"]
+    assert "oa-key-not-echoed" not in json.dumps(seen)
+
+
+def test_a_refused_lookup_is_not_reported_as_no_hits(monkeypatch):
+    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+    monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "1")
+    monkeypatch.setenv("CONSENSUS_API_KEY", "key-not-echoed")
+
+    def refused(url, headers=None):
+        raise LookupRefused(429, "daily budget used up")
+
+    monkeypatch.setattr("essay_writer.dig._get_json", refused)
+    openalex = openalex_search("chokepoints")
+    consensus = consensus_search("chokepoints")
+    assert openalex["refused"] == {"status": 429, "detail": "daily budget used up"}
+    assert openalex["hits"] == []
+    assert consensus["refused"]["status"] == 429
+    assert "key-not-echoed" not in json.dumps({"openalex": openalex, "consensus": consensus})
+
+
+def test_the_dig_card_and_reply_name_a_refusal():
+    card = {
+        "openalex": {
+            "called": True,
+            "hits": [],
+            "refused": {"status": 429, "detail": "daily budget used up"},
+        },
+        "consensus": {
+            "called": True,
+            "tier": None,
+            "hits": [],
+            "refused": {"status": 401, "detail": "Invalid authentication credentials."},
+            "switch": "1",
+            "enabled": True,
+            "key_present": True,
+            "remind": "Consensus is on.",
+        },
+        "unpaywall": [],
+    }
+    text = _card_markdown("chokepoints", "MOD1004AA-1", card)
+    assert "OpenAlex refused the look-up. HTTP 429: daily budget used up" in text
+    assert "Consensus refused the look-up. HTTP 401: Invalid authentication credentials." in text
+    reply = _dig_reply("MOD1004AA-1", "chokepoints", "draft", card)
+    assert "OpenAlex refused the look-up" in reply["lookup_note"]
+    assert "Consensus refused the look-up" in reply["lookup_note"]
 
 
 def test_confirm_without_draft_writes_nothing_when_consensus_is_on(workspace, monkeypatch):

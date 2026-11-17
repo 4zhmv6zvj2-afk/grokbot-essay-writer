@@ -5,14 +5,16 @@ Set up essay writer from this copy. You talk to the user. File work does not own
 This file is operator setup. Do not read these install steps into student chat. The Basics checklist stays internal. A new student starts a new essay. Do not continue a leftover module on this computer unless they name that sequence. Do not delete a leftover module.
 
 First-time install
-When no Mac folder is remembered yet, show the four-way Essay Bot folder card. OK creates Documents/Essay Bot; another needs a path; later or skip without a path stays chat-only — do not say the Mac folder is ready. On this computer, install the Cursor agent when missing, then agent login when agent status is not logged in and CURSOR_API_KEY is not already on the machine. Collect Consensus on the secret card when the key is not already saved. Then unpack, pip install, MCP attach, Mac handoff when chosen, and essay.setup as below.
+When no Mac folder is remembered yet, show the four-way Essay Bot folder card. OK creates Documents/Essay Bot; another needs a path; later or skip without a path stays chat-only — do not say the Mac folder is ready. On this computer, install the Cursor agent when missing, then agent login when agent status is not logged in and CURSOR_API_KEY is not already on the machine. Collect Consensus and the OpenAlex key on the secret card when they are not already saved. Then unpack, pip install, MCP attach, Mac handoff when chosen, and essay.setup as below.
 
 Update install
-Replace the app from a new friend zip with essay-writer --install-upload /path/to/the.zip, or unpack this copy and run python first_run.py as below, which installs the hash-pinned runtime dependencies before the project. Keep the remembered Mac folder and existing Cursor login. Do not re-show the four-way card when ESSAY_WRITER_MAC_DIR is already saved. Do not re-show the sign-in card when agent status shows logged in or CURSOR_API_KEY is already on the machine. After install or upgrade, install_self_check runs essay.health; the report should be alive and name the tool count. `build_commit` names the commit this copy was built from. When the zip includes a CHANGELOG, it repeats that commit. Then re-read this file and docs/templates/bot.md; do not recite install steps in student chat.
+An installed app updates in place from GitHub. Run essay-writer --check-update; it names the current version, the newest release, and whether an update is available. When one is, run essay-writer --update. It downloads the release source archive and SHA256SUMS from the GitHub release, verifies the checksum, installs the hash-pinned runtime dependencies and the new package into the existing environment, then runs essay.health. The update does not touch /workspace/Essay-writer: the setup record, the stored keys, the remembered Mac folder, and the essays stay. It does not re-run essay.setup, the four-way card, or the sign-in card. Start a new session after the update so the host launches the new code, then run essay-writer --health and confirm the new version and that it is alive. A git checkout updates with git pull; --update refuses a source checkout and says so. Pass --force to replace a source checkout with the release package. A copy that has no --update command yet updates once through the download and first_run.py above. If the GitHub download is unavailable, the same release can be installed offline from a zip with essay-writer --install-upload /path/to/the.zip.
 
-When this copy arrived as a friend zip, do not also clone a git URL for the same install. A normal git clone of the public repo is fine for developers.
+A normal git clone of the public repo is for developers. A friend install downloads the GitHub release.
 
-This zip is the copy. In this same turn, unpack it on this computer and install it. Do not split unpack, install, and Custom MCP attach across turns, and do not ask the user to do those steps.
+First install from a download. In this same turn, download the copy on this computer and install it. Do not split download, install, and Custom MCP attach across turns, and do not ask the user to do those steps.
+
+Get the latest release at https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/latest. Download the essay_writer-<version>.tar.gz source archive and SHA256SUMS, verify the archive against that file, and unpack it. Do not use the Source code zip for this download.
 
 When /workspace exists, unpack to /workspace/essay-writer-install. Otherwise unpack only to a folder the user names on this computer. Do not fall back to Documents and call it this computer.
 
@@ -42,7 +44,7 @@ Essay Bot is the chat. File work stays the pick in this file: Cursor by default,
 
 The install folder is `/workspace/essay-writer-install` when `/workspace` exists. `~/.grok` is the grok config home, not a second install folder.
 
-If essay-writer is already installed, one command unpacks the zip and installs it:
+If essay-writer is already installed, the normal update is essay-writer --check-update then essay-writer --update. For an offline or damaged install, the installer can still unpack a zip and install it:
 
 essay-writer --install-upload /path/to/the.zip
 
@@ -80,7 +82,7 @@ A folder path copies each .docx and .zip in that folder and leaves every other f
 
 Show this card: "Open Consensus → API keys → New key → paste once on the secret card. Ask Free or Pro."
 
-Ordinary setup collects the Consensus key, the Consensus plan, and the Unpaywall email on the setup secret card, then passes them to essay.setup.
+Ordinary setup collects the Consensus key, the Consensus plan, the Unpaywall email, and the OpenAlex key on the setup secret card, then passes them to essay.setup.
 
 The Consensus key is for academic research search: it finds papers for the research step. Consensus's help center says the API is how a tool programmatically searches academic research and retrieves relevant papers: https://help.consensus.app/en/articles/16516328-the-consensus-api
 
@@ -90,8 +92,10 @@ Ask which Consensus plan they have. Free stores ESSAY_WRITER_CONSENSUS_PAID as 0
 
 The email is for Unpaywall free-PDF lookup. Unpaywall's API docs say a request must include the email as ?email=YOUR_EMAIL, and they ask for at most 100,000 calls a day: https://unpaywall.org/products/api . OpenAlex, from the same team, asks for an email where they can contact you if a script goes wrong, and says that approach is copied from Crossref: https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md . Crossref's REST API FAQ answers "Will you spam me with marketing bumf once you have our contact info?" with "No. We will only use it to contact you about problems with your scripts." https://github.com/CrossRef/rest-api-doc/blob/master/README.md . Say that limit, attributed to the Crossref FAQ by way of OpenAlex. Do not say that Unpaywall's own page promised never to email.
 
-If the user skips the Consensus key, the Unpaywall email, or both, show the warning before the skip is accepted. Consensus is not used when the key is missing. Unpaywall free PDF lookup will not run when the email is missing. OpenAlex still runs. After an explicit yes to that warning, call essay.setup with confirmPhase draft, acknowledge_skipped_searches true, and the same other arguments. Show that result. After another explicit yes, call essay.setup with confirmPhase confirm and those same arguments. A confirm that skips without acknowledge_skipped_searches writes nothing.
+The OpenAlex key raises the free look-up budget. OpenAlex's authentication page says to make an account at openalex.org, then copy the key from Settings → API key: https://help.openalex.org/api/authentication/ . The settings page is https://openalex.org/settings/api . A free key includes $1 of usage per day. Calls with no key share $0.10 per day on that network address, and OpenAlex can rate-limit them: https://help.openalex.org/access/pricing/ . Pass that key to essay.setup as openalex_api_key.
 
-Do not ask the user to edit a .env file. Do not repeat the key or the email.
+If the user skips the Consensus key, the Unpaywall email, the OpenAlex key, or any of them, show the warning before the skip is accepted. Consensus is not used when the key is missing. Unpaywall free PDF lookup will not run when the email is missing. OpenAlex still runs without a key, on a small daily budget shared with everyone on the same network address, and that budget can be rate-limited. A free OpenAlex key raises that budget. After an explicit yes to that warning, call essay.setup with confirmPhase draft, acknowledge_skipped_searches true, and the same other arguments. Show that result. After another explicit yes, call essay.setup with confirmPhase confirm and those same arguments. A confirm that skips without acknowledge_skipped_searches writes nothing.
+
+Do not ask the user to edit a .env file. Do not repeat the key, the email, or the OpenAlex key.
 
 When the folders exist, reply with the folder paths. Then stop.

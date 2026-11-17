@@ -65,18 +65,16 @@ def test_ac4_health_reports_the_build_commit(monkeypatch, workspace):
     assert project["project"]["version"] == __version__
 
 
-def test_ac5_the_friend_docs_point_at_build_commit():
-    """AC5. The update check names build_commit in both prompt copies and the workflow."""
-    for name in ("FRIEND-PROMPT.txt", "src/essay_writer/FRIEND-PROMPT.txt"):
-        text = (REPO / name).read_text(encoding="utf-8")
-        assert "`build_commit`" in text
-        assert "commit this copy was built from" in text
-        assert "when the zip includes" in text.casefold()
+def test_ac5_the_update_path_is_named_in_first_run_and_readme():
+    """AC5. First-run and README name the update CLI; health names the version."""
     for name in ("FIRST-RUN.txt", "src/essay_writer/FIRST-RUN.txt"):
         text = (REPO / name).read_text(encoding="utf-8")
-        assert "`build_commit`" in text
-        assert "when the zip includes" in text.casefold()
+        assert "--check-update" in text
+        assert "--update" in text
+        assert "`build_commit`" not in text
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    assert "--check-update" in readme
+    assert "--update" in readme
     workflow = (REPO / "docs" / "workflow.md").read_text(encoding="utf-8")
-    assert "`build_commit`" in workflow
-    assert "CHANGELOG" in workflow
-    assert "when the zip includes" in workflow.casefold()
+    assert "--check-update" in workflow
+    assert "`build_commit`" not in workflow

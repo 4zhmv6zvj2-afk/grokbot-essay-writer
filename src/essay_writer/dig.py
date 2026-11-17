@@ -1,4 +1,4 @@
-"""Local dig card. OpenAlex needs no key. Consensus runs only when allowed.
+"""Local dig card. OpenAlex runs without a key. Consensus runs only when allowed.
 
 Draft writes nothing. It stores the card that was shown, including Unpaywall
 rows. Confirm writes that stored card to dig-card.json and dig-card.md.
@@ -30,7 +30,12 @@ from essay_writer.confirm import (
 from essay_writer.downloads import BUCKET_LABELS, run_downloads
 from essay_writer.known_paths import guard_write_door
 from essay_writer.paths import module_code, sequence_write_error, uploads_dir, work_dir
-from essay_writer.resolvers import resolver_mode, unpaywall_doi_url, unpaywall_email
+from essay_writer.resolvers import (
+    openalex_api_key,
+    resolver_mode,
+    unpaywall_doi_url,
+    unpaywall_email,
+)
 from essay_writer.setup import read_setup_secret
 from essay_writer.student_voice import say
 
@@ -40,6 +45,19 @@ CONSENSUS_URL = "https://api.consensus.app/v1/search"
 UNPAYWALL_URL = "https://api.unpaywall.org/v2/"
 MAX_API_BYTES = 2 * 1024 * 1024
 API_TIMEOUT = 20.0
+
+
+class LookupRefused(Exception):
+    """A look-up service answered with an error, or the fetch never connected."""
+
+    def __init__(self, status: int, detail: str) -> None:
+        super().__init__(detail)
+        self.status = int(status or 0)
+        self.detail = detail
+
+    def record(self) -> dict[str, Any]:
+        """What the card keeps. The request key is never part of it."""
+        return {"status": self.status, "detail": self.detail}
 
 
 def consensus_api_key() -> str | None:
@@ -106,8 +124,31 @@ def consensus_status() -> dict[str, Any]:
     return body
 
 
+def openalex_status() -> dict[str, Any]:
+    """Whether OpenAlex sends a key. The key itself is never included."""
+    return {"key_present": openalex_api_key() is not None}
+
+
+def _refusal_detail(status: int, body: bytes) -> str:
+    """One short reason from the error body. Never a request key."""
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        payload = None
+    if isinstance(payload, dict):
+        for name in ("detail", "message", "error"):
+            value = payload.get(name)
+            if isinstance(value, str) and value.strip():
+                return value.strip()[:200]
+    return f"HTTP {status}" if status else "the look-up did not answer"
+
+
 def _get_json(url: str, headers: dict[str, str] | None = None) -> dict[str, Any] | None:
-    """GET one look-up URL through safe_url. A refusal or miss is None."""
+    """GET one look-up URL through safe_url. A refusal raises LookupRefused.
+
+    The reason is kept so a bad key, an exhausted plan, or a blocked network
+    is not reported to the student as "no papers found".
+    """
     try:
         with safe_url.open_url(
             url,
@@ -115,9 +156,17 @@ def _get_json(url: str, headers: dict[str, str] | None = None) -> dict[str, Any]
             max_bytes=MAX_API_BYTES,
             headers=headers or {},
         ) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (safe_url.Refused, urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
-        return None
+            body = response.read()
+            status = int(getattr(response, "status", 200) or 200)
+            if status < 200 or status >= 300:
+                raise LookupRefused(status, _refusal_detail(status, body))
+            payload = json.loads(body.decode("utf-8"))
+    except LookupRefused:
+        raise
+    except json.JSONDecodeError:
+        raise LookupRefused(0, "the look-up did not return JSON") from None
+    except (safe_url.Refused, urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise LookupRefused(0, str(exc).strip()[:200] or "the look-up did not answer") from None
     if not isinstance(payload, dict):
         return None
     return payload
@@ -170,8 +219,15 @@ def _hit(
 def openalex_search(query: str) -> dict[str, Any]:
     if resolver_mode() == "off":
         return {"called": False, "skipped": "resolvers-off", "hits": []}
-    url = OPENALEX_URL + "?" + urllib.parse.urlencode({"search": query, "per-page": 5})
-    payload = _get_json(url, {"User-Agent": "essay-writer"})
+    params = {"search": query, "per-page": 5}
+    key = openalex_api_key()
+    if key:
+        params["api_key"] = key
+    url = OPENALEX_URL + "?" + urllib.parse.urlencode(params)
+    try:
+        payload = _get_json(url, {"User-Agent": "essay-writer"})
+    except LookupRefused as exc:
+        return {"called": True, "hits": [], "miss": "openalex", "refused": exc.record()}
     if payload is None:
         return {"called": True, "hits": [], "miss": "openalex"}
     hits: list[dict[str, Any]] = []
@@ -205,7 +261,16 @@ def consensus_search(query: str) -> dict[str, Any]:
     if not key:
         return {"called": False, "tier": None, "hits": [], "remind": status["remind"]}
     url = CONSENSUS_URL + "?" + urllib.parse.urlencode({"query": query})
-    payload = _get_json(url, {"x-api-key": key, "User-Agent": "essay-writer"})
+    try:
+        payload = _get_json(url, {"x-api-key": key, "User-Agent": "essay-writer"})
+    except LookupRefused as exc:
+        return {
+            "called": True,
+            "tier": None,
+            "hits": [],
+            "miss": "consensus",
+            "refused": exc.record(),
+        }
     if payload is None:
         return {"called": True, "tier": None, "hits": [], "miss": "consensus"}
     tier = payload.get("plan") or payload.get("tier")
@@ -236,7 +301,16 @@ def unpaywall_lookup(doi: str) -> dict[str, Any]:
     if resolver_mode() == "off":
         return {"called": False, "skipped": "resolvers-off", "doi": doi}
     url = unpaywall_doi_url(doi, email)
-    payload = _get_json(url, {"User-Agent": "essay-writer"})
+    try:
+        payload = _get_json(url, {"User-Agent": "essay-writer"})
+    except LookupRefused as exc:
+        return {
+            "called": True,
+            "doi": doi,
+            "oa_url": None,
+            "miss": "unpaywall",
+            "refused": exc.record(),
+        }
     if payload is None:
         return {"called": True, "doi": doi, "oa_url": None, "miss": "unpaywall"}
     location = payload.get("best_oa_location")
@@ -246,6 +320,19 @@ def unpaywall_lookup(doi: str) -> dict[str, Any]:
         if isinstance(candidate, str) and candidate.strip():
             oa_url = candidate.strip()
     return {"called": True, "doi": doi, "oa_url": oa_url}
+
+
+def _refused_lines(name: str, body: dict[str, Any]) -> list[str]:
+    """One line when the service refused the call. Empty on a real miss."""
+    refused = body.get("refused")
+    if not isinstance(refused, dict):
+        return []
+    status = refused.get("status")
+    detail = refused.get("detail")
+    if not isinstance(detail, str) or not detail.strip():
+        detail = "no reason given"
+    code = f"HTTP {status}: " if isinstance(status, int) and status else ""
+    return [f"- {name} refused the look-up. {code}{detail.strip()[:200]}"]
 
 
 def _card_markdown(query: str, essay_id: str, card: dict[str, Any]) -> str:
@@ -259,6 +346,7 @@ def _card_markdown(query: str, essay_id: str, card: dict[str, Any]) -> str:
         "",
         "## OpenAlex",
     ]
+    lines.extend(_refused_lines("OpenAlex", card["openalex"]))
     lines.extend(
         _hit_lines(card["openalex"]["hits"]) or ["- No OpenAlex hits. None were invented."]
     )
@@ -268,6 +356,7 @@ def _card_markdown(query: str, essay_id: str, card: dict[str, Any]) -> str:
         lines.append(f"Tier: {tier or 'unspecified'}")
     else:
         lines.append("Consensus was not called.")
+    lines.extend(_refused_lines("Consensus", card["consensus"]))
     lines.extend(
         _hit_lines(card["consensus"]["hits"]) or ["- No Consensus hits. None were invented."]
     )
@@ -278,6 +367,10 @@ def _card_markdown(query: str, essay_id: str, card: dict[str, Any]) -> str:
         for item in card["unpaywall"]:
             if item.get("skipped") == "no-email":
                 lines.append(f"- {item['doi']}: skipped, no email.")
+            elif item.get("refused"):
+                refused = item["refused"]
+                detail = str(refused.get("detail") or "no reason given")[:200]
+                lines.append(f"- {item['doi']}: the look-up was refused. {detail}")
             elif item.get("oa_url"):
                 lines.append(f"- {item['doi']}: {item['oa_url']}")
             else:
@@ -498,7 +591,7 @@ def _stored_dig_card(record: dict[str, Any]) -> dict[str, Any] | None:
 def _dig_reply(
     essay_id: str, query: str, confirmPhase: str, card: dict[str, Any]
 ) -> dict[str, Any]:
-    return {
+    body = {
         "ok": True,
         "essay_id": essay_id,
         "query": query,
@@ -515,6 +608,14 @@ def _dig_reply(
         },
         "invent_forbid": True,
     }
+    notes: list[str] = []
+    for name, entry in (("OpenAlex", card["openalex"]), ("Consensus", card["consensus"])):
+        for line in _refused_lines(name, entry):
+            notes.append(say(line.removeprefix("- ")))
+    if notes:
+        # A refused look-up is not an empty result. The front office says this.
+        body["lookup_note"] = " ".join(notes)
+    return body
 
 
 def essay_dig(

@@ -73,11 +73,13 @@ def test_prompt_text_ships_with_the_copy():
     assert "essay-writer" in text
     assert "--reviewer" in text
     assert "/workspace/essay-writer-install" in text
-    assert "do not also clone a git url" in text.casefold()
-    assert "public repo" in text.casefold()
+    assert "a normal git clone of the public repo is for developers" in text.casefold()
+    assert "a friend install downloads the github release" in text.casefold()
+    assert "releases/latest" in text
     cited = (
         "https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md",
         "https://github.com/CrossRef/rest-api-doc/blob/master/README.md",
+        "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/latest",
     )
     leftover = text
     for url in cited:

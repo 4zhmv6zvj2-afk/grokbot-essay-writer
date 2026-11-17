@@ -41,7 +41,7 @@ What the gate does not prevent: draft calls are not inert (they change those
 files before any confirm), and stage 5 stores its first draft and advances to
 stage 6 on its draft call by design, with no card. The card a side-effect door
 showed is bound to the draft by `cardDigest`, and `essay.setup` binds the
-Consensus key and Unpaywall email by SHA-256 instead of only their presence.
+Consensus key, Unpaywall email, and OpenAlex key by SHA-256 instead of only their presence.
 
 Trusted: the host model and its chat transport. They are trusted to relay the
 person's yes and no truthfully, to keep operator setup notes out of student
@@ -86,9 +86,10 @@ Recommendations, in order of value:
   its draft call by design, with no card. `essay.dig` and the research doors
   store the card they showed and bind it with `cardDigest`; the confirm call
   must send that digest, and a missing or different value is refused.
-  `essay.setup` includes a SHA-256 of the stripped Consensus key and Unpaywall
-  email in the draft, so the confirm call must repeat the same values; neither
-  value is echoed in a reply or written into the draft record.
+  `essay.setup` includes a SHA-256 of the stripped Consensus key, Unpaywall
+  email, and OpenAlex key in the draft, so the confirm call must repeat the
+  same values; none of those values is echoed in a reply or written into the
+  draft record.
 - Every fetch driven by model- or paper-supplied content goes through
   `safe_url` (paper downloads, research look-ups, and dig look-ups): only http
   and https, a host that resolves, every resolved address public (no loopback,
@@ -113,7 +114,7 @@ Recommendations, in order of value:
   goes. The zip is still a debug archive: review it before sharing it further.
 - Secret files are created with mode 0600 before any content is written, never
   written at 0644 and narrowed afterwards. That covers `setup.secrets.json` for
-  the optional Consensus key, Unpaywall email, and remembered Mac folder.
+  the optional Consensus key, Unpaywall email, OpenAlex key, and remembered Mac folder.
 - The `python first_run.py` entry point installs the hash-pinned runtime
   requirements (`requirements-runtime.txt` with `--require-hashes`) before the
   project install, which then runs with `--no-deps`. A hash mismatch or a

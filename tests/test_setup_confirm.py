@@ -79,13 +79,16 @@ def test_optional_secrets_are_stored_and_not_echoed(tmp_path, monkeypatch):
         confirmPhase="draft",
         consensus_api_key=key,
         unpaywall_email=email,
+        openalex_api_key="openalex-secret-value",
         consensus_plan="pro",
     )
     assert draft["wrote"] is False
     assert key not in json.dumps(draft)
     assert email not in json.dumps(draft)
+    assert "openalex-secret-value" not in json.dumps(draft)
     assert draft["consensus_key"] is True
     assert draft["unpaywall_email"] is True
+    assert draft["openalex_key"] is True
     skipped = essay_setup(app_path=str(app), kb1_path=str(kb1), confirmPhase="draft")
     assert skipped["consensus_key"] is False
     confirmed = essay_setup(
@@ -94,22 +97,88 @@ def test_optional_secrets_are_stored_and_not_echoed(tmp_path, monkeypatch):
         confirmPhase="confirm",
         consensus_api_key=key,
         unpaywall_email=email,
+        openalex_api_key="openalex-secret-value",
         consensus_plan="pro",
     )
     assert confirmed["wrote"] is True
     dumped = json.dumps(confirmed)
     assert key not in dumped
     assert email not in dumped
+    assert "openalex-secret-value" not in dumped
     record = json.loads((tmp_path / "setup.json").read_text(encoding="utf-8"))
     assert key not in json.dumps(record)
     assert email not in json.dumps(record)
+    assert "openalex-secret-value" not in json.dumps(record)
     assert record["consensus_key"] is True
+    assert record["openalex_key"] is True
     secrets = json.loads((tmp_path / "setup.secrets.json").read_text(encoding="utf-8"))
     assert secrets["CONSENSUS_API_KEY"] == key
     assert secrets["ESSAY_WRITER_UNPAYWALL_EMAIL"] == email
     assert secrets["ESSAY_WRITER_CONSENSUS_PAID"] == "1"
+    assert secrets["OPENALEX_API_KEY"] == "openalex-secret-value"
+    monkeypatch.delenv("OPENALEX_API_KEY", raising=False)
+    from essay_writer.resolvers import openalex_api_key as stored_openalex
+
+    assert stored_openalex() == "openalex-secret-value"
     mode = (tmp_path / "setup.secrets.json").stat().st_mode
     assert mode & stat.S_IRWXO == 0
+
+
+def test_a_later_setup_keeps_the_secrets_it_was_not_given(tmp_path, monkeypatch):
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
+    app = tmp_path / "app"
+    kb1 = tmp_path / "KB1"
+    essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        consensus_api_key="first-key",
+        unpaywall_email="reader@example.com",
+        openalex_api_key="first-openalex-key",
+        consensus_plan="pro",
+    )
+    first = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        consensus_api_key="first-key",
+        unpaywall_email="reader@example.com",
+        openalex_api_key="first-openalex-key",
+        consensus_plan="pro",
+    )
+    assert first["wrote"] is True
+    secret_path = tmp_path / "setup.secrets.json"
+    stored = json.loads(secret_path.read_text(encoding="utf-8"))
+    stored["ESSAY_WRITER_MAC_DIR"] = "/Users/reader/Documents/Essay Bot"
+    secret_path.write_text(json.dumps(stored) + "\n", encoding="utf-8")
+    essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        consensus_api_key="second-key",
+        consensus_plan="free",
+        acknowledge_skipped_searches=True,
+    )
+    second = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        consensus_api_key="second-key",
+        consensus_plan="free",
+        acknowledge_skipped_searches=True,
+    )
+    assert second["wrote"] is True
+    stored = json.loads(secret_path.read_text(encoding="utf-8"))
+    assert stored["CONSENSUS_API_KEY"] == "second-key"
+    assert stored["ESSAY_WRITER_CONSENSUS_PAID"] == "0"
+    assert stored["ESSAY_WRITER_UNPAYWALL_EMAIL"] == "reader@example.com"
+    assert stored["OPENALEX_API_KEY"] == "first-openalex-key"
+    assert stored["ESSAY_WRITER_MAC_DIR"] == "/Users/reader/Documents/Essay Bot"
+    record = json.loads((tmp_path / "setup.json").read_text(encoding="utf-8"))
+    assert record["consensus_key"] is True
+    assert record["unpaywall_email"] is True
+    assert record["openalex_key"] is True
 
 
 def test_named_save_on_the_cloud_computer_is_the_record_later_tools_read(tmp_path, monkeypatch):

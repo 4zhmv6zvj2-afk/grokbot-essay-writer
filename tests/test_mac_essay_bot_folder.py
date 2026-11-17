@@ -129,12 +129,10 @@ def test_ac3_named_other_folder_is_created_on_the_mac(tmp_path, monkeypatch):
 
 
 def test_ac4_prompts_still_say_the_four_way_card():
-    """AC4. Friend, first-run, and both setup prompts keep the four-way card."""
+    """AC4. First-run and both setup prompts keep the four-way card."""
     root_prompt, packaged = _prompt_copies("FIRST-RUN.txt")
-    friend, friend_packaged = _prompt_copies("FRIEND-PROMPT.txt")
     assert root_prompt == packaged == first_run_prompt()
-    assert friend == friend_packaged
-    for text in (root_prompt, friend, SETUP_PROMPT, CURSOR_SETUP_PROMPT, FIRST_RUN_MAC_SPEECH):
+    for text in (root_prompt, SETUP_PROMPT, CURSOR_SETUP_PROMPT, FIRST_RUN_MAC_SPEECH):
         assert MAC_FOUR_WAY_CARD in text
     assert "choose_mac_handoff" in FIRST_RUN_MAC_SPEECH
     assert FIRST_RUN_MAC_SPEECH in SETUP_PROMPT

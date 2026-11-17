@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.5 — 2026-11-17
+
+Free look-ups that the app could not make were reported as empty results, and every HTTPS call failed on a Python build with no CA bundle of its own.
+
+- `safe_url` now builds its HTTPS context from `certifi` when it is installed, then from `SSL_CERT_FILE`, then from the macOS, Red Hat, or Debian CA bundle. A python.org framework build with no `Install Certificates.command` used to fail every OpenAlex, Consensus, Unpaywall, and PDF request with `CERTIFICATE_VERIFY_FAILED`; both look-ups then looked dead.
+- A refused look-up keeps its HTTP status and reason on the dig card instead of becoming "no hits". An invalid Consensus key, a spent plan, an OpenAlex rate limit, or a blocked network now appears on `dig-card.md`, in the reply as `lookup_note`, and as `refused` on the card. `invent-forbid` is unchanged.
+- OpenAlex accepts a key from `OPENALEX_API_KEY` (environment or stored setup secret). Keyless calls share a small daily budget with everyone on the same network address, and OpenAlex rate-limits them under load; mailto no longer raises that budget. `essay.health` reports `openalex.key_present`.
+- Ordinary setup collects that OpenAlex key on the same secret card as the Consensus key and the Unpaywall email. `essay.setup` binds it by SHA-256, stores it as `OPENALEX_API_KEY`, and names the shared budget when the key is skipped. A later setup that omits it keeps a key already stored.
+- Debug export redacts `OPENALEX_API_KEY` values and `api_key=` query values.
+- The public tree ships `FIRST-RUN.txt` as the only setup manual. `FRIEND-PROMPT.txt` is no longer tracked, packaged, or copied into a release; it remains a local-only email prompt outside the public repo.
+- New `essay-writer --check-update` reads the newest GitHub release, and `essay-writer --update` verifies the release source archive against `SHA256SUMS` and upgrades the installed package in place. The essay tree, setup record, stored keys, and remembered Mac folder are not touched, and the setup cards are not shown again. A git checkout is refused unless `--force` is given.
+- A later `essay.setup` keeps the secrets it was not given. Before, confirming with only a key dropped the stored Unpaywall email and the remembered Mac handoff folder, and confirming with only the email dropped the key. The stored secrets file is merged, and the setup record reports the secrets that are actually on disk.
+
 ## 0.9.4 — 2026-11-15
 
 Student docs, the final-folder scheme, mark-fit notes, the unmounted-Mac line, the prompt-density pass, and the mid-office session-token fix.

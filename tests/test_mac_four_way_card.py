@@ -7,7 +7,6 @@ from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.first_run import (
     MAC_FOUR_WAY_CARD,
-    MAC_FOUR_WAY_FRIEND_SPEECH,
     choose_mac_handoff,
     copy_deliverable_to_mac,
     first_run_prompt,
@@ -43,15 +42,12 @@ def _prompt_copies(name: str) -> tuple[str, str]:
     return disk, packaged
 
 
-def test_ac1_first_run_and_friend_show_four_way_card():
-    """AC1. FIRST-RUN and FRIEND-PROMPT show OK / another / later / skip."""
+def test_ac1_first_run_shows_four_way_card():
+    """AC1. FIRST-RUN shows OK / another / later / skip."""
     root_run, packaged_run = _prompt_copies("FIRST-RUN.txt")
-    friend, friend_packaged = _prompt_copies("FRIEND-PROMPT.txt")
     assert root_run == packaged_run == first_run_prompt()
-    assert friend == friend_packaged
-    for text in (root_run, friend, SETUP_PROMPT, CURSOR_SETUP_PROMPT, FIRST_RUN_MAC_SPEECH):
+    for text in (root_run, SETUP_PROMPT, CURSOR_SETUP_PROMPT, FIRST_RUN_MAC_SPEECH):
         assert MAC_FOUR_WAY_CARD in text
-    assert MAC_FOUR_WAY_FRIEND_SPEECH in friend
     assert "do not say the mac folder is ready" in root_run.casefold()
 
 

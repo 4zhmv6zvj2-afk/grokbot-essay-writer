@@ -20,7 +20,9 @@ could still reach a private address. The https certificate check stays on.
 from __future__ import annotations
 
 import ipaddress
+import os
 import socket
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -183,13 +185,54 @@ class _GuardedRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 
 _DEFAULT_OPENER: urllib.request.OpenerDirector | None = None
+_SSL_CONTEXT: ssl.SSLContext | None = None
+_CA_FALLBACKS = (
+    "/etc/ssl/cert.pem",  # macOS system bundle
+    "/etc/pki/tls/certs/ca-bundle.crt",  # Red Hat family
+    "/etc/ssl/certs/ca-certificates.crt",  # Debian family
+)
+
+
+def _ca_bundle() -> str | None:
+    """A readable CA bundle. None means the interpreter's own defaults."""
+    try:
+        import certifi  # noqa: PLC0415 - optional, not a runtime dependency
+    except ImportError:
+        certifi = None
+    if certifi is not None:
+        try:
+            found = certifi.where()
+        except Exception:  # noqa: BLE001 - a broken certifi is not fatal
+            found = ""
+        if found and os.path.isfile(found):
+            return found
+    # A python.org framework build ships no CA file until "Install
+    # Certificates.command" is run. The OS bundle is the same trust store.
+    for candidate in (os.environ.get("SSL_CERT_FILE"), *_CA_FALLBACKS):
+        if candidate and os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def _ssl_context() -> ssl.SSLContext:
+    """The HTTPS trust store. Certificates still verify; the check stays on."""
+    global _SSL_CONTEXT
+    if _SSL_CONTEXT is None:
+        bundle = _ca_bundle()
+        _SSL_CONTEXT = (
+            ssl.create_default_context(cafile=bundle) if bundle else ssl.create_default_context()
+        )
+    return _SSL_CONTEXT
 
 
 def _opener() -> urllib.request.OpenerDirector:
     """One private opener with the guarded redirect handler. Tests patch this."""
     global _DEFAULT_OPENER
     if _DEFAULT_OPENER is None:
-        _DEFAULT_OPENER = urllib.request.build_opener(_GuardedRedirectHandler())
+        _DEFAULT_OPENER = urllib.request.build_opener(
+            _GuardedRedirectHandler(),
+            urllib.request.HTTPSHandler(context=_ssl_context()),
+        )
     return _DEFAULT_OPENER
 
 

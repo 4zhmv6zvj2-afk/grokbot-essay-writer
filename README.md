@@ -22,7 +22,7 @@ this repository is its source.
   designed exception: it stores the first draft and advances to stage 6 on its
   draft call, with no card. `essay.dig` and the research doors bind the card
   they showed with a `cardDigest` that confirm re-derives and requires, and
-  `essay.setup` binds the Consensus key and Unpaywall email by SHA-256 so the
+  `essay.setup` binds the Consensus key, Unpaywall email, and OpenAlex key by SHA-256 so the
   save call must repeat the same values. A typed yes, ok, or Confirm saves the
   waiting stage only when the host cannot send the card fields; a supplied card
   field still has to be the Confirm action; it never saves a later stage.
@@ -171,9 +171,33 @@ Essay Bot will ask, in the chat, for:
 1. Where Word files should be saved on your Mac (or skip for chat-only).
 2. Whether setup may install the Cursor CLI, then sign-in on the Grok Bot
    computer when setup asks for it.
-3. Your Consensus key and plan, and an email for free paper lookup.
+3. Your Consensus key and plan, an email for free paper lookup, and a free OpenAlex key.
 
 Paste keys only when the chat asks for a secret — not into ordinary messages.
+
+## Updating
+
+An installed copy updates from the newest GitHub release:
+
+```text
+essay-writer --check-update
+essay-writer --update
+```
+
+`--check-update` asks the release API for the newest version and prints the
+current version, the newest one, and whether an update is available. `--update`
+downloads the release source archive and `SHA256SUMS`, verifies the checksum,
+installs the hash-pinned runtime and the new package into the existing
+environment, then runs `essay.health`. The essay tree
+(`/workspace/Essay-writer`: setup record, stored keys, remembered Mac folder,
+essays) is not touched, and setup cards are not shown again. Start a new chat
+after the update so the host launches the new code.
+
+A git checkout updates with `git pull`; `--update` refuses a source checkout and
+says so. Pass `--force` to replace a source checkout with the release package.
+
+A copy older than the first release that carries `--update` updates once through
+the first-run download above. After that, the CLI handles updates.
 
 ## What setup does to the computer
 
@@ -181,7 +205,7 @@ On the Grok Bot computer, setup will:
 
 - Install the runtime dependencies from the hash-pinned `requirements-runtime.txt`
   first, then Essay Writer itself. A hash mismatch stops the install; nothing is
-  left half-installed. The `essay-writer --install-upload` update path requires
+  left half-installed. The `essay-writer --install-upload` offline path requires
   a `requirements-runtime.txt` in the zip before it unpacks anything, and never
   falls back to an unpinned install. A zip checksum is optional: pass
   `--upload-sha256`, or put a matching `essay-writer.zip.sha256` / `SHA256SUMS`
@@ -276,21 +300,21 @@ shasum -a 256 -c SHA256SUMS        # macOS; Linux: sha256sum -c SHA256SUMS
 # is this repository's Release workflow on main, where the workflow is
 # dispatched from.
 cosign verify-blob \
-  --bundle essay_writer-0.9.4-py3-none-any.whl.sigstore.json \
+  --bundle essay_writer-0.9.5-py3-none-any.whl.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.9.4-py3-none-any.whl
+  essay_writer-0.9.5-py3-none-any.whl
 
 cosign verify-blob \
-  --bundle essay_writer-0.9.4.tar.gz.sigstore.json \
+  --bundle essay_writer-0.9.5.tar.gz.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.9.4.tar.gz
+  essay_writer-0.9.5.tar.gz
 
 # Check the build provenance GitHub recorded for the release workflow:
-gh attestation verify essay_writer-0.9.4-py3-none-any.whl \
+gh attestation verify essay_writer-0.9.5-py3-none-any.whl \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
-gh attestation verify essay_writer-0.9.4.tar.gz \
+gh attestation verify essay_writer-0.9.5.tar.gz \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
 ```
 
@@ -305,7 +329,7 @@ the same pinned toolchain, and fails if the SHA-256 set differs. You can do the
 same check yourself:
 
 ```bash
-git checkout v0.9.4
+git checkout v0.9.5
 python -m pip install --require-hashes -r requirements-build.txt
 SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
     python tools/reproducible_build.py --outdir dist-rebuild

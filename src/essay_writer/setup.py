@@ -210,6 +210,23 @@ def _secrets_path(record_path: Path) -> Path:
     return record_path.parent / "setup.secrets.json"
 
 
+def _read_secret_dict(path: Path) -> dict[str, str]:
+    """Secrets already on disk. A missing, damaged, or non-object file keeps none."""
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {
+        key: value
+        for key, value in data.items()
+        if isinstance(key, str) and isinstance(value, str) and value.strip()
+    }
+
+
 def _write_secret_text(path: Path, text: str) -> None:
     """Create a secret file with mode 0600 before any content exists.
 
@@ -361,9 +378,9 @@ def parse_consensus_plan(plan: object) -> tuple[str | None, str | None]:
     )
 
 
-def search_warning(has_key: bool, has_email: bool) -> str | None:
-    """Name the searches that stay off. OpenAlex is unchanged."""
-    if has_key and has_email:
+def search_warning(has_key: bool, has_email: bool, has_openalex: bool) -> str | None:
+    """Name a skipped search. OpenAlex still runs without a key, on a shared budget."""
+    if has_key and has_email and has_openalex:
         return None
     parts: list[str] = []
     if not has_key:
@@ -372,7 +389,14 @@ def search_warning(has_key: bool, has_email: bool) -> str | None:
         parts.append(
             "Unpaywall free PDF lookup will not run, because no Unpaywall email was given."
         )
-    parts.append("OpenAlex still runs.")
+    if has_openalex:
+        parts.append("OpenAlex uses the stored key.")
+    else:
+        parts.append("OpenAlex still runs.")
+        parts.append(
+            "Those calls share a small daily budget with everyone on the same network address "
+            "and can be rate-limited."
+        )
     parts.append("Skip is saved only after this warning is confirmed.")
     return " ".join(parts)
 
@@ -391,6 +415,7 @@ def essay_setup(
     confirmPhase: str | None = None,
     consensus_api_key: str | None = None,
     unpaywall_email: str | None = None,
+    openalex_api_key: str | None = None,
     mid_office_shell: str | None = None,
     acknowledge_skipped_searches: bool = False,
     consensus_plan: str | None = None,
@@ -398,9 +423,10 @@ def essay_setup(
     """Draft shows the door tree and writes nothing. Confirm creates it.
 
     Omit the paths on the cloud computer. Name both paths to save on this
-    computer. A Consensus key and an Unpaywall email are collected on the
-    secret card and are not repeated in the reply. A skip writes nothing
-    until acknowledge_skipped_searches is true on a matching draft and confirm.
+    computer. A Consensus key, an Unpaywall email, and an OpenAlex key are
+    collected on the secret card and are not repeated in the reply. A skip
+    writes nothing until acknowledge_skipped_searches is true on a matching
+    draft and confirm.
     mid_office_shell is the one-time file-work pick: omit or Cursor for the
     default, or Grok Build when the user asks.
     """
@@ -455,6 +481,7 @@ def essay_setup(
 
     key = consensus_api_key.strip() if isinstance(consensus_api_key, str) else ""
     email = unpaywall_email.strip() if isinstance(unpaywall_email, str) else ""
+    oa = openalex_api_key.strip() if isinstance(openalex_api_key, str) else ""
     if email and "@" not in email:
         return refuse(
             "setup",
@@ -473,10 +500,14 @@ def essay_setup(
             wrote=False,
             needs_consensus_plan=True,
         )
-    warning = search_warning(bool(key), bool(email))
+    warning = search_warning(bool(key), bool(email), bool(oa))
     skipped = [
         name
-        for name, present in (("consensus", bool(key)), ("unpaywall", bool(email)))
+        for name, present in (
+            ("consensus", bool(key)),
+            ("unpaywall", bool(email)),
+            ("openalex", bool(oa)),
+        )
         if not present
     ]
     acked = acknowledge_skipped_searches is True
@@ -500,10 +531,12 @@ def essay_setup(
         "where": where,
         "consensus_key": bool(key),
         "unpaywall_email": bool(email),
-        # The key and the email are bound by hash only. The values are never
+        "openalex_key": bool(oa),
+        # The keys and the email are bound by hash only. The values are never
         # in the payload, the reply, or the draft record.
         "consensus_key_sha256": _sha256_text(key),
         "unpaywall_email_sha256": _sha256_text(email),
+        "openalex_key_sha256": _sha256_text(oa),
         "consensus_paid": paid or "",
         "acknowledge_skipped_searches": acked if warning else False,
         "mid_office_shell": shell,
@@ -522,6 +555,7 @@ def essay_setup(
         "where": where,
         "consensus_key": bool(key),
         "unpaywall_email": bool(email),
+        "openalex_key": bool(oa),
         "consensus_paid": paid,
         "mid_office_shell": shell,
         "grokbuild": {"where": where, "ran_install": False},
@@ -558,7 +592,9 @@ def essay_setup(
             extra += " Show search_warning. The skip is not kept until that warning is confirmed."
         body["next"] = (
             "Nothing has been written. Say yes to create these folders. "
-            "A Consensus key and an Unpaywall email are not repeated." + consensus_line + extra
+            "A Consensus key, an Unpaywall email, and an OpenAlex key are not repeated."
+            + consensus_line
+            + extra
         )
         return speak(body)
     ready = confirm_ready("setup", TOOL, payload, fingerprint)
@@ -597,6 +633,9 @@ def essay_setup(
                 wrote=False,
             )
 
+    record_path = _setup_record_path(app)
+    secret_path = _secrets_path(record_path)
+    existing_secrets = _read_secret_dict(secret_path)
     record = {
         "app_path": str(app.resolve()),
         "app": str(app.resolve()),
@@ -604,10 +643,10 @@ def essay_setup(
         "grokbuild": "grok",
         "where": where,
         "mid_office_shell": shell,
-        "consensus_key": bool(key),
-        "unpaywall_email": bool(email),
+        "consensus_key": bool(key) or "CONSENSUS_API_KEY" in existing_secrets,
+        "unpaywall_email": bool(email) or "ESSAY_WRITER_UNPAYWALL_EMAIL" in existing_secrets,
+        "openalex_key": bool(oa) or "OPENALEX_API_KEY" in existing_secrets,
     }
-    record_path = _setup_record_path(app)
     try:
         record_path.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
@@ -631,14 +670,18 @@ def essay_setup(
             wrote=False,
         )
 
-    if key or email:
-        secrets: dict[str, str] = {}
+    if key or email or oa:
+        # A later setup for one secret keeps the other stored secrets: the
+        # Mac handoff folder, the Unpaywall email, the Consensus key, and the
+        # OpenAlex key.
+        secrets = dict(existing_secrets)
         if key:
             secrets["CONSENSUS_API_KEY"] = key
             secrets["ESSAY_WRITER_CONSENSUS_PAID"] = paid or "0"
         if email:
             secrets["ESSAY_WRITER_UNPAYWALL_EMAIL"] = email
-        secret_path = _secrets_path(record_path)
+        if oa:
+            secrets["OPENALEX_API_KEY"] = oa
         try:
             _write_secret_text(secret_path, json.dumps(secrets, indent=2) + "\n")
         except OSError as exc:

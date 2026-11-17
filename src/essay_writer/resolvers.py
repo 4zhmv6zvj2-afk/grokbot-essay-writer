@@ -81,6 +81,16 @@ def unpaywall_email() -> str | None:
     return read_setup_secret("ESSAY_WRITER_UNPAYWALL_EMAIL")
 
 
+def openalex_api_key() -> str | None:
+    """OpenAlex key. Keyless use shares a small daily budget for the network IP."""
+    raw = os.environ.get("OPENALEX_API_KEY", "").strip()
+    if raw:
+        return raw
+    from essay_writer.setup import read_setup_secret
+
+    return read_setup_secret("OPENALEX_API_KEY")
+
+
 def _paid_name(text: str) -> str | None:
     lowered = text.casefold()
     for name in PAID_RESOLVERS:
@@ -192,9 +202,11 @@ def openalex_lookup(query: str) -> LookupRecord | None:
     # OpenAlex is optional enrichment; fixture mode returns nothing (Crossref carries tests).
     if resolver_mode() == "fixture":
         return None
-    url = "https://api.openalex.org/works?" + urllib.parse.urlencode(
-        {"search": query, "per_page": 3}
-    )
+    params = {"search": query, "per_page": 3}
+    key = openalex_api_key()
+    if key:
+        params["api_key"] = key
+    url = "https://api.openalex.org/works?" + urllib.parse.urlencode(params)
     payload = _lookup_json(url)
     if payload is None:
         return None

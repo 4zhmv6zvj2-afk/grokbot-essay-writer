@@ -76,3 +76,7 @@ uploads/*/
 debug.log
 ml-events.jsonl
 debug.zip
+
+# Local-only setup prompt. The public tree ships FIRST-RUN.txt only.
+FRIEND-PROMPT.txt
+src/essay_writer/FRIEND-PROMPT.txt
