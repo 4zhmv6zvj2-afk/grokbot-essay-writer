@@ -151,6 +151,7 @@ def essay_health() -> dict[str, Any]:
         packs.append(_pack(essay_id, state, sequence))
     from essay_writer.debug_log import FERRY_ZIP_TIP, _known_land, ferry_tip_sha
     from essay_writer.dig import openalex_status
+    from essay_writer.resolvers import unpaywall_email
 
     body: dict[str, Any] = {
         "ok": True,
@@ -187,6 +188,7 @@ def essay_health() -> dict[str, Any]:
         "resolvers": "free-only",
         "consensus": consensus_status(),
         "openalex": openalex_status(),
+        "unpaywall": {"email_present": unpaywall_email() is not None},
         "invent_forbid": True,
         "opening": ["new", "continue", "roll-forward", "archive", "unarchive", "delete"],
         "first_turn_card": prompt_text("front_office/chat.md", "first_turn_card"),

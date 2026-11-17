@@ -458,5 +458,17 @@ def test_consensus_switch_is_on_the_health_reminder(workspace, monkeypatch):
     assert "present-but-off" not in json.dumps(on)
 
 
+def test_health_reports_whether_a_unpaywall_email_is_stored(monkeypatch):
+    from essay_writer.health import essay_health
+
+    monkeypatch.delenv("ESSAY_WRITER_UNPAYWALL_EMAIL", raising=False)
+    monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
+    assert essay_health()["unpaywall"] == {"email_present": False}
+    monkeypatch.setenv("ESSAY_WRITER_UNPAYWALL_EMAIL", "reader@example.com")
+    report = essay_health()
+    assert report["unpaywall"] == {"email_present": True}
+    assert "reader@example.com" not in json.dumps(report)
+
+
 def test_cloud_constant_is_the_workspace_root():
     assert CLOUD_WORKSPACE == Path("/workspace")
