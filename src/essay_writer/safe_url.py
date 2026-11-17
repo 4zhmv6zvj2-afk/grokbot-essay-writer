@@ -193,19 +193,24 @@ _CA_FALLBACKS = (
 )
 
 
-def _ca_bundle() -> str | None:
-    """A readable CA bundle. None means the interpreter's own defaults."""
+def _certifi_bundle() -> str | None:
+    """The certifi bundle when that optional package is installed."""
     try:
         import certifi  # noqa: PLC0415 - optional, not a runtime dependency
     except ImportError:
-        certifi = None
-    if certifi is not None:
-        try:
-            found = certifi.where()
-        except Exception:  # noqa: BLE001 - a broken certifi is not fatal
-            found = ""
-        if found and os.path.isfile(found):
-            return found
+        return None
+    try:
+        found = certifi.where()
+    except Exception:  # noqa: BLE001 - a broken certifi is not fatal
+        return None
+    return found if found and os.path.isfile(found) else None
+
+
+def _ca_bundle() -> str | None:
+    """A readable CA bundle. None means the interpreter's own defaults."""
+    found = _certifi_bundle()
+    if found:
+        return found
     # A python.org framework build ships no CA file until "Install
     # Certificates.command" is run. The OS bundle is the same trust store.
     for candidate in (os.environ.get("SSL_CERT_FILE"), *_CA_FALLBACKS):
