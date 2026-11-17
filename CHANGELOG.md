@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.9.7 — 2026-11-17
 
 - `essay-writer --install-upload` finds the project root inside the zip itself. An install folder that already held an older copy used to make the installer pip install that older tree and still report success; the update now installs the uploaded copy, and a fresh interpreter must report the uploaded version before the result says `ok`.
 - `essay.setup` counts the secrets already stored in `setup.secrets.json` when it decides what is skipped. A later setup that adds only the OpenAlex key no longer warns that the stored Consensus key and Unpaywall email will not run, and the reply reports the secrets that are present.
+- The setup preview again names the Consensus key when it exists only in the environment, matching what `essay.dig` uses. Setup still warns about, records, and reports only the passed or stored key.
 
 ## 0.9.6 — 2026-11-17
 
