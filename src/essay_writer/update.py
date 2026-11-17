@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -17,9 +18,10 @@ import tempfile
 import urllib.error
 import urllib.parse
 import xml.etree.ElementTree as ElementTree
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from essay_writer import __version__, safe_url
 
@@ -335,6 +337,71 @@ def _project_root(dest: Path) -> Path | None:
     return None
 
 
+def _lock_path() -> Path:
+    override = os.environ.get("ESSAY_WRITER_UPDATE_LOCK", "").strip()
+    if override:
+        return Path(override)
+    return Path(tempfile.gettempdir()) / "essay-writer-update.lock"
+
+
+def _acquire_update_lock(handle: BinaryIO) -> None:
+    """Take the process-wide lock, or say that another update is running."""
+    if sys.platform == "win32":  # pragma: no cover - Windows file locking
+        import msvcrt
+
+        handle.seek(0, os.SEEK_END)
+        if handle.tell() == 0:
+            handle.write(b"\0")
+            handle.flush()
+        handle.seek(0)
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            raise UpdateError("another update is already running") from None
+        return
+    import fcntl
+
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        raise UpdateError("another update is already running") from None
+
+
+def _release_update_lock(handle: BinaryIO) -> None:
+    if sys.platform == "win32":  # pragma: no cover - Windows file locking
+        import msvcrt
+
+        try:
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+        return
+    import fcntl
+
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    except OSError:
+        pass
+
+
+@contextmanager
+def _update_lock() -> Iterator[None]:
+    """One update installs at a time. The lock is released on every path."""
+    path = _lock_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("a+b")
+    locked = False
+    try:
+        _acquire_update_lock(handle)
+        locked = True
+        yield
+    finally:
+        if locked:
+            _release_update_lock(handle)
+        handle.close()
+
+
 def _pip(command: list[str], cwd: Path) -> dict[str, Any]:
     try:
         completed = subprocess.run(
@@ -503,27 +570,40 @@ def apply_update(
             ],
         ]
         steps: list[dict[str, Any]] = []
-        for index, command in enumerate(commands):
-            report = run_pip(command, root)
-            steps.append({"command": command, **report})
-            if report.get("returncode") != 0:
-                requirements_done = index > 0
-                reason = "the release install did not finish"
-                if requirements_done:
-                    reason += ". The runtime dependencies were installed and were not rolled back."
-                body: dict[str, Any] = {
-                    "ok": False,
-                    "updated": False,
-                    "current": current,
-                    "latest": latest,
-                    "reason": reason,
-                    "pip": steps,
-                    "url": check["url"],
-                }
-                if requirements_done:
-                    body["environment_changed"] = True
-                    body["rolled_back"] = False
-                return body
+        try:
+            with _update_lock():
+                for index, command in enumerate(commands):
+                    report = run_pip(command, root)
+                    steps.append({"command": command, **report})
+                    if report.get("returncode") != 0:
+                        requirements_done = index > 0
+                        reason = "the release install did not finish"
+                        if requirements_done:
+                            reason += (
+                                ". The runtime dependencies were installed and were not rolled back."
+                            )
+                        body: dict[str, Any] = {
+                            "ok": False,
+                            "updated": False,
+                            "current": current,
+                            "latest": latest,
+                            "reason": reason,
+                            "pip": steps,
+                            "url": check["url"],
+                        }
+                        if requirements_done:
+                            body["environment_changed"] = True
+                            body["rolled_back"] = False
+                        return body
+        except UpdateError as exc:
+            return {
+                "ok": False,
+                "updated": False,
+                "current": current,
+                "latest": latest,
+                "reason": str(exc),
+                "url": check["url"],
+            }
     health = run_health()
     installed = health.get("version") if isinstance(health, dict) else None
     if health.get("ok") is not True or installed != latest:

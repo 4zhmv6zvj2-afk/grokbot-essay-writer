@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+import sys
 import tarfile
 from pathlib import Path
 
@@ -333,6 +335,92 @@ def test_apply_installs_the_archive_and_checks_health(monkeypatch, tmp_path):
     assert "--no-deps" in calls[1][0]
     assert "--upgrade" in calls[1][0]
     assert calls[1][1].name == f"essay_writer-{LATEST}"
+
+
+_HOLD_LOCK = """
+import fcntl, sys
+handle = open(sys.argv[1], "a+b")
+fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+print("held", flush=True)
+sys.stdin.readline()
+"""
+
+_PROBE_LOCK = """
+import fcntl, sys
+handle = open(sys.argv[1], "a+b")
+try:
+    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError:
+    print("busy")
+else:
+    print("acquired")
+    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+"""
+
+
+def _probe_lock(path: Path) -> str:
+    probe = subprocess.run(
+        [sys.executable, "-c", _PROBE_LOCK, str(path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return probe.stdout.strip()
+
+
+def test_a_second_update_is_refused_and_the_lock_is_released(monkeypatch, tmp_path):
+    """Another process holding the lock stops the install, and a failed install releases it."""
+    lock = tmp_path / "update.lock"
+    monkeypatch.setenv("ESSAY_WRITER_UPDATE_LOCK", str(lock))
+    monkeypatch.setattr(update, "__version__", CURRENT)
+    monkeypatch.setattr(update, "is_developer_checkout", lambda: False)
+    archive_bytes = _sdist_bytes(tmp_path)
+    digest = hashlib.sha256(archive_bytes).hexdigest()
+
+    def download(url, path: Path):
+        if path.name == "SHA256SUMS":
+            path.write_text(f"{digest}  essay_writer-{LATEST}.tar.gz\n", encoding="utf-8")
+        else:
+            path.write_bytes(archive_bytes)
+
+    holder = subprocess.Popen(
+        [sys.executable, "-c", _HOLD_LOCK, str(lock)],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    pip_calls: list[str] = []
+    try:
+        assert holder.stdout is not None
+        assert holder.stdout.readline().strip() == "held"
+        blocked = update.apply_update(
+            fetcher=lambda url: _release(),
+            downloader=download,
+            pip_runner=lambda command, cwd: pip_calls.append("pip") or {"returncode": 0},
+            health_runner=lambda: {"ok": True, "version": LATEST},
+        )
+    finally:
+        if holder.stdin is not None:
+            holder.stdin.close()
+        holder.wait(timeout=5)
+    assert blocked["ok"] is False
+    assert blocked["reason"] == "another update is already running"
+    assert pip_calls == []
+
+    def pip_runner(command, cwd):
+        pip_calls.append(_probe_lock(lock))
+        return {"returncode": 1, "stdout": "", "stderr": ""}
+
+    failed = update.apply_update(
+        fetcher=lambda url: _release(),
+        downloader=download,
+        pip_runner=pip_runner,
+        health_runner=lambda: {"ok": True, "version": LATEST},
+    )
+    assert failed["ok"] is False
+    assert "did not finish" in failed["reason"]
+    assert pip_calls == ["busy"]
+    assert _probe_lock(lock) == "acquired"
 
 
 def test_apply_reports_a_partial_install_when_the_second_pip_fails(monkeypatch, tmp_path):
