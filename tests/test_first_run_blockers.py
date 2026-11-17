@@ -467,17 +467,20 @@ def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, 
         assert secrets["OPENALEX_API_KEY"] == "openalex-secret-value"
         assert "search_warning" not in kept
 
+    warn_root = tmp_path / "warnings"
+    warn_app = warn_root / "app"
+    warn_kb1 = warn_root / "KB1"
     email_only = essay_setup(
-        app_path=str(app),
-        kb1_path=str(kb1),
+        app_path=str(warn_app),
+        kb1_path=str(warn_kb1),
         confirmPhase="draft",
         unpaywall_email="reader@example.com",
     )
     assert "Consensus dig will not run" in email_only["search_warning"]
     assert "Unpaywall free PDF lookup will not run" not in email_only["search_warning"]
     key_only = essay_setup(
-        app_path=str(app),
-        kb1_path=str(kb1),
+        app_path=str(warn_app),
+        kb1_path=str(warn_kb1),
         confirmPhase="draft",
         consensus_api_key=key,
         consensus_plan="free",
@@ -486,8 +489,8 @@ def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, 
     assert "Consensus dig will not run" not in key_only["search_warning"]
     assert key not in json.dumps(key_only)
     missing_openalex = essay_setup(
-        app_path=str(app),
-        kb1_path=str(kb1),
+        app_path=str(warn_app),
+        kb1_path=str(warn_kb1),
         confirmPhase="draft",
         consensus_api_key=key,
         unpaywall_email="reader@example.com",
@@ -499,8 +502,8 @@ def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, 
     assert "Consensus dig will not run" not in missing_openalex["search_warning"]
     assert "Unpaywall free PDF lookup will not run" not in missing_openalex["search_warning"]
     refused_openalex = essay_setup(
-        app_path=str(app),
-        kb1_path=str(kb1),
+        app_path=str(warn_app),
+        kb1_path=str(warn_kb1),
         confirmPhase="confirm",
         consensus_api_key=key,
         unpaywall_email="reader@example.com",
@@ -509,8 +512,8 @@ def test_skip_needs_a_warning_confirm_and_the_plan_sets_the_paid_flag(tmp_path, 
     assert refused_openalex["ok"] is False
     assert refused_openalex["wrote"] is False
     with_openalex = essay_setup(
-        app_path=str(app),
-        kb1_path=str(kb1),
+        app_path=str(warn_app),
+        kb1_path=str(warn_kb1),
         confirmPhase="draft",
         unpaywall_email="reader@example.com",
         openalex_api_key="openalex-secret-value",

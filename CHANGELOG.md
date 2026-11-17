@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `essay.setup` counts the secrets already stored in `setup.secrets.json` when it decides what is skipped. A later setup that adds only the OpenAlex key no longer warns that the stored Consensus key and Unpaywall email will not run, and the reply reports the secrets that are present.
+
 ## 0.9.6 — 2026-11-17
 
 Free look-ups that the app could not make were reported as empty results, and every HTTPS call failed on a Python build with no CA bundle of its own.

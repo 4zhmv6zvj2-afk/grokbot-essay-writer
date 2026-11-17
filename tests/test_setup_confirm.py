@@ -152,21 +152,24 @@ def test_a_later_setup_keeps_the_secrets_it_was_not_given(tmp_path, monkeypatch)
     stored = json.loads(secret_path.read_text(encoding="utf-8"))
     stored["ESSAY_WRITER_MAC_DIR"] = "/Users/student/Documents/Essay Bot"
     secret_path.write_text(json.dumps(stored) + "\n", encoding="utf-8")
-    essay_setup(
+    changed = essay_setup(
         app_path=str(app),
         kb1_path=str(kb1),
         confirmPhase="draft",
         consensus_api_key="second-key",
         consensus_plan="free",
-        acknowledge_skipped_searches=True,
     )
+    # The email and the OpenAlex key are already stored, so nothing is skipped.
+    assert "search_warning" not in changed
+    assert changed["consensus_key"] is True
+    assert changed["unpaywall_email"] is True
+    assert changed["openalex_key"] is True
     second = essay_setup(
         app_path=str(app),
         kb1_path=str(kb1),
         confirmPhase="confirm",
         consensus_api_key="second-key",
         consensus_plan="free",
-        acknowledge_skipped_searches=True,
     )
     assert second["wrote"] is True
     stored = json.loads(secret_path.read_text(encoding="utf-8"))
@@ -179,6 +182,69 @@ def test_a_later_setup_keeps_the_secrets_it_was_not_given(tmp_path, monkeypatch)
     assert record["consensus_key"] is True
     assert record["unpaywall_email"] is True
     assert record["openalex_key"] is True
+
+
+def test_adding_only_the_openalex_key_does_not_warn(tmp_path, monkeypatch):
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
+    app = tmp_path / "app"
+    kb1 = tmp_path / "KB1"
+    essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        consensus_api_key="consensus-key",
+        unpaywall_email="reader@example.com",
+        consensus_plan="pro",
+        acknowledge_skipped_searches=True,
+    )
+    first = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        consensus_api_key="consensus-key",
+        unpaywall_email="reader@example.com",
+        consensus_plan="pro",
+        acknowledge_skipped_searches=True,
+    )
+    assert first["wrote"] is True
+    draft = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="draft",
+        openalex_api_key="openalex-key",
+    )
+    assert draft["ok"] is True
+    assert "search_warning" not in draft
+    assert "skipped_searches" not in draft
+    assert draft["consensus_key"] is True
+    assert draft["unpaywall_email"] is True
+    assert draft["openalex_key"] is True
+    confirmed = essay_setup(
+        app_path=str(app),
+        kb1_path=str(kb1),
+        confirmPhase="confirm",
+        openalex_api_key="openalex-key",
+    )
+    assert confirmed["wrote"] is True
+    stored = json.loads((tmp_path / "setup.secrets.json").read_text(encoding="utf-8"))
+    assert stored["OPENALEX_API_KEY"] == "openalex-key"
+    assert stored["CONSENSUS_API_KEY"] == "consensus-key"
+    assert stored["ESSAY_WRITER_UNPAYWALL_EMAIL"] == "reader@example.com"
+    assert stored["ESSAY_WRITER_CONSENSUS_PAID"] == "1"
+
+
+def test_a_first_setup_with_only_the_openalex_key_still_warns(tmp_path, monkeypatch):
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing-cloud")
+    draft = essay_setup(
+        app_path=str(tmp_path / "app"),
+        kb1_path=str(tmp_path / "KB1"),
+        confirmPhase="draft",
+        openalex_api_key="openalex-key",
+    )
+    assert draft["search_warning"]
+    assert draft["skipped_searches"] == ["consensus", "unpaywall"]
 
 
 def test_named_save_on_the_cloud_computer_is_the_record_later_tools_read(tmp_path, monkeypatch):

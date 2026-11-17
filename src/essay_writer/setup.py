@@ -500,13 +500,21 @@ def essay_setup(
             wrote=False,
             needs_consensus_plan=True,
         )
-    warning = search_warning(bool(key), bool(email), bool(oa))
+    record_path = _setup_record_path(app)
+    secret_path = _secrets_path(record_path)
+    existing_secrets = _read_secret_dict(secret_path)
+    # A secret already on disk counts as present, so adding one key later does
+    # not warn about the keys and the email that setup already stored.
+    has_key = bool(key) or "CONSENSUS_API_KEY" in existing_secrets
+    has_email = bool(email) or "ESSAY_WRITER_UNPAYWALL_EMAIL" in existing_secrets
+    has_openalex = bool(oa) or "OPENALEX_API_KEY" in existing_secrets
+    warning = search_warning(has_key, has_email, has_openalex)
     skipped = [
         name
         for name, present in (
-            ("consensus", bool(key)),
-            ("unpaywall", bool(email)),
-            ("openalex", bool(oa)),
+            ("consensus", has_key),
+            ("unpaywall", has_email),
+            ("openalex", has_openalex),
         )
         if not present
     ]
@@ -529,9 +537,9 @@ def essay_setup(
         "app": str(app),
         "kb1": str(kb1),
         "where": where,
-        "consensus_key": bool(key),
-        "unpaywall_email": bool(email),
-        "openalex_key": bool(oa),
+        "consensus_key": has_key,
+        "unpaywall_email": has_email,
+        "openalex_key": has_openalex,
         # The keys and the email are bound by hash only. The values are never
         # in the payload, the reply, or the draft record.
         "consensus_key_sha256": _sha256_text(key),
@@ -553,9 +561,9 @@ def essay_setup(
         "stored": False,
         "wrote_notes": False,
         "where": where,
-        "consensus_key": bool(key),
-        "unpaywall_email": bool(email),
-        "openalex_key": bool(oa),
+        "consensus_key": has_key,
+        "unpaywall_email": has_email,
+        "openalex_key": has_openalex,
         "consensus_paid": paid,
         "mid_office_shell": shell,
         "grokbuild": {"where": where, "ran_install": False},
@@ -565,10 +573,9 @@ def essay_setup(
         body["skipped_searches"] = skipped
     if key and paid is None:
         body["needs_consensus_plan"] = True
-    from essay_writer.dig import consensus_api_key as stored_consensus_key
     from essay_writer.dig import consensus_paid_flag, consensus_status_for
 
-    preview = consensus_status_for(stored_consensus_key() is not None or bool(key))
+    preview = consensus_status_for(has_key)
     body["consensus"] = {
         "switch": preview["switch"],
         "enabled": preview["enabled"],
@@ -633,9 +640,6 @@ def essay_setup(
                 wrote=False,
             )
 
-    record_path = _setup_record_path(app)
-    secret_path = _secrets_path(record_path)
-    existing_secrets = _read_secret_dict(secret_path)
     record = {
         "app_path": str(app.resolve()),
         "app": str(app.resolve()),
@@ -643,9 +647,9 @@ def essay_setup(
         "grokbuild": "grok",
         "where": where,
         "mid_office_shell": shell,
-        "consensus_key": bool(key) or "CONSENSUS_API_KEY" in existing_secrets,
-        "unpaywall_email": bool(email) or "ESSAY_WRITER_UNPAYWALL_EMAIL" in existing_secrets,
-        "openalex_key": bool(oa) or "OPENALEX_API_KEY" in existing_secrets,
+        "consensus_key": has_key,
+        "unpaywall_email": has_email,
+        "openalex_key": has_openalex,
     }
     try:
         record_path.parent.mkdir(parents=True, exist_ok=True)
