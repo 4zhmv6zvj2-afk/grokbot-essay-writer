@@ -288,6 +288,53 @@ def test_unset_trusted_egress_refuses_the_fake_ip_and_names_the_setting(monkeypa
         safe_url.validate_url("https://api.openalex.org/works")
     assert "198.18.0.0/15" in str(caught.value)
     assert safe_url.TRUSTED_EGRESS_ENV in str(caught.value)
+    assert "Other ranges are not accepted" in str(caught.value)
+
+
+def test_a_host_address_inside_the_fake_ip_range_is_trusted(monkeypatch):
+    monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.1/32")
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    assert (
+        safe_url.validate_url("https://api.openalex.org/works") == "https://api.openalex.org/works"
+    )
+
+
+def test_a_mapped_fake_ip_is_trusted_and_names_the_setting_when_it_is_not(monkeypatch):
+    monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["::ffff:198.18.0.1"])
+    assert (
+        safe_url.validate_url("https://api.openalex.org/works") == "https://api.openalex.org/works"
+    )
+    monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "")
+    monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
+    with pytest.raises(safe_url.BlockedURL) as caught:
+        safe_url.validate_url("https://api.openalex.org/works")
+    assert "198.18.0.0/15" in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "0.0.0.0/0",
+        "::/0",
+        "10.0.0.0/8",
+        "127.0.0.0/8",
+        "169.254.0.0/16",
+        "100.64.0.0/10",
+        "198.16.0.0/12",
+        "::ffff:198.18.0.1/128",
+        "198.18.0.0/15, 0.0.0.0/0",
+        "198.18.0.0/15, not-a-cidr",
+    ],
+)
+def test_trusted_egress_rejects_a_network_outside_the_fake_ip_range(monkeypatch, setting):
+    monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, setting)
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    with pytest.raises(safe_url.BlockedURL):
+        safe_url.validate_url("https://api.openalex.org/works")
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["169.254.169.254"])
+    with pytest.raises(safe_url.BlockedURL):
+        safe_url.validate_url("https://api.openalex.org/works")
 
 
 def test_the_private_opener_carries_the_guarded_redirect_handler(monkeypatch):

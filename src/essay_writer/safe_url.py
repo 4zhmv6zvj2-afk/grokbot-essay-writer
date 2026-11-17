@@ -4,7 +4,8 @@ The six URL opens in downloads, dig, and resolvers go through open_url.
 Only http and https are allowed. The host must resolve, and every address it
 resolves to must be public: loopback, private, link-local, reserved,
 multicast, unspecified, and IPv6 ULA addresses are refused before a
-connection is made. A private opener re-validates every redirect Location
+connection is made. An operator may opt in to subnets of the fake-IP range
+198.18.0.0/15. One invalid or wider network disables that opt-in. A private opener re-validates every redirect Location
 with the same rules, refuses a cross-scheme redirect, and allows at most
 three redirects. A response is read whole up to max_bytes; a declared
 Content-Length or a streamed body over the cap raises TooLarge instead of
@@ -71,11 +72,13 @@ class Response:
         return None
 
 
-def _trusted_networks() -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
-    """Operator-trusted egress networks, such as a proxy's fake-IP range.
+def _trusted_networks() -> tuple[ipaddress.IPv4Network, ...]:
+    """Subnets of 198.18.0.0/15, the standard proxy fake-IP range.
 
     Empty by default. Set ESSAY_WRITER_TRUSTED_EGRESS (environment or the
-    setup secrets file) only on a host whose proxy or DNS is trusted.
+    setup secrets file) only on a host whose proxy or DNS is trusted. A
+    token that is not a subnet of that range, including a supernet, a
+    private range, or text that is not a network, disables the opt-in.
     """
     raw = os.environ.get(TRUSTED_EGRESS_ENV, "").strip()
     if not raw:
@@ -90,15 +93,37 @@ def _trusted_networks() -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, 
                 raw = ""
     if not raw:
         return ()
-    networks: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+    networks: list[ipaddress.IPv4Network] = []
     for part in re.split(r"[,\s]+", raw):
         if not part:
             continue
         try:
-            networks.append(ipaddress.ip_network(part, strict=False))
+            network = ipaddress.ip_network(part, strict=False)
         except ValueError:
-            continue
+            return ()
+        if not isinstance(network, ipaddress.IPv4Network) or not network.subnet_of(
+            _FAKE_IP_NETWORK
+        ):
+            return ()
+        networks.append(network)
     return tuple(networks)
+
+
+def _fake_ip_hint(address: str) -> str:
+    """Tell the operator how to opt in when the blocked address is fake-IP."""
+    try:
+        parsed: ipaddress.IPv4Address | ipaddress.IPv6Address = ipaddress.ip_address(address)
+    except ValueError:
+        return ""
+    if isinstance(parsed, ipaddress.IPv6Address) and parsed.ipv4_mapped is not None:
+        parsed = parsed.ipv4_mapped
+    if parsed not in _FAKE_IP_NETWORK:
+        return ""
+    return (
+        " If this host uses a trusted proxy with fake-IP DNS in 198.18.0.0/15, "
+        "set ESSAY_WRITER_TRUSTED_EGRESS to a subnet of that range. "
+        "Other ranges are not accepted."
+    )
 
 
 def _public_address(
@@ -185,15 +210,7 @@ def validate_url(url: object) -> str:
     for address in _resolve_addresses(host, port):
         if _public_address(address, trusted):
             continue
-        hint = ""
-        try:
-            if ipaddress.ip_address(address) in _FAKE_IP_NETWORK:
-                hint = (
-                    " If this host uses a trusted proxy with fake-IP DNS, set "
-                    "ESSAY_WRITER_TRUSTED_EGRESS=198.18.0.0/15."
-                )
-        except ValueError:
-            pass
+        hint = _fake_ip_hint(address)
         raise BlockedURL(f"the host resolves to a non-public address ({address}).{hint}")
     return urllib.parse.urlunsplit((scheme, parts.netloc, parts.path, parts.query, ""))
 
