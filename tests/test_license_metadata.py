@@ -21,7 +21,7 @@ HOLDER = "Copyright 2026 4zhmv6zvj2-afk"
 AUTHOR_RECORD = {"name": "Ron", "email": "4zhmv6zvj2-afk@users.noreply.github.com"}
 OLD_HOLDER = "Copyright (c) 2026"
 APACHE_CLASSIFIER = "License :: OSI Approved :: Apache Software License"
-VERSION = "0.9.8"
+VERSION = "0.9.9"
 MIT_MARKS = ("MIT License", "license-MIT", "[MIT]")
 OKAVANGO = REPO / "tests" / "fixtures" / "okavango-strong-v1.md"
 

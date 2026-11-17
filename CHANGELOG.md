@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.9 — 2026-11-18
 
 - `essay.health` reports `unpaywall.email_present` as a boolean, beside `consensus.key_present` and `openalex.key_present`. The update path does not ask for keys; one health call now shows whether all three are stored, without echoing any value.
 
