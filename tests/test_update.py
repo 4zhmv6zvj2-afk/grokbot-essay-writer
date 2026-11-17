@@ -113,7 +113,7 @@ def test_feed_tag_ignores_a_note_that_appears_before_the_link():
         '<link rel="alternate" '
         'href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v0.9.12"/>'
         "</entry>"
-        "<entry><link rel=\"alternate\" "
+        '<entry><link rel="alternate" '
         'href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v9.9.9"/>'
         "</entry></feed>"
     )
@@ -122,13 +122,13 @@ def test_feed_tag_ignores_a_note_that_appears_before_the_link():
 
 def test_feed_tag_rejects_a_prerelease_suffix():
     feed = (
-        "<feed><entry><link rel=\"alternate\" "
+        '<feed><entry><link rel="alternate" '
         'href="https://github.com/org/repo/releases/tag/v0.9.12-rc1"/>'
         "</entry></feed>"
     )
     assert update._feed_tag(feed) is None
     longer = (
-        "<feed><entry><link rel=\"alternate\" "
+        '<feed><entry><link rel="alternate" '
         'href="https://github.com/org/repo/releases/tag/v0.9.12/notes"/>'
         "</entry></feed>"
     )
