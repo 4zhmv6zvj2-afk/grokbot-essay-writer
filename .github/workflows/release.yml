@@ -138,7 +138,7 @@ jobs:
           import essay_writer
 
           package = pathlib.Path(essay_writer.__file__).parent
-          for name in ("FIRST-RUN.txt", "FRIEND-PROMPT.txt", "_vendor/VENDOR.json"):
+          for name in ("FIRST-RUN.txt", "_vendor/VENDOR.json"):
               assert (package / name).is_file(), f"wheel is missing {name}"
           print("wheel import ok:", essay_writer.__version__, package)
           PY

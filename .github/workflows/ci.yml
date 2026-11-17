@@ -163,7 +163,6 @@ jobs:
           package = pathlib.Path(essay_writer.__file__).parent
           for name in (
               "FIRST-RUN.txt",
-              "FRIEND-PROMPT.txt",
               "_vendor/VENDOR.json",
               "prompts/front_office/tools.json",
           ):
