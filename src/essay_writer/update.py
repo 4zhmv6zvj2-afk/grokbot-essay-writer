@@ -435,28 +435,44 @@ def apply_update(
             ],
         ]
         steps: list[dict[str, Any]] = []
-        for command in commands:
+        for index, command in enumerate(commands):
             report = run_pip(command, root)
             steps.append({"command": command, **report})
             if report.get("returncode") != 0:
-                return {
+                requirements_done = index > 0
+                reason = "the release install did not finish"
+                if requirements_done:
+                    reason += (
+                        ". The runtime dependencies were installed and were not rolled back."
+                    )
+                body: dict[str, Any] = {
                     "ok": False,
                     "updated": False,
                     "current": current,
                     "latest": latest,
-                    "reason": "the release install did not finish",
+                    "reason": reason,
                     "pip": steps,
                     "url": check["url"],
                 }
+                if requirements_done:
+                    body["environment_changed"] = True
+                    body["rolled_back"] = False
+                return body
     health = run_health()
     installed = health.get("version") if isinstance(health, dict) else None
     if health.get("ok") is not True or installed != latest:
         return {
             "ok": False,
             "updated": False,
+            "installed": True,
+            "environment_changed": True,
+            "rolled_back": False,
             "current": current,
             "latest": latest,
-            "reason": "essay.health did not report the new version",
+            "reason": (
+                "essay.health did not report the new version. "
+                "The new code is on disk but unverified, and the environment was not rolled back."
+            ),
             "health": health,
             "url": check["url"],
         }

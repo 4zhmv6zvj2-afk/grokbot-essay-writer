@@ -764,19 +764,29 @@ def install_uploaded_copy(
         pip_body = {"command": command, "cwd": str(root), **report}
         pip_steps.append(pip_body)
         if report.get("returncode") != 0:
-            message = (
-                "The hash-pinned runtime install did not finish."
-                if index == 0 and len(commands) > 1
-                else "pip install -e . did not finish."
-            )
+            requirements_done = index > 0
+            if index == 0 and len(commands) > 1:
+                message = "The hash-pinned runtime install did not finish."
+            elif requirements_done:
+                message = (
+                    "pip install -e . did not finish. The runtime dependencies were "
+                    "installed and were not rolled back."
+                )
+            else:
+                message = "pip install -e . did not finish."
+            extra: dict[str, Any] = {}
+            if requirements_done:
+                extra["environment_changed"] = True
+                extra["rolled_back"] = False
             return _fail(
                 message,
                 unpacked=unpacked,
                 root=str(root),
                 pip=pip_body,
                 pip_steps=pip_steps,
-                requirements_verified=False,
+                requirements_verified=requirements_done,
                 prompt_present=prompt_present,
+                **extra,
             )
     exposer = path_exposer or first_run_host.expose_writer_on_path
     exposer()
@@ -811,19 +821,25 @@ def install_uploaded_copy(
         health_check = install_self_check()
     if not health_check.get("ok"):
         return _fail(
-            "essay.health did not pass after install.",
+            (
+                "essay.health did not pass after install. The new code is on disk "
+                "but unverified, and the environment was not rolled back."
+            ),
             unpacked=unpacked,
             root=str(root),
             pip=pip_body,
             pip_steps=pip_steps,
             prompt_present=prompt_present,
             health_check=health_check,
+            environment_changed=True,
+            rolled_back=False,
         )
     if pip_runner is None and expected_version and health_check.get("version") != expected_version:
         return _fail(
             (
                 f"The installed copy reports version {health_check.get('version') or 'unknown'}, "
-                f"not the uploaded {expected_version}. The old copy would still start."
+                f"not the uploaded {expected_version}. The new code is on disk but unverified, "
+                "and the environment was not rolled back."
             ),
             unpacked=unpacked,
             root=str(root),
@@ -832,6 +848,8 @@ def install_uploaded_copy(
             prompt_present=prompt_present,
             health_check=health_check,
             expected_version=expected_version,
+            environment_changed=True,
+            rolled_back=False,
         )
     payload: dict[str, Any] = {
         "ok": True,

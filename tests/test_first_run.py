@@ -229,8 +229,11 @@ def test_upload_reports_when_health_still_names_the_old_version(tmp_path, monkey
     )
     assert result["ok"] is False
     assert result["installed"] is False
+    assert result["environment_changed"] is True
+    assert result["rolled_back"] is False
     assert "0.9.4" in result["reason"]
     assert "0.9.6" in result["reason"]
+    assert "on disk but unverified" in result["reason"]
     assert result["expected_version"] == "0.9.6"
 
     health["version"] = "0.9.6"
@@ -705,6 +708,34 @@ def test_upload_stops_when_the_hash_pinned_install_fails(tmp_path, monkeypatch):
     assert len(calls) == 1
     assert result["pip_steps"][0]["returncode"] == 1
     assert result["requirements_verified"] is False
+
+
+def test_upload_says_when_the_package_install_fails_after_requirements(tmp_path, monkeypatch):
+    cloud = tmp_path / "workspace"
+    cloud.mkdir()
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
+    upload = _upload_with_requirements(tmp_path)
+
+    def pip_runner(command: list[str], cwd: Path) -> dict:
+        if "--require-hashes" in command:
+            return {"returncode": 0, "stdout": "", "stderr": ""}
+        return {"returncode": 1, "stdout": "", "stderr": "package install failed"}
+
+    result = install_uploaded_copy(
+        upload,
+        pip_runner=pip_runner,
+        attach=False,
+        upload_sha256=_sha(upload),
+        path_exposer=_no_path_expose,
+        allow_cursor_install=False,
+    )
+    assert result["ok"] is False
+    assert result["installed"] is False
+    assert result["requirements_verified"] is True
+    assert result["environment_changed"] is True
+    assert result["rolled_back"] is False
+    assert "not rolled back" in result["reason"]
+    assert len(result["pip_steps"]) == 2
 
 
 def test_expose_writer_on_path_links_an_explicit_script_into_a_temp_dir(tmp_path):

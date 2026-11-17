@@ -209,6 +209,37 @@ def test_apply_installs_the_archive_and_checks_health(monkeypatch, tmp_path):
     assert calls[1][1].name == f"essay_writer-{LATEST}"
 
 
+def test_apply_reports_a_partial_install_when_the_second_pip_fails(monkeypatch, tmp_path):
+    monkeypatch.setattr(update, "__version__", CURRENT)
+    monkeypatch.setattr(update, "is_developer_checkout", lambda: False)
+    archive_bytes = _sdist_bytes(tmp_path)
+    digest = hashlib.sha256(archive_bytes).hexdigest()
+
+    def download(url, path: Path):
+        if path.name == "SHA256SUMS":
+            path.write_text(f"{digest}  essay_writer-{LATEST}.tar.gz\n", encoding="utf-8")
+        else:
+            path.write_bytes(archive_bytes)
+
+    def pip_runner(command, cwd):
+        if "--require-hashes" in command:
+            return {"returncode": 0, "stdout": "", "stderr": ""}
+        return {"returncode": 1, "stdout": "", "stderr": "package install failed"}
+
+    body = update.apply_update(
+        fetcher=lambda url: _release(),
+        downloader=download,
+        pip_runner=pip_runner,
+        health_runner=lambda: {"ok": True, "version": LATEST},
+    )
+    assert body["ok"] is False
+    assert body["updated"] is False
+    assert body["environment_changed"] is True
+    assert body["rolled_back"] is False
+    assert "not rolled back" in body["reason"]
+    assert len(body["pip"]) == 2
+
+
 def test_apply_refuses_when_health_names_the_old_version(monkeypatch, tmp_path):
     monkeypatch.setattr(update, "__version__", CURRENT)
     monkeypatch.setattr(update, "is_developer_checkout", lambda: False)
@@ -229,7 +260,11 @@ def test_apply_refuses_when_health_names_the_old_version(monkeypatch, tmp_path):
     )
     assert body["ok"] is False
     assert body["updated"] is False
+    assert body["installed"] is True
+    assert body["environment_changed"] is True
+    assert body["rolled_back"] is False
     assert "new version" in body["reason"]
+    assert "on disk but unverified" in body["reason"]
 
 
 def test_the_cli_prints_the_check(monkeypatch, capsys):
