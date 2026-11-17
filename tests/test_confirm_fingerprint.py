@@ -261,7 +261,7 @@ def test_research_second_unpaywall_keeps_draft_fields(workspace, monkeypatch):
     payload["quote"] = quote
     calls = {"n": 0}
 
-    def crossref_doi_only(query, fetch=None):
+    def crossref_doi_only(query, fetch=None, **kwargs):
         return {"doi": "10.1000/kept"}
 
     def unpaywall(doi, email):

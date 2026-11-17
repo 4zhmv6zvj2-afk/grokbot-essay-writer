@@ -5,17 +5,19 @@ from __future__ import annotations
 import json
 import os
 import re
+import unicodedata
 import urllib.error
 import urllib.parse
 from collections.abc import Callable
 from typing import Any
 
-from essay_writer import safe_url
+from essay_writer import __version__, safe_url
 from essay_writer.cite_open import page_value_kind
 from essay_writer.programme import FREE_RESOLVERS, PAID_RESOLVERS
 
 MAX_LOOKUP_BYTES = 1024 * 1024
 LOOKUP_TIMEOUT = 15.0
+USER_AGENT = f"essay-writer/{__version__} (+https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer)"
 
 RESOLVER_FILLABLE = (
     "doi",
@@ -63,7 +65,12 @@ def resolver_mode() -> str:
 def _lookup_json(url: str) -> dict[str, Any] | None:
     """GET one look-up URL through safe_url. A refusal or miss is None."""
     try:
-        with safe_url.open_url(url, timeout=LOOKUP_TIMEOUT, max_bytes=MAX_LOOKUP_BYTES) as response:
+        with safe_url.open_url(
+            url,
+            timeout=LOOKUP_TIMEOUT,
+            max_bytes=MAX_LOOKUP_BYTES,
+            headers={"User-Agent": USER_AGENT},
+        ) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except (safe_url.Refused, urllib.error.URLError, TimeoutError, json.JSONDecodeError):
         return None
@@ -152,13 +159,109 @@ def _record_from_crossref_message(message: dict[str, Any]) -> LookupRecord:
     return record
 
 
+def _name_key(text: str) -> str:
+    """Letters only, accent-folded, for a surname comparison."""
+    folded = unicodedata.normalize("NFKD", text)
+    return "".join(char for char in folded.casefold() if char.isalpha())
+
+
+def _surname(author: object) -> str | None:
+    """One author's family name from a string, a list, or a Crossref author object."""
+    if isinstance(author, dict):
+        for key in ("family", "name", "literal"):
+            value = author.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+    if isinstance(author, (list, tuple)):
+        for item in author:
+            found = _surname(item)
+            if found:
+                return found
+        return None
+    if isinstance(author, str) and author.strip():
+        value = author.strip()
+        if "," in value:
+            return value.split(",", 1)[0].strip() or None
+        parts = value.split()
+        return parts[-1] if parts else None
+    return None
+
+
+def _year_int(value: object) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
+
+
+def _crossref_year(item: dict[str, Any]) -> int | None:
+    for key in ("issued", "published-print", "published-online", "published"):
+        value = item.get(key)
+        if not isinstance(value, dict):
+            continue
+        parts = value.get("date-parts")
+        if isinstance(parts, list) and parts and isinstance(parts[0], list) and parts[0]:
+            found = _year_int(parts[0][0])
+            if found is not None:
+                return found
+    return None
+
+
+def _crossref_has_author(item: dict[str, Any], wanted: str) -> bool:
+    authors = item.get("author")
+    if not isinstance(authors, list):
+        return False
+    for author in authors:
+        name = _surname(author)
+        if name and _name_key(name) == wanted:
+            return True
+    return False
+
+
 def crossref_lookup(
-    query: str, *, fetch: Callable[[str], dict[str, Any]] | None = None
+    query: str,
+    *,
+    fetch: Callable[[str], dict[str, Any]] | None = None,
+    year: object = None,
+    author: object = None,
 ) -> LookupRecord | None:
+    """One exact Crossref match, checked against the gathered year and author.
+
+    With no year or author, only the first row is read, as before. With either
+    one, the query carries the citation so Crossref ranks the work above
+    recommendation rows, and every returned row must also agree on what is
+    known. A same-title work from another year or author is not a match.
+    """
+    wanted_year = _year_int(year)
+    surname = _surname(author)
+    wanted_author = _name_key(surname) if surname else ""
     if fetch is None:
-        url = "https://api.crossref.org/works?" + urllib.parse.urlencode(
-            {"query.bibliographic": query, "rows": 3}
-        )
+        terms = [query]
+        if surname:
+            terms.insert(0, surname)
+        if wanted_year is not None:
+            terms.append(str(wanted_year))
+        params = {
+            "query.bibliographic": " ".join(terms),
+            "rows": 5,
+            "select": (
+                "DOI,title,container-title,volume,issue,page,publisher,"
+                "publisher-location,issued,author"
+            ),
+        }
+        if wanted_year is not None or wanted_author:
+            # Dataset rows are mostly "Faculty Opinions recommendation of ..."
+            # entries and crowd the real work out of the first page. The REST
+            # API documents the type filter with one type; journal articles are
+            # the Crossref case, and OpenAlex still covers books and reports.
+            params["filter"] = "type:journal-article"
+        email = unpaywall_email()
+        if email:
+            # Documented polite pool: add the contact email to the request.
+            params["mailto"] = email
+        url = "https://api.crossref.org/works?" + urllib.parse.urlencode(params)
         payload = _lookup_json(url)
         if payload is None:
             return None
@@ -167,14 +270,20 @@ def crossref_lookup(
     items = payload.get("message", {}).get("items", [])
     if not items:
         return None
-    first = items[0]
-    if not isinstance(first, dict):
-        return None
-    titles = first.get("title") or []
-    title = titles[0] if titles else ""
-    if not isinstance(title, str) or not _title_matches(query, title):
-        return None
-    return _record_from_crossref_message(first)
+    rows = items if (wanted_year is not None or wanted_author) else items[:1]
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        titles = item.get("title") or []
+        title = titles[0] if titles else ""
+        if not isinstance(title, str) or not _title_matches(query, title):
+            continue
+        if wanted_year is not None and _crossref_year(item) != wanted_year:
+            continue
+        if wanted_author and not _crossref_has_author(item, wanted_author):
+            continue
+        return _record_from_crossref_message(item)
+    return None
 
 
 def fixture_crossref_fetch(query: str) -> dict[str, object]:
@@ -192,6 +301,8 @@ def fixture_crossref_fetch(query: str) -> dict[str, object]:
                     "page": FIXTURE_SAMPLE["pages"],
                     "publisher": FIXTURE_SAMPLE["publisher"],
                     "publisher-location": FIXTURE_SAMPLE["place"],
+                    "issued": {"date-parts": [[2020]]},
+                    "author": [{"family": "Smith"}],
                 }
             ]
         }
@@ -206,6 +317,9 @@ def openalex_lookup(query: str) -> LookupRecord | None:
     key = openalex_api_key()
     if key:
         params["api_key"] = key
+    email = unpaywall_email()
+    if email:
+        params["mailto"] = email
     url = "https://api.openalex.org/works?" + urllib.parse.urlencode(params)
     payload = _lookup_json(url)
     if payload is None:
@@ -309,7 +423,11 @@ def _merge_record(target: LookupRecord, incoming: LookupRecord) -> None:
 
 
 def _lookup_chain(
-    title: str | None, doi_in_file: str | None
+    title: str | None,
+    doi_in_file: str | None,
+    *,
+    year: object = None,
+    author: object = None,
 ) -> tuple[LookupRecord | None, list[ResolverCall]]:
     calls: list[ResolverCall] = []
     merged: LookupRecord = {}
@@ -321,7 +439,12 @@ def _lookup_chain(
 
     if title:
         looked_up = title.strip()
-        record = crossref_lookup(looked_up, fetch=fetch)
+        if fetch:
+            # Fixture mode: the sample row is the answer, so the gathered
+            # author and year are not checked against it.
+            record = crossref_lookup(looked_up, fetch=fetch)
+        else:
+            record = crossref_lookup(looked_up, year=year, author=author)
         if record:
             calls.append({"name": "crossref", "looked_up": looked_up, "result": "matched"})
             _merge_record(merged, record)
@@ -395,7 +518,9 @@ def apply_lookup_fields(
     if not needs_fill or (title is None and doi_in_file is None):
         return source, [], {}
 
-    record, calls = _lookup_chain(title, doi_in_file)
+    record, calls = _lookup_chain(
+        title, doi_in_file, year=source.get("year"), author=source.get("author")
+    )
     provenance: dict[str, str] = dict(source.get("field_sources") or {})
     updated = dict(source)
     if not record:

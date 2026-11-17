@@ -56,6 +56,94 @@ def test_saved_crossref_sample_matches_title():
     assert record["container"] == "Journal of Transport Geography"
 
 
+def test_crossref_uses_year_and_author_to_pick_the_real_work():
+    payload = {
+        "message": {
+            "items": [
+                {
+                    "title": ["Highly accurate protein structure prediction with AlphaFold"],
+                    "DOI": "10.1/wrong-year",
+                    "issued": {"date-parts": [[2019]]},
+                    "author": [{"family": "Jumper"}],
+                },
+                {
+                    "title": ["Highly accurate protein structure prediction with AlphaFold"],
+                    "DOI": "10.1038/s41586-021-03819-2",
+                    "issued": {"date-parts": [[2021]]},
+                    "author": [{"family": "Jumper"}],
+                    "container-title": ["Nature"],
+                },
+            ]
+        }
+    }
+    record = crossref_lookup(
+        "Highly accurate protein structure prediction with AlphaFold",
+        fetch=lambda query: payload,
+        year="2021",
+        author="Jumper, J.",
+    )
+    assert record is not None
+    assert record["doi"] == "10.1038/s41586-021-03819-2"
+
+
+def test_crossref_refuses_a_same_title_work_from_another_year():
+    payload = {
+        "message": {
+            "items": [
+                {
+                    "title": ["Deep learning"],
+                    "DOI": "10.1/wrong",
+                    "issued": {"date-parts": [[2019]]},
+                    "author": [{"family": "LeCun"}],
+                }
+            ]
+        }
+    }
+    assert crossref_lookup("Deep learning", fetch=lambda query: payload, year="2015") is None
+
+
+def test_crossref_refuses_a_same_title_work_by_another_author():
+    payload = {
+        "message": {
+            "items": [
+                {
+                    "title": ["Deep learning"],
+                    "DOI": "10.1/wrong",
+                    "issued": {"date-parts": [[2015]]},
+                    "author": [{"family": "Someone"}],
+                }
+            ]
+        }
+    }
+    assert crossref_lookup("Deep learning", fetch=lambda query: payload, author="LeCun, Y.") is None
+
+
+def test_crossref_without_a_citation_still_reads_only_the_first_row():
+    payload = {
+        "message": {
+            "items": [
+                {"title": ["Deep learning"], "DOI": "10.1/first"},
+                {"title": ["Deep learning"], "DOI": "10.1/second"},
+            ]
+        }
+    }
+    record = crossref_lookup("Deep learning", fetch=lambda query: payload)
+    assert record is not None
+    assert record["doi"] == "10.1/first"
+
+
+def test_lookups_send_the_stored_email_as_the_polite_pool_contact(monkeypatch):
+    from essay_writer import resolvers
+
+    seen: list[str] = []
+    monkeypatch.setenv("ESSAY_WRITER_UNPAYWALL_EMAIL", "reader@example.com")
+    monkeypatch.setattr(resolvers, "_lookup_json", lambda url: seen.append(url) or {})
+    assert resolvers.crossref_lookup("Deep learning") is None
+    assert resolvers.openalex_lookup("Deep learning") is None
+    assert len(seen) == 2
+    assert all("mailto=reader%40example.com" in url for url in seen)
+
+
 def test_crossref_sample_does_not_match_other_titles():
     record = crossref_lookup("Chokepoints and crude", fetch=fixture_crossref_fetch)
     assert record is None

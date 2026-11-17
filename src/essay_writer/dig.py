@@ -223,6 +223,9 @@ def openalex_search(query: str) -> dict[str, Any]:
     key = openalex_api_key()
     if key:
         params["api_key"] = key
+    email = unpaywall_email()
+    if email:
+        params["mailto"] = email
     url = OPENALEX_URL + "?" + urllib.parse.urlencode(params)
     try:
         payload = _get_json(url, {"User-Agent": "essay-writer"})

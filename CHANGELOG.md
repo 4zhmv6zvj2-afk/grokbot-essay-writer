@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Crossref enrichment follows the documented REST API guidance: the stored Unpaywall email goes with each request as the polite-pool `mailto`, the query asks for five rows with a `select` field list, and a row is accepted only when its title, year, and author agree with the gathered citation. With a citation the query filters to `type:journal-article`, so "Faculty Opinions recommendation" datasets no longer crowd out the work. OpenAlex requests send the same contact email. Without a year or author, the resolver still reads only the first row.
+
 ## 0.9.7 — 2026-11-17
 
 - `essay-writer --install-upload` finds the project root inside the zip itself. An install folder that already held an older copy used to make the installer pip install that older tree and still report success; the update now installs the uploaded copy, and a fresh interpreter must report the uploaded version before the result says `ok`.
