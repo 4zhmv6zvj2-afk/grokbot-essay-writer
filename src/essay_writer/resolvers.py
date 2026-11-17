@@ -63,7 +63,7 @@ def resolver_mode() -> str:
 
 
 def _lookup_json(url: str) -> dict[str, Any] | None:
-    """GET one look-up URL through safe_url. A refusal or miss is None."""
+    """GET one look-up URL through safe_url. A refusal, an HTTP error, or a miss is None."""
     try:
         with safe_url.open_url(
             url,
@@ -71,6 +71,9 @@ def _lookup_json(url: str) -> dict[str, Any] | None:
             max_bytes=MAX_LOOKUP_BYTES,
             headers={"User-Agent": USER_AGENT},
         ) as response:
+            status = int(getattr(response, "status", 200) or 200)
+            if status < 200 or status >= 300:
+                return None
             payload = json.loads(response.read().decode("utf-8"))
     except (safe_url.Refused, urllib.error.URLError, TimeoutError, json.JSONDecodeError):
         return None
@@ -267,7 +270,8 @@ def crossref_lookup(
             return None
     else:
         payload = fetch(query)
-    items = payload.get("message", {}).get("items", [])
+    message = payload.get("message")
+    items = message.get("items", []) if isinstance(message, dict) else []
     if not items:
         return None
     rows = items if (wanted_year is not None or wanted_author) else items[:1]

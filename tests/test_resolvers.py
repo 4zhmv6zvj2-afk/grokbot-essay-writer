@@ -222,6 +222,25 @@ def test_lookup_chain_does_not_keep_an_openalex_doi_crossref_rejected(monkeypatc
     assert [item["result"] for item in calls] == ["missed", "missed"]
 
 
+def test_crossref_http_error_is_a_miss_not_an_exception(monkeypatch):
+    from essay_writer import resolvers, safe_url
+
+    monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+
+    def refused(url, **kwargs):
+        return safe_url.Response(429, {}, b'{"message": "Too many requests"}')
+
+    monkeypatch.setattr(resolvers.safe_url, "open_url", refused)
+    assert resolvers.crossref_lookup("Deep learning", year="2015", author="LeCun, Y.") is None
+    assert resolvers.openalex_lookup("Deep learning", year="2015", author="LeCun, Y.") is None
+
+    def strange(url, **kwargs):
+        return safe_url.Response(200, {}, b'{"message": "not-an-object"}')
+
+    monkeypatch.setattr(resolvers.safe_url, "open_url", strange)
+    assert resolvers.crossref_lookup("Deep learning", year="2015") is None
+
+
 def test_crossref_without_a_citation_still_reads_only_the_first_row():
     payload = {
         "message": {
