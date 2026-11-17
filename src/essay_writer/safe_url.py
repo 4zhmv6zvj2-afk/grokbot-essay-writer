@@ -36,7 +36,7 @@ MAX_REDIRECTS = 3
 MAX_URL_LENGTH = 4096
 DEFAULT_TIMEOUT = 20.0
 TRUSTED_EGRESS_ENV = "ESSAY_WRITER_TRUSTED_EGRESS"
-_FAKE_IP_NETWORK = ipaddress.ip_network("198.18.0.0/15")
+_FAKE_IP_NETWORK = ipaddress.IPv4Network("198.18.0.0/15")
 _READ_CHUNK = 64 * 1024
 _SENSITIVE_HEADERS = frozenset({"authorization", "proxy-authorization", "x-api-key", "cookie"})
 
