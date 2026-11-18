@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.14 — 2026-11-18
 
 - The release check now fails when `uv.lock` names a project version older than `pyproject.toml`. The suite reads the version from the package instead of hardcoding it, and a test fails when the README artifact names are stale.
 - README, ARCHITECTURE, and the glossary describe the reviewer seat and the full stage order. The operator log lists the environment overrides.
