@@ -2,9 +2,11 @@
 
 The release workflow compared the tag with ``pyproject.toml`` only, so a tag cut
 from a tree whose ``CHANGELOG.md`` still described the previous release passed
-every check and shipped. These fixtures pin the replacement: one checker that
-compares the tag, the package version, and the changelog version, and a release
-workflow that runs it before it builds, signs, or uploads anything.
+every check and shipped. A stale ``uv.lock`` then rode along inside the sdist,
+naming an older project version. These fixtures pin the replacement: one checker
+that compares the tag, the package version, the lock version, and the changelog
+version, and a release workflow that runs it before it builds, signs, or uploads
+anything.
 """
 
 from __future__ import annotations
@@ -31,15 +33,34 @@ CHANGELOG = """\
 {headings}
 """
 
+LOCK = """\
+version = 1
+revision = 1
 
-def _tree(root: Path, *, project: str, changelog_version: str | None) -> Path:
-    """A minimal tree with the two version files, and nothing else."""
+[[package]]
+name = "essay-writer"
+version = "{version}"
+"""
+
+
+def _tree(
+    root: Path,
+    *,
+    project: str,
+    changelog_version: str | None,
+    lock_version: str | None = None,
+) -> Path:
+    """A minimal tree with the three version files, and nothing else."""
     headings = (
         "## Unreleased\n\n- Nothing yet.\n"
         if changelog_version is None
         else f"## {changelog_version} — 2026-11-11\n\n- A change.\n"
     )
     (root / "pyproject.toml").write_text(PYPROJECT.format(version=project), encoding="utf-8")
+    (root / "uv.lock").write_text(
+        LOCK.format(version=lock_version if lock_version is not None else project),
+        encoding="utf-8",
+    )
     (root / "CHANGELOG.md").write_text(CHANGELOG.format(headings=headings), encoding="utf-8")
     return root
 
@@ -54,19 +75,30 @@ def _run(*arguments: str) -> subprocess.CompletedProcess[str]:
 
 
 @pytest.mark.parametrize(
-    ("project", "changelog_version", "tag"),
+    ("project", "changelog_version", "tag", "lock"),
     [
-        pytest.param("0.8.0", "0.7.0", "v0.8.0", id="case-1"),
-        pytest.param("0.8.0", "0.8.1", "v0.8.0", id="case-2"),
-        pytest.param("0.8.0", None, "v0.8.0", id="case-3"),
-        pytest.param("0.8.0", "0.8.0", "v0.7.0", id="case-4"),
+        pytest.param("0.8.0", "0.7.0", "v0.8.0", None, id="case-1"),
+        pytest.param("0.8.0", "0.8.1", "v0.8.0", None, id="case-2"),
+        pytest.param("0.8.0", None, "v0.8.0", None, id="case-3"),
+        pytest.param("0.8.0", "0.8.0", "v0.7.0", None, id="case-4"),
+        pytest.param("0.8.0", "0.8.0", "v0.8.0", "0.7.0", id="case-5-stale-lock"),
+        pytest.param("0.8.0", None, "v0.8.0", "0.7.0", id="case-6-stale-lock-and-no-changelog"),
     ],
 )
 def test_a_disagreement_fails_the_check(
-    tmp_path: Path, project: str, changelog_version: str | None, tag: str
+    tmp_path: Path,
+    project: str,
+    changelog_version: str | None,
+    tag: str,
+    lock: str | None,
 ) -> None:
-    """AC1. Any disagreement between the three sources exits non-zero."""
-    root = _tree(tmp_path, project=project, changelog_version=changelog_version)
+    """AC1. Any disagreement between the sources exits non-zero."""
+    root = _tree(
+        tmp_path,
+        project=project,
+        changelog_version=changelog_version,
+        lock_version=lock,
+    )
     result = _run("--tag", tag, "--root", str(root))
     assert result.returncode == 1, result.stdout + result.stderr
     assert "::error::" in result.stderr
@@ -98,6 +130,15 @@ def test_an_unreleased_section_does_not_hide_the_release_version(tmp_path: Path)
     )
     result = _run("--tag", "v0.8.0", "--root", str(root))
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_the_readme_names_the_release_being_cut() -> None:
+    """AC1. The README verify snippets carry the version the tree ships."""
+    from essay_writer import __version__
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert f"essay_writer-{__version__}-" in readme
+    assert f"v{__version__}" in readme
 
 
 def test_the_checked_in_tree_agrees_with_its_version() -> None:

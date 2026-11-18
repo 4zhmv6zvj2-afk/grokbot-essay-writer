@@ -82,8 +82,25 @@ Open an issue with:
 ## Releases
 
 Releases are cut by the maintainer in two passes. A release is a tag `vX.Y.Z`
-on a commit in this repository, with `pyproject.toml`,
-`src/essay_writer/__init__.py`, and `CHANGELOG.md` carrying the same version.
+on a commit in this repository, with four sources carrying the same version:
+`pyproject.toml`, `src/essay_writer/__init__.py`, the `essay-writer` entry in
+`uv.lock`, and the newest release heading in `CHANGELOG.md`. The README verify
+snippets name the release artifacts, so they carry it too.
+
+Before tagging, check every source in one step:
+
+- run `uv lock` so `uv.lock` names the new project version (it also picks up
+  any dependency change, such as a security bump);
+- update the README artifact names and the `git checkout` tag;
+- rename `## Unreleased` to the version heading, with the date;
+- run `python tools/check_release_version.py --tag vX.Y.Z`, then the suite,
+  `ruff check`, `ruff format --check`, `mypy`, and `uv lock --check`.
+
+The version literal no longer appears in the test suite: tests import
+`essay_writer.__version__`, so a bump only touches the files above. The
+checker fails on a stale `uv.lock` or changelog heading, and a suite test
+fails on stale README artifact names, so a missed file stops the release
+before it ships.
 First tag the commit and create a **draft** GitHub release for that tag. Then
 dispatch the Release workflow with the tag input. It rebuilds from the tag with
 pinned build tooling and `SOURCE_DATE_EPOCH`, builds twice and requires

@@ -1,7 +1,8 @@
 """The package names its author and maintainer, and nothing else moves.
 
 ``pyproject.toml`` carries one author record and one maintainer record, both
-pointing at the same GitHub noreply address. The version stays 0.9.13 and the
+pointing at the same GitHub noreply address. The version stays the package's
+current version and the
 licence stays the Apache License, Version 2.0.
 
 The check that reads the record only ever opens the file for reading. A tree
@@ -20,6 +21,8 @@ import tomllib
 from pathlib import Path
 
 import pytest
+
+from essay_writer import __version__ as VERSION
 
 REPO = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO / "pyproject.toml"
@@ -40,7 +43,6 @@ MAINTAINERS_LINE = (
 )
 FIELD_LINES = {"authors": AUTHORS_LINE, "maintainers": MAINTAINERS_LINE}
 
-VERSION = "0.9.13"
 APACHE_CLASSIFIER = "License :: OSI Approved :: Apache Software License"
 HOLDER = "Copyright 2026 4zhmv6zvj2-afk"
 
@@ -286,7 +288,7 @@ def test_author_and_maintainer_are_the_one_noreply_record(case_id):
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-author-a2", id="essay-author-a2")])
 def test_version_and_apache_licence_stay_and_no_real_address_ships(case_id):
-    """essay-author-a2: version 0.9.13, Apache 2.0, and no real address in the tree."""
+    """essay-author-a2: the current package version, Apache 2.0, and no real address."""
     assert case_id == "essay-author-a2"
     project, problems = _read_project(PYPROJECT)
     assert problems == []

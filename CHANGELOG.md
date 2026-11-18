@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- The release check now fails when `uv.lock` names a project version older than `pyproject.toml`. The suite reads the version from the package instead of hardcoding it, and a test fails when the README artifact names are stale.
+- README, ARCHITECTURE, and the glossary describe the reviewer seat and the full stage order. The operator log lists the environment overrides.
+- `opentelemetry-api` moves to 1.45.2 in `uv.lock`, which clears GHSA-mf5v-w3w3-f6cg, a denial of service in traceparent parsing. The lock also catches up to the project version its sdist entry had fallen behind.
+- The update-lock change is formatted to the repository's ruff style. No behaviour changes.
+
 ## 0.9.13 — 2026-11-18
 
 - Craft voice adds four short prose-habit rules (dashes, staged run-ups, decorated formatting, model knowledge guesses), written in-house from patterns in [blader/humanizer](https://github.com/blader/humanizer) (MIT). They ride the existing stage rules; there is no rewrite pass and no detector chase. `edit_recheck` also keeps names, numbers, dates, quotes, and citations unchanged.

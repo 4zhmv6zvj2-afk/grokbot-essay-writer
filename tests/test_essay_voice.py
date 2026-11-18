@@ -16,6 +16,7 @@ import pytest
 from docx import Document
 from helpers import open_sequence, pack, picked, plant_gathered_source
 
+from essay_writer import __version__
 from essay_writer.assignment_gate import read_assignment
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
@@ -636,7 +637,7 @@ def test_the_chat_sounds_like_a_helpful_friend(case_id):
     """essay-voice-a1: The persona is the helpful friend. The banking sentence is gone."""
     assert case_id == "essay-voice-a1"
     _assert_friend_sources()
-    assert 'version = "0.9.13"' in _read(REPO / "pyproject.toml")
+    assert f'version = "{__version__}"' in _read(REPO / "pyproject.toml")
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-voice-b1", id="essay-voice-b1")])
@@ -652,7 +653,7 @@ def test_earlier_cases_still_hold(case_id, workspace):
     assert case_id == "essay-voice-c1"
     _seat_parents()
     _assert_parent_cases("11")
-    assert 'version = "0.9.13"' in _read(REPO / "pyproject.toml")
+    assert f'version = "{__version__}"' in _read(REPO / "pyproject.toml")
 
 
 @pytest.mark.parametrize("case_id", [pytest.param("essay-voice-d1", id="essay-voice-d1")])
@@ -673,4 +674,4 @@ def test_a_partial_update_keeps_the_voice_and_the_saves(case_id, workspace):
     assert FRIEND not in first_run
     assert NEXT_STEP not in first_run
     assert "Do not fall back to Documents and call it this computer." in first_run
-    assert 'version = "0.9.13"' in _read(REPO / "pyproject.toml")
+    assert f'version = "{__version__}"' in _read(REPO / "pyproject.toml")

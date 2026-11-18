@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 from helpers import open_sequence
 
+from essay_writer import __version__
 from essay_writer.assignment_gate import (
     FORMAT_NAMED_ONE,
     QUESTION_NAMED_ONE,
@@ -367,4 +368,4 @@ def test_a_partial_update_does_not_leave_the_copies_apart(case_id, workspace):
     assert (folder / "brief.md").read_bytes() == before
     assert not (folder / "brief-meta.json").exists()
     version = (REPO / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "0.9.13"' in version
+    assert f'version = "{__version__}"' in version
