@@ -12,9 +12,13 @@ this repository is its source.
 
 ## What this is
 
-- **An MCP server for one workflow.** 24 tools take a single essay from brief to
-  `.docx`: research, plan, annotated bibliography, critical review, first draft,
-  feedback, edit, references, and final Word.
+- **An MCP server for one workflow.** The writer seat's 24 tools take a single
+  essay from brief to `.docx`: assignment, research, plan, annotated
+  bibliography, critical review, first draft, re-read, feedback, edit,
+  references, and final Word.
+- **A separate reviewer seat.** `essay-writer --reviewer` serves one tool,
+  `essay.review`, for the EQR pass. The writer refuses the Word write on stage 6
+  and stage 9 until that pass returns `PASS`.
 - **Confirm-gated and local.** A save, stage advance, or deliverable write needs
   a matching draft: a stage draft call writes the draft ledger (`.drafts/`), the
   tracking note, and the stage pointer, and the Confirm re-derives the same
@@ -293,6 +297,10 @@ spine, shelf, dig, canon, mid-office). The
 [Student-facing terms](docs/GLOSSARY.md#student-facing-terms) section of that
 page is the same vocabulary in plain English. [docs/testing.md](docs/testing.md)
 covers how the suite is organised and how the prompt snapshot is regenerated.
+[docs/operator-log.md](docs/operator-log.md) documents the operator debug log,
+the event stream, and the internal environment overrides; and
+[docs/writing-type-checklist.md](docs/writing-type-checklist.md) lists what a
+new writing type must map before it can be saved.
 
 `uv.lock` is the developer lockfile. `requirements-ci.txt` is the hash-pinned CI
 environment; `requirements-build.txt` pins the build tooling; and

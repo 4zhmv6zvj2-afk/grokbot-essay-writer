@@ -127,7 +127,8 @@ still happen inside function bodies; that is a package-wide import-graph
 question, not evidence for the stage layers.
 
 The stages are 1–10: assignment, thesis or purpose, plan, 4a annotated bibliography,
-4b critical review, first draft, feedback, edit, references, and final Word.
+4b critical review, first draft, re-read and make changes, feedback, edit,
+references, and final Word.
 
 ## Design notes
 

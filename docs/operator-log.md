@@ -25,3 +25,13 @@ The file is `ml-events.jsonl` in the same essay app folder as `debug.log`. That 
 Each line is one JSON object. The kinds are stage, confirm, digest, paths, shell, and outcome. A line names the tool, the stage, whether a confirm card was present, a digest hash, a file path with its time and checksum, which shell started or finished, and whether the call wrote or was refused. The student's chat, the stage note, and the launch prompt are not copied into the line.
 
 `essay.debug.wipe` is the only clear. Delete the logs, or clear the debug log, removes both files. There is no second wipe door.
+
+## Environment overrides (operators and tests)
+
+Set these on the `essay-writer` process, not in chat. The first three change behaviour. The last two are internal signals: do not set them by hand.
+
+- `ESSAY_WRITER_MAC_HOME` — the friend's Mac home this computer can see, when a non-Darwin shell already has it mounted. Unset, empty, or `open` means the Mac is not mounted, so the handoff stays chat-only. A named folder that does not exist is treated the same way.
+- `ESSAY_WRITER_RESOLVERS` — paper look-up mode: `live` (default), `off` (skip look-ups), or `fixture` (the test set).
+- `ESSAY_WRITER_UPDATE_LOCK` — the path of the process-wide `--update` lock. Unset uses `essay-writer-update.lock` in the system temp folder.
+- `ESSAY_WRITER_INTERPRETER` — internal handoff signal. The bootstrap sets it to the interpreter it re-execs into, and a consumer reads it to skip a second bootstrap.
+- `ESSAY_WRITER_BUILD` — internal build label. It overrides the `BUILD-COMMIT` marker for one run; `essay.health` reports it as `build_commit`.
