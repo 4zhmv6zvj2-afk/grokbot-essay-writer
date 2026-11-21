@@ -26,7 +26,12 @@ validation, and Word output.
     bookkeeping, and the stage 6 opener. The inherited-lock keep takes the
     public confirm runner as an injected callable.
   - `stage_replies.py` — the draft and save reply writers (`_draft_reply`,
-    `_save_confirm`) and the no-op result.
+    `_save_confirm`) and the no-op result. They do not assign the stage
+    "what happens next" sentence.
+  - `stage_next.py` — the one writer for that sentence on an `essay.stage`
+    reply, including the upload line, the stage 7 ask, the mid-run wait, and
+    Confirm wording stripped while a mid-run is going. Dig, shelf, setup,
+    intake, review, and projects still write their own next sentence.
   - `stage_confirm.py` — the confirm path and the shared stage-7 skip probe.
     The body builder may import this module for the skip probe. This module
     never imports the body builder or the orchestrator.

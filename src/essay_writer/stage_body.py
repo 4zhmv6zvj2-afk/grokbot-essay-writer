@@ -42,17 +42,28 @@ def _normalize_look(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).casefold()
 
 
-def _guidance_pieces(essay_id: str, stage: str, genre: str | None) -> list[str]:
-    """Normalized guidance blocks and their lines, longest first."""
+def _guidance_pieces(
+    essay_id: str,
+    stage: str,
+    genre: str | None,
+    lines: tuple[str, str, str] | None = None,
+) -> list[str]:
+    """Normalized guidance blocks and their lines, longest first.
+
+    ``lines`` is the opening this build already loaded. A call without them
+    loads once for that ask.
+    """
     from essay_writer.brief_contract import opening_card_lines
     from essay_writer.specialists.grok_bot import (
         CHECKLIST_WALK,
-        basics_pass_lines,
         cached_approved_look,
+        read_basics_opening,
     )
     from essay_writer.stage_llm import prompt_overlay, stage_rules
 
-    scores, format_line, question_line = basics_pass_lines(essay_id)
+    if lines is None:
+        lines = read_basics_opening(essay_id).lines
+    scores, format_line, question_line = lines
     blocks = [
         "\n".join((scores, format_line, question_line)),
         scores,
@@ -83,7 +94,13 @@ def _guidance_pieces(essay_id: str, stage: str, genre: str | None) -> list[str]:
     return sorted(norms, key=len, reverse=True)
 
 
-def look_is_confirmable(essay_id: str, stage: str, genre: str | None, text: str) -> bool:
+def look_is_confirmable(
+    essay_id: str,
+    stage: str,
+    genre: str | None,
+    text: str,
+    lines: tuple[str, str, str] | None = None,
+) -> bool:
     """True when the text that would be stored has a sentence of the student's own.
 
     Missing or blank text is not confirmable. Text that is only the Basics
@@ -94,7 +111,7 @@ def look_is_confirmable(essay_id: str, stage: str, genre: str | None, text: str)
     if not isinstance(text, str) or not text.strip():
         return False
     remaining = _normalize_look(text)
-    for piece in _guidance_pieces(essay_id, stage, genre):
+    for piece in _guidance_pieces(essay_id, stage, genre, lines):
         if not remaining:
             break
         while piece and piece in remaining:
@@ -123,15 +140,19 @@ def _prepare_stage_text(
     text: str,
     *,
     minting: bool,
-) -> tuple[str, bool, str | None, dict[str, Any], dict[str, Any] | None]:
-    """Seed the draft, then run the shared citation report before the gates."""
+) -> tuple[str, bool, str | None, dict[str, Any], dict[str, Any] | None, object | None]:
+    """Seed the draft, then run the shared citation report before the gates.
+
+    The returned opening is the one brief read for this build. Stage 5 returns
+    none because that stage does not read the brief here.
+    """
     from essay_writer.specialists.grok_bot import maybe_seed_basics_on_draft
 
     essay_id = args.essay_id
     stage = args.stage
     answers = args.answers
     edited = args.edited
-    text, basics_seeded = maybe_seed_basics_on_draft(
+    text, basics_seeded, opening = maybe_seed_basics_on_draft(
         essay_id,
         stage,
         args.confirmPhase,
@@ -179,7 +200,7 @@ def _prepare_stage_text(
                 "applied": True,
                 "cut": list(short_report.get("cut") or []) + woven,
             }
-    return text, basics_seeded, edited, short_report, cite_report
+    return text, basics_seeded, edited, short_report, cite_report, opening
 
 
 def _stage_body_fields(
@@ -241,8 +262,13 @@ def _attach_stage_reports(
     cite_report: dict[str, Any] | None,
     *,
     stage5_gate: dict[str, Any] | None,
+    basics: object | None = None,
 ) -> None:
-    """Attach the outline, cite, basics, and host-launch report fields."""
+    """Attach the outline, cite, basics, and host-launch report fields.
+
+    ``basics`` is the opening draft preparation already loaded. This does not
+    read the brief again.
+    """
     essay_id = args.essay_id
     stage = args.stage
     _attach_outline_report(body, essay_id, stage)
@@ -255,12 +281,10 @@ def _attach_stage_reports(
     if stage5_gate is not None:
         body["north_star"] = stage5_gate
         body["checklist_in_chat"] = False
-    if stage != "5":
-        from essay_writer.specialists.grok_bot import attach_basics_pass
+    from essay_writer.specialists.grok_bot import BasicsOpening
 
-        shown = attach_basics_pass(essay_id)
-        if shown:
-            body["basics_pass"] = shown
+    if stage != "5" and isinstance(basics, BasicsOpening) and basics.active:
+        body["basics_pass"] = list(basics.lines)
     if stage in {"1", "3"}:
         from essay_writer.brief_contract import assignment_silence_gaps
 
@@ -421,11 +445,14 @@ def _build_stage_body(
     namedFolder = args.namedFolder
     heldFile = args.heldFile
     card_only = args.card_only
-    text, basics_seeded, edited, short_report, cite_report = _prepare_stage_text(
+    from essay_writer.specialists.grok_bot import BasicsOpening
+
+    text, basics_seeded, edited, short_report, cite_report, opening = _prepare_stage_text(
         args,
         text,
         minting=minting,
     )
+    prepared_lines = opening.lines if isinstance(opening, BasicsOpening) else None
     from essay_writer.spine import stage_uses_confirm_card
 
     # Card-bearing stages only. Stage 5 stores on the draft, including an empty look.
@@ -437,7 +464,7 @@ def _build_stage_body(
     if (
         stage_uses_confirm_card(stage)
         and not answer_call
-        and not look_is_confirmable(essay_id, stage, genre, text)
+        and not look_is_confirmable(essay_id, stage, genre, text, prepared_lines)
     ):
         return guidance_only_refusal()
     # A waiting-card mint is not the student's answer. Part names, Entry N,
@@ -468,7 +495,14 @@ def _build_stage_body(
         revisit=revisit,
         basics_seeded=basics_seeded,
     )
-    _attach_stage_reports(args, body, short_report, cite_report, stage5_gate=stage5_gate)
+    _attach_stage_reports(
+        args,
+        body,
+        short_report,
+        cite_report,
+        stage5_gate=stage5_gate,
+        basics=opening,
+    )
     _attach_stage_databases(args, body)
     if stage == "6":
         from essay_writer.late_chain import stage6_fields

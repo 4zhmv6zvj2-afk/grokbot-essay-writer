@@ -489,7 +489,8 @@ def essay_pack_render_word(
     if stage is not None and stage not in {"6", "7", "9"}:
         return refuse(
             "stage",
-            "Word stage is 6 for the first Word file, 7 after the questions and edits, or 9 for the final Word file.",
+            "Word stage is 6 for the first Word file, 7 after the questions and edits, "
+            "or 9 for the references confirm.",
         )
     if stage == "7":
         from essay_writer.stage7 import stage7_edited
@@ -596,9 +597,9 @@ def essay_pack_render_word(
         body["ok"] = True
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint)
         if stage in {"6", "9"} and body.get("eqr") != "PASS":
-            which = "first" if stage == "6" else "final"
+            pending = "first Word file" if stage == "6" else "references confirm"
             body["writer_clears_left"] = writer_clears_left()
-            body["next"] = say(f"The {which} Word file is not written yet. {PERSON_BLOCK}")
+            body["next"] = say(f"The {pending} is not written yet. {PERSON_BLOCK}")
             from essay_writer.specialists.grok_bot import attach_eqr_first_run_speech
 
             attach_eqr_first_run_speech(body)
@@ -648,7 +649,7 @@ def essay_pack_render_word(
             return attach_eqr_first_run_speech(
                 refuse(
                     "eqr",
-                    f"The final Word file is waiting on the reviewer. {PERSON_BLOCK}",
+                    f"The references confirm is waiting on the reviewer. {PERSON_BLOCK}",
                     writer_clears_left=writer_clears_left(),
                     submit_pass=submit.get("reason") or "",
                     path=planned,
@@ -676,8 +677,9 @@ def essay_pack_render_word(
                 )
             )
     if stage == "9":
-        # Final Word only: one look-up for a specialist source class the brief
-        # names and the gathered files do not. A hit is reported, never added.
+        # References confirm only: one look-up for a specialist source class the
+        # brief names and the gathered files do not. A hit is reported, never
+        # added. Finish does not run this look-up again.
         from essay_writer.mark_fit import final_specialist_lookup
 
         lookup_state = load_state(essay_id)

@@ -52,11 +52,12 @@ def json_data(relative: str) -> Any:
     return json.loads(_text(relative))
 
 
-_TOKEN = re.compile(r"\{\{(confirm|status|chat):([a-z0-9_]+)\}\}")
+_TOKEN = re.compile(r"\{\{(confirm|status|chat|install):([a-z0-9_]+)\}\}")
 _TOKEN_FILES = {
     "confirm": "front_office/confirm.md",
     "status": "status/mid.md",
     "chat": "front_office/chat.md",
+    "install": "install/operator.md",
 }
 
 

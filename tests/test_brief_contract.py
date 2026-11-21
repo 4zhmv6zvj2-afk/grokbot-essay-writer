@@ -38,6 +38,7 @@ from essay_writer.late_chain import (
     _stage10_gate,
     _stage10_manifest,
     _write_stage10_sequence,
+    build_finished_word,
     write_stage10,
 )
 from essay_writer.paths import essay_dir, work_dir
@@ -454,6 +455,7 @@ def test_ac_nt4_title_page_identity(workspace, monkeypatch):
             _stage10_gate,
             _write_stage10_sequence,
             _deliver_stage10,
+            build_finished_word,
         )
     )
     assert "write_docx(" in stage10_source

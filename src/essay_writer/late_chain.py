@@ -142,11 +142,6 @@ def next_run(essay_id: str, stage: str, *, armed: bool) -> dict[str, Any] | None
     return None
 
 
-STAGE10_UNMOUNTED = (
-    "The Mac folder is not on this computer. "
-    "The final Word stays in this chat and on this sequence. "
-    "This tool does not submit."
-)
 MISSING_FINAL_WORD = "The final Word file is missing."
 FINDINGS_UNMOUNTED = (
     "The review opened the saved Word file. "
@@ -174,13 +169,9 @@ _LEAKS = (
 
 
 def quiet_next(stage: str, *, armed: bool, blocked: bool, place: str) -> str | None:
-    if not armed:
-        return None
-    if blocked:
-        return "Read the independent review note in this chat before the final Word file."
-    if stage == "10":
-        return place
-    return None
+    from essay_writer.stage_next import quiet_stage_line
+
+    return quiet_stage_line(stage, armed=armed, blocked=blocked, place=place)
 
 
 def chat_leaks(text: str) -> bool:
@@ -212,12 +203,15 @@ def draft_prose(pack: dict[str, Any] | None) -> str:
     return "\n\n".join(parts)
 
 
-def mark_quiet(body: dict[str, Any], chat: str, *, step: str) -> dict[str, Any]:
+def mark_quiet(
+    body: dict[str, Any], chat: str, *, step: str, speak_next: bool = True
+) -> dict[str, Any]:
     body["quiet"] = True
     body["step"] = step
     body["checklist_in_chat"] = False
     body["chat"] = chat
-    body["next"] = chat
+    if speak_next:
+        body["next"] = chat
     body["confirm_line"] = chat
     body.pop("tracking_path", None)
     return body
@@ -240,7 +234,10 @@ def quiet_stage5(body: dict[str, Any], essay_id: str) -> dict[str, Any]:
         line = stage5_chat_line(FIRST_DRAFT_READY, FIRST_DRAFT_READY)
     else:
         line = stage5_chat_line(STAGE6_OPEN, STAGE6_OPEN)
-    quiet = mark_quiet(body, line, step="5")
+    quiet = mark_quiet(body, line, step="5", speak_next=False)
+    from essay_writer.stage_next import write_stage_next
+
+    write_stage_next(quiet, line)
     quiet["checklist_in_chat"] = False
     from essay_writer.student_turns import STAGE6_LEAD_IN
 
@@ -741,17 +738,22 @@ def _pack_from_docx(essay_id: str, source: Path) -> dict[str, Any] | None:
     return _finish_recovered_pack(essay_id, pack, reference_lines)
 
 
-def _refresh_sequence_final(source: Path, project: str) -> None:
-    """Write output/<module>-10/<module>-final.docx from the sequence Word file just saved."""
+def _copy_word_bytes(source: Path, dest: Path) -> None:
+    """Copy one built Word file byte-for-byte. This does not build the document again."""
     import os
 
-    folder = source.parent / f"{project}-10"
-    folder.mkdir(parents=True, exist_ok=True)
-    final = folder / f"{project}-final.docx"
-    refuse_repo_write(final)
-    pending = final.with_name(f".{final.name}.writing")
+    refuse_repo_write(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    pending = dest.with_name(f".{dest.name}.writing")
     pending.write_bytes(source.read_bytes())
-    os.replace(pending, final)
+    os.replace(pending, dest)
+
+
+def _refresh_sequence_final(source: Path, project: str) -> Path:
+    """Write output/<module>-10/<module>-final.docx from the one build just saved."""
+    final = source.parent / f"{project}-10" / f"{project}-final.docx"
+    _copy_word_bytes(source, final)
+    return final
 
 
 def _unmounted_documents(body: dict[str, Any]) -> None:
@@ -826,7 +828,6 @@ def _stop_missing_final_word(body: dict[str, Any]) -> None:
     body["ok"] = False
     body["refused"] = "word"
     body["reason"] = MISSING_FINAL_WORD
-    body["next"] = say(MISSING_FINAL_WORD)
     body["place"] = ""
     body["final_word"] = {
         "ok": False,
@@ -898,6 +899,12 @@ def _reuse_stage10(
     body["place"] = record.get("place") or body.get("place") or ""
     body["comments_place"] = record.get("comments_place") or ""
     body["findings_place"] = record.get("findings_place") or ""
+    project = module_code(source.stem)
+    sequence_final = source.parent / f"{project}-10" / f"{project}-final.docx"
+    if sequence_final.is_file():
+        from essay_writer.assignment_handoff import attach_word_chat
+
+        attach_word_chat(body, sequence_final)
     return body
 
 
@@ -926,7 +933,11 @@ def _load_stage10_pack(
     source: Path,
     body: dict[str, Any],
 ) -> tuple[dict[str, Any] | None, str, str, int]:
-    """Read the saved pack, or rebuild it from the sequence Word file."""
+    """Finish reads the saved draft when it is present, otherwise the working Word file.
+
+    The saved draft is the stored pack. The working Word file is the sequence
+    document. Both are input to the same one build.
+    """
     saved_pack = _saved_pack(essay_id)
     pack_path = "saved_pack" if saved_pack is not None else "missing"
     pack = saved_pack
@@ -1149,6 +1160,25 @@ def _stage10_gate(
     return prepared, None
 
 
+def build_finished_word(
+    essay_id: str,
+    pack: dict[str, Any],
+    report: dict[str, Any],
+    path: Path,
+) -> Path:
+    """Build the finished Word document once and return that file.
+
+    Stage 10 save is the only caller. Page-number and reference checks run on
+    this file before it is saved. The final-named file and the student's folder
+    receive a byte-for-byte copy of this result. A later call with the same
+    draft does not call this again.
+    """
+    from essay_writer.word import write_docx
+
+    write_docx(essay_id, pack, report, path, product_log=False)
+    return path
+
+
 def _write_stage10_sequence(
     essay_id: str,
     *,
@@ -1156,17 +1186,17 @@ def _write_stage10_sequence(
     body: dict[str, Any],
     prepared: dict[str, Any],
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-    """Write the pending sequence file and check footer, references, and Harvard.
+    """Build once, check that file, then save it.
 
-    A check stops with the reply body in the second slot. A written file leaves
-    the facts the delivery step needs in the first slot.
+    A failed check deletes the pending build and leaves every previous file in
+    place. A written file leaves the facts the delivery step needs in the first
+    slot.
     """
     import os
 
     from essay_writer.word import (
         EmptyFooter,
         empty_footer_refusal,
-        write_docx,
     )
 
     pack = prepared["pack"]
@@ -1178,7 +1208,7 @@ def _write_stage10_sequence(
     cover = prepared["cover"]
     pending = source.with_name(f".{source.name}.writing")
     try:
-        write_docx(essay_id, pack, report, pending, product_log=False)
+        build_finished_word(essay_id, pack, report, pending)
     except EmptyFooter:
         pending.unlink(missing_ok=True)
         return None, _footer_stop(
@@ -1265,7 +1295,7 @@ def _deliver_stage10(
     written: dict[str, Any],
     body: dict[str, Any],
 ) -> dict[str, Any]:
-    """Refresh the sequence final, then copy the Word file where it is mounted."""
+    """Copy the one build to the final-named file, then to the student's folder."""
     pack = written["pack"]
     report = written["report"]
     pack_path = written["pack_path"]
@@ -1273,11 +1303,11 @@ def _deliver_stage10(
     refs_count = written["refs_count"]
     sources_count = written["sources_count"]
     cover = written["cover"]
-    _refresh_sequence_final(source, project)
+    sequence_final = _refresh_sequence_final(source, project)
     from essay_writer.assignment_handoff import attach_word_chat
     from essay_writer.word_references import reference_lines_origin
 
-    attach_word_chat(body, source)
+    attach_word_chat(body, sequence_final)
     body["sequence_written"] = True
     refs_from = reference_lines_origin(pack)
     _log_stage10_word(
@@ -1295,9 +1325,6 @@ def _deliver_stage10(
     body["cover"] = cover
     body["sources"] = report.get("sources") or []
     if root is None:
-        from essay_writer.ml_events import note_stage10_rewrite_paths
-
-        note_stage10_rewrite_paths(essay_id)
         _unmounted_documents(body)
         body["ok"] = True
         body["sequence_written"] = True
@@ -1312,9 +1339,6 @@ def _deliver_stage10(
         ensure_sequence_mac_folder(essay_id)
         folder = seq_mac
     elif not root.is_dir():
-        from essay_writer.ml_events import note_stage10_rewrite_paths
-
-        note_stage10_rewrite_paths(essay_id)
         _unmounted_documents(body)
         body["ok"] = True
         body["sequence_written"] = True
@@ -1324,27 +1348,7 @@ def _deliver_stage10(
     folder.mkdir(parents=True, exist_ok=True)
     final = folder / f"{project}-final.docx"
     comments = folder / f"{project}-comments.docx"
-    from essay_writer.word import EmptyFooter, empty_footer_refusal, write_docx
-
-    try:
-        write_docx(essay_id, pack, report, final, product_log=False)
-    except EmptyFooter:
-        if final.is_file():
-            final.unlink()
-        return _footer_stop(
-            body,
-            refused="footer",
-            reason="The page number is missing. An empty footer is refused.",
-        )
-    empty = empty_footer_refusal(final)
-    if empty:
-        if final.is_file():
-            final.unlink()
-        return _footer_stop(
-            body,
-            refused=str(empty.get("refused") or "footer"),
-            reason=str(empty.get("reason") or ""),
-        )
+    _copy_word_bytes(source, final)
     from essay_writer.review import place_findings_note
 
     note = place_findings_note(essay_id, documents=root)
@@ -1379,13 +1383,16 @@ def _remember_stage10_result(
 
 
 def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, Any]:
-    """Write the sequence Word file, then refresh the sequence -10 final from it.
+    """Build the finished Word file once, check it, then copy those bytes.
 
-    The sequence file is Essay-writer/<module>/sequences/<n>/output/<id>.docx.
-    Those same bytes are written to output/<module>-10/<module>-final.docx so a
-    cloned parent final cannot stay stale. Documents/<module>-10/<module>-final.docx
-    is written only when that folder is mounted. A missing registration number
-    or an empty footer does not record the sequence file as the final.
+    The build runs on the stage 10 save, before that step is marked saved.
+    Page-number and reference checks run on that one file. The same bytes are
+    saved as the working sequence file, copied to output/<module>-10/<module>-final.docx,
+    and copied to the student's folder when that folder is on this computer.
+    A failed check leaves the previous files in place. A successful build is
+    remembered whether or not that folder is here. The same draft later returns
+    the remembered result and does not build again. A missing registration
+    number or an empty footer does not record the file as final.
     """
     project = module_code(essay_id)
     place = final_place(essay_id)
@@ -1446,9 +1453,9 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
         written=written,
         body=body,
     )
-    if body.get("copied") is not True:
-        return body
-    return _remember_stage10_result(essay_id, source, written["pack"], body)
+    if body.get("ok") is True and body.get("sequence_written") is True:
+        return _remember_stage10_result(essay_id, source, written["pack"], body)
+    return body
 
 
 def _write_comments(essay_id: str, path: Path) -> None:
@@ -1543,16 +1550,9 @@ def finish_stage_reply(
         if run:
             body["next_run"] = run
             blocked = bool(run.get("blocked"))
-            line = quiet_next(stage, armed=True, blocked=blocked, place=final_place(essay_id))
-            if line:
-                body["next"] = say(line)
             if blocked:
                 body["blocked"] = True
                 body["eqr"] = run.get("eqr") or "missing"
-    elif armed and stage in {"8", "9"} and not body.get("stored"):
-        line = quiet_next(stage, armed=True, blocked=False, place=final_place(essay_id))
-        if line:
-            body["next"] = say(line)
     if stage == "10" and body.get("stored"):
         final = body.get("final_word")
         source = work_dir(essay_id) / "output" / f"{essay_id}.docx"
@@ -1575,16 +1575,10 @@ def finish_stage_reply(
             final["comments_place"] = ""
             final["delivery"] = "chat"
             body["place"] = ""
-            body["next"] = say(STAGE10_UNMOUNTED)
             body["final_word"] = final
         elif isinstance(final, dict):
             final.pop("sequence_written", None)
             body["place"] = final["place"]
-            findings = final.get("findings_place") or ""
-            note = f" The review note is {findings}." if findings else ""
-            body["next"] = say(
-                f"Open {final['place']} and keep a copy.{note} This tool does not submit."
-            )
             body["final_word"] = final
         kept = body.get("final_word")
         delivery = kept.get("delivery") if isinstance(kept, dict) else None
@@ -1596,15 +1590,16 @@ def finish_stage_reply(
         blocked_text, verdict = final_review(essay_id)
         if blocked_text:
             body["blocked"] = True
-            body["next"] = say(blocked_text)
             body["eqr"] = verdict
-    if stage == "9" and body.get("stored"):
-        from essay_writer.specialists.grok_bot import STAGE9_OWN_WORDS
+    from essay_writer.stage_next import apply_finished_stage_next
 
-        next_raw = body.get("next")
-        current = next_raw if isinstance(next_raw, str) else ""
-        if STAGE9_OWN_WORDS not in current:
-            body["next"] = say(f"{STAGE9_OWN_WORDS} {current}".strip())
+    apply_finished_stage_next(
+        body,
+        essay_id,
+        stage,
+        armed=armed,
+        place=final_place(essay_id),
+    )
     from essay_writer.cite_fit import in_line, speak_cite_ask
 
     speak_cite_ask(body)
@@ -1633,12 +1628,9 @@ def _say_written_conclusion(body: dict[str, Any], essay_id: str) -> None:
     if not line:
         return
     body["conclusion_line"] = line
-    current = body.get("next")
-    if isinstance(current, str) and current.strip():
-        if line not in current:
-            body["next"] = f"{current.rstrip()} {line}"
-    else:
-        body["next"] = line
+    from essay_writer.stage_next import append_conclusion_next
+
+    append_conclusion_next(body, line)
     chat = body.get("chat")
     if isinstance(chat, str) and chat.strip():
         if line not in chat:

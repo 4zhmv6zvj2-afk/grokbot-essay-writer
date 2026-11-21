@@ -29,6 +29,7 @@ from essay_writer.harvard_ref_check import (
 from essay_writer.late_chain import (
     _deliver_stage10,
     _write_stage10_sequence,
+    build_finished_word,
     write_stage10,
 )
 from essay_writer.paths import essay_dir, work_dir
@@ -228,7 +229,11 @@ def test_essay_ref_ctl_a1_writer_checks_before_stage10_done(workspace, monkeypat
     assert saved["ok"] is True, saved
     assert saved.get("closed") is True
     assert load_pointer(seq)["closed"] is True
-    stage_source = inspect.getsource(_write_stage10_sequence) + inspect.getsource(_deliver_stage10)
+    stage_source = (
+        inspect.getsource(_write_stage10_sequence)
+        + inspect.getsource(_deliver_stage10)
+        + inspect.getsource(build_finished_word)
+    )
     assert stage_source.index("writer_reference_block(") < stage_source.index(
         '["sequence_written"] = True'
     )

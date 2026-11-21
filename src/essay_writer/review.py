@@ -1,6 +1,6 @@
 """Reviewer seat. The writer door does not record EQR.
 
-Stage 6 is the first Word path. Stage 9 is the final Word path.
+Stage 6 is the first Word path. Stage 9 is the references confirm.
 Only seat=reviewer can store PASS or FAIL.
 """
 

@@ -50,6 +50,16 @@ def _sdist_bytes(tmp_path: Path) -> bytes:
     return archive.read_bytes()
 
 
+def _health_payload(version: str) -> dict:
+    """An essay.health payload as the official door returns it."""
+    return {
+        "ok": True,
+        "alive": True,
+        "version": version,
+        "doors": [{"id": "essay.health", "tool": "essay.health"}],
+    }
+
+
 def test_version_compare_reads_a_tag_and_ignores_noise():
     assert update.version_tuple("v0.9.5") == (0, 9, 5)
     assert update.version_tuple("0.9.5") == (0, 9, 5)
@@ -323,7 +333,7 @@ def test_apply_installs_the_archive_and_checks_health(monkeypatch, tmp_path):
         fetcher=lambda url: _release(),
         downloader=download,
         pip_runner=pip_runner,
-        health_runner=lambda: {"ok": True, "version": LATEST},
+        health_runner=lambda: _health_payload(LATEST),
     )
     assert body["ok"] is True
     assert body["updated"] is True
@@ -397,7 +407,7 @@ def test_a_second_update_is_refused_and_the_lock_is_released(monkeypatch, tmp_pa
             fetcher=lambda url: _release(),
             downloader=download,
             pip_runner=lambda command, cwd: pip_calls.append("pip") or {"returncode": 0},
-            health_runner=lambda: {"ok": True, "version": LATEST},
+            health_runner=lambda: _health_payload(LATEST),
         )
     finally:
         if holder.stdin is not None:
@@ -415,7 +425,7 @@ def test_a_second_update_is_refused_and_the_lock_is_released(monkeypatch, tmp_pa
         fetcher=lambda url: _release(),
         downloader=download,
         pip_runner=pip_runner,
-        health_runner=lambda: {"ok": True, "version": LATEST},
+        health_runner=lambda: _health_payload(LATEST),
     )
     assert failed["ok"] is False
     assert "did not finish" in failed["reason"]
@@ -444,7 +454,7 @@ def test_apply_reports_a_partial_install_when_the_second_pip_fails(monkeypatch, 
         fetcher=lambda url: _release(),
         downloader=download,
         pip_runner=pip_runner,
-        health_runner=lambda: {"ok": True, "version": LATEST},
+        health_runner=lambda: _health_payload(LATEST),
     )
     assert body["ok"] is False
     assert body["updated"] is False
@@ -470,7 +480,7 @@ def test_apply_refuses_when_health_names_the_old_version(monkeypatch, tmp_path):
         fetcher=lambda url: _release(),
         downloader=download,
         pip_runner=lambda command, cwd: {"returncode": 0, "stdout": "", "stderr": ""},
-        health_runner=lambda: {"ok": True, "version": CURRENT},
+        health_runner=lambda: _health_payload(CURRENT),
     )
     assert body["ok"] is False
     assert body["updated"] is False
