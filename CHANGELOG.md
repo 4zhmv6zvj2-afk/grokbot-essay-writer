@@ -1,12 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.9.15 — 2026-11-22
 
 - The stage "what happens next" sentence is stored by one module. The stage reply, hold, landing, and finish paths no longer assign it. Dig, shelf, setup, intake, review, and projects still write their own next sentence. The words a person reads are still cleaned the same way on every door.
 - A draft reads the brief once for the Basics pass. The reply and the guidance inside that build reuse those three lines. A save that misses the pass reads the brief on its own, leaves the student's note unchanged, and stage 5 still skips that refusal.
 - The finished Word file is built once on the stage 10 save, before that step is marked saved. Page-number and reference checks run on that one build, then those bytes are saved and copied to the final-named file and, when the student's folder is on this computer, to that folder. A failed check leaves the previous files and leaves stage 10 unsaved. Earlier Word steps may update the working file and do not write the final-named file. The references confirm stays the submit file the independent review reads, and the one specialist look-up stays there. A successful build is remembered whether or not the student's folder is on this computer. Cursor CLI and Grok Build follow this same path. Build covered.
 - The setup ask is written once in the shared setup block. Both host setup prompts point at that block by token, and the front-office briefing and the first-run text carry the same words, so the student still has one setup door.
 - Install, update, and attach read health the same way: one short "did health pass?" answer beside the official door. The install write stays on its own path and is never combined with that check.
+- 0.9.15 ships the wheel, the sdist, and `SHA256SUMS`, and does not include Sigstore bundles or build-provenance attestations.
 
 ## 0.9.14 — 2026-11-18
 
