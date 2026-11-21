@@ -571,11 +571,11 @@ def test_essay_cues_d1_a_failed_update_does_not_guess_into_a_file(case_id, works
     def unavailable(_essay_id: str):
         raise OSError("the spoken lines are unavailable")
 
-    showing = grok_bot.basics_pass_lines
-    monkeypatch.setattr(grok_bot, "basics_pass_lines", unavailable)
+    showing = grok_bot.read_basics_opening
+    monkeypatch.setattr(grok_bot, "read_basics_opening", unavailable)
     with pytest.raises(OSError, match="spoken lines are unavailable"):
         essay_stage(seq, "1", "draft", "The corridor is the case here.")
-    monkeypatch.setattr(grok_bot, "basics_pass_lines", showing)
+    monkeypatch.setattr(grok_bot, "read_basics_opening", showing)
 
     assert brief.read_bytes() == before
     assert "Genre:" not in brief.read_text(encoding="utf-8")

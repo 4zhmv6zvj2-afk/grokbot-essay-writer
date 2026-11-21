@@ -13,6 +13,7 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Any, NamedTuple
 
 from essay_writer import assignment_gate as essay_assignment_gate
 from essay_writer.assignment_gate import assignment_gate, mark_scheme_text
@@ -327,11 +328,15 @@ def confirm_line(stage: str, genre: str | None, *, revisit: bool = False) -> str
     return "Confirm to save the final look. The tool does not submit."
 
 
-def basics_pass_lines(essay_id: str) -> tuple[str, str, str]:
-    """The three lines chat shows before a save. The question stays in the student's words."""
-    import re
+class BasicsOpening(NamedTuple):
+    """One load: whether a brief is active, and the three opening lines."""
 
-    record = essay_assignment_gate.read_assignment(essay_id)
+    active: bool
+    lines: tuple[str, str, str]
+
+
+def _three_opening_lines(essay_id: str, record: dict[str, Any]) -> tuple[str, str, str]:
+    """The three opening lines from an assignment record this ask already loaded."""
     scheme = mark_scheme_text(essay_id)
     band = record.get("highest_band") if isinstance(record.get("highest_band"), str) else ""
     snippet = ""
@@ -363,6 +368,23 @@ def basics_pass_lines(essay_id: str) -> tuple[str, str, str]:
     format_line = essay_assignment_gate.format_gap_line(essay_id, record.get("format"))
     question_line = essay_assignment_gate.question_gap_line(essay_id, record.get("question"))
     return scores, format_line, question_line
+
+
+def read_basics_opening(essay_id: str) -> BasicsOpening:
+    """Whether a brief is active, and the three opening lines.
+
+    Each call loads the assignment once. A later ask does not reuse this load.
+    """
+    record = essay_assignment_gate.read_assignment(essay_id)
+    return BasicsOpening(
+        active=record.get("active") is True,
+        lines=_three_opening_lines(essay_id, record),
+    )
+
+
+def basics_pass_lines(essay_id: str) -> tuple[str, str, str]:
+    """The three lines chat shows before a save. The question stays in the student's words."""
+    return read_basics_opening(essay_id).lines
 
 
 def standard_opening(essay_id: str) -> str:
@@ -422,9 +444,17 @@ def remember_approved_look(essay_id: str, look: str) -> None:
     save_state(essay_id, state)
 
 
-def seed_basics_look(essay_id: str, text: str) -> str:
-    """Prefill the three Basics lines from the brief, or reuse the last approved look."""
-    lines = basics_pass_lines(essay_id)
+def seed_basics_look(
+    essay_id: str,
+    text: str,
+    lines: tuple[str, str, str] | None = None,
+) -> str:
+    """Prefill the three Basics lines from this ask, or reuse the last approved look.
+
+    Pass the lines this ask already loaded. A call without them loads once.
+    """
+    if lines is None:
+        lines = read_basics_opening(essay_id).lines
     if basics_pass_opens(text, lines):
         return text
     cached = cached_approved_look(essay_id)
@@ -447,23 +477,25 @@ def maybe_seed_basics_on_draft(
     text: str,
     *,
     minting: bool,
-) -> tuple[str, bool]:
-    """On draft, prepend the Basics pass instead of refusing when the note never opened with it."""
+) -> tuple[str, bool, BasicsOpening | None]:
+    """On draft, prepend the Basics pass instead of refusing when the note never opened with it.
 
-    if minting or stage == "5" or confirm_phase != DRAFT:
-        return text, False
+    Stage 5 does not read the brief here. Every other stage reads it once and
+    returns that load for the reply and the guidance in the same build.
+    """
 
-    if essay_assignment_gate.read_assignment(essay_id).get("active") is not True:
-        return text, False
-    lines = basics_pass_lines(essay_id)
-    if basics_pass_opens(text, lines):
-        return text, False
-    if basics_pass_replaced_wrong(text, lines):
-        return text, False
+    if stage == "5":
+        return text, False, None
+    opening = read_basics_opening(essay_id)
+    if minting or confirm_phase != DRAFT or not opening.active:
+        return text, False, opening
+    lines = opening.lines
+    if basics_pass_opens(text, lines) or basics_pass_replaced_wrong(text, lines):
+        return text, False, opening
     from essay_writer.fo_chat_locks import seed_inherited_look
 
-    seeded = seed_basics_look(essay_id, seed_inherited_look(essay_id, stage, text))
-    return seeded, seeded != text
+    seeded = seed_basics_look(essay_id, seed_inherited_look(essay_id, stage, text), lines)
+    return seeded, seeded != text, opening
 
 
 def delivery_file_only(text: str) -> bool:
@@ -503,12 +535,13 @@ def basics_pass_block(essay_id: str, text: str) -> dict[str, object] | None:
     """Refuse a save while the short Basics pass is not the first three lines.
 
     Daily use, with no brief and no mark scheme, is unchanged. Stage 5 does not call this.
+    This ask loads the opening once and does not change the student's note.
     """
 
-    record = essay_assignment_gate.read_assignment(essay_id)
-    if record.get("active") is not True:
+    opening = read_basics_opening(essay_id)
+    if not opening.active:
         return None
-    lines = basics_pass_lines(essay_id)
+    lines = opening.lines
     if basics_pass_opens(text, lines):
         return None
     if basics_pass_replaced_wrong(text, lines):
@@ -535,9 +568,10 @@ def basics_pass_block(essay_id: str, text: str) -> dict[str, object] | None:
 def attach_basics_pass(essay_id: str) -> list[str] | None:
     """The three lines for a reply, when a brief or mark scheme is on the module."""
 
-    if essay_assignment_gate.read_assignment(essay_id).get("active") is not True:
+    opening = read_basics_opening(essay_id)
+    if not opening.active:
         return None
-    return list(basics_pass_lines(essay_id))
+    return list(opening.lines)
 
 
 def confirm_gate(essay_id: str, look: str) -> dict[str, object] | None:

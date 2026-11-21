@@ -307,12 +307,20 @@ def _collect_stage_misses(
     from essay_writer.specialists.grok_bot import basics_pass_block, delivery_file_only
     from essay_writer.spine import gate_save, north_star
 
-    if stage != "5" and delivery_file_only(text):
+    def take_basics_refusal() -> None:
         blocked_pass = basics_pass_block(essay_id, text)
-        if blocked_pass:
-            blocked_pass["stage"] = stage
-            blocked_pass["confirmPhase"] = confirmPhase
-            add(blocked_pass)
+        if not blocked_pass:
+            return
+        blocked_pass["stage"] = stage
+        blocked_pass["confirmPhase"] = confirmPhase
+        add(blocked_pass)
+
+    # Wording and contract misses are already recorded. A file-name-only note
+    # takes this refusal before the assignment gate. Every other note takes it
+    # after that gate. Stage 5 does not take it. The note is not rewritten.
+    file_only = stage != "5" and delivery_file_only(text)
+    if file_only:
+        take_basics_refusal()
     stage5_gate = None
     if stage == "5":
         from essay_writer.draft_from_review import stage5_draft_blockers
@@ -323,12 +331,8 @@ def _collect_stage_misses(
             add(_stage5_held(pointer, stage5_gate, stage5_blockers))
     else:
         add(gate_save(essay_id, text))
-    if stage != "5":
-        blocked_pass = basics_pass_block(essay_id, text)
-        if blocked_pass:
-            blocked_pass["stage"] = stage
-            blocked_pass["confirmPhase"] = confirmPhase
-            add(blocked_pass)
+    if stage != "5" and not file_only:
+        take_basics_refusal()
     if not found:
         return None, stage5_gate
     if len(found) == 1:

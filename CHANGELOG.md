@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The stage "what happens next" sentence is stored by one module. The stage reply, hold, landing, and finish paths no longer assign it. Dig, shelf, setup, intake, review, and projects still write their own next sentence. The words a person reads are still cleaned the same way on every door.
+- A draft reads the brief once for the Basics pass. The reply and the guidance inside that build reuse those three lines. A save that misses the pass reads the brief on its own, leaves the student's note unchanged, and stage 5 still skips that refusal.
 
 ## 0.9.14 — 2026-11-18
 
