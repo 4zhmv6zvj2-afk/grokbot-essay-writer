@@ -9,7 +9,8 @@ essay_writer/stage_landing.py. The orchestrator in essay_writer.stage_track
 imports this module and keeps the public entry points.
 
 This module never imports essay_writer.stage_track. The card runner the hold
-module needs is passed down from the orchestrator.
+module needs is passed down from the orchestrator. The stage "what happens
+next" sentence is stored by stage_next, not here.
 """
 
 from __future__ import annotations
@@ -173,31 +174,14 @@ def _draft_reply(context: StageContext, *, card_run: CardRun | None = None) -> d
                 named_folder=namedFolder,
                 card_run=card_run,
             )
-        from essay_writer.specialists.grok_bot import (
-            card_next,
-            confirm_reply_fields,
-            stage7_lead,
-        )
-        from essay_writer.stage7 import stage7_edited
-        from essay_writer.student_progress import (
-            mid_run_wait_next,
-            upload_reconcile_next,
-        )
+        from essay_writer.specialists.grok_bot import confirm_reply_fields
+        from essay_writer.stage_next import write_draft_stage_next
 
-        upload_next = upload_reconcile_next(body.get("download_check"))
         # A stage 7 draft that has not been edited asks the questions, and that
         # ask is the student's next action whether or not a mid step started.
         # The wait line never replaces it: the ask names the all-fine answer and
         # the card the door already returned, so the ask comes first.
-        stage7_ask = stage == "7" and not stage7_edited(essay_id)
-        if upload_next:
-            body["next"] = upload_next
-        elif stage7_ask:
-            body["next"] = stage7_lead(list(body.get("questions") or []), body["stage_title"])
-        elif body.get("mid_started") is True:
-            body["next"] = mid_run_wait_next(stage, body["stage_title"])
-        else:
-            body["next"] = card_next(stage, body["stage_title"])
+        write_draft_stage_next(body, stage=stage, essay_id=essay_id)
         body["card"] = stage_confirm_card(
             essay_id,
             stage,
@@ -367,16 +351,15 @@ def _save_confirm(
         body["digest"] = ready["digest"]
         body["tracking_path"] = rel
         body["current"] = "5"
-        from essay_writer.specialists.grok_bot import revisit_plan_next, saved_next
+        from essay_writer.stage_next import write_revisit_stage_next
 
         if stage == "2":
             body["next_stage"] = "3"
             body["next_stage_title"] = stage_title("3", genre)
-            body["next"] = revisit_plan_next(stage_title("3", genre))
         else:
             body["next_stage"] = "5"
             body["next_stage_title"] = stage_title("5", genre)
-            body["next"] = saved_next("5", stage_title("5", genre))
+        write_revisit_stage_next(body, stage=stage, genre=genre)
         finished = _mark_explicit_end(_with_plan_encourage(body, essay_id, stage, text))
         _snapshot_stage_save(essay_id, stage, text, finished)
         return finished

@@ -8,7 +8,8 @@ keeps the public entry points.
 
 This module never imports essay_writer.stage_track. The inherited-lock keep
 gets the public confirm runner as an injected callable, and the pointer-lost
-path gets the same card runner the state layer uses.
+path gets the same card runner the state layer uses. The stage "what happens
+next" sentence is stored by stage_next, not here.
 """
 
 from __future__ import annotations
@@ -178,12 +179,10 @@ def _store_stage(
     body["tracking_path"] = rel
     body["current"] = updated["current"]
     body.pop("card", None)
-    from essay_writer.specialists.grok_bot import saved_next
+    from essay_writer.stage_next import write_following_stage_next
 
-    if following:
-        body["next"] = saved_next(following, stage_title(following, genre))
-    else:
-        body["next"] = "Keep a copy. This tool does not submit."
+    following_title = stage_title(following, genre) if following else ""
+    write_following_stage_next(body, following, following_title)
     from essay_writer.late_chain import finish_stage_reply, quiet_stage5
 
     finished = finish_stage_reply(

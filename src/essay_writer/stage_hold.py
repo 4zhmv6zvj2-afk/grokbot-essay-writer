@@ -4,7 +4,8 @@ stage_hold builds the reply a save returns when it is held or refused,
 replays a Confirm card, and commits the pointer through the injected
 CardRun. The pointer write stays in stage_state: this module calls
 _commit_pointer and does not write the journal itself. It never imports
-the orchestrator, the confirm path, or the body builder.
+the orchestrator, the confirm path, or the body builder. The stage "what
+happens next" sentence is stored by stage_next, not here.
 """
 
 from __future__ import annotations
@@ -131,7 +132,6 @@ def _confirm_blocked(
     card_run: CardRun | None = None,
 ) -> dict[str, object]:
     """An already-saved stage does not replay its card. The draft card is for current."""
-    from essay_writer.specialists.grok_bot import missing_confirm_next
     from essay_writer.spine import stage_uses_confirm_card
 
     current = pointer["current"]
@@ -144,10 +144,9 @@ def _confirm_blocked(
     blocked.pop("cardDigest", None)
     saved = pointer.get("saved") or []
     if pointer.get("closed") is True or current in saved:
-        blocked["next"] = str(
-            blocked.get("reason") or "The last stage is already saved. This tool does not submit."
-        )
-        return blocked
+        from essay_writer.stage_next import write_closed_stage_next
+
+        return write_closed_stage_next(blocked)
     opened = None
     if stage_uses_confirm_card(current) and current != stage:
         opened = _replay_confirm_card(essay_id, current, genre, pointer, None)
@@ -171,15 +170,17 @@ def _confirm_blocked(
             blocked["cardAction"] = opened_reply["cardAction"]
         if opened_reply.get("cardDigest"):
             blocked["cardDigest"] = opened_reply["cardDigest"]
-        nxt = opened_reply.get("next")
-        blocked["next"] = (
-            nxt
-            if isinstance(nxt, str) and nxt.strip()
-            else missing_confirm_next(current, stage_title(current, genre))
+        from essay_writer.stage_next import write_blocked_card_next
+
+        return write_blocked_card_next(
+            blocked,
+            opened_reply.get("next"),
+            stage=current,
+            title=stage_title(current, genre),
         )
-    else:
-        blocked["next"] = missing_confirm_next(current, stage_title(current, genre))
-    return blocked
+    from essay_writer.stage_next import write_missing_confirm_next
+
+    return write_missing_confirm_next(blocked, current, stage_title(current, genre))
 
 
 def _opening_look(essay_id: str) -> str:
@@ -276,7 +277,10 @@ def _name_inherited_lock(
     body.pop("cardAction", None)
     body.pop("cardDigest", None)
     body.pop("explicit_end", None)
-    body["next"] = ask["next"]
+    from essay_writer.stage_next import write_stage_next
+
+    inherited = ask.get("next")
+    write_stage_next(body, inherited if isinstance(inherited, str) else "")
     body["prior_saved_lock"] = ask["prior_saved_lock"]
     body["inherited_lock_preview"] = ask["inherited_lock_preview"]
     body["lock_choices"] = ask["lock_choices"]
@@ -346,7 +350,9 @@ def _attach_minted_card(
     chain = body.get("next_run") or body.get("blocked") or body.get("final_word")
     nxt = opened.get("next")
     if not chain and isinstance(nxt, str) and nxt.strip():
-        body["next"] = nxt
+        from essay_writer.stage_next import write_stage_next
+
+        write_stage_next(body, nxt)
     if "status" not in body:
         status = opened.get("status")
         if isinstance(status, list) and any(isinstance(line, str) and line for line in status):
@@ -491,12 +497,10 @@ def _commit_with_next_card(
     body["digest"] = card_digest
     body["tracking_path"] = relative(note)
     body["current"] = updated["current"]
-    from essay_writer.specialists.grok_bot import saved_next
+    from essay_writer.stage_next import write_critical_reviews_next, write_following_stage_next
 
-    if following:
-        body["next"] = saved_next(following, stage_title(following, genre))
-    else:
-        body["next"] = "Keep a copy. This tool does not submit."
+    following_title = stage_title(following, genre) if following else ""
+    write_following_stage_next(body, following, following_title)
     from essay_writer.late_chain import finish_stage_reply
 
     finished = finish_stage_reply(
@@ -506,10 +510,7 @@ def _commit_with_next_card(
         armed=updated.get("chain_armed") is True,
     )
     if finished.get("delivery_speech") == "4b" and isinstance(finished.get("next"), str):
-        from essay_writer.specialists.grok_bot import critical_reviews_delivery_next
-
-        finished["next"] = critical_reviews_delivery_next(finished["next"])
-        finished.pop("delivery_speech", None)
+        write_critical_reviews_next(finished)
     if pending_next is not None and following:
         finished = _name_inherited_lock(finished, essay_id, following, pending_next)
     elif not _expects_next_card(following):
@@ -550,8 +551,9 @@ def _replay_confirm_card(
     digest = record.get("digest")
     if not isinstance(digest, str) or not digest:
         return None
-    from essay_writer.specialists.grok_bot import card_next, confirm_reply_fields
+    from essay_writer.specialists.grok_bot import confirm_reply_fields
     from essay_writer.spine import stage_confirm_card
+    from essay_writer.stage_next import write_replay_card_next
 
     revisit = _revisit_window(pointer) and stage in {"2", "3"}
     line = _confirm_line(stage, genre, revisit=revisit)
@@ -563,16 +565,16 @@ def _replay_confirm_card(
         line,
         stage_title=title,
     )
-    return {
+    replayed: dict[str, Any] = {
         "card": card,
         "digest": digest,
         **confirm_reply_fields(digest),
-        "next": card_next(stage, title),
         "confirm_line": line,
         "stored": False,
         "advanced": False,
         "wrote": False,
     }
+    return write_replay_card_next(replayed, stage, title)
 
 
 def _stage7_skip_reply(
@@ -583,8 +585,8 @@ def _stage7_skip_reply(
     confirm_phase: str,
 ) -> dict[str, object]:
     """A skip does not save. The same reply asks the questions again."""
-    from essay_writer.specialists.grok_bot import stage7_lead
     from essay_writer.stage7 import load_stage7, note_questions, questions_for
+    from essay_writer.stage_next import write_stage7_skip_next
 
     record = load_stage7(essay_id)
     if not record.get("asked"):
@@ -593,11 +595,9 @@ def _stage7_skip_reply(
     questions = list(record.get("questions") or questions_for(essay_id))
     title = stage_title(stage, genre)
     reason = "Skipping the questions does not save this step. Answer them in this chat."
-    lead = stage7_lead(questions, title)
-    return refuse(
+    refused = refuse(
         "stage",
         reason,
-        next=f"{reason} {lead}",
         questions=questions,
         stored=False,
         wrote=False,
@@ -607,6 +607,8 @@ def _stage7_skip_reply(
         stage=stage,
         confirmPhase=confirm_phase,
     )
+    spoken = [item for item in questions if isinstance(item, str)]
+    return write_stage7_skip_next(refused, reason=reason, questions=spoken, title=title)
 
 
 def _reoffer_confirm(
@@ -627,7 +629,7 @@ def _reoffer_confirm(
     Other refusals still name the card. When no card can be replayed, the
     typed-yes fallback stays.
     """
-    from essay_writer.specialists.grok_bot import missing_confirm_next
+    from essay_writer.stage_next import write_reoffer_next
 
     replay = _replay_confirm_card(essay_id, stage, genre, pointer, card_digest)
     extra: dict[str, object] = {
@@ -641,11 +643,14 @@ def _reoffer_confirm(
     }
     if replay:
         extra.update(replay)
-    if isinstance(lead, str) and lead.strip():
-        extra["next"] = lead.strip()
-    elif not replay:
-        extra["next"] = missing_confirm_next(stage, stage_title(stage, genre))
-    return refuse(code, reason, **extra)
+    refused = refuse(code, reason, **extra)
+    return write_reoffer_next(
+        refused,
+        lead=lead,
+        replayed=replay is not None,
+        stage=stage,
+        title=stage_title(stage, genre),
+    )
 
 
 def _card_record(essay_id: str, stage: str, card_digest: str | None):
@@ -770,7 +775,9 @@ def _stage_refusal(
             from essay_writer.late_chain import MISSING_FINAL_WORD, _missing_stored_final_word
 
             if _missing_stored_final_word(essay_id):
-                return refuse("word", MISSING_FINAL_WORD, next=MISSING_FINAL_WORD)
+                from essay_writer.stage_next import write_reason_next
+
+                return write_reason_next(refuse("word", MISSING_FINAL_WORD))
         return refuse("stage", "The last stage is already saved. This tool does not submit.")
     window = _revisit_window(cast(dict[str, Any], pointer))
     if window and stage in {"2", "3"}:
@@ -823,7 +830,7 @@ def _stage5_held(
         code = "north-star"
         reason = gate.get("reason") or "The first draft does not pass the assignment check yet."
     line = stage5_chat_line(reason, "The first draft is not ready yet.")
-    return refuse(
+    refused = refuse(
         code,
         reason,
         advanced=False,
@@ -834,9 +841,12 @@ def _stage5_held(
         step="5",
         checklist_in_chat=False,
         chat=line,
-        next=line,
         confirm_line=line,
     )
+    from essay_writer.stage_next import write_stage_next
+    from essay_writer.student_voice import say
+
+    return write_stage_next(refused, say(line))
 
 
 def _confirm_line(stage: str, genre: str | None, *, revisit: bool = False) -> str:

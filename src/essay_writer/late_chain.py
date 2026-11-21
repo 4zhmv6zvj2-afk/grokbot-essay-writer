@@ -142,11 +142,6 @@ def next_run(essay_id: str, stage: str, *, armed: bool) -> dict[str, Any] | None
     return None
 
 
-STAGE10_UNMOUNTED = (
-    "The Mac folder is not on this computer. "
-    "The final Word stays in this chat and on this sequence. "
-    "This tool does not submit."
-)
 MISSING_FINAL_WORD = "The final Word file is missing."
 FINDINGS_UNMOUNTED = (
     "The review opened the saved Word file. "
@@ -174,13 +169,9 @@ _LEAKS = (
 
 
 def quiet_next(stage: str, *, armed: bool, blocked: bool, place: str) -> str | None:
-    if not armed:
-        return None
-    if blocked:
-        return "Read the independent review note in this chat before the final Word file."
-    if stage == "10":
-        return place
-    return None
+    from essay_writer.stage_next import quiet_stage_line
+
+    return quiet_stage_line(stage, armed=armed, blocked=blocked, place=place)
 
 
 def chat_leaks(text: str) -> bool:
@@ -212,12 +203,15 @@ def draft_prose(pack: dict[str, Any] | None) -> str:
     return "\n\n".join(parts)
 
 
-def mark_quiet(body: dict[str, Any], chat: str, *, step: str) -> dict[str, Any]:
+def mark_quiet(
+    body: dict[str, Any], chat: str, *, step: str, speak_next: bool = True
+) -> dict[str, Any]:
     body["quiet"] = True
     body["step"] = step
     body["checklist_in_chat"] = False
     body["chat"] = chat
-    body["next"] = chat
+    if speak_next:
+        body["next"] = chat
     body["confirm_line"] = chat
     body.pop("tracking_path", None)
     return body
@@ -240,7 +234,10 @@ def quiet_stage5(body: dict[str, Any], essay_id: str) -> dict[str, Any]:
         line = stage5_chat_line(FIRST_DRAFT_READY, FIRST_DRAFT_READY)
     else:
         line = stage5_chat_line(STAGE6_OPEN, STAGE6_OPEN)
-    quiet = mark_quiet(body, line, step="5")
+    quiet = mark_quiet(body, line, step="5", speak_next=False)
+    from essay_writer.stage_next import write_stage_next
+
+    write_stage_next(quiet, line)
     quiet["checklist_in_chat"] = False
     from essay_writer.student_turns import STAGE6_LEAD_IN
 
@@ -826,7 +823,6 @@ def _stop_missing_final_word(body: dict[str, Any]) -> None:
     body["ok"] = False
     body["refused"] = "word"
     body["reason"] = MISSING_FINAL_WORD
-    body["next"] = say(MISSING_FINAL_WORD)
     body["place"] = ""
     body["final_word"] = {
         "ok": False,
@@ -1543,16 +1539,9 @@ def finish_stage_reply(
         if run:
             body["next_run"] = run
             blocked = bool(run.get("blocked"))
-            line = quiet_next(stage, armed=True, blocked=blocked, place=final_place(essay_id))
-            if line:
-                body["next"] = say(line)
             if blocked:
                 body["blocked"] = True
                 body["eqr"] = run.get("eqr") or "missing"
-    elif armed and stage in {"8", "9"} and not body.get("stored"):
-        line = quiet_next(stage, armed=True, blocked=False, place=final_place(essay_id))
-        if line:
-            body["next"] = say(line)
     if stage == "10" and body.get("stored"):
         final = body.get("final_word")
         source = work_dir(essay_id) / "output" / f"{essay_id}.docx"
@@ -1575,16 +1564,10 @@ def finish_stage_reply(
             final["comments_place"] = ""
             final["delivery"] = "chat"
             body["place"] = ""
-            body["next"] = say(STAGE10_UNMOUNTED)
             body["final_word"] = final
         elif isinstance(final, dict):
             final.pop("sequence_written", None)
             body["place"] = final["place"]
-            findings = final.get("findings_place") or ""
-            note = f" The review note is {findings}." if findings else ""
-            body["next"] = say(
-                f"Open {final['place']} and keep a copy.{note} This tool does not submit."
-            )
             body["final_word"] = final
         kept = body.get("final_word")
         delivery = kept.get("delivery") if isinstance(kept, dict) else None
@@ -1596,15 +1579,16 @@ def finish_stage_reply(
         blocked_text, verdict = final_review(essay_id)
         if blocked_text:
             body["blocked"] = True
-            body["next"] = say(blocked_text)
             body["eqr"] = verdict
-    if stage == "9" and body.get("stored"):
-        from essay_writer.specialists.grok_bot import STAGE9_OWN_WORDS
+    from essay_writer.stage_next import apply_finished_stage_next
 
-        next_raw = body.get("next")
-        current = next_raw if isinstance(next_raw, str) else ""
-        if STAGE9_OWN_WORDS not in current:
-            body["next"] = say(f"{STAGE9_OWN_WORDS} {current}".strip())
+    apply_finished_stage_next(
+        body,
+        essay_id,
+        stage,
+        armed=armed,
+        place=final_place(essay_id),
+    )
     from essay_writer.cite_fit import in_line, speak_cite_ask
 
     speak_cite_ask(body)
@@ -1633,12 +1617,9 @@ def _say_written_conclusion(body: dict[str, Any], essay_id: str) -> None:
     if not line:
         return
     body["conclusion_line"] = line
-    current = body.get("next")
-    if isinstance(current, str) and current.strip():
-        if line not in current:
-            body["next"] = f"{current.rstrip()} {line}"
-    else:
-        body["next"] = line
+    from essay_writer.stage_next import append_conclusion_next
+
+    append_conclusion_next(body, line)
     chat = body.get("chat")
     if isinstance(chat, str) and chat.strip():
         if line not in chat:

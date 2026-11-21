@@ -239,17 +239,22 @@ def _stage_call(args: StageArgs, *, minting: bool) -> dict[str, Any]:
     from essay_writer.state import DamagedState, state_file_refusal
 
     try:
-        return _run_stage(args, minting=minting)
+        result = _run_stage(args, minting=minting)
     except DamagedStageCommit as exc:
         reason = str(exc).strip() or DAMAGED_COMMIT
-        return refuse(
+        result = refuse(
             "stage",
             reason,
             wrote=False,
             stored=False,
         )
     except DamagedState:
-        return state_file_refusal()
+        result = state_file_refusal()
+    if isinstance(result, dict) and isinstance(result.get("next"), str):
+        from essay_writer.stage_next import write_stage_next
+
+        write_stage_next(result, result["next"])
+    return result
 
 
 def _turn_redirect(
@@ -261,13 +266,16 @@ def _turn_redirect(
     for message in messages:
         reply = redirect_for(message)
         if reply is not None:
-            return refuse(
+            from essay_writer.stage_next import write_stage_next
+            from essay_writer.student_voice import say
+
+            refused = refuse(
                 "turn",
                 reply,
-                next=reply,
                 stage=stage,
                 confirmPhase=confirm_phase,
             )
+            return write_stage_next(refused, say(reply) if isinstance(reply, str) else "")
     return None
 
 
@@ -395,16 +403,22 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
 
     auto_next = advances_without_confirm(stage)
     if confirmPhase == CONFIRM and auto_next:
-        return refuse(
+        from essay_writer.stage_next import write_stage_next
+        from essay_writer.student_voice import say
+
+        refused = refuse(
             "confirm-card",
             "This step moves on when the draft is stored. There is no save-card between this step and the next.",
             advanced=False,
             current=pointer["current"],
-            next=(
+            waiting_confirm=False,
+        )
+        return write_stage_next(
+            refused,
+            say(
                 "This step moves on when the draft is stored. "
                 "There is no Confirm card between this step and the next."
             ),
-            waiting_confirm=False,
         )
     if (
         confirmPhase == CONFIRM
@@ -470,16 +484,20 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         if isinstance(outcome, dict):
             return outcome
         if not look_is_confirmable(essay_id, stage, genre, text):
-            return {
-                "ok": True,
-                "essay_id": essay_id,
-                "stage": stage,
-                "confirmPhase": DRAFT,
-                "stored": False,
-                "advanced": False,
-                "wrote": False,
-                "next": answer_next(outcome[0], outcome[1]),
-            }
+            from essay_writer.stage_next import write_stage_next
+
+            return write_stage_next(
+                {
+                    "ok": True,
+                    "essay_id": essay_id,
+                    "stage": stage,
+                    "confirmPhase": DRAFT,
+                    "stored": False,
+                    "advanced": False,
+                    "wrote": False,
+                },
+                answer_next(outcome[0], outcome[1]),
+            )
     resolved = replace(
         args,
         confirmPhase=confirmPhase,
