@@ -27,7 +27,7 @@ from essay_writer.confirm import (
 )
 from essay_writer.debug_log import record_requests_debug
 from essay_writer.paths import recommended_paths
-from essay_writer.prompt_loader import text
+from essay_writer.prompt_loader import render_tokens, text
 from essay_writer.student_voice import speak
 
 TOOL = "essay.setup"
@@ -109,9 +109,9 @@ def resolve_setup_shell(value: object) -> str | dict[str, object]:
     return parsed
 
 
-SETUP_PROMPT = text("install/operator.md", "setup_prompt") + "\n"
+SETUP_PROMPT = render_tokens(text("install/operator.md", "setup_prompt")) + "\n"
 
-CURSOR_SETUP_PROMPT = text("install/operator.md", "cursor_setup_prompt") + "\n"
+CURSOR_SETUP_PROMPT = render_tokens(text("install/operator.md", "cursor_setup_prompt")) + "\n"
 
 
 def setup_prompt(shell: str | None = None) -> str:
