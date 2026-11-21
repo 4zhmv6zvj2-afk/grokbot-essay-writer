@@ -1,9 +1,9 @@
-"""One final-Word look-up for a specialist source class. Stable ids: AC1–AC5.
+"""One references-confirm look-up for a specialist source class. Stable ids: AC1–AC5.
 
 The synth-mark brief names a specialist industry source class. When the gathered
-files do not name one, the final Word does exactly one live look-up and reports
-what it found. Nothing is added to the sources or the reference list, so no
-source, reference line, or claim is invented. Fixture-only, soft only.
+files do not name one, the references confirm does exactly one live look-up and
+reports what it found. Nothing is added to the sources or the reference list, so
+no source, reference line, or claim is invented. Fixture-only, soft only.
 """
 
 import re
@@ -146,10 +146,10 @@ def test_ac4_one_attempt_is_kept_per_pack(workspace):
 
 
 def test_ac5_the_look_up_runs_only_at_the_final_write(workspace):
-    """AC5. The look-up sits at the final Word write, after the reviewer gate."""
+    """AC5. The look-up sits on the references confirm, after the reviewer gate."""
     source = (REPO / "src" / "essay_writer" / "word.py").read_text(encoding="utf-8")
     assert "final_specialist_lookup" in source
-    final_block = source.index('if stage == "9":\n        # Final Word only')
+    final_block = source.index('if stage == "9":\n        # References confirm only')
     write_block = source.index("write_docx(essay_id, pack, report, target)")
     assert final_block < write_block
     assert specialist_lookup_query(MODULE + "-1", ["Statista"]).startswith("Statista")

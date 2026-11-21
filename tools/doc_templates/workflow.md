@@ -100,9 +100,9 @@ A student can ask for the cites to be shortened to about one or two sentences. T
 
 When the student puts an outline or their own prose in `Essay-writer/<module>/sequences/<n>/student-outline/` (or at `student-outline.md` on the sequence), that outline is the structure for stages 3 to 6. Its headings keep the student's order, a section the outline does not name is reported rather than dropped, no section is lifted from the brief, and the body is not stretched from gathered files. Each woven cite stays to one or two sentences. With no student outline the earlier path is unchanged.
 
-## Final Word look-up
+## References confirm look-up
 
-At the final Word (stage 9, after the reviewer pass), one look-up runs when the brief names a specialist source class and the gathered files do not name one. A hit is reported with its title, year, and DOI. A miss says the look-up found none. Nothing is added to the sources or the reference list, so no source or reference line is invented. One attempt is kept per pack, and a preview does not call.
+At the references confirm (stage 9, after the reviewer pass), one look-up runs when the brief names a specialist source class and the gathered files do not name one. A hit is reported with its title, year, and DOI. A miss says the look-up found none. Nothing is added to the sources or the reference list, so no source or reference line is invented. One attempt is kept per pack, and a preview does not call. Finish does not run that look-up again. The finished Word file is the stage 10 file.
 
 ## Stage LLM
 

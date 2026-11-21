@@ -338,6 +338,7 @@ def test_build_covered_both_shells_share_the_write_and_the_log(monkeypatch):
         _stage10_gate,
         _stage10_manifest,
         _write_stage10_sequence,
+        build_finished_word,
     )
 
     stage10_source = "".join(
@@ -347,6 +348,7 @@ def test_build_covered_both_shells_share_the_write_and_the_log(monkeypatch):
             _stage10_gate,
             _write_stage10_sequence,
             _deliver_stage10,
+            build_finished_word,
         )
     )
     assert "write_docx(" in stage10_source
