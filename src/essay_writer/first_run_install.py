@@ -895,32 +895,17 @@ def install_uploaded_copy(
 
 def install_self_check() -> dict[str, Any]:
     """Read-only essay.health after install or attach. Cursor and Grok Build share this."""
-    from essay_writer.health import essay_health
+    from essay_writer.health import essay_health, health_read
 
-    health = essay_health()
-    doors = health.get("doors")
-    tool_count = len(doors) if isinstance(doors, list) else 0
-    ok = bool(health.get("ok") and health.get("alive") and tool_count > 0)
-    return {
-        "ok": ok,
-        "tool": "essay.health",
-        "alive": health.get("alive"),
-        "tool_count": tool_count,
-    }
+    read = health_read(essay_health())
+    return {key: value for key, value in read.items() if key != "version"}
 
 
 def _health_summary(health: dict[str, Any]) -> dict[str, Any]:
     """The install report's view of a health payload from a fresh interpreter."""
-    doors = health.get("doors")
-    tool_count = len(doors) if isinstance(doors, list) else 0
-    version = health.get("version")
-    return {
-        "ok": bool(health.get("ok") and health.get("alive") and tool_count > 0),
-        "tool": "essay.health",
-        "alive": health.get("alive"),
-        "tool_count": tool_count,
-        "version": version if isinstance(version, str) else None,
-    }
+    from essay_writer.health import health_read
+
+    return health_read(health)
 
 
 def _installed_health() -> dict[str, Any]:

@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, BinaryIO
 
 from essay_writer import __version__, safe_url
+from essay_writer.health import health_read
 
 REPO = "4zhmv6zvj2-afk/grokbot-essay-writer"
 LATEST_API = f"https://api.github.com/repos/{REPO}/releases/latest"
@@ -602,9 +603,9 @@ def apply_update(
                 "reason": str(exc),
                 "url": check["url"],
             }
-    health = run_health()
-    installed = health.get("version") if isinstance(health, dict) else None
-    if health.get("ok") is not True or installed != latest:
+    health = health_read(run_health())
+    installed = health["version"]
+    if health["ok"] is not True or installed != latest:
         return {
             "ok": False,
             "updated": False,

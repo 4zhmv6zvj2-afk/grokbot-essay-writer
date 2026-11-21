@@ -40,6 +40,27 @@ from essay_writer.stage_state import DAMAGED_COMMIT, DamagedStageCommit, load_po
 from essay_writer.state import DamagedState, load_state
 
 
+def health_read(payload: dict[str, Any] | object) -> dict[str, Any]:
+    """Did essay.health pass? The short read install, update, and attach share.
+
+    It only reads a payload the caller already has. The caller that ran the
+    check still decides what to do with a failed read, and none of them
+    combines this with the install write.
+    """
+    health = payload if isinstance(payload, dict) else {}
+    doors = health.get("doors")
+    tool_count = len(doors) if isinstance(doors, list) else 0
+    version = health.get("version")
+    alive = health.get("alive")
+    return {
+        "ok": bool(health.get("ok") and alive and tool_count > 0),
+        "tool": "essay.health",
+        "alive": alive,
+        "tool_count": tool_count,
+        "version": version if isinstance(version, str) else None,
+    }
+
+
 def _discover() -> list[str]:
     found: set[str] = set()
     root = workspace_root()
