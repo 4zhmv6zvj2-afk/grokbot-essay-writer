@@ -314,6 +314,9 @@ def consensus_search(query: str) -> dict[str, Any]:
             "consensus",
         )
         if hit:
+            abstract = paper.get("abstract")
+            if isinstance(abstract, str) and abstract.strip():
+                hit["abstract"] = abstract.strip()
             hits.append(hit)
     return {"called": True, "tier": tier, "hits": hits}
 
@@ -462,41 +465,221 @@ def _abstract_name(doi_key: str, index: int, used: set[str]) -> str:
     return name
 
 
-def _save_openalex_abstracts(
+_KEPT_ON_ABSTRACT = ("author", "year", "title", "doi")
+
+
+def _lookup_author(hit: dict[str, Any]) -> str:
+    """Names the look-up returned, joined as given. No initial is added."""
+    names: list[str] = []
+    authors = hit.get("authors")
+    if isinstance(authors, list):
+        for author in authors:
+            if isinstance(author, str) and author.strip():
+                names.append(author.strip())
+    elif isinstance(authors, str) and authors.strip():
+        names.append(authors.strip())
+    if not names:
+        single = hit.get("author")
+        if isinstance(single, str) and single.strip():
+            names.append(single.strip())
+    return " and ".join(names)
+
+
+def _provided_details(hit: dict[str, Any]) -> dict[str, str]:
+    """Author, year, title, and DOI the look-up already put on this hit.
+
+    A missing field is omitted. Nothing is filled in.
+    """
+    details: dict[str, str] = {}
+    author = _lookup_author(hit)
+    if author:
+        details["author"] = author
+    year = hit.get("year")
+    if isinstance(year, str) and year.strip().isdigit():
+        details["year"] = year.strip()
+    elif isinstance(year, int) and not isinstance(year, bool):
+        details["year"] = str(year)
+    title = hit.get("title")
+    if isinstance(title, str) and title.strip():
+        details["title"] = title.strip()
+    doi = _doi_key(hit.get("doi"))
+    if doi:
+        details["doi"] = doi
+    return details
+
+
+def _fill_blank_details(target: dict[str, str], incoming: dict[str, str]) -> None:
+    """Copy a provided field onto a record that does not have it yet."""
+    for key, value in incoming.items():
+        if key not in target and value:
+            target[key] = value
+
+
+def _printed_name_year(details: dict[str, str]) -> str:
+    """Name and year in the same shape as a saved citation line.
+
+    A name or a year the look-up did not return is not printed.
+    """
+    author = details.get("author", "")
+    year = details.get("year", "")
+    if author and year:
+        return f"{author} ({year})"
+    if author:
+        return author
+    if year:
+        return f"({year})"
+    return ""
+
+
+def _abstract_text(abstract: str, details: dict[str, str]) -> str:
+    body = abstract.strip()
+    heading = _printed_name_year(details)
+    if not heading:
+        return body + "\n"
+    return f"{heading}\n\n{body}\n"
+
+
+def same_lookup_value(field: str, claimed: str, stored: str) -> bool:
+    """True when the claimed value is the one the look-up already stored."""
+    if field == "doi":
+        return bool(_doi_key(stored)) and _doi_key(claimed) == _doi_key(stored)
+    return claimed.strip() == stored.strip()
+
+
+def abstract_lookup_fields(essay_id: str, locator: str) -> dict[str, str]:
+    """Author, year, title, and DOI stored when this abstract was saved.
+
+    Only fields the look-up returned are present. Nothing is invented.
+    """
+    if not isinstance(locator, str) or not locator.strip():
+        return {}
+    wanted = locator.strip().replace("\\", "/")
+    path = work_dir(essay_id) / "dig-card.json"
+    if not path.is_file():
+        return {}
+    try:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(stored, dict):
+        return {}
+    rows = stored.get("abstract_files")
+    if not isinstance(rows, list):
+        return {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        found = row.get("locator")
+        if not isinstance(found, str) or found.strip().replace("\\", "/") != wanted:
+            continue
+        kept: dict[str, str] = {}
+        for field in _KEPT_ON_ABSTRACT:
+            value = row.get(field)
+            if isinstance(value, str) and value.strip():
+                kept[field] = value.strip()
+        return kept
+    return {}
+
+
+def _abstract_hits(card: dict[str, Any]) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
+    for key in ("openalex", "consensus"):
+        block = card.get(key)
+        hits = block.get("hits") if isinstance(block, dict) else None
+        if not isinstance(hits, list):
+            continue
+        for hit in hits:
+            if not isinstance(hit, dict):
+                continue
+            abstract = hit.get("abstract")
+            if isinstance(abstract, str) and abstract.strip():
+                found.append(hit)
+    return found
+
+
+def _save_lookup_abstracts(
     essay_id: str,
     card: dict[str, Any],
     pdf_dois: set[str],
-) -> list[dict[str, str]]:
-    """Save an OpenAlex abstract when that hit has no PDF. The file is the abstract only."""
+) -> list[dict[str, Any]]:
+    """Save a look-up abstract when that hit has no PDF.
 
-    openalex = card.get("openalex")
-    hits = openalex.get("hits") if isinstance(openalex, dict) else None
-    if not isinstance(hits, list):
+    Author, year, title, and DOI are copied from the look-up when it
+    returned them. A field the look-up left out stays off the record.
+    The file prints the kept name and year, in the same shape as a saved
+    citation line, and does not add a name or year that was not returned.
+    """
+
+    hits = _abstract_hits(card)
+    if not hits:
         return []
-    folder = uploads_dir(essay_id)
-    module = module_code(essay_id)
-    saved: list[dict[str, str]] = []
-    used: set[str] = set()
+    bundles: list[dict[str, Any]] = []
+    by_doi: dict[str, dict[str, Any]] = {}
     for index, hit in enumerate(hits, start=1):
-        if not isinstance(hit, dict):
+        doi_key = _doi_key(hit.get("doi"))
+        if doi_key and doi_key in pdf_dois:
             continue
         abstract = hit.get("abstract")
         if not isinstance(abstract, str) or not abstract.strip():
             continue
-        doi_key = _doi_key(hit.get("doi"))
-        if doi_key and doi_key in pdf_dois:
+        details = _provided_details(hit)
+        if doi_key and doi_key in by_doi:
+            _fill_blank_details(by_doi[doi_key]["details"], details)
             continue
-        folder.mkdir(parents=True, exist_ok=True)
-        name = _abstract_name(doi_key, index, used)
-        (folder / name).write_text(abstract.strip() + "\n", encoding="utf-8")
-        row: dict[str, str] = {"locator": f"uploads/{module}/{name}"}
+        bundle = {
+            "index": index,
+            "doi": doi_key,
+            "abstract": abstract.strip(),
+            "details": details,
+        }
+        bundles.append(bundle)
         if doi_key:
-            row["doi"] = doi_key
-        title = hit.get("title")
-        if isinstance(title, str) and title.strip():
-            row["title"] = title.strip()
+            by_doi[doi_key] = bundle
+    if not bundles:
+        return []
+    folder = uploads_dir(essay_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    module = module_code(essay_id)
+    saved: list[dict[str, Any]] = []
+    used: set[str] = set()
+    for bundle in bundles:
+        raw_index = bundle.get("index")
+        raw_doi = bundle.get("doi")
+        raw_abstract = bundle.get("abstract")
+        raw_details = bundle.get("details")
+        index = raw_index if isinstance(raw_index, int) and not isinstance(raw_index, bool) else 0
+        doi = raw_doi if isinstance(raw_doi, str) else ""
+        abstract = raw_abstract if isinstance(raw_abstract, str) else ""
+        kept_details: dict[str, str] = {}
+        if isinstance(raw_details, dict):
+            for key, value in raw_details.items():
+                if isinstance(key, str) and isinstance(value, str) and value.strip():
+                    kept_details[key] = value.strip()
+        name = _abstract_name(doi, index, used)
+        (folder / name).write_text(
+            _abstract_text(abstract, kept_details),
+            encoding="utf-8",
+        )
+        row: dict[str, Any] = {"locator": f"uploads/{module}/{name}"}
+        provenance: dict[str, str] = {}
+        for field in _KEPT_ON_ABSTRACT:
+            value = kept_details.get(field)
+            if isinstance(value, str) and value.strip():
+                row[field] = value.strip()
+                provenance[field] = "lookup"
+        if provenance:
+            row["field_sources"] = provenance
         saved.append(row)
     return saved
+
+
+def _save_openalex_abstracts(
+    essay_id: str,
+    card: dict[str, Any],
+    pdf_dois: set[str],
+) -> list[dict[str, Any]]:
+    """Older name for the abstract save. OpenAlex and Consensus share it."""
+    return _save_lookup_abstracts(essay_id, card, pdf_dois)
 
 
 def _open_candidates(card: dict[str, Any]) -> list[dict[str, Any]]:
@@ -731,7 +914,7 @@ def essay_dig(
         if isinstance(downloads.get("next"), str):
             body["next"] = downloads["next"]
     pdf_dois = _pdf_dois(body.get("downloads"))
-    abstract_files = _save_openalex_abstracts(essay_id, card, pdf_dois)
+    abstract_files = _save_lookup_abstracts(essay_id, card, pdf_dois)
     if abstract_files:
         card["abstract_files"] = abstract_files
         body["abstract_files"] = abstract_files

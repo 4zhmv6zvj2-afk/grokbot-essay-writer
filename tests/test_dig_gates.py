@@ -131,7 +131,11 @@ def test_dig_card_is_local_and_does_not_invent(workspace, monkeypatch):
 
 
 def test_openalex_abstract_is_saved_when_there_is_no_pdf(workspace, monkeypatch):
-    """An OpenAlex abstract with no PDF is the gathered file, and nothing else."""
+    """An OpenAlex abstract with no PDF is saved, and a returned year is printed.
+
+    The title stays on the source record. It is not added to the file. No author
+    is printed or stored when the look-up did not return one.
+    """
     from essay_writer.dig import _save_openalex_abstracts
 
     seq = open_sequence()
@@ -168,8 +172,13 @@ def test_openalex_abstract_is_saved_when_there_is_no_pdf(workspace, monkeypatch)
     saved = confirmed["abstract_files"]
     assert len(saved) == 1
     path = workspace / saved[0]["locator"]
-    assert path.read_text(encoding="utf-8") == "Supply chains collaborate.\n"
-    assert "Returned by OpenAlex" not in path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    assert text == "(2019)\n\nSupply chains collaborate.\n"
+    assert "Returned by OpenAlex" not in text
+    assert saved[0]["year"] == "2019"
+    assert saved[0]["title"] == "Returned by OpenAlex"
+    assert saved[0]["doi"] == "10.1/oa"
+    assert "author" not in saved[0]
 
 
 def test_consensus_free_tier_is_recorded_without_echoing_the_key(workspace, monkeypatch):

@@ -102,6 +102,9 @@ def _paid(raw: dict[str, Any]) -> str | None:
 
 
 _LOOKUP_KEPT = (
+    "author",
+    "title",
+    "year",
     "doi",
     "volume",
     "issue",
@@ -112,6 +115,7 @@ _LOOKUP_KEPT = (
     "container",
     "accessed",
 )
+_ABSTRACT_KEPT = ("author", "year", "title", "doi")
 
 
 def _lookup_kept(essay_id: str, locator: str) -> dict[str, str]:
@@ -269,10 +273,23 @@ def gather_source(
     }
     folded = text.casefold()
     field_sources: dict[str, str] = {}
+    locator_key = locator.strip().replace("\\", "/")
+    from essay_writer.dig import abstract_lookup_fields, same_lookup_value
+
+    abstract_kept = abstract_lookup_fields(essay_id, locator_key)
     lookup_kept = _lookup_kept(essay_id, locator)
     for field in BIBLIO_FIELDS:
         text_value = _as_text(raw.get(field))
+        if field in lookup_kept:
+            remembered = lookup_kept[field]
+        elif field in abstract_kept:
+            remembered = abstract_kept[field]
+        else:
+            remembered = None
         if text_value is None:
+            if field in _ABSTRACT_KEPT and field in abstract_kept:
+                kept[field] = abstract_kept[field]
+                field_sources[field] = "lookup"
             continue
         if field == "author" and opened is not None:
             corrected = author_kept(text_value, opened)
@@ -300,8 +317,8 @@ def gather_source(
                     kept["pages"] = text_value
                     field_sources[field] = "file"
                 continue
-        if field in lookup_kept and text_value == lookup_kept[field]:
-            kept[field] = text_value
+        if remembered and same_lookup_value(field, text_value, remembered):
+            kept[field] = remembered
             field_sources[field] = "lookup"
             continue
         if text_value.casefold() not in folded:

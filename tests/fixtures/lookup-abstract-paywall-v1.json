@@ -1,0 +1,33 @@
+{
+  "openalex": [
+    {
+      "title": "Corridor capacity under a named constraint",
+      "publication_year": 2019,
+      "doi": "https://doi.org/10.1000/kept-oa",
+      "authors": ["Ada Lovelace"],
+      "abstract": "Supply chains collaborate when a corridor stays open for the named lane. This study presents the measured share of tanker flows through that lane. The named constraint limits how many ships can pass the narrow point. A later count still depends on the same gathered lane and the same risk. Operators record the delay at the narrow point before the next sailing. The gathered note keeps the finding inside this one corridor case. Each extra vessel waits until the lane clears and the count is recorded. The measured delay stays tied to this corridor and this narrow point. A second week of counts shows the same lane limit and the same queue. The note does not claim a result for any other corridor or any other place."
+    },
+    {
+      "title": "A note with no name",
+      "publication_year": 2020,
+      "abstract": "This note records a lane count without a person or a document identifier."
+    }
+  ],
+  "consensus": [
+    {
+      "title": "Consensus paper kept from the look-up",
+      "publish_year": 2021,
+      "doi": "10.1000/kept-cs",
+      "authors": ["Grace Hopper"],
+      "abstract": "This gathered abstract says the corridor risk stays local to one named lane and does not generalise beyond that lane."
+    },
+    {
+      "title": "Consensus paper with a title only",
+      "abstract": "This abstract states a lane finding and does not carry a person name or a document identifier. The count stays on one corridor and one narrow point."
+    }
+  ],
+  "pdf": {
+    "10.1000/kept-oa": "https://oa.example/kept-oa.pdf",
+    "10.1000/kept-cs": "https://oa.example/kept-cs.pdf"
+  }
+}
