@@ -452,6 +452,26 @@ def _build_stage_body(
         text,
         minting=minting,
     )
+    if stage == "5":
+        from essay_writer.specialists.writer import finish_first_draft
+        from essay_writer.stage_next import write_stage_next
+
+        finished_draft = finish_first_draft(essay_id, text)
+        if finished_draft.get("ready") is not True:
+            block = finished_draft.get("block")
+            if not isinstance(block, dict):
+                block = refuse(
+                    "word-band",
+                    "This first draft is not inside the brief's word band.",
+                )
+            block["stage"] = stage
+            block["current"] = pointer.get("current")
+            block["advanced"] = False
+            reason = str(block.get("reason") or "")
+            return write_stage_next(block, reason)
+        written = finished_draft.get("text")
+        if isinstance(written, str):
+            text = written
     prepared_lines = opening.lines if isinstance(opening, BasicsOpening) else None
     from essay_writer.spine import stage_uses_confirm_card
 

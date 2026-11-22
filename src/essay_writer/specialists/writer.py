@@ -376,11 +376,170 @@ def recover_short_word_band(essay_id: str, pack: dict[str, Any]) -> dict[str, An
             split_now = _split_count(filled)
             token_now = _token_count(filled, exclude_citations=exclude)
             added += 1
-            if added > 40:
-                return filled
     if split_now >= low and token_now >= low:
         return filled
     return _shortfall(filled if added else pack, low, min(split_now, token_now))
+
+
+def draft_word_count(essay_id: str, text: str) -> int | None:
+    """Counted words of a first draft when the brief states a word band."""
+    from essay_writer.rewrite_baseline import band_edges
+
+    band = document_word_band(essay_id)
+    low, high = band_edges(band)
+    if low is None or high is None:
+        return None
+    return count_words(text or "", exclude_citations=bool(band.get("exclude_in_text_citations")))
+
+
+def first_draft_below_minimum(essay_id: str, text: str) -> dict[str, Any] | None:
+    """Fail a first draft that would be saved or shown below the brief's minimum.
+
+    Both ends of the band count as inside. A draft with no stated band is left alone.
+    """
+    from essay_writer.rewrite_baseline import band_edges
+
+    band = document_word_band(essay_id)
+    low, high = band_edges(band)
+    if low is None or high is None:
+        return None
+    counted = count_words(text or "", exclude_citations=bool(band.get("exclude_in_text_citations")))
+    if counted >= low:
+        return None
+    return refuse(
+        "word-band",
+        (
+            f"This first draft is {counted} words. "
+            f"The brief asks for {low}–{high}. "
+            "It is not the finished first draft."
+        ),
+        counted=counted,
+        minimum=low,
+        maximum=high,
+    )
+
+
+def _research_sources(essay_id: str) -> list[dict[str, Any]]:
+    from essay_writer.state import load_state
+
+    state = load_state(essay_id)
+    research = state.get("research") if isinstance(state, dict) else None
+    if not isinstance(research, dict):
+        return []
+    found: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for key in ("summary", "full"):
+        block = research.get(key)
+        if not isinstance(block, dict):
+            continue
+        sources = block.get("sources")
+        if not isinstance(sources, list):
+            continue
+        for item in sources:
+            if not isinstance(item, dict):
+                continue
+            locator = item.get("locator")
+            if not isinstance(locator, str) or not locator.strip() or locator in seen:
+                continue
+            seen.add(locator)
+            found.append(dict(item))
+    return found
+
+
+def _with_assignment(essay_id: str, text: str) -> str:
+    """Keep the format and the assignment question in the draft being written."""
+    from essay_writer.assignment_gate import question_is_answered, read_assignment
+
+    record = read_assignment(essay_id)
+    if record.get("active") is not True:
+        return text
+    pieces = [text.strip()] if isinstance(text, str) and text.strip() else []
+    joined = "\n\n".join(pieces)
+    format_name = record.get("format") if isinstance(record.get("format"), str) else ""
+    question = record.get("question") if isinstance(record.get("question"), str) else ""
+    if format_name and format_name.casefold() not in joined.casefold():
+        pieces.insert(0, f"This {format_name} takes up the assignment.")
+        joined = "\n\n".join(pieces)
+    if question and not question_is_answered(joined, question):
+        sentence = question if question.endswith((".", "?", "!")) else f"{question}."
+        pieces.insert(0, sentence)
+    return "\n\n".join(piece for piece in pieces if piece).strip()
+
+
+def _sections_to_look(sections: list[Any]) -> str:
+    parts: list[str] = []
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        raw_heading = section.get("heading")
+        raw_body = section.get("body")
+        heading = raw_heading.strip() if isinstance(raw_heading, str) else ""
+        body = raw_body.strip() if isinstance(raw_body, str) else ""
+        if heading and body:
+            parts.append(f"## {heading}\n\n{body}")
+        elif body:
+            parts.append(body)
+    return "\n\n".join(parts).strip()
+
+
+def _write_up_to_band(essay_id: str, text: str) -> str:
+    """Write the first draft from gathered claims until the count is inside the band."""
+    from essay_writer.draft_from_review import look_sections
+    from essay_writer.rewrite_baseline import band_edges
+
+    prepared = _with_assignment(essay_id, text)
+    low, high = band_edges(document_word_band(essay_id))
+    if low is None or high is None:
+        return prepared
+    sections = look_sections(prepared)
+    if not sections:
+        sections = [{"heading": "", "body": prepared}]
+    draft = {
+        "essay_id": essay_id,
+        "sections": sections,
+        "sources": _research_sources(essay_id),
+    }
+    recovered = recover_short_word_band(essay_id, draft)
+    if recovered.get("word_band_shortfall"):
+        return prepared
+    written_sections = recovered.get("sections")
+    if not isinstance(written_sections, list):
+        return prepared
+    written = _sections_to_look(written_sections)
+    if not written:
+        return prepared
+    counted = count_words(
+        written,
+        exclude_citations=bool(document_word_band(essay_id).get("exclude_in_text_citations")),
+    )
+    if low <= counted <= high:
+        return written
+    return prepared
+
+
+def finish_first_draft(essay_id: str, text: str) -> dict[str, Any]:
+    """Write a short first draft into the brief's word band, or refuse to finish it.
+
+    A draft already at or above the minimum is left as written. When gathered
+    claims can carry the length, the returned text is inside the band. A draft
+    that is still short is not the finished first draft.
+    """
+    from essay_writer.rewrite_baseline import band_edges
+
+    low, high = band_edges(document_word_band(essay_id))
+    if low is None or high is None:
+        return {"ready": True, "text": text}
+    counted = draft_word_count(essay_id, text)
+    if counted is not None and counted >= low:
+        return {"ready": True, "text": text}
+    written = _write_up_to_band(essay_id, text)
+    after = draft_word_count(essay_id, written)
+    if after is not None and high is not None and low <= after <= high:
+        return {"ready": True, "text": written}
+    blocked = first_draft_below_minimum(essay_id, written)
+    if blocked is None:
+        return {"ready": True, "text": written}
+    return {"ready": False, "text": text, "block": blocked}
 
 
 def _with_citation(line: str, citation: str) -> str:
