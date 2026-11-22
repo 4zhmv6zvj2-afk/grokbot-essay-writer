@@ -286,18 +286,13 @@ def gather_source(
             remembered = abstract_kept[field]
         else:
             remembered = None
-        if text_value is None:
-            if field in _ABSTRACT_KEPT and field in abstract_kept:
-                kept[field] = abstract_kept[field]
-                field_sources[field] = "lookup"
-            elif field == "author" and remembered:
-                kept["author"] = remembered
-                field_sources["author"] = "lookup"
+        if field in _ABSTRACT_KEPT and remembered:
+            # A look-up author, year, title, or DOI stays, including on a kept PDF.
+            # A value taken from the file does not replace it.
+            kept[field] = remembered
+            field_sources[field] = "lookup"
             continue
-        if field == "author" and remembered:
-            # A look-up author stays. A name taken from the PDF does not replace it.
-            kept["author"] = remembered
-            field_sources["author"] = "lookup"
+        if text_value is None:
             continue
         if field == "author" and opened is not None:
             corrected = author_kept(text_value, opened)

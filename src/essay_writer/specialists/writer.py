@@ -517,15 +517,111 @@ def _write_up_to_band(essay_id: str, text: str) -> str:
     return prepared
 
 
+_LOWER_LEAD = frozenset({"e.g", "i.e", "etc", "cf", "vs"})
+_BARE_VERBS = frozenset(
+    {
+        "add",
+        "adds",
+        "argue",
+        "argues",
+        "compare",
+        "compares",
+        "describe",
+        "describes",
+        "explain",
+        "explains",
+        "find",
+        "finds",
+        "give",
+        "gives",
+        "report",
+        "reports",
+        "say",
+        "says",
+        "show",
+        "shows",
+        "suggest",
+        "suggests",
+        "tie",
+        "ties",
+        "treat",
+        "treats",
+        "write",
+        "writes",
+    }
+)
+_PREP_MODAL = re.compile(
+    r"\b(?:in|on|at|for|from|with|by|of|to)\s+(?:may|might|could|would|should|must|shall|can)\b"
+)
+_BARE_AFTER = re.compile(
+    r"\b(?:because|although|while|whereas|if|when)\s+(?:ties|treat|finds|argue|compares|adds)\b"
+)
+UNREADABLE_DRAFT = "This first draft is not readable. It is not the finished first draft."
+
+
+def _glued_period_comma(text: str) -> bool:
+    """A full stop glued to a comma, except the stop that closes an abbreviation."""
+    from essay_writer.textutil import _abbreviation_before
+
+    start = 0
+    while True:
+        found = text.find(".,", start)
+        if found < 0:
+            return False
+        if not _abbreviation_before(text, found):
+            return True
+        start = found + 2
+
+
+def _lowercase_sentence(text: str) -> bool:
+    from essay_writer.textutil import sentences
+
+    for sentence in sentences(text):
+        piece = sentence.lstrip(" \t\"'“”‘’(")
+        if not piece:
+            continue
+        head = piece.split(None, 1)[0].strip(".,;:").casefold()
+        if head in _LOWER_LEAD:
+            continue
+        if piece[0].islower() and head in _BARE_VERBS:
+            return True
+    return False
+
+
+def first_draft_unreadable(text: str) -> dict[str, Any] | None:
+    """Refuse a first draft a citation removal left unreadable.
+
+    A doubled comma, a full stop glued to a comma, a sentence that starts
+    without its capital, a modal left after a preposition, or a verb left
+    after a conjunction with no subject are not readable English. A readable
+    sentence is left alone.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return None
+    if (
+        ",," in text
+        or _glued_period_comma(text)
+        or _lowercase_sentence(text)
+        or _PREP_MODAL.search(text) is not None
+        or _BARE_AFTER.search(text) is not None
+    ):
+        return refuse("draft", UNREADABLE_DRAFT, readable=False)
+    return None
+
+
 def finish_first_draft(essay_id: str, text: str) -> dict[str, Any]:
     """Write a short first draft into the brief's word band, or refuse to finish it.
 
     A draft already at or above the minimum is left as written. When gathered
     claims can carry the length, the returned text is inside the band. A draft
-    that is still short is not the finished first draft.
+    that is still short is not the finished first draft. A draft a citation
+    removal left unreadable is not saved and is not treated as inside the band.
     """
     from essay_writer.rewrite_baseline import band_edges
 
+    broken = first_draft_unreadable(text)
+    if broken is not None:
+        return {"ready": False, "text": text, "block": broken}
     low, high = band_edges(document_word_band(essay_id))
     if low is None or high is None:
         return {"ready": True, "text": text}
@@ -535,6 +631,9 @@ def finish_first_draft(essay_id: str, text: str) -> dict[str, Any]:
     written = _write_up_to_band(essay_id, text)
     after = draft_word_count(essay_id, written)
     if after is not None and high is not None and low <= after <= high:
+        broken = first_draft_unreadable(written)
+        if broken is not None:
+            return {"ready": False, "text": text, "block": broken}
         return {"ready": True, "text": written}
     blocked = first_draft_below_minimum(essay_id, written)
     if blocked is None:

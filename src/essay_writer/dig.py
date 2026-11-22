@@ -598,10 +598,33 @@ def same_lookup_value(field: str, claimed: str, stored: str) -> bool:
     return claimed.strip() == stored.strip()
 
 
-def abstract_lookup_fields(essay_id: str, locator: str) -> dict[str, str]:
-    """Bibliographic fields stored when this abstract was saved.
+def _fields_on_row(row: dict[str, Any]) -> dict[str, str]:
+    kept: dict[str, str] = {}
+    for field in _KEPT_ON_ABSTRACT:
+        value = row.get(field)
+        if isinstance(value, str) and value.strip():
+            kept[field] = value.strip()
+    return kept
 
-    Only fields the look-up returned are present. Nothing is invented.
+
+def _matching_lookup_row(rows: object, wanted: str) -> dict[str, str] | None:
+    if not isinstance(rows, list):
+        return None
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        found = row.get("locator")
+        if not isinstance(found, str) or found.strip().replace("\\", "/") != wanted:
+            continue
+        return _fields_on_row(row)
+    return None
+
+
+def abstract_lookup_fields(essay_id: str, locator: str) -> dict[str, str]:
+    """Bibliographic fields stored when this file was saved from a look-up.
+
+    A saved abstract and a kept PDF use the same record. Only fields the
+    look-up returned are present. Nothing is invented.
     """
     if not isinstance(locator, str) or not locator.strip():
         return {}
@@ -615,21 +638,10 @@ def abstract_lookup_fields(essay_id: str, locator: str) -> dict[str, str]:
         return {}
     if not isinstance(stored, dict):
         return {}
-    rows = stored.get("abstract_files")
-    if not isinstance(rows, list):
-        return {}
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        found = row.get("locator")
-        if not isinstance(found, str) or found.strip().replace("\\", "/") != wanted:
-            continue
-        kept: dict[str, str] = {}
-        for field in _KEPT_ON_ABSTRACT:
-            value = row.get(field)
-            if isinstance(value, str) and value.strip():
-                kept[field] = value.strip()
-        return kept
+    for key in ("abstract_files", "pdf_files"):
+        matched = _matching_lookup_row(stored.get(key), wanted)
+        if matched is not None:
+            return matched
     return {}
 
 
@@ -721,6 +733,90 @@ def _save_lookup_abstracts(
                 provenance[field] = "lookup"
         if provenance:
             row["field_sources"] = provenance
+        saved.append(row)
+    return saved
+
+
+_PDF_LOOKUP_FIELDS = ("author", "year", "title", "doi")
+
+
+def _hits_by_doi(card: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """Look-up author, year, title, and DOI, keyed by DOI.
+
+    OpenAlex and Consensus supply those fields. Unpaywall may fill a blank
+    year, title, or DOI. Unpaywall does not supply an author.
+    """
+    by_doi: dict[str, dict[str, str]] = {}
+    for key in ("openalex", "consensus"):
+        block = card.get(key)
+        hits = block.get("hits") if isinstance(block, dict) else None
+        if not isinstance(hits, list):
+            continue
+        for hit in hits:
+            if not isinstance(hit, dict):
+                continue
+            doi = _doi_key(hit.get("doi"))
+            if not doi:
+                continue
+            details = {
+                field: value
+                for field, value in _provided_details(hit).items()
+                if field in _PDF_LOOKUP_FIELDS
+            }
+            slot = by_doi.setdefault(doi, {})
+            _fill_blank_details(slot, details)
+    unpaywall = card.get("unpaywall")
+    if isinstance(unpaywall, list):
+        for item in unpaywall:
+            if not isinstance(item, dict):
+                continue
+            doi = _doi_key(item.get("doi"))
+            if not doi:
+                continue
+            details = {
+                field: value
+                for field, value in _provided_details(item).items()
+                if field in _PDF_LOOKUP_FIELDS and field != "author"
+            }
+            slot = by_doi.setdefault(doi, {})
+            _fill_blank_details(slot, details)
+    return by_doi
+
+
+def _save_lookup_pdfs(
+    card: dict[str, Any],
+    papers: object,
+) -> list[dict[str, Any]]:
+    """Copy look-up author, year, title, and DOI onto each kept PDF.
+
+    A field the look-up did not return stays off the record. A name is not
+    read from the PDF.
+    """
+    if not isinstance(papers, list) or not papers:
+        return []
+    by_doi = _hits_by_doi(card)
+    saved: list[dict[str, Any]] = []
+    for paper in papers:
+        if not isinstance(paper, dict):
+            continue
+        path = paper.get("path")
+        if not isinstance(path, str) or not path.strip():
+            continue
+        doi = _doi_key(paper.get("doi"))
+        details = by_doi.get(doi, {}) if doi else {}
+        present = {
+            field: details[field]
+            for field in _PDF_LOOKUP_FIELDS
+            if isinstance(details.get(field), str) and details[field].strip()
+        }
+        if not present:
+            continue
+        row: dict[str, Any] = {"locator": path.strip().replace("\\", "/")}
+        provenance: dict[str, str] = {}
+        for field, value in present.items():
+            row[field] = value.strip()
+            provenance[field] = "lookup"
+        row["field_sources"] = provenance
         saved.append(row)
     return saved
 
@@ -986,11 +1082,17 @@ def essay_dig(
             body["links"] = downloads["links"]
         if isinstance(downloads.get("next"), str):
             body["next"] = downloads["next"]
-    pdf_dois = _pdf_dois(body.get("downloads"))
+    downloads_body = body.get("downloads")
+    pdf_dois = _pdf_dois(downloads_body)
     abstract_files = _save_lookup_abstracts(essay_id, card, pdf_dois)
     if abstract_files:
         card["abstract_files"] = abstract_files
         body["abstract_files"] = abstract_files
+    papers = downloads_body.get("papers") if isinstance(downloads_body, dict) else None
+    pdf_files = _save_lookup_pdfs(card, papers)
+    if pdf_files:
+        card["pdf_files"] = pdf_files
+        body["pdf_files"] = pdf_files
     folder = work_dir(essay_id)
     folder.mkdir(parents=True, exist_ok=True)
     to_write = dict(card)
