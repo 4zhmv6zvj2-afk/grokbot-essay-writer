@@ -127,17 +127,31 @@ def test_ac1_failed_swap_leaves_a_gap_and_snapshot_restore_does_not_put_it_back(
     )
     assert swapped["ok"] is True, swapped
     assert "Beldad" not in (_note_look(seq, "6") or "")
-    assert "Yamoah" not in (_note_look(seq, "6") or "")
+    assert "(Yamoah, 2020)" in (_note_look(seq, "6") or "")
     reasons = {item["token"]: item["reason"] for item in swapped["cite_held"]}
     assert reasons["beldad, 2019"] == "rejected"
-    assert reasons["yamoah, 2020"] == "claim-fit"
-    # The student is offered the gap. Nothing is put back and nothing is invented.
-    gap = swapped["cite_gap"]
-    assert "stays out because you rejected it" in gap
-    assert "left open" in gap
-    assert gap in swapped["next"]
+    assert "yamoah, 2020" not in reasons
+    assert "cite_gap" not in swapped
     assert "cite_ask" not in swapped
     assert "beldad" in load_record(seq)["rejected"]
+    # A replacement that names no gathered source still leaves the gap.
+    gapped = front_office_call(
+        "essay.stage",
+        {
+            "essay_id": seq,
+            "stage": "6",
+            "confirmPhase": "draft",
+            "look": _cited("Beldad", "2019").replace("(Beldad, 2019)", "(Beldad, 2019; Nobody, 1999)"),
+            "answers": "swap Beldad for Nobody",
+        },
+    )
+    assert gapped["ok"] is True, gapped
+    assert "Nobody" not in (_note_look(seq, "6") or "")
+    assert "Beldad" not in (_note_look(seq, "6") or "")
+    gap = gapped["cite_gap"]
+    assert "stays out because you rejected it" in gap
+    assert "left open" in gap
+    assert gap in gapped["next"]
 
     # A snapshot from before the swap still carries the rejected body.
     state = load_state(seq)

@@ -1,16 +1,19 @@
 """Shared body-cite gate for the writer and the front office.
 
-A paper stays in the body only when its gathered text supports the
-student's own sentence: the same idea, not a shared topic. A paper the
-student did not ask for is asked about before it is pasted. A cite the
-student rejected stays out when a swap does not succeed, and it stays out
-for every later save too: a snapshot restore, a draft overwrite, or a Word
-re-land does not put that paper back. The student is offered the gap instead.
+A citation that names a gathered source stays in the body. That includes a
+multi-author "and" list and a lead author with "and others" when the family
+names and the year match the gathered source. A citation that names no
+gathered source is left out. A cite the student rejected stays out when a
+swap does not succeed, and it stays out for every later save too: a snapshot
+restore, a draft overwrite, or a Word re-land does not put that paper back.
+The student is offered the gap when the replacement also names no gathered source.
 
 Stages 5, 6, 7, and 8, and a revision note, use this one function.
 The decision does not branch on stage 6. Stage 4a, stage 4b, and stage 9
 do not gain a new door here. Word still omits a cite this gate withheld,
 so a later file cannot put that cite back into the body or the reference list.
+The first-draft Word file is the stored draft, so a citation kept here is
+the citation in that file.
 """
 
 from __future__ import annotations
@@ -18,7 +21,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from essay_writer import assignment_gate as essay_assignment_gate
 from essay_writer.paths import work_dir
 from essay_writer.records import read_json, write_json
 from essay_writer.state import load_state
@@ -29,7 +31,6 @@ from essay_writer.textutil import (
     family_name,
     in_text_forms,
     norm_space,
-    sentences,
     token_allowed,
     without_narrative_citations,
 )
@@ -37,7 +38,6 @@ from essay_writer.textutil import (
 BODY_CITE_STAGES = frozenset({"5", "6", "7", "8"})
 _ACTIVE = BODY_CITE_STAGES | {"revise"}
 _BODY_ORDER = ("5", "6", "7", "8")
-_STUDENT_STAGES = ("1", "2", "3", "4")
 
 _STOP = frozenset(
     {
@@ -198,33 +198,6 @@ def same_idea(sentence: str, excerpt: str, topic: str = "") -> bool:
     return found >= need
 
 
-def _topic(essay_id: str) -> str:
-
-    record = essay_assignment_gate.read_assignment(essay_id)
-    if record.get("active") is not True:
-        return ""
-    question = record.get("question")
-    return question.strip() if isinstance(question, str) else ""
-
-
-def _student_sentences(essay_id: str, answers: str) -> list[str]:
-    from essay_writer.stage_note import _note_look
-
-    chunks: list[str] = []
-    for stage in _STUDENT_STAGES:
-        look = _note_look(essay_id, stage)
-        if isinstance(look, str) and look.strip():
-            chunks.append(look)
-    if answers.strip():
-        chunks.append(answers)
-    found: list[str] = []
-    for chunk in chunks:
-        for sentence in sentences(chunk):
-            if len(_claim_words(sentence)) >= 3:
-                found.append(sentence)
-    return found
-
-
 def _prior_body(essay_id: str, stage: str) -> str:
     from essay_writer.stage_note import _note_look
 
@@ -245,21 +218,6 @@ def _sources(essay_id: str) -> list[dict[str, Any]]:
 
     allowed, _digests = research_index(load_state(essay_id))
     return [row for row in allowed.values() if isinstance(row, dict)]
-
-
-def _excerpt(source: dict[str, Any]) -> str:
-    quote = source.get("quote")
-    if isinstance(quote, str) and quote.strip():
-        return quote
-    excerpt = source.get("excerpt")
-    if isinstance(excerpt, str) and excerpt.strip():
-        return excerpt
-    from essay_writer.invent import load_text_for
-
-    try:
-        return load_text_for(source)
-    except (KeyError, OSError, ValueError):
-        return ""
 
 
 def _source_for(token: str, sources: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -286,25 +244,6 @@ def rejected_names(record: dict[str, Any]) -> set[str]:
         if isinstance(item, str) and item.strip():
             names.add(item.strip().casefold())
     return names
-
-
-def _sentence_with(text: str, token: str) -> str:
-
-    for sentence in sentences(text):
-        if token in citation_tokens(sentence):
-            return sentence
-    return text
-
-
-def _on_student_sentence(sentence: str, students: list[str], topic: str) -> str | None:
-    bare_words = set(content_words(_bare(sentence), stopwords=_STOP))
-    for student in students:
-        claim = _claim_words(student, topic)
-        if len(claim) < 3:
-            continue
-        if all(word in bare_words for word in claim):
-            return student
-    return None
 
 
 def _label(token: str, text: str) -> str:
@@ -349,21 +288,6 @@ def strip_token(text: str, token: str) -> str:
     return cleaned
 
 
-def _asked_names(essay_id: str, answers: str, ok: set[str]) -> set[str]:
-    from essay_writer.stage_note import _note_look
-
-    names = set(ok)
-    names |= _added_names(answers)
-    for stage in _STUDENT_STAGES:
-        look = _note_look(essay_id, stage)
-        if not isinstance(look, str):
-            continue
-        names |= _added_names(look)
-        for token in citation_tokens(look):
-            names.add(_surname(token))
-    return names
-
-
 def _ask_sentence(labels: list[str]) -> str | None:
     if not labels:
         return None
@@ -377,10 +301,7 @@ def _gate_text(
     text: str,
     *,
     prior: str,
-    students: list[str],
     sources: list[dict[str, Any]],
-    topic: str,
-    asked: set[str],
     rejected: set[str],
     withheld: set[str],
 ) -> tuple[str, list[dict[str, str]], set[str]]:
@@ -404,17 +325,15 @@ def _gate_text(
         if token in prior_tokens and token not in withheld:
             continue
         source = _source_for(token, sources)
-        excerpt = _excerpt(source) if source is not None else ""
-        student = _on_student_sentence(_sentence_with(text, token), students, topic)
-        if student is None or not same_idea(student, excerpt, topic):
-            withheld.add(token)
-            held.append({"token": token, "reason": "claim-fit", "label": _label(token, text)})
+        if source is not None:
+            # A citation that names a gathered source stays. Topic overlap
+            # and an ask for a name do not remove it.
+            withheld.discard(token)
             continue
-        if surname not in asked:
-            withheld.add(token)
-            held.append({"token": token, "reason": "ask", "label": _label(token, text)})
-            continue
-        withheld.discard(token)
+        # A citation that names no gathered source is left out. An ask does
+        # not keep a paper that was never gathered.
+        withheld.add(token)
+        held.append({"token": token, "reason": "claim-fit", "label": _label(token, text)})
     cleaned = text
     for item in held:
         cleaned = strip_token(cleaned, item["token"])
@@ -485,19 +404,13 @@ def apply_body_cites(
         rejected |= _swap_old(edited_text)
     for name in _added_names(answers_text):
         rejected.discard(name)
-    asked = _asked_names(essay_id, answers_text, ok)
-    topic = _topic(essay_id)
-    students = _student_sentences(essay_id, answers_text)
     sources = _sources(essay_id)
     prior = _prior_body(essay_id, stage)
     withheld = set(record["withheld"])
     cleaned, held, withheld = _gate_text(
         incoming,
         prior=prior,
-        students=students,
         sources=sources,
-        topic=topic,
-        asked=asked,
         rejected=rejected,
         withheld=withheld,
     )
@@ -506,10 +419,7 @@ def apply_body_cites(
         gated_edited, edited_held, withheld = _gate_text(
             edited_text,
             prior=prior,
-            students=students,
             sources=sources,
-            topic=topic,
-            asked=asked,
             rejected=rejected,
             withheld=withheld,
         )

@@ -558,8 +558,9 @@ _LEADING_TRANSITION = frozenset(
     }
 )
 WORD = re.compile(r"[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*")
-# Drop "et al." and leave the comma that separates the name from the year.
+# Drop "et al." or "and others" and leave the comma that separates the name from the year.
 ET_AL = re.compile(r"\s+et\s+al\.?", re.IGNORECASE)
+AND_OTHERS = re.compile(r"\s+and\s+others\b", re.IGNORECASE)
 
 
 def norm_space(value: str) -> str:
@@ -921,13 +922,77 @@ def citation_tokens(text: str) -> list[str]:
     return [record.token for record in citation_records(text)]
 
 
+def fold_name(text: str) -> str:
+    """Match a name when the only difference is an apostrophe or hyphen U+2010.
+
+    The reference-list check uses this same folding. Printed text is unchanged.
+    """
+    return text.replace("’", "'").replace("‘", "'").replace("\u2010", "-")
+
+
+def _without_etal_label(text: str) -> str:
+    """Drop a trailing et al. or and others. The lead author stays."""
+    return norm_space(AND_OTHERS.sub("", ET_AL.sub("", text)))
+
+
+def _coauthor_groups(author: str) -> list[list[str]]:
+    """Each co-author as words. A comma before initials is not a new author.
+
+    "Froese, R. and Quaas, M." is two people. "Rainer Froese and Martin Quaas"
+    is the same two people. "Horwood, J., O'Brien, C. and Darby, C." is three.
+    """
+    cleaned = _without_etal_label(fold_name(author))
+    chunks = [
+        chunk.strip()
+        for chunk in re.split(r"\s*(?:&|\band\b)\s*", cleaned, flags=re.IGNORECASE)
+        if chunk.strip()
+    ]
+    people: list[list[str]] = []
+    for chunk in chunks:
+        current: list[str] = []
+        for part in [piece.strip() for piece in chunk.split(",") if piece.strip()]:
+            words = [word for word in part.split() if word]
+            if words and all(_is_initial(word) for word in words):
+                current.extend(words)
+                continue
+            if current:
+                people.append(current)
+            current = words
+        if current:
+            people.append(current)
+    return people
+
+
+def _surname_keys(words: list[str]) -> list[str]:
+    """Family-name forms for one person. Leading and trailing initials stay off."""
+    kept = list(words)
+    while kept and _is_initial(kept[0]):
+        kept = kept[1:]
+    while kept and _is_initial(kept[-1]):
+        kept = kept[:-1]
+    return _person_form_keys(kept)
+
+
 def in_text_forms(author: str, year: str) -> set[str]:
-    author = norm_space(author)
+    """Author-year labels a gathered source may match in the text.
+
+    The whole stored author is one label. Each co-author's family name is
+    another, so "Froese and Quaas, 2012" matches "Rainer Froese and Martin
+    Quaas" and "Froese, R. and Quaas, M.". A lead author with et al. or
+    and others matches that family name and year.
+    """
+    author = norm_space(fold_name(author))
     year = norm_space(str(year))
+    bare = _without_etal_label(author)
     forms = {f"{author}, {year}".casefold()}
-    if "," in author:
-        forms.add(f"{norm_space(author.split(',', 1)[0])}, {year}".casefold())
-    return forms
+    if bare and bare.casefold() != author.casefold():
+        forms.add(f"{bare}, {year}".casefold())
+    if "," in bare:
+        forms.add(f"{norm_space(bare.split(',', 1)[0])}, {year}".casefold())
+    for words in _coauthor_groups(author):
+        for key in _surname_keys(words):
+            forms.add(f"{key}, {year}".casefold())
+    return {form for form in forms if form and not form.startswith(", ")}
 
 
 _BIBLIO_FILL = (
@@ -1183,10 +1248,18 @@ def _person_form_keys(words: list[str]) -> list[str]:
 
 
 def token_allowed(token: str, forms: set[str]) -> bool:
-    if token in forms:
+    """True when this author-year cites the gathered forms.
+
+    et al. and and others name the lead author. A normal hyphen and hyphen
+    U+2010 are the same character. Every named co-author still has to be
+    one of the forms, so a joint citation does not match a single surname.
+    """
+    folded_forms = {fold_name(form).casefold() for form in forms}
+    folded = fold_name(token).casefold()
+    if folded in folded_forms:
         return True
-    stripped = norm_space(ET_AL.sub("", token)).casefold()
-    if stripped in forms:
+    stripped = _without_etal_label(folded)
+    if stripped in folded_forms:
         return True
     match = re.fullmatch(rf"(.+),\s*({YEAR})", stripped)
     if match is None:
@@ -1197,7 +1270,7 @@ def token_allowed(token: str, forms: set[str]) -> bool:
     year = match.group(2)
 
     def person_ok(words: list[str]) -> bool:
-        return any(f"{key}, {year}" in forms for key in _person_form_keys(words))
+        return any(f"{key}, {year}" in folded_forms for key in _person_form_keys(words))
 
     return all(person_ok(words) for words in people)
 

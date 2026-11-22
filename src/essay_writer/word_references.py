@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 from essay_writer.confirm import refuse
-from essay_writer.textutil import citation_tokens, reference_line, reference_parts
+from essay_writer.textutil import citation_tokens, fold_name, reference_line, reference_parts
 
 PACK_REFERENCES_MARKDOWN = "references_markdown"
 _CITE_TOKEN = re.compile(r"(.+),\s*(\d{4}[a-z]?)\Z", re.IGNORECASE)
@@ -314,7 +314,7 @@ def _plain_quotes(text: str) -> str:
 
     A normal hyphen and hyphen U+2010 are the same character in a name.
     """
-    return text.replace("’", "'").replace("‘", "'").replace("\u2010", "-")
+    return fold_name(text)
 
 
 def cite_reference_gaps(lines: list[str], sections: list[object]) -> list[str]:
