@@ -4,8 +4,9 @@ The student research notes, the writer, and the reviewer all read this list.
 Each entry keeps the gathered author, year, title, and DOI, the short
 in-text citation, and the full Harvard reference line. Those two forms are
 stored when the entry is written. Later steps copy them. They do not compose
-a second wording, and they do not correct an author or a year after the entry
-exists.
+a second wording. A newer uploaded file is the exception: the opened source,
+the research note, and the citation list all take the new source id, DOI,
+author, year, and title, and the stored short form is taken from that refresh.
 """
 
 from __future__ import annotations
@@ -16,13 +17,23 @@ from typing import Any
 
 from essay_writer.paths import work_dir, workspace_root
 from essay_writer.records import read_json, write_json
-from essay_writer.textutil import _is_initial, fold_name, in_text_forms, token_allowed
+from essay_writer.textutil import (
+    PAREN,
+    YEAR,
+    _is_initial,
+    fold_name,
+    in_text_forms,
+    token_allowed,
+)
 
 _FROZEN = ("source_id", "locator", "author", "year", "title", "doi", "in_text", "reference")
-_YEAR = re.compile(r"\b((?:1[0-9]{3}|20[0-9]{2})[a-z]?)\b")
-_DOI = re.compile(r"10\.\d{4,9}/\S+", re.IGNORECASE)
+_OFFICIAL = ("source_id", "doi", "author", "year", "title")
 MISSING_NOTE = "The research note for {label} is missing."
-CONFLICT = "The citation list and the research note for {label} do not agree."
+FIELD_CONFLICT = (
+    "The stored details for {label} do not agree across the opened source, "
+    "the research note, and the citation list."
+)
+NOTE_DETAIL_GAP = "The research note for {label} is missing a stored detail."
 EMPTY_GAP = "No gathered source was saved."
 NOT_WRITTEN = (
     "The citation list has not been written. The first draft waits until that list is saved."
@@ -162,10 +173,6 @@ def _label(entry: dict[str, Any]) -> str:
     return _text(entry.get("title")) or _text(entry.get("source_id")) or "this source"
 
 
-def _surnames(author: str) -> list[str]:
-    return [name for name in (_display_surname(words) for words in _author_groups(author)) if name]
-
-
 def _resolve_note(raw: str) -> Path:
     path = Path(raw)
     if path.is_absolute():
@@ -193,48 +200,315 @@ def _read_note(path: Path | None) -> str:
         return ""
 
 
-def _disagreement(entry: dict[str, Any], text: str) -> str:
-    """Name a conflict only when the note states a different author, year, title, or DOI.
+def _norm_official(value: str, key: str) -> str:
+    text = re.sub(r"\s+", " ", value).strip().casefold()
+    if key == "doi":
+        return text.rstrip(".")
+    return text
 
-    A note that does not repeat those fields is still the record of what was read.
-    Neither side is rewritten here.
-    """
-    if not text.strip():
+
+def _official_from_source(source: dict[str, Any]) -> dict[str, str]:
+    return {
+        "source_id": _text(source.get("id")),
+        "doi": _text(source.get("doi")),
+        "author": _text(source.get("author")),
+        "year": _text(source.get("year")),
+        "title": _text(source.get("title")),
+    }
+
+
+def _official_from_entry(entry: dict[str, Any]) -> dict[str, str]:
+    return {key: _text(entry.get(key)) for key in _OFFICIAL}
+
+
+def _note_record_path(note_raw: str) -> Path | None:
+    """The note's own record. It is not stored inside the citation list."""
+    if not note_raw.strip():
+        return None
+    path = _resolve_note(note_raw)
+    return path.with_name(f"{path.stem}.record.json")
+
+
+def _source_record_path(essay_id: str, source_id: str) -> Path | None:
+    """The opened source's own record. It is not stored inside the citation list."""
+    ident = source_id.strip().replace("\\", "_").replace("/", "_")
+    if not ident or ident in {".", ".."}:
+        return None
+    return work_dir(essay_id) / "output" / "source-records" / f"{ident}.record.json"
+
+
+def _present_official(data: dict[str, Any] | None) -> dict[str, str]:
+    if not isinstance(data, dict):
+        return {}
+    return {key: _text(data.get(key)) for key in _OFFICIAL if key in data}
+
+
+def _file_digest(locator: str) -> str:
+    if not locator.strip():
         return ""
-    first = ""
-    for line in text.splitlines():
-        if line.strip():
-            first = line.strip()
+    path = _resolve_note(locator)
+    if not path.is_file():
+        return ""
+    try:
+        from essay_writer.canon import file_sha256
+
+        return file_sha256(path)
+    except OSError:
+        return ""
+
+
+def _source_payload(official: dict[str, str], locator: str, digest: str) -> dict[str, str]:
+    body = {key: _text(official.get(key)) for key in _OFFICIAL}
+    body["locator"] = locator
+    body["file_sha256"] = digest
+    return body
+
+
+def _ensure_note_record(note_raw: str, official: dict[str, str]) -> None:
+    """Store the note's own copy when the note is written.
+
+    A later heading is not read, and a stored field is not replaced from it.
+    """
+    record_path = _note_record_path(note_raw)
+    if record_path is None:
+        return
+    current = read_json(record_path)
+    data = current if isinstance(current, dict) else {}
+    stored: dict[str, str] = {}
+    changed = not record_path.is_file()
+    for key in _OFFICIAL:
+        if key in data:
+            stored[key] = _text(data.get(key))
+            continue
+        stored[key] = _text(official.get(key))
+        changed = True
+    if changed:
+        write_json(record_path, stored, mkdir=True)
+
+
+def _ensure_source_record(essay_id: str, source: dict[str, Any]) -> None:
+    """Store the opened source's own copy once. A later edit does not move it."""
+    path = _source_record_path(essay_id, _text(source.get("id")))
+    if path is None or path.is_file():
+        return
+    locator = _text(source.get("locator"))
+    payload = _source_payload(_official_from_source(source), locator, _file_digest(locator))
+    write_json(path, payload, mkdir=True)
+
+
+def _load_source_record(essay_id: str, source_id: str) -> dict[str, Any] | None:
+    path = _source_record_path(essay_id, source_id)
+    if path is None or not path.is_file():
+        return None
+    data = read_json(path)
+    return data if isinstance(data, dict) else None
+
+
+def _opened_source(essay_id: str, entry: dict[str, Any]) -> dict[str, Any] | None:
+    """The opened source for this entry. Heading text is not used.
+
+    The source id is the link. A stored id that no longer matches is still the
+    opened file when the locator is the one on the list, so that id can disagree.
+    """
+    source_id = _text(entry.get("source_id"))
+    locator = _text(entry.get("locator"))
+    found_id = None
+    found_locator = None
+    for source in all_gathered(essay_id):
+        if source_id and _text(source.get("id")) == source_id and found_id is None:
+            found_id = source
+        if locator and _text(source.get("locator")) == locator and found_locator is None:
+            found_locator = source
+    if found_locator is not None and _text(found_locator.get("id")) != source_id:
+        return found_locator
+    if found_id is not None:
+        return found_id
+    return found_locator
+
+
+def _refresh_official(entry: dict[str, Any], opened: dict[str, Any]) -> dict[str, str]:
+    """Official fields for a newer file. The note heading is not read."""
+    official = _official_from_source(opened)
+    if not official["source_id"]:
+        official["source_id"] = _text(entry.get("source_id"))
+    return official
+
+
+def _store_source_official(
+    essay_id: str,
+    official: dict[str, str],
+    locator: str,
+    digest: str,
+) -> bool:
+    path = _source_record_path(essay_id, official["source_id"])
+    if path is None:
+        return False
+    write_json(path, _source_payload(official, locator, digest), mkdir=True)
+    return True
+
+
+def _store_note_official(note_raw: str, official: dict[str, str]) -> bool:
+    record_path = _note_record_path(note_raw)
+    if record_path is None:
+        return False
+    write_json(record_path, {key: official[key] for key in _OFFICIAL}, mkdir=True)
+    return True
+
+
+def _store_list_official(
+    essay_id: str,
+    entry: dict[str, Any],
+    official: dict[str, str],
+    opened: dict[str, Any],
+    locator: str,
+) -> dict[str, str] | None:
+    """Write the list's own copy, including the short form taken from the refresh."""
+    record = _raw(essay_id)
+    entries = [dict(item) for item in record.get("entries") or []]
+    source_id = _text(entry.get("source_id"))
+    previous_locator = _text(entry.get("locator"))
+    found = None
+    for item in entries:
+        if source_id and _text(item.get("source_id")) == source_id:
+            found = item
             break
-    years = set(_YEAR.findall(first))
-    entry_year = _text(entry.get("year"))
-    if entry_year and years and entry_year not in years:
-        return CONFLICT.format(label=_label(entry))
-    if entry_year and entry_year in years:
-        families = _surnames(_text(entry.get("author")))
-        folded = fold_name(first).casefold()
-        if families and not any(fold_name(name).casefold() in folded for name in families):
-            return CONFLICT.format(label=_label(entry))
-        title = _text(entry.get("title"))
-        if len(title) >= 6 and title.casefold() not in text.casefold():
-            return CONFLICT.format(label=_label(entry))
-    doi = _text(entry.get("doi")).casefold().rstrip(".")
-    stated = [item.rstrip(".").casefold() for item in _DOI.findall(text)]
-    if doi and stated and doi not in stated and not any(doi in item for item in stated):
-        return CONFLICT.format(label=_label(entry))
+    if found is None:
+        for item in entries:
+            if previous_locator and _text(item.get("locator")) == previous_locator:
+                found = item
+                break
+    if found is None:
+        return None
+    for key in _OFFICIAL:
+        found[key] = official[key]
+    if locator:
+        found["locator"] = locator
+    found["in_text"] = short_in_text(official["author"], official["year"])
+    basis = dict(opened)
+    basis["id"] = official["source_id"]
+    for key in _OFFICIAL:
+        if key != "source_id":
+            basis[key] = official[key]
+    found["reference"] = full_reference(basis)
+    record["entries"] = entries
+    _save(essay_id, record)
+    stored = {key: _text(found.get(key)) for key in _OFFICIAL}
+    stored["in_text"] = _text(found.get("in_text"))
+    stored["reference"] = _text(found.get("reference"))
+    stored["locator"] = _text(found.get("locator"))
+    return stored
+
+
+def _refresh_source_record(
+    essay_id: str,
+    entry: dict[str, Any],
+) -> tuple[dict[str, str], dict[str, str] | None]:
+    """The opened source's stored details, and the list copy when a newer file refreshed it.
+
+    A published source does not change on its own. A newer file refreshes the
+    opened source, the research note, and the citation list together. The note
+    heading is not read. A record that cannot be written stays as it was.
+    """
+    source_id = _text(entry.get("source_id"))
+    opened = _opened_source(essay_id, entry)
+    stored = _load_source_record(essay_id, source_id)
+    if stored is None and opened is not None:
+        _ensure_source_record(essay_id, opened)
+        stored = _load_source_record(essay_id, source_id)
+    if not isinstance(stored, dict):
+        return {}, None
+    if opened is None:
+        return _present_official(stored), None
+    locator = _text(opened.get("locator")) or _text(stored.get("locator"))
+    digest = _file_digest(locator)
+    if not digest or digest == _text(stored.get("file_sha256")):
+        return _present_official(stored), None
+    official = _refresh_official(entry, opened)
+    if not _store_source_official(essay_id, official, locator, digest):
+        return _present_official(stored), None
+    _store_note_official(_text(entry.get("note")), official)
+    listed = _store_list_official(essay_id, entry, official, opened, locator)
+    return {key: official[key] for key in _OFFICIAL}, listed
+
+
+def _fill_note_gaps(note_raw: str, source_fields: dict[str, str], label: str) -> str:
+    """Fill a missing note detail from the stored source. A heading is not read.
+
+    A detail the source does not have yet stays a gap. It is not a conflict.
+    """
+    record_path = _note_record_path(note_raw)
+    if record_path is None:
+        return NOTE_DETAIL_GAP.format(label=label)
+    current = read_json(record_path)
+    data = current if isinstance(current, dict) else {}
+    fields = _present_official(data)
+    changed = not record_path.is_file()
+    for key in _OFFICIAL:
+        if key in fields:
+            continue
+        if key not in source_fields:
+            continue
+        fields[key] = source_fields[key]
+        changed = True
+    if changed and fields:
+        kept = {key: fields[key] for key in _OFFICIAL if key in fields}
+        write_json(record_path, kept, mkdir=True)
+    if any(key not in fields for key in _OFFICIAL):
+        return NOTE_DETAIL_GAP.format(label=label)
     return ""
 
 
-def _present_entry(_essay_id: str, entry: dict[str, Any]) -> dict[str, Any]:
+def _fields_conflict(
+    entry: dict[str, Any],
+    source_fields: dict[str, str],
+    note_raw: str,
+) -> str:
+    """Name a conflict when the stored copies disagree. A missing note detail is not one."""
+    record_path = _note_record_path(note_raw)
+    note = _present_official(read_json(record_path) if record_path is not None else None)
+    listed = _official_from_entry(entry)
+    for key in _OFFICIAL:
+        if key not in note:
+            continue
+        sides = [listed[key], note[key]]
+        if key in source_fields:
+            sides.append(source_fields[key])
+        norms = [_norm_official(value, key) for value in sides]
+        if any(item != norms[0] for item in norms[1:]):
+            return FIELD_CONFLICT.format(label=_label(entry))
+    return ""
+
+
+def _part_names(source_id: str) -> dict[str, str]:
+    """The opened file, the note, and the list entry, named with the role at the back."""
+    ident = source_id.strip()
+    return {
+        "part_source": f"{ident}:source",
+        "part_note": f"{ident}:note",
+        "part_list": f"{ident}:list",
+    }
+
+
+def _present_entry(essay_id: str, entry: dict[str, Any]) -> dict[str, Any]:
     shown = {key: entry.get(key, "") for key in _FROZEN}
     shown["note"] = _text(entry.get("note"))
+    source_id = _text(shown.get("source_id"))
+    if source_id:
+        shown.update(_part_names(source_id))
     path = _resolve_note(shown["note"]) if shown["note"] else None
     conflict = ""
     gap = ""
     if path is None or not path.is_file():
         gap = MISSING_NOTE.format(label=_label(shown))
     else:
-        conflict = _disagreement(shown, _read_note(path))
+        source_fields, listed = _refresh_source_record(essay_id, shown)
+        if listed is not None:
+            for key in (*_OFFICIAL, "in_text", "reference", "locator"):
+                shown[key] = listed[key]
+            if _text(shown.get("source_id")):
+                shown.update(_part_names(_text(shown.get("source_id"))))
+        gap = _fill_note_gaps(shown["note"], source_fields, _label(shown))
+        conflict = _fields_conflict(shown, source_fields, shown["note"])
     shown["gap"] = gap
     shown["conflict"] = conflict
     shown["usable"] = not gap and not conflict
@@ -387,6 +661,13 @@ def receive_sources(
         if _match(entries, source) is None:
             ident = _text(source.get("id"))
             entries.append(_entry_from_source(source, notes.get(ident, "")))
+    remembered: list[dict[str, Any]] = [
+        item for item in list(sources) + list(all_gathered(essay_id)) if isinstance(item, dict)
+    ]
+    for source in remembered:
+        _ensure_source_record(essay_id, source)
+    for entry in entries:
+        _ensure_note_record(_text(entry.get("note")), _official_from_entry(entry))
     gap = ""
     if not entries:
         gap = EMPTY_GAP
@@ -471,6 +752,90 @@ def _token_matches(token: str, entry: dict[str, Any]) -> bool:
     if not author or not year:
         return False
     return token_allowed(token, in_text_forms(author, year))
+
+
+def _identifier_keys(entry: dict[str, Any]) -> set[str]:
+    keys: set[str] = set()
+    source_id = _text(entry.get("source_id")).casefold()
+    if source_id:
+        keys.add(source_id)
+        keys.update(name.casefold() for name in _part_names(source_id).values())
+    doi = _text(entry.get("doi")).casefold().rstrip(".")
+    if doi:
+        keys.add(doi)
+        keys.add(f"doi:{doi}")
+    return {key for key in keys if len(key) >= 6}
+
+
+def _short_inner(entry: dict[str, Any]) -> str:
+    stored = _text(entry.get("in_text"))
+    if stored.startswith("(") and stored.endswith(")"):
+        return stored[1:-1]
+    return stored
+
+
+def _stored_for_part(part: str, rows: list[dict[str, Any]]) -> str | None:
+    """The stored short form for this parenthesis part, found by source id.
+
+    An author-year that names one list entry and is not that stored form is
+    the same lookup. The research-note heading is not read.
+    """
+    folded = re.sub(r"\s+", " ", part).strip().casefold().rstrip(".")
+    bare = folded.removeprefix("doi:").strip()
+    hits: list[str] = []
+    for entry in rows:
+        inner = _short_inner(entry)
+        if not inner:
+            continue
+        keys = _identifier_keys(entry)
+        matched = folded in keys or bare in keys
+        if not matched:
+            for key in keys:
+                if re.fullmatch(re.escape(key) + rf"(?:,\s*{YEAR})?", bare):
+                    matched = True
+                    break
+        if matched:
+            hits.append(inner)
+            continue
+        if re.fullmatch(rf".+,\s*{YEAR}", folded) and _token_matches(folded, entry):
+            hits.append(inner)
+    unique = list(dict.fromkeys(hits))
+    if len(unique) != 1:
+        return None
+    return unique[0]
+
+
+def use_stored_short_form(essay_id: str, text: str) -> str:
+    """Replace an in-essay citation with the short form stored on its list entry.
+
+    The entry is found by source id. A different wording is not kept. Nothing
+    is copied from a research-note heading.
+    """
+    if not isinstance(text, str) or not text:
+        return text
+    rows = _usable(essay_id)
+    if not rows:
+        return text
+
+    def replace(match: re.Match[str]) -> str:
+        parts = [part.strip() for part in match.group(1).split(";") if part.strip()]
+        if not parts:
+            return match.group(0)
+        rewritten: list[str] = []
+        changed = False
+        for part in parts:
+            stored = _stored_for_part(part, rows)
+            if stored is None:
+                rewritten.append(part)
+                continue
+            rewritten.append(stored)
+            if fold_name(part).casefold() != fold_name(stored).casefold():
+                changed = True
+        if not changed:
+            return match.group(0)
+        return "(" + "; ".join(rewritten) + ")"
+
+    return PAREN.sub(replace, text)
 
 
 def match_token(essay_id: str, token: str) -> dict[str, Any] | None:
@@ -603,6 +968,7 @@ def attach_note(essay_id: str, source_id: str, prose: str) -> dict[str, Any]:
     path = _resolve_note(note)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(prose if prose.endswith("\n") else prose + "\n", encoding="utf-8")
+    _ensure_note_record(note, _official_from_entry(target))
     _save(essay_id, {"written": True, "entries": entries, "gap": record.get("gap") or ""})
     shown = load_citation_list(essay_id)
     shown["wrote"] = True
@@ -625,6 +991,12 @@ def student_list_text(essay_id: str) -> str:
             lines.append(in_text)
         if reference:
             lines.append(reference)
+        source_id = _text(entry.get("source_id"))
+        if source_id:
+            names = _part_names(source_id)
+            lines.append(names["part_source"])
+            lines.append(names["part_note"])
+            lines.append(names["part_list"])
         note_name = Path(_text(entry.get("note"))).name if _text(entry.get("note")) else ""
         if note_name:
             lines.append(f"Research note: {note_name}")

@@ -49,9 +49,9 @@ DRAFT = (
 KEPT = (
     "(Froese and Quaas, 2012)",
     "(Horwood, O'Brien and Darby, 2006)",
-    "(Beare and others, 2013)",
-    "(Trijoulet and others, 2021)",
-    "(Dickey-Collas and others, 2010)",
+    "(Beare et al., 2013)",
+    "(Trijoulet et al., 2021)",
+    f"(Dickey{HYPHEN}Collas and Nash, 2010)",
 )
 
 
@@ -256,8 +256,9 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
     """AC-cite-keep-5: An ungathered citation is refused, a missing reference line is refused, and a hyphen still matches."""
     seq, look, saved = _save_draft()
     assert "Nobody" not in look
-    assert "(Dickey-Collas and others, 2010)" in look
-    assert HYPHEN not in look
+    assert f"(Dickey{HYPHEN}Collas and Nash, 2010)" in look
+    assert "(Dickey-Collas and others, 2010)" not in look
+    assert HYPHEN in look
     assert HYPHEN in _authors()["dickey"][0]
     held = {item["token"]: item["reason"] for item in saved["cite_held"]}
     assert held["nobody, 1999"] == "claim-fit"
