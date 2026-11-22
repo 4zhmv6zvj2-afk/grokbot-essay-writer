@@ -258,13 +258,16 @@ def test_stored_details_must_match_across_the_three_records(workspace):
     assert json.loads(source_record.read_text(encoding="utf-8"))["year"] == "2026"
     _opened_file(seq, KEITH_ID, "A newer file for the same paper.\n")
     refreshed = _entry(seq, KEITH_ID)
+    refreshed_short = "(Keith et al., 1998)"
     assert json.loads(source_record.read_text(encoding="utf-8"))["year"] == "1998"
-    assert refreshed["year"] == "2026"
-    assert json.loads(note_record.read_text(encoding="utf-8"))["year"] == "2026"
-    assert refreshed["usable"] is False
-    assert "do not agree" in refreshed["conflict"].casefold()
-    held = apply_body_cites(seq, "5", f"The count stands {KEITH_SHORT}.")
-    assert KEITH_SHORT not in held["text"]
+    assert json.loads(note_record.read_text(encoding="utf-8"))["year"] == "1998"
+    assert refreshed["year"] == "1998"
+    assert refreshed["in_text"] == refreshed_short
+    assert refreshed["usable"] is True
+    assert refreshed["conflict"] == ""
+    assert "(1999)" in _note_path(refreshed).read_text(encoding="utf-8")
+    held = apply_body_cites(seq, "5", f"The count stands {refreshed_short}.")
+    assert refreshed_short in held["text"]
     assert workspace is not None
 
 

@@ -180,7 +180,7 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - Fit to the argument on the papers you will use.
 - When the assignment is itself a critical review: introduction with author, title, topic, aim, findings, and your overall judgement; a summary of about a quarter to a third; a critique ordered by importance or by criterion; a conclusion that restates the judgement. The brief wins on structure.
 - This step ends with one citation list in the research notes. Each entry has the short citation, such as (Smith, 2020), and the full Harvard reference line. A source already listed keeps that entry and that note, and the student is told it was already there.
-- A research note may use a plain heading. It does not have to be a Harvard line. The opened file, the research note, and the citation-list entry share one source id. Each one keeps its own copy of the source id, DOI, author, year, and title. A heading that leaves the year out does not change those stored details. A missing detail on the note is filled from the opened source. A newer uploaded file refreshes the opened source. The citation list keeps the copy it stored first.
+- A research note may use a plain heading. It does not have to be a Harvard line. The opened file, the research note, and the citation-list entry share one source id. Each one keeps its own copy of the source id, DOI, author, year, and title. A heading that leaves the year out does not change those stored details. A missing detail on the note is filled from the opened source. A newer uploaded file refreshes the opened source, the research note, and the citation list together.
 
 **Shared rules:**
 - Research file work on this computer opens only a path already allowed for this sequence.
