@@ -12,7 +12,7 @@ import inspect
 import json
 import re
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 from helpers import OTHER, TOPIC, card_digest_for, open_sequence
 
@@ -115,15 +115,16 @@ def _install_lookup(monkeypatch) -> None:
     monkeypatch.setenv("ESSAY_WRITER_UNPAYWALL_EMAIL", "person@example.com")
 
     def fake(url, headers=None):
-        asked = unquote(url)
-        if "api.consensus.app" in asked:
+        host = (urlparse(str(url)).hostname or "").casefold()
+        if host == "api.consensus.app":
             assert headers and headers.get("x-api-key") == "fixture-key-not-echoed"
             return consensus
-        if "api.openalex.org" in asked:
+        if host == "api.openalex.org":
             return openalex
-        if "api.unpaywall.org" in asked:
+        if host == "api.unpaywall.org":
+            segments = [unquote(part) for part in urlparse(str(url)).path.split("/") if part]
             for doi, address in pdfs.items():
-                if doi in asked:
+                if doi in segments:
                     return {"best_oa_location": {"url_for_pdf": address}}
             return {"best_oa_location": None}
         return None
