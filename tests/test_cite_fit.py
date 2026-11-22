@@ -1,9 +1,10 @@
 """Body-cite gate. Stable ids: AC1–AC5.
 
-AC1: an FO-added gathered cite that fails claim-fit does not land in the body
-or the reference list.
-AC2: an FO-added cite the student did not ask for waits for an explicit yes.
-AC3: after the student rejects a cite, a failed swap does not put it back.
+AC1: a gathered citation stays in the stored draft. A citation that names no
+gathered source is left out of the body and the reference list.
+AC2: a gathered citation stays without waiting for a yes.
+AC3: after the student rejects a cite, that cite stays out. A gathered
+replacement stays.
 AC4: the gate is the writer path for stages 5, 6, 7, and 8, not a stage-6 branch.
 AC5: Build covered. Cursor and Grok Build share the stage row and this gate.
 """
@@ -107,24 +108,29 @@ def _refs(sources: list) -> str:
     return "\n".join(reference_line(source) for source in sources if isinstance(source, dict))
 
 
-def test_ac1_fo_added_cite_that_fails_claim_fit_does_not_land(workspace):
-    """AC1. Peng is gathered and on the same topic. The claim does not match, so it stays out."""
+def test_ac1_a_gathered_cite_stays_and_an_ungathered_cite_stays_out(workspace):
+    """AC1. Peng is gathered, so the save keeps it. Nobody is not gathered, so it stays out."""
     seq = open_sequence()
     _plant(seq)
     _walk(seq, "5", stage3=STUDENT)
+    look_in = (
+        "Privacy risk reduces willingness to disclose personal data (Peng, 2018; Nobody, 1999)."
+    )
     draft = front_office_call(
         "essay.stage",
-        {"essay_id": seq, "stage": "5", "confirmPhase": "draft", "look": _cited("Peng", "2018")},
+        {"essay_id": seq, "stage": "5", "confirmPhase": "draft", "look": look_in},
     )
     assert draft["ok"] is True, draft
     assert draft["stored"] is True
     look = _note_look(seq, "5") or ""
-    assert "Peng" not in look
+    assert "(Peng, 2018)" in look
+    assert "Nobody" not in look
     assert "privacy risk reduces willingness" in look.casefold()
     held = {item["token"]: item["reason"] for item in draft["cite_held"]}
-    assert held["peng, 2018"] == "claim-fit"
+    assert held["nobody, 1999"] == "claim-fit"
+    assert "peng, 2018" not in held
     assert "cite_ask" not in draft
-    assert load_record(seq)["withheld"] == ["peng, 2018"]
+    assert load_record(seq)["withheld"] == ["nobody, 1999"]
 
     peng = _source(seq, "peng", "Peng, W.", "2018", TOPIC_ONLY)
     _write_paper(peng)
@@ -136,9 +142,10 @@ def test_ac1_fo_added_cite_that_fails_claim_fit_does_not_land(workspace):
     sources, sections = prepare_word_citations(
         seq,
         [peng],
-        [{"heading": "Findings", "body": _cited("Peng", "2018")}],
+        [{"heading": "Findings", "body": look_in}],
     )
-    assert "Peng" not in _refs(sources)
+    assert "Peng" in _refs(sources)
+    assert "Nobody" not in sections[0]["body"]
     _pack, report = word_manifest(
         seq,
         {
@@ -146,17 +153,18 @@ def test_ac1_fo_added_cite_that_fails_claim_fit_does_not_land(workspace):
             "title": "Privacy risk",
             "referencing": "harvard",
             "conclusion": "open",
-            "sections": [{"heading": "Findings", "body": _cited("Peng", "2018")}],
+            "sections": [{"heading": "Findings", "body": look_in}],
             "sources": [peng],
         },
     )
-    assert "Peng" not in " ".join(report["references"])
-    assert "Peng" not in " ".join(section["body"] for section in report["sections"])
+    rendered = " ".join(section["body"] for section in report["sections"])
+    assert "Peng" in rendered
+    assert "Nobody" not in rendered
     assert "withhold_body_cites" in inspect.getsource(prepare_word_citations)
 
 
-def test_ac2_fo_added_cite_needs_student_ok_before_it_lands(workspace):
-    """AC2. O'Connor supports the sentence. It still waits until the student says yes."""
+def test_ac2_a_gathered_cite_stays_without_waiting_for_a_yes(workspace):
+    """AC2. O'Connor is gathered. The save keeps it without waiting for a yes."""
     seq = open_sequence()
     _plant(seq)
     _walk(seq, "5", stage3=STUDENT)
@@ -170,10 +178,9 @@ def test_ac2_fo_added_cite_needs_student_ok_before_it_lands(workspace):
         },
     )
     assert asked["stored"] is True, asked
-    assert "O'Connor" not in (_note_look(seq, "5") or "")
-    assert asked["cite_ask"] == "Do you want O'Connor (2021) added? You did not ask for this paper."
-    assert asked["cite_ask"] in asked["next"]
-    assert "o'connor, 2021" in load_record(seq)["withheld"]
+    assert "(O'Connor, 2021)" in (_note_look(seq, "5") or "")
+    assert "cite_ask" not in asked
+    assert "o'connor, 2021" not in load_record(seq)["withheld"]
 
     again = front_office_call(
         "essay.stage",
@@ -185,23 +192,9 @@ def test_ac2_fo_added_cite_needs_student_ok_before_it_lands(workspace):
         },
     )
     assert again["ok"] is True, again
-    assert "O'Connor" not in (_note_look(seq, "6") or "")
-    assert "cite_ask" in again
-
-    allowed = front_office_call(
-        "essay.stage",
-        {
-            "essay_id": seq,
-            "stage": "6",
-            "confirmPhase": "draft",
-            "look": _cited("O'Connor", "2021"),
-            "answers": "Yes, add O'Connor.",
-        },
-    )
-    assert allowed["ok"] is True, allowed
     landed = _note_look(seq, "6") or ""
     assert "(O'Connor, 2021)" in landed
-    assert "cite_ask" not in allowed
+    assert "cite_ask" not in again
     assert "o'connor, 2021" not in load_record(seq)["withheld"]
     sources, sections = prepare_word_citations(
         seq,
@@ -209,6 +202,7 @@ def test_ac2_fo_added_cite_needs_student_ok_before_it_lands(workspace):
         [{"heading": "Findings", "body": _cited("O'Connor", "2021")}],
     )
     assert "O'Connor" in _refs(sources)
+    assert "O'Connor" in sections[0]["body"]
 
 
 def test_ac3_failed_swap_does_not_restore_rejected_cite(workspace):
@@ -237,14 +231,14 @@ def test_ac3_failed_swap_does_not_restore_rejected_cite(workspace):
     assert swapped["ok"] is True, swapped
     look = _note_look(seq, "6") or ""
     assert "Beldad" not in look
-    assert "Yamoah" not in look
+    assert "(Yamoah, 2020)" in look
     assert "privacy risk reduces willingness" in look.casefold()
     held = {item["token"]: item["reason"] for item in swapped["cite_held"]}
     assert held["beldad, 2019"] == "rejected"
-    assert held["yamoah, 2020"] == "claim-fit"
+    assert "yamoah, 2020" not in held
     withheld = set(load_record(seq)["withheld"])
     assert "beldad, 2019" in withheld
-    assert "yamoah, 2020" in withheld
+    assert "yamoah, 2020" not in withheld
     sources, sections = prepare_word_citations(
         seq,
         [
@@ -264,7 +258,7 @@ def test_ac3_failed_swap_does_not_restore_rejected_cite(workspace):
     body = sections[0]["body"]
     refs = _refs(sources)
     assert "Beldad" not in body and "Beldad" not in refs
-    assert "Yamoah" not in body and "Yamoah" not in refs
+    assert "Yamoah" in body and "Yamoah" in refs
 
 
 def test_ac4_gate_is_shared_writer_path_not_stage6_only(workspace):
@@ -289,11 +283,15 @@ def test_ac4_gate_is_shared_writer_path_not_stage6_only(workspace):
     seq = open_sequence()
     _plant(seq)
     _walk(seq, "5", stage3=STUDENT)
-    proposal = _cited("Peng", "2018")
+    gathered = _cited("Peng", "2018")
+    missing = _cited("Nobody", "1999")
     reasons = []
     for stage in ("5", "6", "7", "8"):
-        result = land_body_cites(seq, stage, proposal)
-        assert "Peng" not in result["text"]
+        kept = land_body_cites(seq, stage, gathered)
+        assert "(Peng, 2018)" in kept["text"]
+        assert kept["held"] == []
+        result = land_body_cites(seq, stage, missing)
+        assert "Nobody" not in result["text"]
         assert result["applied"] is True
         reasons.append(result["held"][0]["reason"])
     assert reasons == ["claim-fit", "claim-fit", "claim-fit", "claim-fit"]
@@ -305,9 +303,17 @@ def test_ac4_gate_is_shared_writer_path_not_stage6_only(workspace):
         assert skipped["text"] == untouched
 
     _walk(seq, "8", stage3=STUDENT, start="5")
-    stage8 = essay_stage(seq, "8", "draft", proposal)
+    stage8 = essay_stage(
+        seq,
+        "8",
+        "draft",
+        "Privacy risk reduces willingness to disclose personal data (Peng, 2018; Nobody, 1999).",
+    )
     assert stage8["ok"] is True, stage8
-    assert "Peng" not in (_note_look(seq, "8") or "")
+    note = _note_look(seq, "8") or ""
+    assert "(Peng, 2018)" in note
+    assert "Nobody" not in note
+    assert stage8["cite_held"][0]["token"] == "nobody, 1999"
     assert stage8["cite_held"][0]["reason"] == "claim-fit"
 
 
