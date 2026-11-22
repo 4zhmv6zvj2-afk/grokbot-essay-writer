@@ -66,6 +66,15 @@ some function names and docstrings are stable local acceptance-criterion ids;
 they are not tracker references. Private ticket and PR references were removed
 from the test docstrings before the 0.3.1 release.
 
+## Plymouth Cite Them Right
+
+Plymouth Cite Them Right is the Harvard style in `docs/referencing-harvard.md`.
+There is no separate Plymouth style to switch on, so a brief or a course page
+that names it is not asking for a product feature that is missing. A missing
+Plymouth switch is not a product gap. The wording stays internal: the Word file
+does not print it and the essay does not announce its referencing method.
+`tests/test_internal_style_note.py` holds that line.
+
 ## Writing a test
 
 - Every behaviour change lands with a test; a bug fix lands with a regression
