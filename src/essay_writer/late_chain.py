@@ -227,13 +227,20 @@ def stage5_chat_line(text: str, fallback: str) -> str:
 
 
 def _stage5_shown_line(essay_id: str, line: str) -> tuple[str, int | None]:
-    """Ready line for a draft inside the band. A short draft is not announced as finished."""
-    from essay_writer.specialists.writer import draft_word_count, first_draft_below_minimum
+    """Ready line for a draft inside the band. A short or unreadable draft is not announced as finished."""
+    from essay_writer.specialists.writer import (
+        draft_word_count,
+        first_draft_below_minimum,
+        first_draft_unreadable,
+    )
     from essay_writer.stage_note import _note_look
 
     saved = _note_look(essay_id, "5")
     if not isinstance(saved, str) or not saved.strip():
         return line, None
+    broken = first_draft_unreadable(saved)
+    if broken is not None:
+        return str(broken.get("reason") or line), None
     blocked = first_draft_below_minimum(essay_id, saved)
     if blocked is not None:
         reason = str(blocked.get("reason") or line)
