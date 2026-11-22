@@ -180,6 +180,42 @@ def _wrapped_in_quotes(body: str, start: int, end: int) -> bool:
     return body[start - 1] in '"“' and body[end] in '"”'
 
 
+_DOTTED_PAIR = (
+    (re.compile(r"(?i)\be\.\s+g\."), "e.g."),
+    (re.compile(r"(?i)\bi\.\s+e\."), "i.e."),
+)
+_FRAGMENT_SENTENCE = re.compile(r"(?i)^(?:[a-z]\.|e\.g\.|i\.e\.|etc\.|et\s+al\.|cf\.|vs\.)$")
+
+
+def _rejoin_dotted(text: str) -> str:
+    """Put a split e.g. or i.e. back together before sentences are taken.
+
+    An opened file can store each letter on its own line. ``e.`` then ``g.``
+    is the abbreviation, not two sentences.
+    """
+    for pattern, replacement in _DOTTED_PAIR:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+def _fragment_sentence(sentence: str) -> bool:
+    """True for a lone letter or a dotted abbreviation standing as its own sentence."""
+    text = sentence.strip()
+    if _FRAGMENT_SENTENCE.fullmatch(text):
+        return True
+    letters = re.sub(r"[^A-Za-z]", "", text)
+    return len(letters) <= 1
+
+
+def _short_mid_token(body: str, start: int, end: int) -> bool:
+    """True when a very short match sits inside a larger token such as e.g."""
+    if end - start > 4:
+        return False
+    if start > 0 and (body[start - 1].isalnum() or body[start - 1] == "."):
+        return True
+    return end < len(body) and body[end].isalnum()
+
+
 def unquoted_exact(body: str, gathered: list[str]) -> list[str]:
     """Sentences copied from a gathered file and not quoted, short ones included.
 
@@ -187,13 +223,14 @@ def unquoted_exact(body: str, gathered: list[str]) -> list[str]:
     A sentence that is itself the quotation, even when it contains a quote,
     does not. The old eight-word floor silently hid short copied lines; the
     shared splitter keeps them and this gate sees what the checks see.
+    A lone fragment such as g., including g. taken from e.g., is not a sentence.
     """
     spans = _quote_spans(body)
     hits: list[str] = []
     seen: set[str] = set()
     for text in gathered:
-        for sentence in sentences(text):
-            if sentence in seen:
+        for sentence in sentences(_rejoin_dotted(text)):
+            if sentence in seen or _fragment_sentence(sentence):
                 continue
             cursor = 0
             while True:
@@ -201,7 +238,11 @@ def unquoted_exact(body: str, gathered: list[str]) -> list[str]:
                 if at < 0:
                     break
                 end = at + len(sentence)
-                if not _inside_quote(spans, at, end) and not _wrapped_in_quotes(body, at, end):
+                if (
+                    not _inside_quote(spans, at, end)
+                    and not _wrapped_in_quotes(body, at, end)
+                    and not _short_mid_token(body, at, end)
+                ):
                     seen.add(sentence)
                     hits.append(sentence)
                     break

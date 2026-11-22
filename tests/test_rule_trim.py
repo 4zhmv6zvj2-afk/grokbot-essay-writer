@@ -29,7 +29,7 @@ CHATBOT = "If a chatbot produced"
 def test_case_1():
     """AC1: Duplicated rules were merged or relocated. Bullets stay flat.
 
-    The stage 5 shared checklist is 25 bullets. One bullet says the first draft
+    The stage 5 shared checklist is 26 bullets. One bullet says the first draft
     is written inside the brief's word band. One keeps a look-up author, year,
     title, and DOI when a PDF is saved. One refuses an unreadable first draft
     and waits for a clear review before the first-draft Word file. The ownership sentence lives
@@ -39,7 +39,7 @@ def test_case_1():
     and Grok Build read those same rules. The prompt loader still returns one
     flat bullet per line that starts with a dash.
     """
-    assert len(CHECKLISTS["5"]) == 25
+    assert len(CHECKLISTS["5"]) == 26
     assert CHECKLISTS["5"] == bullets("stages/05.md", "shared")
     assert all("\n" not in line for line in CHECKLISTS["5"])
     assert OWNERSHIP not in "\n".join(CHECKLISTS["5"])

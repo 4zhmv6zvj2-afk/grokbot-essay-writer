@@ -534,16 +534,26 @@ def test_a_note_without_an_entry_blocks_the_draft(workspace):
 
 
 def test_a_disagreement_is_named_and_not_silently_resolved(workspace):
-    """AC-cite-lib-11: A conflict is named, and neither the list nor the note is rewritten."""
+    """AC-cite-lib-11: A stored-detail conflict is named, and neither record is rewritten."""
     seq, rows = _ready()
     smith = _entry(seq, "smith")
     from essay_writer.paths import workspace_root
 
     path = workspace_root() / smith["note"]
+    record_path = path.with_name(f"{path.stem}.record.json")
     original = path.read_text(encoding="utf-8")
+    stored = record_path.read_text(encoding="utf-8")
     path.write_text(original.replace("(2020)", "(1999)", 1), encoding="utf-8")
+    headed = _entry(seq, "smith")
+    assert headed["usable"] is True
+    assert headed["conflict"] == ""
+    assert headed["year"] == "2020"
+    held_heading = apply_body_cites(seq, "5", DRAFT)
+    assert "(Smith, 2020)" in held_heading["text"]
+    record_path.write_text(stored.replace('"year": "2020"', '"year": "1999"', 1), encoding="utf-8")
     conflicted = _entry(seq, "smith")
     assert conflicted["usable"] is False
+    assert "stored details" in conflicted["conflict"].casefold()
     assert "do not agree" in conflicted["conflict"].casefold()
     assert conflicted["author"] == rows[0]["author"]
     assert conflicted["year"] == "2020"
@@ -552,10 +562,14 @@ def test_a_disagreement_is_named_and_not_silently_resolved(workspace):
     assert conflicted["in_text"] == smith["in_text"]
     assert conflicted["reference"] == smith["reference"]
     assert path.read_text(encoding="utf-8") == original.replace("(2020)", "(1999)", 1)
+    assert '"year": "1999"' in record_path.read_text(encoding="utf-8")
+    state = load_state(seq)
+    sources = state["research"]["summary"]["sources"]
+    assert sources[0]["year"] == "2020"
     held = apply_body_cites(seq, "5", DRAFT)
     assert "(Smith, 2020)" not in held["text"]
     assert "(Froese and Quaas, 2012)" in held["text"]
-    path.write_text(original, encoding="utf-8")
+    record_path.write_text(stored, encoding="utf-8")
     restored = _entry(seq, "smith")
     assert restored["usable"] is True
     assert restored["conflict"] == ""

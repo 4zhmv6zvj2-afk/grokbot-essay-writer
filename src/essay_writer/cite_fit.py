@@ -376,8 +376,13 @@ def apply_body_cites(
     incoming = text if isinstance(text, str) else ""
     if stage not in _ACTIVE:
         return _passthrough(incoming, edited)
+    from essay_writer.citation_list import use_stored_short_form
+
+    incoming = use_stored_short_form(essay_id, incoming)
     answers_text = answers if isinstance(answers, str) else ""
     edited_text = edited if isinstance(edited, str) else None
+    if edited_text is not None:
+        edited_text = use_stored_short_form(essay_id, edited_text)
     cites = bool(citation_tokens(incoming)) or bool(edited_text and citation_tokens(edited_text))
     intent = bool(
         _added_names(answers_text)
