@@ -335,6 +335,9 @@ def _write_body(
 
 def write_critical_review_docx(path: Path, prose: str) -> None:
     """One critical-review note as Word for the student zip."""
+    from essay_writer.context_fit import student_review_text
+
+    prose = student_review_text(prose)
     document = Document()
     _style_document(document)
     document.core_properties.title = "Critical review"

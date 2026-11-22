@@ -123,7 +123,7 @@ def test_ac3_ship_4b_stubs_only_when_review_is_absent(workspace):
     text = review.read_text(encoding="utf-8")
     line = harvard_4a_line(SOURCE)
     assert line in text
-    assert "Critical note:" in text
+    assert "Critical note:" not in text
     assert "UNIQUE-KEEP-4B-REVIEW" not in text
     assert len(text) < 400
     assert delivered["reviews_zip"]["name"] == "critical-reviews.zip"

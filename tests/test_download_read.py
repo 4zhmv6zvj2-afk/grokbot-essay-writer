@@ -70,7 +70,7 @@ def test_overlays_name_the_download_locks():
     assert "on disk and in Documents" in overlay_4b
     assert "papers zip as the only copy" in overlay_4b
     assert "option C: Download leftovers first" in overlay_4b
-    assert "grok-4.7" in overlay_4b
+    assert "does not name a model" in overlay_4b
     assert "markdown file on disk" in overlay_4b
     assert "page title or header" in INSTRUCTIONS
     year_source = (REPO / "src" / "essay_writer" / "pdf_year.py").read_text(encoding="utf-8")
@@ -326,7 +326,7 @@ def test_pdf_read_chop_keeps_bytes_on_machine(workspace):
     assert "read(_MAX_BYTES)" not in fetch_source
 
 
-def test_critical_note_opens_the_markdown_and_names_grok(workspace):
+def test_a_source_review_note_opens_from_the_saved_file(workspace):
     seq = open_sequence()
     delivered = ship_4b(
         seq,
@@ -335,9 +335,10 @@ def test_critical_note_opens_the_markdown_and_names_grok(workspace):
     )
     review = delivered["reviews"][0]
     assert review["opened"] is True
-    assert review["model"] == HOUSE_MODEL == "grok-4.7"
+    assert review["model"] == HOUSE_MODEL
     path = workspace / review["markdown_path"]
     opened = open_critical_markdown(path)
     assert opened == path.read_text(encoding="utf-8")
-    assert "Critical note: grok-4.7" in opened
+    assert HOUSE_MODEL not in opened
+    assert "Critical note:" not in opened
     assert "Chokepoints and crude" in opened

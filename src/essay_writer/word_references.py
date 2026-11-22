@@ -310,8 +310,11 @@ def _line_covers_cite(line: str, token: str) -> bool:
 
 
 def _plain_quotes(text: str) -> str:
-    """One apostrophe spelling, for matching a name and not for printing it."""
-    return text.replace("’", "'").replace("‘", "'")
+    """One apostrophe and one hyphen, for matching a name and not for printing it.
+
+    A normal hyphen and hyphen U+2010 are the same character in a name.
+    """
+    return text.replace("’", "'").replace("‘", "'").replace("\u2010", "-")
 
 
 def cite_reference_gaps(lines: list[str], sections: list[object]) -> list[str]:
