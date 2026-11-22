@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import re
 import zipfile
 from pathlib import Path
@@ -40,6 +41,7 @@ from essay_writer.prompt_content import CHECKLISTS
 from essay_writer.research_packs import ship_4a, ship_4b
 from essay_writer.review import PERSON_BLOCK, essay_review, writer_clears_left
 from essay_writer.roll_forward import has_critical_note
+from essay_writer.server import INSTRUCTIONS
 from essay_writer.shells import cursor_shell
 from essay_writer.specialists.writer import UNREADABLE_DRAFT, first_draft_unreadable
 from essay_writer.stage_note import _note_look
@@ -77,6 +79,17 @@ _DENY = {
     "p-10": "bf5b1a77289a1fcacf2eb34c8c1ae7a0b6243b7c58437d175ff8ca1921e1021a",
     "p-11": "8618635332385eae35cff6490f2c43c3d13eb471f2acf7690ab92a5e8405d586",
 }
+# The leftover student-note order. The words are not stored here.
+_NOTE_NAMES_MODEL = "14bd0937786fd13a989e02fc65f1ebfc0198cbee79a655981f7d6019772d4adb"
+
+
+def _note_still_names_a_model(text: str) -> bool:
+    """True when the old student-note order is still present."""
+    tokens = re.findall(r"[a-z0-9]+(?:[._-][a-z0-9]+)*", text.casefold())
+    windows = {" ".join(tokens[index : index + 5]) for index in range(max(len(tokens) - 4, 0))}
+    return any(
+        hashlib.sha256(window.encode()).hexdigest() == _NOTE_NAMES_MODEL for window in windows
+    )
 
 
 def _pieces(text: str) -> set[str]:
@@ -408,6 +421,16 @@ def test_shared_rules_use_public_wording():
     assert "does not name a model" in "\n".join(CHECKLISTS["4b"])
     assert "does not name a model" in stage_file
     assert "does not name a model" in helpers
+    briefing = (REPO / "src/essay_writer/prompts/front_office/briefing.md").read_text(
+        encoding="utf-8"
+    )
+    workflow = (REPO / "docs/workflow.md").read_text(encoding="utf-8")
+    workflow_template = (REPO / "tools/doc_templates/workflow.md").read_text(encoding="utf-8")
+    snapshot = json.loads((REPO / "tests/snapshots/prompts.json").read_text(encoding="utf-8"))
+    composed = snapshot["instructions"]
+    for text in (briefing, workflow, workflow_template, INSTRUCTIONS, composed):
+        assert "does not name a model" in text
+        assert _note_still_names_a_model(text) is False
     # The shared walk already names this product. The model name and the old note line stay out.
     _assert_plain(rules, allow={"p-3", "p-10"})
     _assert_plain("\n".join(CHECKLISTS["4b"]), stage_file, helpers)

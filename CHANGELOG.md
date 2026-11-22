@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The workflow and the composed instructions say the note a student opens does not name a model. The table of which model each stage uses stays.
 - A source review a student opens does not name a model. The Word file and the saved review note leave that line out. Annotation, the download list, the first-draft Word file, the final Word file, and the lines a student reads stay free of a model name and of internal labels.
 - Stage 5 does not save a first draft as finished, and does not write the first-draft Word file, when citation handling leaves a sentence with the author name missing. An intact saved draft is unchanged. Official look-up author, year, title, and DOI still stay when a PDF is kept or only an abstract is saved.
 - Stage 10 treats one author name as the same person when the only difference is the hyphen, and it writes the final Word file. A reference line that is really missing is still refused, and a failed last step does not replace a final Word file that is already saved.
