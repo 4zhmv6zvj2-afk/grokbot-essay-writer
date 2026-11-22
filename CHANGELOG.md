@@ -3,6 +3,7 @@
 ## Unreleased
 
 - When a look-up returns an author, a year, a title, or a DOI and only an abstract is saved, those details stay on the source. A detail the look-up did not return stays blank. The saved abstract prints a kept name and year. A later first draft can cite that source when the author and year were kept. A first draft below the brief's minimum is still not saved.
+- A saved look-up also keeps the other bibliographic fields the official OpenAlex, Consensus, or Unpaywall response already included, including when only an abstract is saved. A field that response did not include stays blank. A file is fetched only from an official OpenAlex or Unpaywall PDF or open-access URL, and it is kept only when it is a real PDF. OpenAlex requests use `per_page` and do not send `mailto`. A contact email stays required for Unpaywall only.
 - The internal referencing note says Plymouth Cite Them Right is Harvard referencing, in `docs/referencing-harvard.md` and the agent prompt generated from it. A missing Plymouth switch is not a product gap. The wording stays internal: no student chat or screen copy changes, and the Word file does not announce the referencing method.
 - When the brief states a word band, stage 5 writes the first draft inside that band. A first draft below the minimum is not saved and is not shown as the finished first draft.
 

@@ -614,13 +614,21 @@ def apply_opened_citation(source: dict[str, Any], essay_id: str | None = None) -
         return promote_lookup_article_page(source)
     opened = open_for_citation(path, essay_id or _essay_from_source(source))
     updated = dict(source)
+    provenance = updated.get("field_sources")
+    lookup_author = isinstance(provenance, dict) and provenance.get("author") == "lookup"
     corrected = opened.author
     claimed = updated.get("author")
-    if isinstance(corrected, str) and isinstance(claimed, str):
-        if claimed.strip().casefold() == corrected.casefold() or _is_inverted_claim(
-            claimed, corrected
-        ):
-            updated["author"] = corrected
+    # A missing author stays blank. A look-up author is not replaced from the PDF.
+    if (
+        not lookup_author
+        and isinstance(corrected, str)
+        and isinstance(claimed, str)
+        and (
+            claimed.strip().casefold() == corrected.casefold()
+            or _is_inverted_claim(claimed, corrected)
+        )
+    ):
+        updated["author"] = corrected
     pages = updated.get("pages")
     page_text = str(pages).strip() if pages is not None and not isinstance(pages, bool) else ""
     if page_text:

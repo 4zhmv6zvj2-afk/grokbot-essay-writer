@@ -1,10 +1,11 @@
 """Open-copy downloads on a sequence.
 
-essay.dig confirm calls this with Unpaywall addresses. A file is kept only
-when the response is a real PDF: the content-type is not HTML, and the bytes
-carry the %PDF- magic. An HTML abstract page, a 404, a paywall, or an empty
-body is classified onto download-list.docx. It is not saved and it is not a
-paper. A saved PDF stays off that list. Valid PDFs are kept, and the rest of
+essay.dig confirm calls this with OpenAlex and Unpaywall PDF or open-access
+addresses. A file is kept only when the response is a real PDF: the content-type
+is not HTML, and the bytes carry the %PDF- magic. An HTML abstract page, a 404,
+a paywall, or an empty body is classified onto download-list.docx. It is not
+saved and it is not a paper. A saved PDF stays off that list. Valid PDFs are
+kept, and the rest of
 the list still runs. The same cannot-open rows are a links card on the reply.
 
 The same failed address is fetched at most 3 times. If more than 10 minutes

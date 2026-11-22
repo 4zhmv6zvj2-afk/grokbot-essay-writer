@@ -353,12 +353,13 @@ def test_secret_card_speech_cites_the_provider_pages():
         assert "100,000" in text
         assert "https://unpaywall.org/products/api" in text
         assert "?email=YOUR_EMAIL" in text
-        assert "problems with your scripts" in text
-        assert "https://github.com/CrossRef/rest-api-doc/blob/master/README.md" in text
-        assert (
-            "https://github.com/ourresearch/openalex-docs/blob/main/how-to-use-the-api/rate-limits-and-authentication.md"
-            in text
-        )
+        assert "Unpaywall free-PDF lookup only" in text
+        assert "does not change OpenAlex limits" in text
+        assert "OpenAlex ignores mailto" in text
+        assert "https://help.openalex.org/api/deprecations/" in text
+        assert "rate-limits-and-authentication.md" not in text
+        assert "problems with your scripts" not in text
+        assert "https://github.com/CrossRef/rest-api-doc/blob/master/README.md" not in text
         assert "Do not ask the user to edit a .env file." in text
         assert "LHS" not in text
         assert "never to email" in text

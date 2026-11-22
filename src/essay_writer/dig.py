@@ -237,16 +237,29 @@ def _hit(
     return item
 
 
+def _copy_openalex_urls(hit: dict[str, Any], work: dict[str, Any]) -> None:
+    """Keep official open-access and PDF URLs. A missing URL stays off the hit."""
+    access = work.get("open_access")
+    if isinstance(access, dict):
+        oa_url = access.get("oa_url")
+        if isinstance(oa_url, str) and oa_url.strip():
+            hit["oa_url"] = oa_url.strip()
+    best = work.get("best_oa_location")
+    if isinstance(best, dict):
+        pdf_url = best.get("pdf_url")
+        if isinstance(pdf_url, str) and pdf_url.strip():
+            hit["pdf_url"] = pdf_url.strip()
+
+
 def openalex_search(query: str) -> dict[str, Any]:
     if resolver_mode() == "off":
         return {"called": False, "skipped": "resolvers-off", "hits": []}
-    params = {"search": query, "per-page": 5}
+    # Official page size is per_page. mailto is ignored and is not sent.
+    # A stored key goes as api_key. Keyless calls still run.
+    params: dict[str, Any] = {"search": query, "per_page": 5}
     key = openalex_api_key()
     if key:
         params["api_key"] = key
-    email = unpaywall_email()
-    if email:
-        params["mailto"] = email
     url = OPENALEX_URL + "?" + urllib.parse.urlencode(params)
     try:
         payload = _get_json(url, {"User-Agent": "essay-writer"})
@@ -271,6 +284,7 @@ def openalex_search(query: str) -> dict[str, Any]:
             abstract = _abstract_from_index(work.get("abstract_inverted_index"))
             if abstract:
                 hit["abstract"] = abstract
+            _copy_openalex_urls(hit, work)
             hits.append(hit)
     return {"called": True, "hits": hits}
 
@@ -317,6 +331,13 @@ def consensus_search(query: str) -> dict[str, Any]:
             abstract = paper.get("abstract")
             if isinstance(abstract, str) and abstract.strip():
                 hit["abstract"] = abstract.strip()
+            journal = paper.get("journal_name")
+            if isinstance(journal, str) and journal.strip():
+                hit["journal"] = journal.strip()
+            for key in ("pages", "volume", "url"):
+                value = paper.get(key)
+                if isinstance(value, str) and value.strip():
+                    hit[key] = value.strip()
             hits.append(hit)
     return {"called": True, "tier": tier, "hits": hits}
 
@@ -343,10 +364,25 @@ def unpaywall_lookup(doi: str) -> dict[str, Any]:
     location = payload.get("best_oa_location")
     oa_url = None
     if isinstance(location, dict):
-        candidate = location.get("url_for_pdf") or location.get("url")
-        if isinstance(candidate, str) and candidate.strip():
-            oa_url = candidate.strip()
-    return {"called": True, "doi": doi, "oa_url": oa_url}
+        # url_for_pdf, then the official url only when no PDF URL is provided.
+        # z_authors is deprecated and is not copied.
+        pdf = location.get("url_for_pdf")
+        if isinstance(pdf, str) and pdf.strip():
+            oa_url = pdf.strip()
+        else:
+            landing = location.get("url")
+            if isinstance(landing, str) and landing.strip():
+                oa_url = landing.strip()
+    row: dict[str, Any] = {"called": True, "doi": doi, "oa_url": oa_url}
+    title = payload.get("title")
+    if isinstance(title, str) and title.strip():
+        row["title"] = title.strip()
+    year = payload.get("year")
+    if isinstance(year, int) and not isinstance(year, bool):
+        row["year"] = str(year)
+    elif isinstance(year, str) and year.strip().isdigit():
+        row["year"] = year.strip()
+    return row
 
 
 def _refused_lines(name: str, body: dict[str, Any]) -> list[str]:
@@ -465,7 +501,19 @@ def _abstract_name(doi_key: str, index: int, used: set[str]) -> str:
     return name
 
 
-_KEPT_ON_ABSTRACT = ("author", "year", "title", "doi")
+_KEPT_ON_ABSTRACT = (
+    "author",
+    "year",
+    "title",
+    "doi",
+    "oa_url",
+    "pdf_url",
+    "journal",
+    "pages",
+    "volume",
+    "url",
+)
+_HIT_TEXT_FIELDS = ("oa_url", "pdf_url", "journal", "pages", "volume", "url")
 
 
 def _lookup_author(hit: dict[str, Any]) -> str:
@@ -486,7 +534,7 @@ def _lookup_author(hit: dict[str, Any]) -> str:
 
 
 def _provided_details(hit: dict[str, Any]) -> dict[str, str]:
-    """Author, year, title, and DOI the look-up already put on this hit.
+    """Bibliographic fields the look-up already put on this hit.
 
     A missing field is omitted. Nothing is filled in.
     """
@@ -505,6 +553,10 @@ def _provided_details(hit: dict[str, Any]) -> dict[str, str]:
     doi = _doi_key(hit.get("doi"))
     if doi:
         details["doi"] = doi
+    for key in _HIT_TEXT_FIELDS:
+        value = hit.get(key)
+        if isinstance(value, str) and value.strip():
+            details[key] = value.strip()
     return details
 
 
@@ -547,7 +599,7 @@ def same_lookup_value(field: str, claimed: str, stored: str) -> bool:
 
 
 def abstract_lookup_fields(essay_id: str, locator: str) -> dict[str, str]:
-    """Author, year, title, and DOI stored when this abstract was saved.
+    """Bibliographic fields stored when this abstract was saved.
 
     Only fields the look-up returned are present. Nothing is invented.
     """
@@ -604,10 +656,10 @@ def _save_lookup_abstracts(
 ) -> list[dict[str, Any]]:
     """Save a look-up abstract when that hit has no PDF.
 
-    Author, year, title, and DOI are copied from the look-up when it
-    returned them. A field the look-up left out stays off the record.
-    The file prints the kept name and year, in the same shape as a saved
-    citation line, and does not add a name or year that was not returned.
+    Bibliographic fields the look-up returned are copied onto the record.
+    A field the look-up left out stays off the record. The file prints the
+    kept name and year, in the same shape as a saved citation line, and
+    does not add a name or year that was not returned.
     """
 
     hits = _abstract_hits(card)
@@ -682,8 +734,20 @@ def _save_openalex_abstracts(
     return _save_lookup_abstracts(essay_id, card, pdf_dois)
 
 
+def _http_url(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if text.startswith("https://") or text.startswith("http://"):
+        return text
+    return None
+
+
 def _open_candidates(card: dict[str, Any]) -> list[dict[str, Any]]:
-    """Unpaywall addresses only. A look-up hit is not a downloaded paper."""
+    """OpenAlex and Unpaywall PDF or open-access URLs already on the card.
+
+    A Consensus URL is not fetched. A hit with neither official URL adds nothing.
+    """
     titles: dict[str, str] = {}
     for hit in list(card["openalex"]["hits"]) + list(card["consensus"]["hits"]):
         doi = hit.get("doi")
@@ -692,21 +756,30 @@ def _open_candidates(card: dict[str, Any]) -> list[dict[str, Any]]:
             titles[doi] = title.strip()
     candidates: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for item in card["unpaywall"]:
-        url = item.get("oa_url")
-        if not isinstance(url, str) or not url.strip():
-            continue
-        url = url.strip()
-        if url in seen:
-            continue
+
+    def add(url: str | None, doi: object, title: object) -> None:
+        if url is None or url in seen:
+            return
         seen.add(url)
         candidate: dict[str, Any] = {"url": url}
-        doi = item.get("doi")
         if isinstance(doi, str) and doi.strip():
             candidate["doi"] = doi.strip()
-            if doi.strip() in titles:
-                candidate["title"] = titles[doi.strip()]
+            named = title if isinstance(title, str) and title.strip() else None
+            if named is None:
+                named = titles.get(doi.strip())
+            if isinstance(named, str) and named.strip():
+                candidate["title"] = named.strip()
         candidates.append(candidate)
+
+    for hit in card["openalex"]["hits"]:
+        if not isinstance(hit, dict):
+            continue
+        add(_http_url(hit.get("pdf_url")), hit.get("doi"), hit.get("title"))
+        add(_http_url(hit.get("oa_url")), hit.get("doi"), hit.get("title"))
+    for item in card["unpaywall"]:
+        if not isinstance(item, dict):
+            continue
+        add(_http_url(item.get("oa_url")), item.get("doi"), None)
     return candidates
 
 
