@@ -328,7 +328,7 @@ def keepers(essay_id: str) -> list[dict[str, Any]]:
 
 
 def has_critical_note(essay_id: str, paper: dict[str, Any]) -> bool:
-    """True when a review markdown already names this paper and is a critical note."""
+    """True when a review markdown already names this paper."""
 
     folder = work_dir(essay_id) / "output" / "reviews"
     if not folder.is_dir():
@@ -344,7 +344,7 @@ def has_critical_note(essay_id: str, paper: dict[str, Any]) -> bool:
             text = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        if "Critical note" not in text:
+        if not text.strip():
             continue
         hay = text.casefold()
         name = _slug(path.stem)

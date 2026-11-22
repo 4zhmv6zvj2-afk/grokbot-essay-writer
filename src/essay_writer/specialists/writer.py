@@ -548,7 +548,26 @@ _BARE_VERBS = frozenset(
         "treats",
         "write",
         "writes",
+        "review",
+        "reviews",
+        "count",
+        "counts",
+        "is",
+        "are",
+        "was",
+        "were",
+        "has",
+        "have",
+        "had",
     }
+)
+# A prepositional opening left in front of a verb whose subject was the author.
+_PREP_BARE = re.compile(
+    r"(?im)^[ \t]*(?:for|in|on|at|after|before|during|within|without|under|over|"
+    r"from|by|with|across|through|about|into)\b[^.\n]{0,160}?,\s+"
+    r"(?:counts?|treats?|reviews?|adds?|reports?|finds?|argues?|compares?|describes?|"
+    r"shows?|says?|suggests?|writes?|gives?|explains?|ties?)"
+    r"\s+(?:the|a|an|this|that|these|those|its|their|his|her)\b"
 )
 _PREP_MODAL = re.compile(
     r"\b(?:in|on|at|for|from|with|by|of|to)\s+(?:may|might|could|would|should|must|shall|can)\b"
@@ -573,26 +592,34 @@ def _glued_period_comma(text: str) -> bool:
         start = found + 2
 
 
+def _opening_is_bare_verb(text: str) -> bool:
+    """True when this sentence or line starts with the verb a removed name left behind."""
+    piece = text.lstrip(" \t\"'“”‘’(")
+    if not piece or not piece[0].islower():
+        return False
+    head = piece.split(None, 1)[0].strip(".,;:").casefold()
+    if head in _LOWER_LEAD:
+        return False
+    return head in _BARE_VERBS
+
+
 def _lowercase_sentence(text: str) -> bool:
     from essay_writer.textutil import sentences
 
-    for sentence in sentences(text):
-        piece = sentence.lstrip(" \t\"'“”‘’(")
-        if not piece:
-            continue
-        head = piece.split(None, 1)[0].strip(".,;:").casefold()
-        if head in _LOWER_LEAD:
-            continue
-        if piece[0].islower() and head in _BARE_VERBS:
-            return True
-    return False
+    return any(_opening_is_bare_verb(sentence) for sentence in sentences(text))
+
+
+def _bare_verb_line(text: str) -> bool:
+    """A heading with no full stop does not hide the next line's missing subject."""
+    return any(_opening_is_bare_verb(line) for line in text.splitlines())
 
 
 def first_draft_unreadable(text: str) -> dict[str, Any] | None:
     """Refuse a first draft a citation removal left unreadable.
 
-    A doubled comma, a full stop glued to a comma, a sentence that starts
-    without its capital, a modal left after a preposition, or a verb left
+    A doubled comma, a full stop glued to a comma, a sentence or line that
+    starts with the verb the author name used to govern, a verb left after a
+    prepositional opening, a modal left after a preposition, or a verb left
     after a conjunction with no subject are not readable English. A readable
     sentence is left alone.
     """
@@ -602,6 +629,8 @@ def first_draft_unreadable(text: str) -> dict[str, Any] | None:
         ",," in text
         or _glued_period_comma(text)
         or _lowercase_sentence(text)
+        or _bare_verb_line(text)
+        or _PREP_BARE.search(text) is not None
         or _PREP_MODAL.search(text) is not None
         or _BARE_AFTER.search(text) is not None
     ):
