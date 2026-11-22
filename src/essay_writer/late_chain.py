@@ -226,6 +226,25 @@ def stage5_chat_line(text: str, fallback: str) -> str:
     return text.strip()
 
 
+def _stage5_shown_line(essay_id: str, line: str) -> tuple[str, int | None]:
+    """Ready line for a draft inside the band. A short draft is not announced as finished."""
+    from essay_writer.specialists.writer import draft_word_count, first_draft_below_minimum
+    from essay_writer.stage_note import _note_look
+
+    saved = _note_look(essay_id, "5")
+    if not isinstance(saved, str) or not saved.strip():
+        return line, None
+    blocked = first_draft_below_minimum(essay_id, saved)
+    if blocked is not None:
+        reason = str(blocked.get("reason") or line)
+        counted = blocked.get("counted")
+        return reason, counted if isinstance(counted, int) else None
+    counted = draft_word_count(essay_id, saved)
+    if counted is None:
+        return line, None
+    return f"{line} Counted words: {counted}.", counted
+
+
 def quiet_stage5(body: dict[str, Any], essay_id: str) -> dict[str, Any]:
     """Stage 5 speech. No save prompt. The finished draft is heard after Word exists."""
 
@@ -234,6 +253,9 @@ def quiet_stage5(body: dict[str, Any], essay_id: str) -> dict[str, Any]:
         line = stage5_chat_line(FIRST_DRAFT_READY, FIRST_DRAFT_READY)
     else:
         line = stage5_chat_line(STAGE6_OPEN, STAGE6_OPEN)
+    line, counted = _stage5_shown_line(essay_id, line)
+    if isinstance(counted, int):
+        body["counted_words"] = counted
     quiet = mark_quiet(body, line, step="5", speak_next=False)
     from essay_writer.stage_next import write_stage_next
 
@@ -257,7 +279,16 @@ def quiet_word_step(body: dict[str, Any], pack: dict[str, Any] | None) -> dict[s
         body["checklist_in_chat"] = False
         return body
     if body.get("wrote"):
-        return mark_quiet(body, completed_draft_chat(draft_prose(pack)), step="5b")
+        prose = draft_prose(pack)
+        essay_id = body.get("essay_id")
+        if isinstance(essay_id, str) and essay_id.strip():
+            from essay_writer.specialists.writer import first_draft_below_minimum
+
+            short = first_draft_below_minimum(essay_id, prose)
+            if short is not None:
+                reason = str(short.get("reason") or "")
+                return mark_quiet(body, reason, step="5b")
+        return mark_quiet(body, completed_draft_chat(prose), step="5b")
     kept = body.get("next")
     if isinstance(kept, str) and "Say yes to keep this step." in kept:
         return mark_quiet(body, kept, step="5b")

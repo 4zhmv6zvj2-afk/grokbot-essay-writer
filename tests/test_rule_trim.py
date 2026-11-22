@@ -29,14 +29,15 @@ CHATBOT = "If a chatbot produced"
 def test_case_1():
     """AC1: Duplicated rules were merged or relocated. Bullets stay flat.
 
-    The stage 5 shared checklist is 21 bullets. The ownership sentence lives
+    The stage 5 shared checklist is 22 bullets. One bullet says the first draft
+    is written inside the brief's word band. The ownership sentence lives
     once, in the craft rule. The essay opener and closer bans live once, in
     the anti-glue rule. The annotation how-to lives once, on the annotation
     bullet. The chatbot rewrite lives once, in the craft revise rule. Cursor
     and Grok Build read those same rules. The prompt loader still returns one
     flat bullet per line that starts with a dash.
     """
-    assert len(CHECKLISTS["5"]) == 21
+    assert len(CHECKLISTS["5"]) == 22
     assert CHECKLISTS["5"] == bullets("stages/05.md", "shared")
     assert all("\n" not in line for line in CHECKLISTS["5"])
     assert OWNERSHIP not in "\n".join(CHECKLISTS["5"])

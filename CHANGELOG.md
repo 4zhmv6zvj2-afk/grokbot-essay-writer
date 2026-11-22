@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The internal referencing note says Plymouth Cite Them Right is Harvard referencing, in `docs/referencing-harvard.md` and the agent prompt generated from it. A missing Plymouth switch is not a product gap. The wording stays internal: no student chat or screen copy changes, and the Word file does not announce the referencing method.
+- When the brief states a word band, stage 5 writes the first draft inside that band. A first draft below the minimum is not saved and is not shown as the finished first draft.
 
 ## 0.9.15 — 2026-11-22
 
