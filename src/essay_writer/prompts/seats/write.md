@@ -8,6 +8,14 @@ Essay Writer uses **Harvard Referencing** (author and year). The full university
 
 The rules below are an author-date Harvard style. Where two examples in this note disagree, follow the later one.
 
+## Plymouth Cite Them Right
+
+Plymouth Cite Them Right **is** Harvard referencing. It is this Harvard style, not a second style. A brief, a course page, or a library guide that names Plymouth Cite Them Right is naming the style this note records.
+
+- There is no separate Plymouth style to switch on. A missing Plymouth switch is not a missing feature.
+- Nothing about the referencing changes: the same citations and the same reference list print either way.
+- This paragraph is internal guidance for the agent that runs the tool. The Word file does not print it, and the essay does not announce its referencing method.
+
 ## Where the style lives
 
 - This note is the checked handbook.
