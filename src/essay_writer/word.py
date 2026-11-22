@@ -452,6 +452,99 @@ def write_docx(
     log_word_docx_written(essay_id, pack, report, lines, path, product_log=product_log)
 
 
+def saved_first_draft_text(essay_id: str) -> str | None:
+    """Final stage 5 look, when that stage was saved. A working note is not saved."""
+    from essay_writer.stage_note import _note_look
+    from essay_writer.stage_state import _note_path, load_pointer
+
+    pointer = load_pointer(essay_id)
+    if "5" not in (pointer.get("saved") or []):
+        return None
+    try:
+        path = _note_path(essay_id, "5")
+    except KeyError:
+        return None
+    if not path.is_file():
+        return None
+    raw = path.read_text(encoding="utf-8")
+    status_head = raw.split("## ", 1)[0]
+    if "Status: final" not in status_head or "## Final look\n\n" not in raw:
+        return None
+    look = _note_look(essay_id, "5")
+    if not isinstance(look, str) or not look.strip():
+        return None
+    return look
+
+
+def intact_saved_first_draft(essay_id: str) -> str | None:
+    """Saved stage 5 look that is still readable and inside a stated word band."""
+    from essay_writer.specialists.writer import (
+        first_draft_below_minimum,
+        first_draft_unreadable,
+    )
+
+    look = saved_first_draft_text(essay_id)
+    if look is None:
+        return None
+    if first_draft_unreadable(look) is not None:
+        return None
+    if first_draft_below_minimum(essay_id, look) is not None:
+        return None
+    return look
+
+
+def write_first_draft_word(essay_id: str) -> dict[str, object]:
+    """Write the first-draft Word file from the intact saved draft.
+
+    The paragraphs are that saved text. A later rewrite is not read.
+    A missing, broken, or short draft writes nothing. An existing file is left as it is.
+    """
+    from essay_writer.paths import work_dir
+    from essay_writer.specialists.writer import draft_word_count
+    from essay_writer.textutil import count_words
+
+    text = intact_saved_first_draft(essay_id)
+    target = work_dir(essay_id) / "output" / f"{essay_id}.docx"
+    if text is None:
+        return {"wrote": False, "path": "", "reason": "not-intact"}
+    if target.is_file():
+        return {"wrote": False, "path": relative(target), "reason": "already-saved"}
+    refuse_repo_write(target)
+    document = Document()
+    _style_document(document, essay_id)
+    if not _footer_has_page(document):
+        raise EmptyFooter()
+    document.core_properties.title = strip_word_labels(str(essay_id))
+    document.core_properties.author = ""
+    document.core_properties.last_modified_by = ""
+    for line in text.splitlines():
+        cleaned = line.strip()
+        if not cleaned:
+            continue
+        match = _HASH_HEADING.match(cleaned)
+        if match:
+            level = min(len(match.group(1)), 3)
+            heading = document.add_heading(match.group(2).strip(), level=level)
+            heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            heading.paragraph_format.line_spacing = 1.5
+            for run in heading.runs:
+                _font(run, 14, bold=True)
+            continue
+        paragraph = document.add_paragraph()
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        paragraph.paragraph_format.line_spacing = 1.5
+        run = paragraph.add_run(cleaned)
+        _font(run, 12)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_suffix(".docx.tmp")
+    document.save(str(temporary))
+    os.replace(temporary, target)
+    counted = draft_word_count(essay_id, text)
+    if counted is None:
+        counted = count_words(text, exclude_citations=False)
+    return {"wrote": True, "path": relative(target), "counted_words": counted}
+
+
 @guard_damaged_records
 def essay_pack_render_word(
     essay_id: str,

@@ -25,6 +25,8 @@ STAGES = frozenset({"6", "9"})
 # The writer cannot clear a review. This number does not increase.
 WRITER_CLEARS_LEFT = 0
 PERSON_BLOCK = "You can't clear this review. Only the reviewer can clear it."
+FIRST_DRAFT_WORD_LINE = "The first-draft Word file is saved from the draft that was reviewed."
+_WORD_NOT_SAVED = "The finished Word file is not saved yet."
 
 
 def writer_clears_left() -> int:
@@ -99,11 +101,20 @@ def essay_review(
             "review",
             "The finished Word file is saved and was not opened. Nothing was recorded.",
         )
-    claim = claim_check_opened(essay_id, opened.get("text") or "")
+    saved_look = None
+    if stage == "6" and not opened.get("opened"):
+        from essay_writer.word import saved_first_draft_text
+
+        saved_look = saved_first_draft_text(essay_id)
+    claim_text = opened.get("text") or ""
+    if isinstance(saved_look, str) and not opened.get("opened"):
+        claim_text = saved_look
+    claim = claim_check_opened(essay_id, claim_text)
     if verdict == "PASS" and claim.get("matches"):
+        where = "saved Word file" if opened.get("opened") else "saved draft"
         return refuse(
             "review",
-            "A gathered sentence appears in the saved Word file without quotation marks. Nothing was recorded.",
+            f"A gathered sentence appears in the {where} without quotation marks. Nothing was recorded.",
             matches=claim["matches"],
         )
     judged_word = (
@@ -122,9 +133,20 @@ def essay_review(
             return blocked_gate
     if verdict == "PASS" and stage == "6":
         from essay_writer.specialists.eqr import answers_assignment_question
+        from essay_writer.word import intact_saved_first_draft
 
-        judged = judged_word if opened.get("opened") else (constitution or "")
-        if not answers_assignment_question(essay_id, judged if isinstance(judged, str) else ""):
+        if opened.get("opened"):
+            judged = judged_word if isinstance(judged_word, str) else ""
+        elif isinstance(saved_look, str):
+            if intact_saved_first_draft(essay_id) is None:
+                return refuse(
+                    "review",
+                    "The saved first draft is not intact. Nothing was recorded.",
+                )
+            judged = saved_look
+        else:
+            judged = constitution if isinstance(constitution, str) else ""
+        if not answers_assignment_question(essay_id, judged):
             return refuse(
                 "review",
                 "Stage 6 only checks whether the draft answers the assignment question. Nothing was recorded.",
@@ -133,8 +155,10 @@ def essay_review(
     if verdict == "PASS" and stage == "9":
         from essay_writer.specialists.eqr import mark_top_band_rows
 
-        judged = opened.get("text") if opened.get("opened") else ""
-        top_band = mark_top_band_rows(essay_id, judged if isinstance(judged, str) else "")
+        opened_text = opened.get("text") if opened.get("opened") else ""
+        if not isinstance(opened_text, str):
+            opened_text = ""
+        top_band = mark_top_band_rows(essay_id, opened_text)
         if top_band.get("marked") and top_band.get("top_band") is not True:
             missed = ", ".join(str(item) for item in top_band.get("missed") or [])
             return refuse(
@@ -144,7 +168,7 @@ def essay_review(
             )
         from essay_writer.textutil import citation_tokens
 
-        if not citation_tokens(judged if isinstance(judged, str) else ""):
+        if not citation_tokens(opened_text):
             return refuse(
                 "review",
                 "The opened Word file has no citations. Nothing was recorded.",
@@ -164,7 +188,11 @@ def essay_review(
     phase = phase_refusal(confirmPhase)
     if phase:
         return phase
-    findings = build_findings(essay_id, opened, claim)
+    findings_opened = opened
+    if isinstance(saved_look, str) and not opened.get("opened"):
+        findings_opened = dict(opened)
+        findings_opened["text"] = saved_look
+    findings = build_findings(essay_id, findings_opened, claim)
     if top_band is not None:
         from essay_writer.specialists.eqr import with_top_band_marks
 
@@ -269,6 +297,27 @@ def essay_review(
             )
         else:
             body["next"] = say("The review opened the saved Word file.")
+    elif stage == "6" and verdict == "PASS":
+        from essay_writer.word import write_first_draft_word
+
+        written = write_first_draft_word(essay_id)
+        if written.get("wrote") is True:
+            updated = findings.replace(_WORD_NOT_SAVED, FIRST_DRAFT_WORD_LINE, 1)
+            if updated != findings:
+                findings = updated
+                body["findings"] = findings
+                stored_state = load_state(essay_id)
+                stored_eqr = stored_state.get("eqr")
+                if isinstance(stored_eqr, dict) and isinstance(stored_eqr.get(stage), dict):
+                    stored_eqr[stage]["findings"] = findings
+                    stored_state["eqr"] = stored_eqr
+                    save_state(essay_id, stored_state)
+            body["first_draft_word"] = {
+                "wrote": True,
+                "path": written.get("path") or "",
+                "counted_words": written.get("counted_words"),
+            }
+            body["next"] = say(FIRST_DRAFT_WORD_LINE)
     return body
 
 
