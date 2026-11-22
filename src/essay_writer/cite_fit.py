@@ -29,6 +29,7 @@ from essay_writer.textutil import (
     citation_tokens,
     content_words,
     family_name,
+    fold_name,
     in_text_forms,
     norm_space,
     token_allowed,
@@ -214,6 +215,11 @@ def _prior_body(essay_id: str, stage: str) -> str:
 
 
 def _sources(essay_id: str) -> list[dict[str, Any]]:
+    from essay_writer.citation_list import usable_sources
+
+    listed = usable_sources(essay_id)
+    if listed is not None:
+        return listed
     from essay_writer.validate import research_index
 
     allowed, _digests = research_index(load_state(essay_id))
@@ -223,6 +229,13 @@ def _sources(essay_id: str) -> list[dict[str, Any]]:
 def _source_for(token: str, sources: list[dict[str, Any]]) -> dict[str, Any] | None:
 
     for source in sources:
+        stored = source.get("in_text")
+        if isinstance(stored, str) and stored.strip():
+            inner = stored.strip()
+            if inner.startswith("(") and inner.endswith(")"):
+                inner = inner[1:-1]
+            if inner and fold_name(inner).casefold() == fold_name(token).casefold():
+                return source
         author = source.get("author")
         year = source.get("year")
         if not author or year is None or year == "":

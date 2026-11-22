@@ -198,8 +198,12 @@ def _source_texts_with_cite(essay_id: str, pack: dict[str, Any]) -> list[tuple[s
             author = record.get("author") if isinstance(record, dict) else None
         if not (isinstance(year, str) and year.strip()):
             year = record.get("year") if isinstance(record, dict) else None
+        from essay_writer.citation_list import list_written, stored_in_text
+
         citation = None
-        if isinstance(author, str) and author.strip() and isinstance(year, str) and year.strip():
+        if list_written(essay_id):
+            citation = stored_in_text(essay_id, source)
+        elif isinstance(author, str) and author.strip() and isinstance(year, str) and year.strip():
             citation = f"({family_name(author)}, {year.strip()})"
         out.append((text, citation))
     return out

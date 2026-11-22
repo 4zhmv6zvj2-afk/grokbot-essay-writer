@@ -616,9 +616,24 @@ def _reference_lines_from_docx(document) -> list[str]:
 
 def _source_for_reference_line(essay_id: str, line: str) -> dict[str, Any] | None:
     """Match a printed Harvard line to a gathered upload. Nothing is invented."""
+    from essay_writer.citation_list import list_written, load_citation_list
     from essay_writer.invent import read_gathered_text
 
-    match = _REFERENCE_AUTHOR_YEAR.match(line.strip())
+    cleaned = line.strip()
+    if list_written(essay_id):
+        for entry in load_citation_list(essay_id)["entries"]:
+            reference = entry.get("reference")
+            if isinstance(reference, str) and reference.strip() == cleaned:
+                return {
+                    "id": entry.get("source_id"),
+                    "author": entry.get("author"),
+                    "year": entry.get("year"),
+                    "title": entry.get("title"),
+                    "doi": entry.get("doi"),
+                    "locator": entry.get("locator"),
+                    "origin": "upload",
+                }
+    match = _REFERENCE_AUTHOR_YEAR.match(cleaned)
     if match is None:
         return None
     author = match.group(1).strip().rstrip(",")
@@ -1169,9 +1184,12 @@ def _stage10_gate(
                 return None, body
     from essay_writer.word_references import stage10_reference_block
 
+    checked_pack = dict(pack)
+    if not isinstance(checked_pack.get("essay_id"), str):
+        checked_pack["essay_id"] = essay_id
     blocked_refs = stage10_reference_block(
         report.get("sources") or [],
-        pack,
+        checked_pack,
         list(report.get("sections") or []),
     )
     if blocked_refs:

@@ -190,7 +190,7 @@ def word_manifest(
 
     reference_lines = without_withheld_reference_lines(
         essay_id,
-        usable_word_reference_lines(list(report.get("sources") or []), prepared),
+        usable_word_reference_lines(list(report.get("sources") or []), prepared, essay_id),
         list(report.get("sources") or []),
     )
     stamped["references"] = reference_lines

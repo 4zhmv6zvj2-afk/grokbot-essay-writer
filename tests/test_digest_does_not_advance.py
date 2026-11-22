@@ -110,6 +110,14 @@ def test_ac1_digest_does_not_auto_advance(workspace):
     note = work_dir(seq) / "output" / "reviews" / "src-zara.md"
     note.parent.mkdir(parents=True, exist_ok=True)
     note.write_text(NOTE, encoding="utf-8")
+    from essay_writer.citation_list import receive_sources
+    from essay_writer.paths import relative
+
+    receive_sources(
+        seq,
+        [{"id": "src-zara", "author": "Smith, J.", "year": "2020", "title": "Zara"}],
+        {"src-zara": relative(note)},
+    )
     pasted = NOTE
     soft = argument_blockers(
         seq,

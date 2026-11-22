@@ -113,7 +113,15 @@ def clear_reference_findings(
 
 
 def reference_sources(essay_id: str) -> list[dict[str, object]]:
-    """Gathered sources for this sequence. A caller list is not a pass."""
+    """Gathered sources for this sequence. A caller list is not a pass.
+
+    When the citation list has been written, the reviewer reads that list.
+    """
+    from essay_writer.citation_list import reviewer_sources
+
+    listed = reviewer_sources(essay_id)
+    if listed is not None:
+        return [row for row in listed if isinstance(row, dict)]
     from essay_writer.late_chain import _pack_sources
 
     state = load_state(essay_id)

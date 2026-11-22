@@ -162,12 +162,28 @@ def styled_reference_runs(line: str, sources: list[object]) -> list[tuple[str, b
     return runs_for_saved_reference_line(cleaned)
 
 
-def usable_word_reference_lines(sources: list[object], pack: dict[str, object]) -> list[str]:
+def usable_word_reference_lines(
+    sources: list[object],
+    pack: dict[str, object],
+    essay_id: str | None = None,
+) -> list[str]:
     """Lines the Word References section prints.
 
-    Saved references_markdown wins when it has entries. Gathered sources are
-    the fallback when that markdown is absent.
+    When the citation list has been written, those stored lines are the ones
+    printed. Otherwise saved references_markdown wins, and gathered sources
+    are the fallback when that markdown is absent.
     """
+    ident = essay_id if isinstance(essay_id, str) else ""
+    if not ident and isinstance(pack, dict):
+        raw = pack.get("essay_id")
+        if isinstance(raw, str):
+            ident = raw
+    if ident:
+        from essay_writer.citation_list import stored_reference_lines
+
+        stored = stored_reference_lines(ident, sources, pack)
+        if stored is not None:
+            return stored
     markdown = references_markdown_lines(pack)
     if markdown:
         return markdown

@@ -318,6 +318,19 @@ def _save_confirm(
             )
         body["delivery"] = delivery
         body["delivery_speech"] = "4b"
+        from essay_writer.citation_list import unfinished_stage_reason
+
+        pending = unfinished_stage_reason(essay_id)
+        if pending:
+            return _reoffer_confirm(
+                essay_id,
+                stage,
+                genre,
+                pointer,
+                cardDigest,
+                code="citation-list",
+                reason=pending,
+            )
     note_text = render_tracking(stage, status="final", look=text, genre=genre, essay_id=essay_id)
     rel = relative(note)
     saved = _saved_after_confirm(pointer, stage)

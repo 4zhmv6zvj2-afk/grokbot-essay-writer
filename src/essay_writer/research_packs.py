@@ -610,6 +610,15 @@ def open_critical_markdown(path: Path, essay_id: str | None = None) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _supplied_prose(supplied: dict[str, str] | None, source: dict[str, Any]) -> str | None:
+    if supplied is None:
+        return None
+    prose = supplied.get(source["id"])
+    if isinstance(prose, str) and prose.strip():
+        return prose
+    return None
+
+
 def ship_4b(
     essay_id: str,
     sources: list[dict[str, Any]],
@@ -619,41 +628,93 @@ def ship_4b(
 
     When supplied is None, an existing output/reviews markdown is kept and that
     text is zipped. A citation-line stub is written only when that file is
-    absent. Stage 4b confirm uses this same call.
+    absent. A source already on the citation list keeps that note. Stage 4b
+    confirm uses this same call. The citation list is written at the end.
     """
+    from essay_writer.citation_list import (
+        entry_among,
+        matching_entry,
+        note_file,
+        receive_sources,
+        student_list_text,
+    )
+    from essay_writer.known_paths import research_file
     from essay_writer.word import write_critical_review_docx
 
     folder = _output(essay_id) / "reviews"
     folder.mkdir(parents=True, exist_ok=True)
-    members: list[tuple[str, bytes]] = []
-    files: list[dict[str, object]] = []
+    planned: list[dict[str, Any]] = []
+    notes: dict[str, str] = {}
+    claimed: list[dict[str, Any]] = []
     md_taken: set[str] = set()
     zip_names: set[str] = set()
     for source in sources:
+        if not isinstance(source, dict) or not source.get("id"):
+            continue
         paper_id = str(source["id"])
+        previous = matching_entry(essay_id, source) or entry_among(claimed, source)
+        reuse = note_file(previous) if previous is not None else None
+        if previous is not None and reuse is not None:
+            prose = _supplied_prose(supplied, source)
+            opened = ""
+            if reuse.is_file() and prose is None:
+                opened = open_critical_markdown(reuse, essay_id)
+            elif prose is not None and research_file(essay_id, str(reuse), save=True) is not None:
+                reuse.parent.mkdir(parents=True, exist_ok=True)
+                reuse.write_text(_review_body(essay_id, source, prose), encoding="utf-8")
+                opened = open_critical_markdown(reuse, essay_id)
+            notes[paper_id] = relative(reuse)
+            claimed.append(dict(previous))
+            docx_name = _unique_zip_name(reuse.stem, ".docx", zip_names)
+            planned.append(
+                {"source": source, "md": reuse, "opened": opened, "docx_name": docx_name}
+            )
+            continue
         md_stem = _MD_NAME.sub("-", paper_id).strip(".-") or "paper"
         md_name = _unique_zip_name(md_stem, ".md", md_taken)
         docx_name = _unique_zip_name(md_stem, ".docx", zip_names)
         md_path = folder / md_name
-        from essay_writer.known_paths import research_file
-
         if research_file(essay_id, str(md_path), save=True) is None:
             continue
+        prose = _supplied_prose(supplied, source)
         if supplied is None and md_path.is_file():
             opened = open_critical_markdown(md_path, essay_id)
         else:
-            prose = _review_body(
-                essay_id,
-                source,
-                None if supplied is None else supplied.get(source["id"]),
-            )
-            md_path.write_text(prose, encoding="utf-8")
+            md_path.write_text(_review_body(essay_id, source, prose), encoding="utf-8")
             opened = open_critical_markdown(md_path, essay_id)
-        docx_path = folder / docx_name
+        note = relative(md_path)
+        notes[paper_id] = note
+        claimed.append(
+            {
+                "source_id": paper_id,
+                "locator": source.get("locator") or "",
+                "doi": source.get("doi") or "",
+                "title": source.get("title") or "",
+                "note": note,
+            }
+        )
+        planned.append({"source": source, "md": md_path, "opened": opened, "docx_name": docx_name})
+    presented = receive_sources(essay_id, [item for item in sources if isinstance(item, dict)], notes)
+    list_text = student_list_text(essay_id) if presented.get("written") is True else ""
+    members: list[tuple[str, bytes]] = []
+    files: list[dict[str, object]] = []
+    written_docx: set[str] = set()
+    for item in planned:
+        opened = item["opened"]
+        if not isinstance(opened, str) or not opened.strip():
+            continue
+        docx_name = str(item["docx_name"])
+        if docx_name in written_docx:
+            continue
+        md_path = item["md"]
+        docx_path = md_path.with_name(docx_name)
         if research_file(essay_id, str(docx_path), save=True) is None:
             continue
-        write_critical_review_docx(docx_path, opened)
+        prose = opened.rstrip() + "\n\n" + list_text + "\n"
+        write_critical_review_docx(docx_path, prose)
+        written_docx.add(docx_name)
         members.append((docx_name, docx_path.read_bytes()))
+        source = item["source"]
         files.append(
             {
                 "paper_id": source["id"],
@@ -669,6 +730,12 @@ def ship_4b(
     from essay_writer.first_run import copy_deliverable_to_mac
 
     mac_copy = copy_deliverable_to_mac(archive)
+    messages = [item for item in presented.get("already") or [] if isinstance(item, str) and item]
+    if not presented.get("entries"):
+        gap = presented.get("gap")
+        if isinstance(gap, str) and gap.strip():
+            messages.insert(0, gap.strip())
+    student_note = " ".join(messages)
     return {
         "stage": "4b",
         "reviews": files,
@@ -679,6 +746,8 @@ def ship_4b(
             "chat": chat_zip(archive),
         },
         "mac_copy": mac_copy,
+        "citation_list": presented,
+        "student_note": student_note,
     }
 
 

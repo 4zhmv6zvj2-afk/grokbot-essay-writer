@@ -537,9 +537,15 @@ def _run(
             shown["sources"],
             shown["review_markdowns"],
         )
+        note = ""
+        delivery = body["delivery"]
+        if isinstance(delivery, dict):
+            raw_note = delivery.get("student_note")
+            if isinstance(raw_note, str) and raw_note.strip():
+                note = " " + raw_note.strip()
         body["next"] = say(
             "Research is stored for this essay. One Word file per paper is in the zip. "
-            "Next is essay.pack.validate."
+            "Next is essay.pack.validate." + note
         )
     return body
 
