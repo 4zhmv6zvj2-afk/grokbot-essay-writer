@@ -191,7 +191,8 @@ def _card(seq: str) -> dict:
 
 
 def _write_artifact(name: str, text: str) -> None:
-    ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    if not ARTIFACTS.is_dir():
+        return
     (ARTIFACTS / name).write_text(text, encoding="utf-8")
 
 
