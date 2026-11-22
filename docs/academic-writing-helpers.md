@@ -179,6 +179,7 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - Evidence vs claim. Bias, validity, and reliability only from the gathered text. Opposing views only if a gathered source states them. Do not invent them.
 - Fit to the argument on the papers you will use.
 - When the assignment is itself a critical review: introduction with author, title, topic, aim, findings, and your overall judgement; a summary of about a quarter to a third; a critique ordered by importance or by criterion; a conclusion that restates the judgement. The brief wins on structure.
+- This step ends with one citation list in the research notes. Each entry has the short citation, such as (Smith, 2020), and the full Harvard reference line. A source already listed keeps that entry and that note, and the student is told it was already there.
 
 **Shared rules:**
 - Research file work on this computer opens only a path already allowed for this sequence.
@@ -209,6 +210,7 @@ The name is the same for both genres. Essay shape is in `docs/essay-writing-help
 - Each body paragraph is one idea: a topic sentence, supporting sentences, evidence or an example, and analysis of why that evidence matters.
 - Paraphrase, summary, and quotation follow the source-use note in docs/academic-writing-helpers.md.
 - In-text citations are Harvard Referencing: family name and year. The first Word reference list uses each gathered source in full (author, year, title, and publisher or URL when that source has them). Do not leave a surname alone as the entry.
+- Use the short citation and the full reference line from the citation list written with the research notes. Do not write a different citation or a different reference line. Do not cite a source that is not on that list.
 - Opposing views only from gathered material. Do not invent sources. Approve the draft before treating it as locked for Word.
 - Do not set the conclusion label to noted or open on the Word cover. The person chooses that on validate before Word.
 - Do not write an independent re-review or mark your own essay passed. Only the separate reviewer records a pass.

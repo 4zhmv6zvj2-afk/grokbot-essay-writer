@@ -447,6 +447,17 @@ def _build_stage_body(
     card_only = args.card_only
     from essay_writer.specialists.grok_bot import BasicsOpening
 
+    if stage == "5" and not minting:
+        from essay_writer.citation_list import first_write_block
+        from essay_writer.stage_next import write_stage_next
+
+        blocked = first_write_block(essay_id)
+        if blocked is not None:
+            blocked["stage"] = stage
+            blocked["current"] = pointer.get("current")
+            blocked["advanced"] = False
+            reason = str(blocked.get("reason") or "")
+            return write_stage_next(blocked, reason)
     text, basics_seeded, edited, short_report, cite_report, opening = _prepare_stage_text(
         args,
         text,

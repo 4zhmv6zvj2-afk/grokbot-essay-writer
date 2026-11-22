@@ -222,7 +222,13 @@ def write_critical_reviews_next(body: dict[str, Any]) -> dict[str, Any]:
     current = body.get("next")
     text = current if isinstance(current, str) else ""
     body.pop("delivery_speech", None)
-    return write_stage_next(body, critical_reviews_delivery_next(text))
+    spoken = critical_reviews_delivery_next(text)
+    delivery = body.get("delivery")
+    if isinstance(delivery, dict):
+        note = delivery.get("student_note")
+        if isinstance(note, str) and note.strip() and note.strip() not in spoken:
+            spoken = f"{spoken} {note.strip()}"
+    return write_stage_next(body, spoken)
 
 
 def write_closed_stage_next(body: dict[str, Any]) -> dict[str, Any]:
