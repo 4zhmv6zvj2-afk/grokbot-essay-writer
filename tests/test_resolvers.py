@@ -264,7 +264,7 @@ def test_crossref_without_a_citation_accepts_only_one_exact_title():
     assert crossref_lookup("Deep learning", fetch=lambda query: none) is None
 
 
-def test_lookups_send_the_stored_email_as_the_polite_pool_contact(monkeypatch):
+def test_crossref_sends_the_contact_email_and_openalex_does_not(monkeypatch):
     from essay_writer import resolvers
 
     seen: list[str] = []
@@ -273,8 +273,11 @@ def test_lookups_send_the_stored_email_as_the_polite_pool_contact(monkeypatch):
     assert resolvers.crossref_lookup("Deep learning") is None
     assert resolvers.openalex_lookup("Deep learning") is None
     assert len(seen) == 2
-    assert all("mailto=reader%40example.com" in url for url in seen)
+    assert "mailto=reader%40example.com" in seen[0]
     assert "article-number" in seen[0]
+    assert "mailto" not in seen[1]
+    assert "per_page=" in seen[1]
+    assert "per-page" not in seen[1]
 
 
 def test_crossref_sample_does_not_match_other_titles():

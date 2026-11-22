@@ -377,9 +377,6 @@ def openalex_lookup(
     key = openalex_api_key()
     if key:
         params["api_key"] = key
-    email = unpaywall_email()
-    if email:
-        params["mailto"] = email
     url = "https://api.openalex.org/works?" + urllib.parse.urlencode(params)
     payload = _lookup_json(url)
     if payload is None:

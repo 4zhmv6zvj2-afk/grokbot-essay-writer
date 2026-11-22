@@ -1,0 +1,60 @@
+{
+  "openalex": [
+    {
+      "title": "Open lane under a named limit",
+      "publication_year": 2019,
+      "doi": "https://doi.org/10.1000/oa-full",
+      "authors": ["Ada Lovelace"],
+      "abstract": "The index sentence is the only abstract text.",
+      "decoy_abstract": "This sentence was not in the inverted index.",
+      "oa_url": "https://oa.example/oa-full",
+      "pdf_url": "https://oa.example/oa-full.pdf"
+    },
+    {
+      "title": "A note with no address",
+      "publication_year": 2020,
+      "abstract": "This note has no open address and no document identifier."
+    },
+    {
+      "title": "A work with a file and no open page",
+      "publication_year": 2018,
+      "doi": "https://doi.org/10.1000/oa-notitle",
+      "authors": ["Mary Jackson"],
+      "abstract": "This work names a file and does not name an open page.",
+      "pdf_url": "https://oa.example/oa-notitle.pdf"
+    }
+  ],
+  "consensus": [
+    {
+      "title": "Consensus lane with a journal line",
+      "publish_year": 2021,
+      "doi": "10.1000/cs-full",
+      "authors": ["Grace Hopper"],
+      "abstract": "The corridor count stays on one lane.",
+      "journal_name": "Journal of Lanes",
+      "pages": "12-18",
+      "volume": "4",
+      "url": "https://consensus.app/papers/lane-count"
+    },
+    {
+      "title": "Consensus paper with a title only",
+      "abstract": "This abstract has no journal line and no document identifier."
+    }
+  ],
+  "unpaywall": {
+    "10.1000/oa-full": {
+      "title": "Open lane under a named limit",
+      "year": 2019,
+      "url_for_pdf": "https://oa.example/unpaywall-oa-full.pdf",
+      "url": "https://oa.example/unpaywall-oa-full-landing"
+    },
+    "10.1000/cs-full": {
+      "title": "Consensus lane with a journal line",
+      "year": 2021,
+      "url": "https://oa.example/unpaywall-cs-landing"
+    },
+    "10.1000/oa-notitle": {
+      "url_for_pdf": "https://oa.example/unpaywall-oa-notitle.pdf"
+    }
+  }
+}
