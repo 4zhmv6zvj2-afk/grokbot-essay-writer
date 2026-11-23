@@ -765,3 +765,96 @@ def test_a_missing_step_does_not_invent_a_question_or_start_the_essay(workspace,
         )
     write_proof("missing-no-invent.txt", "\n".join(lines))
     assert workspace is not None
+
+
+def _ranked_works() -> list[dict[str, str]]:
+    return [
+        {
+            "title": "Fishery ledger",
+            "doi": "10.1000/a-early",
+            "author": "Ann Early",
+            "year": "2020",
+            "url": "https://library.example/a-early",
+        },
+        {
+            "title": "Fishery eastern ledger berth capacity",
+            "doi": "10.1000/z-late",
+            "author": "Zed Late",
+            "year": "2021",
+            "url": "https://library.example/z-late",
+        },
+    ]
+
+
+def test_the_shortlist_ranks_by_the_plan_not_by_the_work_id(workspace):
+    """Under the cap, the closer plan match stays. A later id is not dropped for an earlier letter."""
+    seq = open_sequence()
+    _brief(seq, "The assignment is 50 words.\n")
+    path = _note_path(seq, "3")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_tracking(
+            "3",
+            status="final",
+            look="The eastern ledger records berth capacity.",
+            essay_id=seq,
+        ),
+        encoding="utf-8",
+    )
+    choice = choose_downloads(seq, _ranked_works())
+    assert choice["ready"] is True
+    assert choice["maximum"] == 1
+    assert [row["doi"] for row in choice["shortlist"]] == ["10.1000/z-late"]
+    tied = [
+        {
+            "title": "Fishery ledger",
+            "doi": "10.1000/z-first",
+            "author": "Zed First",
+            "year": "2020",
+            "url": "https://library.example/z-first",
+        },
+        {
+            "title": "Fishery ledger",
+            "doi": "10.1000/a-second",
+            "author": "Ann Second",
+            "year": "2020",
+            "url": "https://library.example/a-second",
+        },
+    ]
+    tie = choose_downloads(seq, tied)
+    assert [row["doi"] for row in tie["shortlist"]] == ["10.1000/z-first"]
+    assert workspace is not None
+
+
+def test_a_draft_plan_does_not_start_downloads(workspace):
+    """A draft plan is not saved. The student goes back to the plan, and nothing is downloaded."""
+    seq = open_sequence()
+    _brief(seq, "The assignment is 1,000 words.\n")
+    path = _note_path(seq, "3")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_tracking(
+            "3",
+            status="draft",
+            look="The eastern ledger records berth capacity.",
+            essay_id=seq,
+        ),
+        encoding="utf-8",
+    )
+    choice = choose_downloads(seq, _ranked_works())
+    assert choice["ready"] is False
+    assert choice["return_to"] == PLAN_STEP
+    assert choice["shortlist"] == []
+    assert rows_for_download(seq, _ranked_works(), _ranked_works()) == []
+    missing_question = open_sequence()
+    _length_only(missing_question)
+    path = _note_path(missing_question, "3")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_tracking("3", status="final", look=PLAN, essay_id=missing_question),
+        encoding="utf-8",
+    )
+    both = choose_downloads(missing_question, _ranked_works())
+    assert both["return_to"] == QUESTION_STEP
+    assert both["shortlist"] == []
+    assert workspace is not None
