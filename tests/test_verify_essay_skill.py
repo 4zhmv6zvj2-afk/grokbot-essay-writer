@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import importlib.machinery
+import importlib.util
 import json
 import os
 import re
 import tempfile
-import types
 from pathlib import Path
 
 import essay_writer
@@ -74,7 +75,9 @@ def test_skill_tree_stays_public():
             continue
         digests = {hashlib.sha256(gram.encode()).hexdigest() for gram in _grams(text)}
         hits.extend(
-            f"{path.relative_to(REPO)} {opaque}" for opaque, digest in denied.items() if digest in digests
+            f"{path.relative_to(REPO)} {opaque}"
+            for opaque, digest in denied.items()
+            if digest in digests
         )
     assert hits == []
 
@@ -86,7 +89,14 @@ def test_skill_names_the_student_path():
     assert "name: verify-essay-writer" in text
     assert "Essay Writer" in text
     assert "MCP" in text
-    for heading in ("## Launch", "## Doctor", "## Drive", "## Evidence", "## Cleanup", "## Helpers"):
+    for heading in (
+        "## Launch",
+        "## Doctor",
+        "## Drive",
+        "## Evidence",
+        "## Cleanup",
+        "## Helpers",
+    ):
         assert heading in text
     assert "ESSAY_WRITER_ROOT" in text
     assert "0.9.17" in text
@@ -105,9 +115,13 @@ def _load_harness(env: dict[str, str] | None = None):
             previous[key] = os.environ.get(key)
             os.environ[key] = value
     try:
-        module = types.ModuleType("essay_verify_harness_under_test")
-        module.__file__ = str(HELPER)
-        exec(compile(HELPER.read_text(encoding="utf-8"), str(HELPER), "exec"), module.__dict__)
+        loader = importlib.machinery.SourceFileLoader(
+            "essay_verify_harness_under_test", str(HELPER)
+        )
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
     finally:
         for key, old in previous.items():
             if old is None:
@@ -199,7 +213,9 @@ def test_silent_brief_floor_blocks_a_short_list():
             and isinstance(value.op, ast.Not)
             and isinstance(value.operand, ast.Name)
         }
-        if missing == {"title", "author", "year"} and any(isinstance(item, ast.Continue) for item in node.body):
+        if missing == {"title", "author", "year"} and any(
+            isinstance(item, ast.Continue) for item in node.body
+        ):
             skipped = True
     assert skipped
     drive = _function(tree, "do_drive")
@@ -208,7 +224,11 @@ def test_silent_brief_floor_blocks_a_short_list():
     consensus_follows_key = False
     short_list_exits_2 = False
     for node in ast.walk(drive):
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
             if node.targets[0].id == "short" and isinstance(node.value, ast.BoolOp):
                 dumped = ast.dump(node.value)
                 short_uses_floor = (
@@ -216,9 +236,17 @@ def test_silent_brief_floor_blocks_a_short_list():
                 )
         if isinstance(node, ast.If) and _compare_is_not_true(node.test, "openalex_called"):
             openalex_required = _body_fails(node.body)
-        if isinstance(node, ast.If) and isinstance(node.test, ast.BoolOp) and isinstance(node.test.op, ast.And):
+        if (
+            isinstance(node, ast.If)
+            and isinstance(node.test, ast.BoolOp)
+            and isinstance(node.test.op, ast.And)
+        ):
             dumped = ast.dump(node.test)
-            if "consensus_key" in dumped and "consensus_called" in dumped and "consensus_refused" in dumped:
+            if (
+                "consensus_key" in dumped
+                and "consensus_called" in dumped
+                and "consensus_refused" in dumped
+            ):
                 consensus_follows_key = _body_fails(node.body)
             names: set[str] = set()
             for value in node.test.values:

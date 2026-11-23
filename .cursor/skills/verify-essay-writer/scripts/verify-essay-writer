@@ -34,10 +34,7 @@ DEPS = Path(os.environ.get("ESSAY_WRITER_VERIFY_DEPS", str(RUN_DIR / "deps")))
 STATE_NAME = "run-state.json"
 MODULE = "MOD1004AA"
 QUESTION = "How do ports shape coastal trade?"
-BRIEF = (
-    f"Question: {QUESTION}\n"
-    "The assignment is 2000 words.\n"
-)
+BRIEF = f"Question: {QUESTION}\nThe assignment is 2000 words.\n"
 FLOOR_WORDS = 2000
 FLOOR_COUNT = 16
 SECRET_NAMES = (
@@ -65,9 +62,7 @@ SAFE_BASE = (
     "SYSTEMROOT",
 )
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-QUERY_SECRET_RE = re.compile(
-    r"(?i)(api_key|apikey|email|key|token)=([^&\s\"']+)"
-)
+QUERY_SECRET_RE = re.compile(r"(?i)(api_key|apikey|email|key|token)=([^&\s\"']+)")
 
 
 def repo_root() -> Path:
@@ -150,8 +145,10 @@ def ensure_outside_checkout(path: Path, label: str) -> Path:
     if resolved == repo or repo in resolved.parents:
         fail(f"{label} is inside the code checkout. Name a folder outside it.")
     workspace = Path("/workspace")
-    if workspace.exists() and workspace.resolve() == repo and (
-        resolved == workspace.resolve() or workspace.resolve() in resolved.parents
+    if (
+        workspace.exists()
+        and workspace.resolve() == repo
+        and (resolved == workspace.resolve() or workspace.resolve() in resolved.parents)
     ):
         fail(f"{label} is the code checkout. Name a folder outside it.")
     evidence = evidence_dir().resolve()
@@ -234,12 +231,16 @@ def tool_payload(result: Any) -> dict[str, Any]:
     return parsed
 
 
-async def raw_call(session: Any, name: str, arguments: dict[str, Any], timeout: float) -> dict[str, Any]:
+async def raw_call(
+    session: Any, name: str, arguments: dict[str, Any], timeout: float
+) -> dict[str, Any]:
     result = await session.call_tool(name, arguments, read_timeout_seconds=timeout)
     return tool_payload(result)
 
 
-async def call(session: Any, name: str, arguments: dict[str, Any], timeout: float) -> dict[str, Any]:
+async def call(
+    session: Any, name: str, arguments: dict[str, Any], timeout: float
+) -> dict[str, Any]:
     body = await raw_call(session, name, arguments, timeout)
     if body.get("ok") is False:
         reason = body.get("reason") or body.get("next") or body.get("code") or "refused"
@@ -523,7 +524,14 @@ def saved_sources(confirm: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def citation_on_disk(sequence_id: str) -> dict[str, Any]:
-    path = STUDENT / "Essay-writer" / MODULE / "sequences" / sequence_id.split("-")[-1] / "citation-list.json"
+    path = (
+        STUDENT
+        / "Essay-writer"
+        / MODULE
+        / "sequences"
+        / sequence_id.split("-")[-1]
+        / "citation-list.json"
+    )
     if not path.is_file():
         return {"written": False, "entries": 0, "path": str(path)}
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -543,11 +551,7 @@ def draft_docx(sequence_id: str) -> list[str]:
     if not folder.is_dir():
         return []
     names = {f"{sequence_id}.docx", f"{MODULE}-final.docx"}
-    return [
-        str(path.relative_to(STUDENT))
-        for path in folder.rglob("*.docx")
-        if path.name in names
-    ]
+    return [str(path.relative_to(STUDENT)) for path in folder.rglob("*.docx") if path.name in names]
 
 
 async def do_drive(session: Any) -> dict[str, Any]:
@@ -601,8 +605,7 @@ async def do_drive(session: Any) -> dict[str, Any]:
     research: dict[str, Any] | None = None
     if view.get("blocked") is not True and sources:
         clarify = {
-            key: {"leave_open": True}
-            for key in ("objective", "background", "issues", "guidance")
+            key: {"leave_open": True} for key in ("objective", "background", "issues", "guidance")
         }
         research_args = {
             "essay_id": sequence_id,
@@ -680,7 +683,11 @@ async def do_drive(session: Any) -> dict[str, Any]:
         write_json("research-gather.json", report)
         fail("OpenAlex was not called.")
     consensus_key = bool(os.environ.get("CONSENSUS_API_KEY", "").strip())
-    if consensus_key and view.get("consensus_called") is not True and not view.get("consensus_refused"):
+    if (
+        consensus_key
+        and view.get("consensus_called") is not True
+        and not view.get("consensus_refused")
+    ):
         report["floor_check"] = "fail"
         write_json("research-gather.json", report)
         fail("A Consensus key is present and essay.dig did not call Consensus.")
@@ -738,23 +745,28 @@ def cmd_cleanup() -> None:
     run_dir = Path(state.get("run_dir") or RUN_DIR)
     student = Path(state.get("student_root") or STUDENT)
     if run_dir.exists() and run_dir.resolve() != evidence_dir().resolve():
-        if run_dir.resolve() != repo_root().resolve() and repo_root().resolve() not in run_dir.resolve().parents:
+        if (
+            run_dir.resolve() != repo_root().resolve()
+            and repo_root().resolve() not in run_dir.resolve().parents
+        ):
             shutil.rmtree(run_dir)
     elif student.exists() and repo_root().resolve() not in student.resolve().parents:
         shutil.rmtree(student)
         kb1 = Path(state.get("kb1") or KB1)
         if kb1.exists() and kb1.resolve() != student.resolve():
             shutil.rmtree(kb1)
-    names = sorted(path.name for path in evidence_dir().iterdir()) if evidence_dir().is_dir() else []
+    names = (
+        sorted(path.name for path in evidence_dir().iterdir()) if evidence_dir().is_dir() else []
+    )
     proof = evidence_dir() / "cleanup.txt"
     proof.write_text(
         "Cleanup removed the student folder this run created.\n"
-        "Evidence files still present:\n"
-        + "\n".join(names)
-        + "\n",
+        "Evidence files still present:\n" + "\n".join(names) + "\n",
         encoding="utf-8",
     )
-    missing = [name for name in ("launch.json", "doctor.json", "research-gather.json") if name not in names]
+    missing = [
+        name for name in ("launch.json", "doctor.json", "research-gather.json") if name not in names
+    ]
     if missing:
         fail("Cleanup kept the folder, but expected evidence is missing: " + ", ".join(missing))
     say("Cleanup finished. Evidence remains in " + str(evidence_dir()) + ".")
