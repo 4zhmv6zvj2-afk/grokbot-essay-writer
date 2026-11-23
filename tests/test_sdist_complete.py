@@ -94,6 +94,12 @@ def test_manifest_ships_the_verify_skill() -> None:
     assert not missing, f"MANIFEST.in does not ship: {missing}"
 
 
+def test_manifest_ships_the_push_hook() -> None:
+    path = ".githooks/pre-push"
+    assert (ROOT / path).is_file()
+    assert _manifest_ships(path), "MANIFEST.in does not ship the push hook"
+
+
 def test_readme_history_link_target_is_shipped() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert re.search(r"\[[^\]]*\]\(HISTORY\.md\)", readme), "README.md no longer links HISTORY.md"

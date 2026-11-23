@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The sdist ships `.githooks/pre-push`, so the local push hook is in the extracted tree.
 - The sdist ships `.cursor/skills/**`, so the verify-skill checks pass from the extracted tarball.
 - A gather with no confirmed question asks for the question and does not search.
 - A gathered sentence keeps the citation-list short form when that source is listed. When it is not, the short form comes from the stored author and year, including the stored look-up record. A source with no stored author or year is not appended.
