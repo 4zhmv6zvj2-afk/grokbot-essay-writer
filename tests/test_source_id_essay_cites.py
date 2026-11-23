@@ -174,6 +174,76 @@ def test_reordering_keeps_each_papers_source_id(workspace):
     assert workspace is not None
 
 
+def test_a_later_field_fill_keeps_the_first_source_id(workspace):
+    """A DOI filled in later does not mint a new id. The file, the note, and the list share it."""
+    seq = open_sequence()
+    module = module_code(seq)
+    locator = f"uploads/{module}/harbour.md"
+    write_upload(
+        workspace,
+        module,
+        "harbour.md",
+        "Ada Lovelace\n2019\nHarbour capacity and trade\nThe harbour handles a large share.\n",
+    )
+    raw = {
+        "origin": "upload",
+        "locator": locator,
+        "author": "Ada Lovelace",
+        "year": "2019",
+        "title": "Harbour capacity and trade",
+        "id": "not a safe id",
+    }
+    first, issues = gather_sources(seq, [raw])
+    assert issues == []
+    minted = first[0]["id"]
+    assert minted.startswith("work:")
+    assert " " not in minted.split(":", 1)[0]
+    assert minted != "not a safe id"
+    delivered = ship_4b(seq, first, {minted: "The harbour handles a large share."})
+    assert delivered.get("blocked") is not True, delivered
+    write_upload(
+        workspace,
+        module,
+        "harbour.md",
+        "Ada Lovelace\n2019\nHarbour capacity and trade\n"
+        "doi:10.1000/harbour\nThe harbour handles a large share.\n",
+    )
+    raw["doi"] = "10.1000/harbour"
+    raw["id"] = "doi:10.1000/harbour"
+    second, more = gather_sources(seq, [raw])
+    assert more == []
+    assert second[0]["id"] == minted
+    assert second[0]["doi"] == "10.1000/harbour"
+    again = ship_4b(seq, second, None)
+    assert again.get("blocked") is not True, again
+    entry = next(item for item in load_citation_list(seq)["entries"] if item["locator"] == locator)
+    assert entry["source_id"] == minted
+    assert entry["part_source"] == f"{minted}:source"
+    assert entry["part_note"] == f"{minted}:note"
+    assert entry["part_list"] == f"{minted}:list"
+    source_path = work_dir(seq) / "output" / "source-records"
+    records = list(source_path.glob("*.record.json"))
+    assert len(records) == 1
+    source_record = json.loads(records[0].read_text(encoding="utf-8"))
+    assert source_record["source_id"] == minted
+    note_path = Path(entry["note"])
+    if not note_path.is_file():
+        from essay_writer.paths import workspace_root
+
+        note_path = workspace_root() / entry["note"]
+    note_record = json.loads(note_path.with_name(f"{note_path.stem}.record.json").read_text())
+    assert note_record["source_id"] == minted
+    long_title = "Harbour capacity " * 30
+    long_id = stable_source_id({"author": "Ada Lovelace", "year": "2019", "title": long_title})
+    other_id = stable_source_id(
+        {"author": "Ada Lovelace", "year": "2019", "title": long_title + " east"}
+    )
+    assert len(long_id) <= 80
+    assert long_id != other_id
+    assert "harbour capacity harbour" not in long_id
+    assert workspace is not None
+
+
 def test_a_shared_short_form_stays_two_works(tmp_path):
     """AC-id-2: Two works that share a short form are checked on their own lines."""
     lead = "Elizabeth Drury O'Neill and Tim Daw and Ada Lane and Emilie Lindkvist"

@@ -10,6 +10,7 @@
 - An empty gather does not write a sourced essay when no source record and no citation entry exist, including when dig-card.json is absent. Stage 4b, stage 5, and stage 10 wait.
 - The shell asks once before the gather and passes up to three smaller questions. The gather reads that list once and does not ask again.
 - A kept PDF whose hit has no DOI still keeps the author, year, and title the look-up returned. The match uses the URL or the locator, or the title with the author. A title alone does not match. A DOI on that hit is kept too.
+- A source id is stored on first sight. A later DOI, author, or title does not mint a new one. A very long title is hashed so the filename stays short. A supplied id is kept only when its shape is safe.
 - A gather with no confirmed question asks for the question and does not search.
 - A gathered sentence keeps the citation-list short form when that source is listed. When it is not, the short form comes from the stored author and year, including the stored look-up record. A source with no stored author or year is not appended.
 - A remembered author, year, title, or DOI is kept only when it matches the claimed value. A different claimed value refuses the source.

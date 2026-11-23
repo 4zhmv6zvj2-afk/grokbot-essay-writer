@@ -264,8 +264,6 @@ def gather_source(
     if opened is not None:
         text = opened.text
     issues: list[dict[str, str]] = []
-    # A supplied id is kept. A missing id is minted from the work. The list
-    # position in the label above is not the source id.
     kept: dict[str, Any] = {
         "id": _as_text(raw.get("id")) or "",
         "origin": origin,
@@ -376,9 +374,15 @@ def gather_source(
         kept["field_sources"] = field_sources
     if issues:
         return None, issues
-    if not kept["id"]:
-        from essay_writer.source_ids import stable_source_id
+    from essay_writer.source_ids import saved_source_id, stable_source_id, valid_source_id
 
+    saved = saved_source_id(essay_id, kept["locator"])
+    supplied = valid_source_id(kept["id"])
+    if saved:
+        kept["id"] = saved
+    elif supplied:
+        kept["id"] = supplied
+    else:
         kept["id"] = stable_source_id(kept) or ("loc:" + kept["locator"].casefold())
     return kept, []
 
