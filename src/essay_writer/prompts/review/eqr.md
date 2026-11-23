@@ -12,6 +12,7 @@ Do not treat e.g. or the fragment g. as a sentence copied from an opened paper w
 Stage 9 checks the same requirement list on the opened Word file. The constitution is not that check. A pass with no opened Word file does not clear. Stage 9 refuses a pass when the opened Word file misses a word band, a cover field, or a diary heading already recorded from the brief, the marking table, or the diary. Nothing is added when those documents did not record that ask.
 Stage 9 marks a mark scheme table row for argument, evidence, or critical thinking at the top band. It does not mark format. It does not mark citations. Stage 6 does not mark those rows.
 Say whether the essay is ready for that Word file, or whether it needs more work. Draft, show it, and approve the save only after an explicit yes.
+A first refusal does not end the job, does not mark the last step done, and does not replace a good first-draft Word file. The writer may amend and request this review again. The last step stays closed while this review is still open. One refusal does not ban the run.
 Do not invent sources in the review note.
 When a mark scheme is present, judge the highest band, the top descriptors, not merely a pass.
 The findings note opens with Overall judgement: what the mark scheme scores, the format, and whether the draft does the assignment. Claim checks against the opened PDFs follow that section. A pass with no findings note does not clear the Word file.

@@ -49,7 +49,10 @@ def reference_lines_origin(pack: dict[str, object]) -> str:
 
 
 _QUOTED_TITLE = re.compile(r"['‘][^'’]+['’],\s+")
-_YEAR_THEN_TITLE = re.compile(r"\(\d{4}[a-z]?\)\s+")
+# A full stop after the year bracket is still the same year. The title follows it.
+_YEAR_THEN_TITLE = re.compile(r"\(\d{4}[a-z]?\)\.?\s+")
+_STANDALONE_QUOTED = re.compile(r"['‘](.+?)['’]")
+_REVIEW_SUBTITLE = re.compile(r"\.\s+[Aa] review\b")
 _CONTAINER_BREAK = re.compile(r",\s+(?=pp\.|\d|\()", re.IGNORECASE)
 _TITLE_MARK = re.compile(r"[.!?]")
 _CHAPTER_LEAD = re.compile(r"^in\s+", re.IGNORECASE)
@@ -83,11 +86,73 @@ def _title_break_end(rest: str) -> int:
     return -1
 
 
+def _mark_span(line: str, span: str) -> list[tuple[str, bool]] | None:
+    """One italic span. The surrounding line stays as saved."""
+    if not span.strip():
+        return None
+    match = re.search(re.escape(span), line, flags=re.IGNORECASE)
+    if match is None:
+        return None
+    return _drop_empty(
+        [
+            (line[: match.start()], False),
+            (line[match.start() : match.end()], True),
+            (line[match.end() :], False),
+        ]
+    )
+
+
+def _extend_review_subtitle(rest: str, end: int) -> int:
+    """A review title may hold a full stop before the words 'a review'.
+
+    The full title has to sit in the italic span, so that stop stays inside it.
+    """
+    match = _REVIEW_SUBTITLE.match(rest[end:])
+    if match is None:
+        return end
+    return end + match.end()
+
+
+def _runs_for_known_source(line: str, sources: list[object]) -> list[tuple[str, bool]] | None:
+    """Italicise the gathered title or the journal when the saved line differs.
+
+    A long author list does not move the span. A review title that contains a
+    full stop, and a management-plan title, are marked in full. A journal
+    article keeps the article title in roman and the journal title italic.
+    """
+    folded = line.casefold()
+    chosen = ""
+    score = -1
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        title = str(source.get("title") or "").strip()
+        container = str(source.get("container") or "").strip()
+        if title and title.casefold() not in folded:
+            continue
+        if container and container.casefold() in folded:
+            span = container
+            rank = len(title) + 1
+        elif title and not container:
+            span = title
+            rank = len(title)
+        else:
+            continue
+        if rank > score:
+            chosen = span
+            score = rank
+    if not chosen:
+        return None
+    return _mark_span(line, chosen)
+
+
 def runs_for_saved_reference_line(line: str) -> list[tuple[str, bool]]:
     """Italicise the journal or work title in one saved Harvard line.
 
     The line text stays as saved. A journal title after the quoted article
-    is italic. A book, report, or web title after the year is italic.
+    is italic. A book, report, or web title after the year is italic. A
+    review subtitle after a full stop stays in that italic span. A quoted
+    work title with no journal is italic too.
     """
     text = line.strip()
     if not text:
@@ -127,11 +192,25 @@ def runs_for_saved_reference_line(line: str) -> list[tuple[str, bool]]:
                 ]
             )
     year = _YEAR_THEN_TITLE.search(text)
-    if year and not text[year.end() :].startswith(("'", "‘")):
+    if year:
         start = year.end()
         rest = text[start:]
+        if rest.startswith(("'", "‘")):
+            inner = _STANDALONE_QUOTED.match(rest)
+            if inner and inner.group(1).strip():
+                opening, closing = inner.span(1)
+                return _drop_empty(
+                    [
+                        (text[:start], False),
+                        (rest[:opening], False),
+                        (rest[opening:closing], True),
+                        (rest[closing:], False),
+                    ]
+                )
+            return [(text, False)]
         end = _title_break_end(rest)
         if end > 0:
+            end = _extend_review_subtitle(rest, end)
             return _drop_empty(
                 [
                     (text[:start], False),
@@ -159,7 +238,24 @@ def styled_reference_runs(line: str, sources: list[object]) -> list[tuple[str, b
         plain = "".join(text for text, _italic in parts).strip()
         if plain == cleaned:
             return parts
+    known = _runs_for_known_source(cleaned, sources)
+    if known is not None:
+        return known
     return runs_for_saved_reference_line(cleaned)
+
+
+def reference_runs_for_stored(entry: dict[str, object]) -> list[tuple[str, bool]]:
+    """Italic runs for one stored citation-list line.
+
+    The stored string keeps the Harvard wording. The title or the journal
+    is marked from the fields stored with that line.
+    """
+    if not isinstance(entry, dict):
+        return []
+    line = entry.get("reference")
+    if not isinstance(line, str) or not line.strip():
+        return []
+    return styled_reference_runs(line, [entry])
 
 
 def usable_word_reference_lines(

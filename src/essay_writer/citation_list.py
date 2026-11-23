@@ -26,7 +26,31 @@ from essay_writer.textutil import (
     token_allowed,
 )
 
-_FROZEN = ("source_id", "locator", "author", "year", "title", "doi", "in_text", "reference")
+# Fields the Harvard line is built from. The list keeps them so a later check
+# reads the same journal, report, or plan the line was printed from.
+_PRINT_FIELDS = (
+    "container",
+    "place",
+    "publisher",
+    "volume",
+    "issue",
+    "pages",
+    "url",
+    "accessed",
+    "edition",
+    "article_number",
+)
+_FROZEN = (
+    "source_id",
+    "locator",
+    "author",
+    "year",
+    "title",
+    "doi",
+    "in_text",
+    "reference",
+    *_PRINT_FIELDS,
+)
 _OFFICIAL = ("source_id", "doi", "author", "year", "title")
 MISSING_NOTE = "The research note for {label} is missing."
 FIELD_CONFLICT = (
@@ -390,6 +414,8 @@ def _store_list_official(
         if key != "source_id":
             basis[key] = official[key]
     found["reference"] = full_reference(basis)
+    for key in _PRINT_FIELDS:
+        found[key] = _text(opened.get(key))
     record["entries"] = entries
     _save(essay_id, record)
     stored = {key: _text(found.get(key)) for key in _OFFICIAL}
@@ -564,7 +590,7 @@ def _match(entries: list[dict[str, Any]], source: dict[str, Any]) -> dict[str, A
 def _entry_from_source(source: dict[str, Any], note: str) -> dict[str, Any]:
     author = _text(source.get("author"))
     year = _text(source.get("year"))
-    return {
+    entry = {
         "source_id": _text(source.get("id")),
         "locator": _text(source.get("locator")),
         "author": author,
@@ -575,6 +601,9 @@ def _entry_from_source(source: dict[str, Any], note: str) -> dict[str, Any]:
         "reference": full_reference(source),
         "note": note,
     }
+    for key in _PRINT_FIELDS:
+        entry[key] = _text(source.get(key))
+    return entry
 
 
 def _freeze(previous: dict[str, Any], note: str) -> dict[str, Any]:
@@ -736,18 +765,21 @@ def usable_sources(essay_id: str) -> list[dict[str, Any]] | None:
         return None
     sources: list[dict[str, Any]] = []
     for entry in rows:
-        sources.append(
-            {
-                "id": entry.get("source_id"),
-                "author": entry.get("author"),
-                "year": entry.get("year"),
-                "title": entry.get("title"),
-                "doi": entry.get("doi"),
-                "locator": entry.get("locator"),
-                "in_text": entry.get("in_text"),
-                "reference": entry.get("reference"),
-            }
-        )
+        row = {
+            "id": entry.get("source_id"),
+            "author": entry.get("author"),
+            "year": entry.get("year"),
+            "title": entry.get("title"),
+            "doi": entry.get("doi"),
+            "locator": entry.get("locator"),
+            "in_text": entry.get("in_text"),
+            "reference": entry.get("reference"),
+        }
+        for key in _PRINT_FIELDS:
+            value = _text(entry.get(key))
+            if value:
+                row[key] = value
+        sources.append(row)
     return sources
 
 
