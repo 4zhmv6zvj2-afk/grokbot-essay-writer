@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Run the full gate on demand without a code change. This repository is
+  # public, so standard GitHub-hosted runners (including macos-latest) are
+  # free; only larger runners are billed.
+  workflow_dispatch:
 
 permissions:
   contents: read

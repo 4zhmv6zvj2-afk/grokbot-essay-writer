@@ -51,6 +51,7 @@ contract pins, and the snapshot.
 ## Sending a change
 
 - Keep a change small and explain what it does.
+- CI runs on every push and pull request and is free for this public repo. Never add `[skip ci]` to a commit that changes code, workflows, or tests.
 - Run the gates above and paste the result.
 - Do not commit secrets, API keys, or student work.
 - Do not rewrite published history or force-push tags.
