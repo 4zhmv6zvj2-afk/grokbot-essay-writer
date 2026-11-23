@@ -291,21 +291,72 @@ def _author_year_present(text: str, surname: str, year: str) -> bool:
     return re.search(pattern, fold_name(text), re.IGNORECASE) is not None
 
 
+def _dois_in(text: str) -> list[str]:
+    found: list[str] = []
+    for item in _DOI.findall(text):
+        norm = _norm_doi(_DOI_PREFIX.sub("", item))
+        if norm:
+            found.append(norm)
+    return found
+
+
 def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
-    author = _text(source.get("author"))
-    year = _text(source.get("year"))
-    surname = _surname(author)
-    if not surname or not year:
+    """The reference line for this source id.
+
+    The line is chosen by the source id's own DOI, stored reference, or
+    title. A shared surname and year does not choose a line. Two works
+    that share a short form stay on their own lines.
+    """
+    doi = _norm_doi(_DOI_PREFIX.sub("", _text(source.get("doi"))))
+    title = _text(source.get("title"))
+    source_id = _text(source.get("id") or source.get("source_id"))
+    reference = _text(source.get("reference"))
+
+    def once(hits: list[Any]) -> Any:
+        if len(hits) == 1:
+            return hits[0]
         return None
-    candidates = [paragraph for paragraph in paragraphs if _name_present(paragraph.text, surname)]
-    if not candidates:
-        return None
-    for paragraph in candidates:
-        if _author_year_present(paragraph.text, surname, year):
-            return paragraph
-    # The author is listed but this year is not. Check that entry so the
-    # first pass can name the missing year instead of skipping the source.
-    return candidates[0]
+
+    if source_id and len(source_id) >= 6:
+        hit = once(
+            [
+                paragraph
+                for paragraph in paragraphs
+                if source_id.casefold() in (paragraph.text or "").casefold()
+            ]
+        )
+        if hit is not None:
+            return hit
+    if doi:
+        hits = [paragraph for paragraph in paragraphs if doi in _dois_in(paragraph.text or "")]
+        hit = once(hits)
+        if hit is not None:
+            return hit
+        if title and len(hits) > 1:
+            hit = once(
+                [paragraph for paragraph in hits if title.casefold() in (paragraph.text or "").casefold()]
+            )
+            if hit is not None:
+                return hit
+    if reference:
+        wanted = re.sub(r"\s+", " ", reference).strip()
+        hit = once(
+            [
+                paragraph
+                for paragraph in paragraphs
+                if re.sub(r"\s+", " ", paragraph.text or "").strip() == wanted
+            ]
+        )
+        if hit is not None:
+            return hit
+    if title and len(title) >= 8:
+        folded = title.casefold()
+        hit = once(
+            [paragraph for paragraph in paragraphs if folded in (paragraph.text or "").casefold()]
+        )
+        if hit is not None:
+            return hit
+    return None
 
 
 def _cite_covered(token: str, paragraphs: list[Any], essay_id: str | None = None) -> bool:

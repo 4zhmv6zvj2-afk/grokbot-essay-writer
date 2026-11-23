@@ -336,11 +336,21 @@ def token_is_covered(token: str, lines: list[str], essay_id: str | None = None) 
     matches. When the list has not been written, the lines are read directly.
     """
     if isinstance(essay_id, str) and essay_id.strip():
-        from essay_writer.citation_list import list_written, match_token
+        from essay_writer.citation_list import (
+            list_written,
+            match_token,
+            reference_entries_for_token,
+        )
 
         if list_written(essay_id):
-            entry = match_token(essay_id, token)
-            if entry is not None and str(entry.get("reference") or "").strip():
+            hits = reference_entries_for_token(essay_id, token)
+            if len(hits) == 1:
+                entry = match_token(essay_id, token)
+                if entry is not None and str(entry.get("reference") or "").strip():
+                    return True
+            elif hits and all(str(entry.get("reference") or "").strip() for entry in hits):
+                # Each work keeps its own stored line. The shared short form
+                # does not pick the first work.
                 return True
     return any(_line_covers_cite(line, token) for line in lines)
 

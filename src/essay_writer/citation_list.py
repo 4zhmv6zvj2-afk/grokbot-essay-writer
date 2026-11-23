@@ -847,13 +847,38 @@ def use_stored_short_form(essay_id: str, text: str) -> str:
     return PAREN.sub(replace, text)
 
 
-def match_token(essay_id: str, token: str) -> dict[str, Any] | None:
+def reference_entries_for_token(essay_id: str, token: str) -> list[dict[str, Any]]:
+    """List entries this token names, keyed by source id.
+
+    A source id returns that one entry. A short form returns its entry only
+    when one work stores that form. When several works store it, every one
+    of those entries is returned and none of them is chosen as the match.
+    Surname-plus-year is not a key.
+    """
     rows = _usable(essay_id)
-    if rows is None:
-        return None
-    for entry in rows:
-        if _token_matches(token, entry):
-            return entry
+    if not rows:
+        return []
+    folded = fold_name(token).casefold().strip().rstrip(".")
+    by_id = [entry for entry in rows if folded in _identifier_keys(entry)]
+    if len(by_id) == 1:
+        return by_id
+    if len(by_id) > 1:
+        return []
+    short = [entry for entry in rows if _token_matches(folded, entry)]
+    if len(short) == 1:
+        return short
+    return short if len(short) > 1 else []
+
+
+def match_token(essay_id: str, token: str) -> dict[str, Any] | None:
+    """The one list entry for this token. None when the token is not one work.
+
+    Look-up uses the source id. A short form is used only when it is stored
+    for a single work. A shared short form does not return the first work.
+    """
+    hits = reference_entries_for_token(essay_id, token)
+    if len(hits) == 1:
+        return hits[0]
     return None
 
 
@@ -900,11 +925,13 @@ def stored_reference_lines(
     seen: set[str] = set()
     if tokens:
         for token in tokens:
-            entry = match_token(essay_id, token)
-            line = _text(entry.get("reference")) if entry else ""
-            if line and line not in seen:
-                seen.add(line)
-                lines.append(line)
+            # One work: its own line. A shared short form: each work's own
+            # line. The first work is not used for the others.
+            for entry in reference_entries_for_token(essay_id, token):
+                line = _text(entry.get("reference")) if entry else ""
+                if line and line not in seen:
+                    seen.add(line)
+                    lines.append(line)
         return lines
     for source in sources:
         if not isinstance(source, dict):
