@@ -241,7 +241,7 @@ def _draft_does_assignment(record: dict[str, Any], opened_text: str) -> str:
 
 
 def build_findings(essay_id: str, opened: dict[str, Any], claim: dict[str, Any]) -> str:
-    """North-star judgement first, then claim checks against opened PDFs."""
+    """Overall judgement first, then claim checks against opened PDFs."""
     from essay_writer.specialists.grok_bot import basics_pass_lines
 
     record = essay_assignment_gate.read_assignment(essay_id)
@@ -383,6 +383,31 @@ def _findings_refused(
     return body
 
 
+_HOUSE_HEADING = re.compile(r"(?i)\bnorth[-\s]star(?:\s+judgement)?\b")
+
+
+def student_findings_text(findings: str) -> str:
+    """Wording for a findings Word file a student would open.
+
+    The section heading is Overall judgement. A house heading, a critical-note
+    label, or a model name is not written into that file.
+    """
+    from essay_writer.stage_llm import HOUSE_MODEL
+
+    model = HOUSE_MODEL.casefold()
+    kept: list[str] = []
+    for line in findings.splitlines():
+        folded = line.casefold()
+        if re.match(r"(?i)^\s*critical note\b", line):
+            continue
+        if model and model in folded:
+            continue
+        cleaned = _HOUSE_HEADING.sub("Overall judgement", line)
+        cleaned = cleaned.replace("Overall judgement judgement", "Overall judgement")
+        kept.append(cleaned)
+    return "\n".join(kept)
+
+
 def _save_findings_docx(path, findings: str) -> None:
     from docx import Document
 
@@ -393,10 +418,11 @@ def _save_findings_docx(path, findings: str) -> None:
     document = Document()
     _style_document(document)
     _add_heading(document, "Findings", level=1)
-    for line in findings.splitlines():
+    shown = student_findings_text(findings)
+    for line in shown.splitlines():
         if not line.strip():
             continue
-        if line.strip() in {NORTH_STAR, CLAIM_CHECKS}:
+        if line.strip() in {NORTH_STAR, CLAIM_CHECKS, "Overall judgement"}:
             _add_heading(document, line.strip(), level=2)
             continue
         paragraph = document.add_paragraph()
