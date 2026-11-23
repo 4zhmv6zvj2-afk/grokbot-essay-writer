@@ -139,7 +139,11 @@ def cover_lines(essay_id: str, pack: dict[str, Any], report: dict[str, Any]) -> 
     else:
         essay = True
     rows = cover_field_rows(essay_id, pack, report, essay=essay)
-    return cover_lines_from_field_rows(essay_id, pack, rows)
+    lines = cover_lines_from_field_rows(essay_id, pack, rows)
+    sections = report.get("sections")
+    if not _first_essay_paragraph(sections):
+        sections = pack.get("sections")
+    return _cover_without_opening(lines, sections)
 
 
 def word_manifest(
@@ -343,6 +347,40 @@ def _flat_title(value: object) -> str:
     return " ".join(strip_word_labels(value).split())
 
 
+def _first_essay_paragraph(sections: object) -> str:
+    """The paragraph the essay body starts with. A blank heading is skipped."""
+    if not isinstance(sections, list):
+        return ""
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        heading = _flat_title(section.get("heading"))
+        if heading.casefold() == "references":
+            continue
+        if heading:
+            return heading
+        body = section.get("body")
+        if not isinstance(body, str):
+            continue
+        for line in body.splitlines():
+            flat = _flat_title(line)
+            if flat:
+                return flat
+    return ""
+
+
+def _cover_without_opening(lines: list[str], sections: object) -> list[str]:
+    """Leave the essay's first paragraph out of the cover.
+
+    That paragraph stays in the essay, once. A short cover line that is not
+    the same paragraph stays. Stages 6, 7, 9, and the stage 10 final share this.
+    """
+    opening = _first_essay_paragraph(sections)
+    if not opening:
+        return list(lines)
+    return [line for line in lines if _flat_title(line) != opening]
+
+
 def document_title(
     stored: object = "",
     *candidates: object,
@@ -517,6 +555,7 @@ def write_docx(
     document.core_properties.title = _word_document_title(essay_id, pack, report, Path(path))
     stored_cover = report.get("cover")
     lines = stored_cover if isinstance(stored_cover, list) else cover_lines(essay_id, pack, report)
+    lines = _cover_without_opening(lines, printed_sections)
     for index, line in enumerate(lines):
         _paragraph(document, line, center=True, size=16 if index == 0 else 14, bold=True)
     document.add_page_break()

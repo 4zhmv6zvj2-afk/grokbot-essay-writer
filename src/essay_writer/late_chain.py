@@ -764,8 +764,12 @@ def _pack_from_docx(essay_id: str, source: Path) -> dict[str, Any] | None:
     elif not content:
         if _wrapped_draft(cover, []):
             content = _unwrap_draft(essay_id, cover, [])
+            # Those paragraphs are the essay. A cover marker may stay.
+            cover = [line for line in cover if cover_residue_line(line)]
         elif cover:
             content = [{"heading": cover[0], "lines": cover[1:]}]
+            # A heading-less file is the essay. Do not treat its paragraphs as a cover.
+            cover = [line for line in cover if cover_residue_line(line)]
     packed: list[dict[str, str]] = []
     for item in content:
         heading = str(item.get("heading") or "").strip()
