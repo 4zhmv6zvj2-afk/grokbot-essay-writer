@@ -527,10 +527,18 @@ def _run(
     body["research_pack"] = shown["research_pack"]
     if depth == "summary":
         body["delivery"] = delivery
-        body["next"] = say(
-            "Research is stored for this essay. The annotated bibliography is the Word file in the chat. "
-            "Next is essay.pack.validate."
-        )
+        returned = delivery.get("return_to") if isinstance(delivery, dict) else None
+        if isinstance(returned, str) and returned:
+            body["return_to"] = returned
+            body["download_ready"] = False
+            body["download_set"] = []
+            nxt = delivery.get("next") if isinstance(delivery, dict) else None
+            body["next"] = nxt if isinstance(nxt, str) else ""
+        else:
+            body["next"] = say(
+                "Research is stored for this essay. The annotated bibliography is the Word file in the chat. "
+                "Next is essay.pack.validate."
+            )
     else:
         body["delivery"] = ship_4b(
             essay_id,

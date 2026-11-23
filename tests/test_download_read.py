@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from docx import Document
-from helpers import ESSAY, open_sequence, picked
+from helpers import ESSAY, confirm_download_words, open_sequence, picked
 
 from essay_writer.downloads import run_downloads
 from essay_writer.first_run import copy_deliverable_to_mac
@@ -141,6 +141,7 @@ def test_abstract_only_stays_on_the_download_list(workspace):
         ),
         encoding="utf-8",
     )
+    confirm_download_words(seq, "Chokepoints crude Behind runway")
     ship_4a(
         seq,
         [
@@ -208,6 +209,33 @@ def test_reconcile_checks_disk_and_documents_not_the_zip(workspace, tmp_path):
     archive_path = zipped / "papers.zip"
     with zipfile.ZipFile(archive_path, "w") as archive:
         archive.writestr("only-in-zip-paper.pdf", PDF)
+    from essay_writer.state import load_state, save_state
+
+    state = load_state(seq)
+    state["research"] = {
+        "summary": {
+            "sources": [
+                {
+                    "id": "behind",
+                    "title": "Behind the runway",
+                    "url": "https://example.test/runway",
+                },
+                {
+                    "id": "other",
+                    "title": "Other runway paper",
+                    "url": "https://example.test/other",
+                },
+                {
+                    "id": "zip",
+                    "title": "Only In Zip Paper",
+                    "url": "https://example.test/zip-only",
+                },
+            ]
+        },
+        "full": None,
+    }
+    save_state(seq, state)
+    confirm_download_words(seq, "Behind runway Other paper Only")
     report = reconcile_before_4b(seq, documents=documents)
     assert report["zip_only"] is False
     assert report["checked"] == "disk-and-documents"

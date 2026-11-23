@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- If the essay question is not confirmed, or the plan is not saved, the download step does not fetch the full list of gathered works. The student goes back to confirm the essay question, or to finish the plan when the question is already confirmed. When both are missing, the essay question comes first. Nothing is downloaded, and the student is not given that full list to fetch by hand. The gathered list can stay on file. When both are present, the shorter download set is unchanged. Cursor and Grok Build follow the same rule. Build covered.
+
 ## 0.9.17 — 2026-11-23
 
 - A stated source count is the floor. When the assignment is silent, the floor is eight sources for each 1,000 words of the stated length, rounded up. After the essay question is confirmed, both shells pass up to three smaller questions on the same tool field, `smallerQuestions`, and the gather asks once before the first catalog call. A missing or unusable reply searches only the confirmed question. Each question keeps its own result. OpenAlex follows its next-page cursor, and Consensus turns the page only when the stored plan allows it. Unpaywall stays a DOI fill. Crossref stays an exact-title fill. The citation list is still written at the end of stage 4b. A further official page blocks that list and the draft while the floor is unmet. An honest short gather writes the list and names the found count. An empty gather does not write a sourced essay. A refused lookup leaves the gather unfinished. Cursor and Grok Build call the same gather, the same one-shot ask, the same citation list, and the same pack gate. Build covered.

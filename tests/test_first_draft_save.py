@@ -15,7 +15,14 @@ import re
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from helpers import TOPIC, card_digest_for, open_sequence, picked, plant_gathered_source
+from helpers import (
+    TOPIC,
+    card_digest_for,
+    confirm_download_words,
+    open_sequence,
+    picked,
+    plant_gathered_source,
+)
 
 import essay_writer.shells as shells
 from essay_writer.build_office import stage_launch
@@ -84,7 +91,9 @@ WORD_RULE = (
 
 def _pdf(text: str) -> bytes:
     stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
-    content = b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
+    content = (
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
+    )
     return b"\n".join(
         [
             b"%PDF-1.4",
@@ -179,9 +188,11 @@ def _install(monkeypatch) -> dict[str, list[str]]:
     return calls
 
 
-def _confirm(monkeypatch) -> tuple[str, dict, dict]:
+def _confirm(monkeypatch, *, words: str | None = None) -> tuple[str, dict, dict]:
     calls = _install(monkeypatch)
     seq = open_sequence()
+    if words:
+        confirm_download_words(seq, words)
     draft = essay_dig(seq, "okavango delta", "draft")
     assert draft["ok"] is True, draft
     saved = essay_dig(
@@ -279,7 +290,7 @@ def test_lookup_fields_stay_when_a_full_pdf_is_kept(workspace, monkeypatch):
     person in the body stays without an author when the look-up gave none.
     The kept author is still on the research record when the first draft cites it.
     """
-    seq, saved, calls = _confirm(monkeypatch)
+    seq, saved, calls = _confirm(monkeypatch, words=f"{CHAPTER_TITLE} {BLANK_TITLE}")
     fetched = calls["fetch"]
     assert fetched
     assert set(fetched) <= {CHAPTER_PDF, BLANK_PDF}
@@ -333,7 +344,16 @@ def test_lookup_fields_stay_when_a_full_pdf_is_kept(workspace, monkeypatch):
     source = research["sources"][0]
     _lookup_row(source)
     _walk(seq, "4b", {"3": CHAPTER_SENTENCE})
-    draft = essay_stage(seq, "5", "draft", CHAPTER_SENTENCE)
+    brief = essay_dir(seq) / "brief.md"
+    brief_text = brief.read_text(encoding="utf-8") if brief.is_file() else ""
+    if not re.search(r"(?im)^\s*genre\s*:", brief_text):
+        brief.write_text(f"Genre: essay\n{brief_text}", encoding="utf-8")
+    draft = essay_stage(
+        seq,
+        "5",
+        "draft",
+        f"{CHAPTER_SENTENCE} This essay keeps {CHAPTER_TITLE} and {BLANK_TITLE}.",
+    )
     assert draft["ok"] is True, draft
     assert draft["stored"] is True, draft
     note = _note_look(seq, "5") or ""
@@ -369,7 +389,10 @@ def test_an_unreadable_first_draft_is_not_saved(workspace):
     counted = count_words(broken, exclude_citations=False)
     assert 1800 <= counted <= 2200, counted
     assert first_draft_unreadable(broken) is not None
-    assert first_draft_unreadable("Privacy risk reduces willingness to disclose personal data.") is None
+    assert (
+        first_draft_unreadable("Privacy risk reduces willingness to disclose personal data.")
+        is None
+    )
     assert first_draft_unreadable("Smith et al., 2014, describe the basin.") is None
     assert first_draft_unreadable("The U.S., in this account, is a place.") is None
     assert first_draft_unreadable("Drying in May is a season.") is None
@@ -481,7 +504,9 @@ def test_public_wording_on_the_first_draft_save():
     parts = [
         BROKEN.read_text(encoding="utf-8"),
         Path(__file__).read_text(encoding="utf-8"),
-        (REPO / "src" / "essay_writer" / "prompts" / "stages" / "05.md").read_text(encoding="utf-8"),
+        (REPO / "src" / "essay_writer" / "prompts" / "stages" / "05.md").read_text(
+            encoding="utf-8"
+        ),
         inspect.getsource(_save_lookup_pdfs),
         inspect.getsource(abstract_lookup_fields),
         inspect.getsource(gather_source),

@@ -22,11 +22,18 @@ import essay_writer.shells as shells
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.dig import _open_candidates, essay_dig
-from essay_writer.download_shortlist import choose_downloads
+from essay_writer.download_shortlist import (
+    PLAN_STEP,
+    QUESTION_STEP,
+    choose_downloads,
+    return_sentence,
+    rows_for_download,
+)
 from essay_writer.essay_cites import essay_cite_bounds
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.research_packs import ship_4a
 from essay_writer.shells import cursor_shell
+from essay_writer.source_floor import confirmed_question
 from essay_writer.source_ids import stable_source_id
 from essay_writer.specialists import researcher
 from essay_writer.stage_llm import stage_settings
@@ -276,7 +283,11 @@ def test_the_plan_keeps_works_that_support_the_argument(workspace, monkeypatch):
 
 
 def test_open_pdf_downloads_use_only_the_shortlist(workspace, monkeypatch):
-    """AC-4a-rel-2: Automatic open-PDF downloads run only for the shortlist."""
+    """AC-4a-rel-2: Automatic open-PDF downloads run only for the shortlist.
+
+    AC-4a-happy-1: When the confirmed question and the stage 3 plan are both
+    present, that shortlist is the download set.
+    """
     seq = open_sequence()
     saved, calls, choice = _gather(seq, monkeypatch)
     wanted = {row["url"] for row in choice["shortlist"]}
@@ -427,11 +438,19 @@ def test_student_download_notes_stay_plain(workspace):
     briefing = (REPO / "src/essay_writer/prompts/front_office/briefing.md").read_text(
         encoding="utf-8"
     )
+    question_line = return_sentence(seq, QUESTION_STEP)
+    plan_line = return_sentence(seq, PLAN_STEP)
     assert student_surface_hits(overlay) == []
     assert student_surface_hits(listed) == []
+    assert student_surface_hits(question_line) == []
+    assert student_surface_hits(plan_line) == []
     assert _leaked(overlay) == []
     assert _leaked(listed) == []
+    assert _leaked(question_line) == []
+    assert _leaked(plan_line) == []
     assert _leaked(helpers) == []
+    assert "Critical note" not in question_line
+    assert "Critical note" not in plan_line
     assert "support the plan" in overlay
     assert "stays off that list" in overlay
     _proof(
@@ -440,10 +459,18 @@ def test_student_download_notes_stay_plain(workspace):
             [
                 f"prompt hits: {student_surface_hits(overlay)}",
                 f"list hits: {student_surface_hits(listed)}",
+                f"question line hits: {student_surface_hits(question_line)}",
+                f"plan line hits: {student_surface_hits(plan_line)}",
                 f"prompt leaked: {_leaked(overlay)}",
                 f"list leaked: {_leaked(listed)}",
+                f"question line leaked: {_leaked(question_line)}",
+                f"plan line leaked: {_leaked(plan_line)}",
                 f"helper leaked: {_leaked(helpers)}",
                 f"briefing leaked: {_leaked(briefing)}",
+                "question line:",
+                question_line,
+                "plan line:",
+                plan_line,
                 "",
             ]
         ),
@@ -480,6 +507,27 @@ def test_both_shells_download_the_same_shortlist(workspace, monkeypatch):
         assert len(_ids(choice["shortlist"])) == 24
         fetched.append(sorted(calls))
     assert fetched[0] == fetched[1]
+    returned: list[str] = []
+    for door, module in (
+        (cursor_shell()["handlers"]["essay.dig"], None),
+        (researcher.essay_dig, OTHER),
+    ):
+        calls = []
+        seq = open_sequence(module)
+        _brief(seq, "The assignment is 2,000 words.\n")
+        _install(monkeypatch, calls)
+        saved = _confirm(seq, door)
+        assert saved.get("return_to") == PLAN_STEP
+        assert saved.get("download_ready") is False
+        assert saved.get("download_set") == []
+        assert calls == []
+        choice = _choice(seq)
+        assert choice["return_to"] == PLAN_STEP
+        assert choice["shortlist"] == []
+        assert choice["full"]
+        returned.append(str(saved.get("next")))
+    assert returned[0] == returned[1]
+    assert "Stage 3" in returned[0]
     _proof(
         "download-shells.txt",
         "\n".join(
@@ -488,8 +536,202 @@ def test_both_shells_download_the_same_shortlist(workspace, monkeypatch):
                 f"fetched: {len(fetched[0])}",
                 "same shortlist: yes",
                 *fetched[0],
+                "missing plan, both shells:",
+                f"return to: {PLAN_STEP} stage",
+                "download set:",
+                "(empty)",
+                returned[0],
                 "",
             ]
         ),
     )
+    assert workspace is not None
+
+
+def _length_only(seq: str) -> None:
+    folder = essay_dir(seq)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "brief.md").write_text("The assignment is 2,000 words.\n", encoding="utf-8")
+
+
+def _missing(monkeypatch, *, question: bool, plan: bool):
+    calls: list[str] = []
+    seq = open_sequence()
+    if question:
+        _brief(seq, "The assignment is 2,000 words.\n")
+    else:
+        _length_only(seq)
+    if plan:
+        _plan(seq)
+    brief = (essay_dir(seq) / "brief.md").read_text(encoding="utf-8")
+    _install(monkeypatch, calls)
+    saved = _confirm(seq, essay_dig)
+    return seq, saved, calls, _choice(seq), brief
+
+
+def _manual(seq: str) -> str:
+    ship_4a(seq, [_source(number) for number in range(1, 41)], {})
+    return _docx(work_dir(seq) / "output" / "download-list.docx")
+
+
+def _extract(saved: dict, calls: list[str], choice: dict, listed: str, target: str) -> str:
+    return "\n".join(
+        [
+            f"return to: {target}",
+            f"next: {saved.get('next')}",
+            "download ready: no",
+            "download set:",
+            "(empty)",
+            f"automatic downloads: {len(calls)}",
+            f"gather kept: {len(choice['full'])}",
+            "manual download list:",
+            listed,
+            "",
+        ]
+    )
+
+
+def test_a_missing_question_returns_before_any_download(workspace, monkeypatch):
+    """AC-4a-miss-q-1: A missing essay question returns to the question-confirm step and downloads nothing."""
+    seq, saved, calls, choice, _brief_text = _missing(monkeypatch, question=False, plan=True)
+    listed = _manual(seq)
+    works = [_source(number) for number in range(1, 41)]
+    assert saved.get("return_to") == QUESTION_STEP
+    assert saved.get("download_ready") is False
+    assert saved.get("download_set") == []
+    assert "downloads" not in saved
+    assert "confirm the essay question" in str(saved.get("next"))
+    assert "before any papers are downloaded" in str(saved.get("next"))
+    assert "Stage 3" not in str(saved.get("next"))
+    assert calls == []
+    assert choice["ready"] is False
+    assert choice["return_to"] == QUESTION_STEP
+    assert choice["shortlist"] == []
+    assert len(choice["full"]) == 40
+    assert rows_for_download(seq, works, works) == []
+    assert "Nothing is waiting on this list." in listed
+    assert "10.1000/case01" not in listed
+    assert "10.1000/case37" not in listed
+    _proof(
+        "missing-question-return.txt",
+        _extract(saved, calls, choice, listed, "question-confirm step"),
+    )
+    assert workspace is not None
+
+
+def test_a_missing_plan_returns_before_any_download(workspace, monkeypatch):
+    """AC-4a-miss-plan-1: A missing plan returns to the plan stage and downloads nothing."""
+    seq, saved, calls, choice, _brief_text = _missing(monkeypatch, question=True, plan=False)
+    listed = _manual(seq)
+    works = [_source(number) for number in range(1, 41)]
+    assert saved.get("return_to") == PLAN_STEP
+    assert saved.get("download_ready") is False
+    assert saved.get("download_set") == []
+    assert "downloads" not in saved
+    assert "Stage 3" in str(saved.get("next"))
+    assert "No papers are downloaded until that plan is saved." in str(saved.get("next"))
+    assert calls == []
+    assert choice["ready"] is False
+    assert choice["return_to"] == PLAN_STEP
+    assert choice["shortlist"] == []
+    assert len(choice["full"]) == 40
+    assert rows_for_download(seq, works, works) == []
+    assert "Nothing is waiting on this list." in listed
+    assert "10.1000/case01" not in listed
+    _proof(
+        "missing-plan-return.txt",
+        _extract(saved, calls, choice, listed, "plan stage"),
+    )
+    assert workspace is not None
+
+
+def test_both_missing_returns_to_the_question_first(workspace, monkeypatch):
+    """AC-4a-miss-both-1: When the question and the plan are both missing, the question-confirm step comes first."""
+    seq, saved, calls, choice, _brief_text = _missing(monkeypatch, question=False, plan=False)
+    listed = _manual(seq)
+    assert saved.get("return_to") == QUESTION_STEP
+    assert saved.get("download_set") == []
+    assert choice["return_to"] == QUESTION_STEP
+    assert choice["shortlist"] == []
+    assert calls == []
+    assert "confirm the essay question" in str(saved.get("next"))
+    assert "Stage 3" not in str(saved.get("next"))
+    assert "Nothing is waiting on this list." in listed
+    assert "10.1000/case37" not in listed
+    _proof(
+        "missing-both-return.txt",
+        _extract(saved, calls, choice, listed, "question-confirm step"),
+    )
+    assert workspace is not None
+
+
+def test_a_missing_step_keeps_the_gather_without_downloading_it(workspace, monkeypatch):
+    """AC-4a-miss-keep-1: The gathered list may stay. It is not the download set."""
+    sections: list[str] = []
+    for question, plan, target in (
+        (False, True, "question-confirm step"),
+        (True, False, "plan stage"),
+        (False, False, "question-confirm step"),
+    ):
+        seq, saved, calls, choice, _brief_text = _missing(monkeypatch, question=question, plan=plan)
+        hits = _card(seq)["openalex"]["hits"]
+        titles = [str(hit["title"]) for hit in hits]
+        listed = _manual(seq)
+        annotation = _docx(work_dir(seq) / "output" / "annotation.docx")
+        assert len(hits) == 40
+        assert len(choice["full"]) == 40
+        assert choice["shortlist"] == []
+        assert calls == []
+        assert saved.get("download_set") == []
+        assert any(title.startswith("Quantum") for title in titles)
+        assert any(title.startswith("Coastal community") for title in titles)
+        assert "Quantum entanglement" not in listed
+        assert "Coastal community bears fishery closure cost case01" not in listed
+        assert "Quantum entanglement" in annotation or "Coastal community" in annotation
+        sections.extend(
+            [
+                f"return to: {target}",
+                f"download set: {len(choice['shortlist'])}",
+                f"automatic downloads: {len(calls)}",
+                f"gather kept: {len(hits)}",
+                "manual download list:",
+                listed,
+                "one kept title:",
+                titles[0],
+                "",
+            ]
+        )
+    _proof("missing-gather-kept.txt", "\n".join(sections))
+    assert workspace is not None
+
+
+def test_a_missing_step_does_not_invent_a_question_or_start_the_essay(workspace, monkeypatch):
+    """AC-4a-miss-no-invent-1: No question or plan is invented, and the essay write does not start."""
+    lines: list[str] = []
+    for question, plan in ((False, False), (True, False), (False, True)):
+        seq, saved, _calls, _choice, brief = _missing(monkeypatch, question=question, plan=plan)
+        assert (essay_dir(seq) / "brief.md").read_text(encoding="utf-8") == brief
+        assert not (essay_dir(seq) / "brief-meta.json").exists()
+        if question:
+            assert confirmed_question(seq) == QUESTION
+        else:
+            assert confirmed_question(seq) == ""
+        if plan:
+            assert _note_path(seq, "3").is_file()
+        else:
+            assert not _note_path(seq, "3").is_file()
+        assert not (work_dir(seq) / "tracking" / "5.md").is_file()
+        assert not (work_dir(seq) / "output" / f"{seq}.docx").exists()
+        assert "Stage 5" not in str(saved.get("next"))
+        assert "first draft" not in str(saved.get("next")).casefold()
+        lines.extend(
+            [
+                f"question stored: {confirmed_question(seq) or '(none)'}",
+                f"plan file: {'yes' if plan else 'no'}",
+                "essay file: no",
+                f"next: {saved.get('next')}",
+                "",
+            ]
+        )
+    _proof("missing-no-invent.txt", "\n".join(lines))
     assert workspace is not None

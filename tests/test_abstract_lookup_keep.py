@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from helpers import OTHER, TOPIC, card_digest_for, open_sequence
+from helpers import OTHER, TOPIC, card_digest_for, confirm_download_words, open_sequence
 
 import essay_writer.shells as shells
 from essay_writer.build_office import stage_launch
@@ -226,6 +226,13 @@ def test_lookup_details_stay_on_the_saved_abstract(workspace, monkeypatch):
     """
     _install_lookup(monkeypatch)
     seq = open_sequence()
+    titles = [KEPT_TITLE]
+    for key in ("openalex", "consensus"):
+        for row in _payload().get(key) or []:
+            title = row.get("title") if isinstance(row, dict) else None
+            if isinstance(title, str) and title.strip():
+                titles.append(title)
+    confirm_download_words(seq, " ".join(titles))
     saved = _confirm(seq, essay_dig, monkeypatch)
     downloads = saved.get("downloads") or {}
     assert downloads.get("papers") in ([], None)
