@@ -12,7 +12,7 @@ uv run python tools/tag_release.py v0.9.19 --dry-run
 
 `--allow-dirty` runs the fast checks on a dirty tree and does not write a stamp. `--json` prints a machine-readable result on stdout.
 
-`--full` adds the Python 3.12 coverage run and the sdist job from `.github/workflows/ci.yml`. That job sets `SOURCE_DATE_EPOCH` from the commit, runs `tools/reproducible_build.py` (which normalizes the tarball with `tools/normalize_sdist.py`), extracts the sdist, requires every tracked file, rebuilds the wheel, and runs `pytest -q` in the extracted tree. Install `requirements-build.txt` into that interpreter the way CI does before expecting `--full` to pass. The tool sets `UV_LINK_MODE=copy` when it is unset.
+`--full` adds the Python 3.12 coverage run and the sdist job from `.github/workflows/ci.yml`. The coverage run uses its own environment, so it does not replace the project `.venv`. That job sets `SOURCE_DATE_EPOCH` from the commit, runs `tools/reproducible_build.py` (which normalizes the tarball with `tools/normalize_sdist.py`), extracts the sdist, requires every tracked file, rebuilds the wheel, and runs `pytest -q` in the extracted tree. Install `requirements-build.txt` into that interpreter the way CI does before expecting `--full` to pass. The tool sets `UV_LINK_MODE=copy` when it is unset.
 
 A stamp authorizes a tag for 60 minutes, and only when it records this commit, a clean tree, mode `full`, every step passed, and the same Python, ruff, and mypy versions. A fast stamp does not authorize a tag.
 

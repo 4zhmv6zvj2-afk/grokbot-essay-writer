@@ -206,21 +206,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run_step(name: str, root: Path) -> tuple[int, str]:
     if name == "coverage312":
-        return command(
-            [
-                "uv",
-                "run",
-                "--python",
-                "3.12",
-                "pytest",
-                "-q",
-                "--cov=essay_writer",
-                "--cov-report=term",
-                "--cov-fail-under=85",
-            ],
-            cwd=root,
-            env=_child_env(),
-        )
+        return _run_coverage(root)
     if name == "sdist":
         return _run_sdist(root)
     flags: dict[str, list[str]] = {
@@ -232,6 +218,38 @@ def _run_step(name: str, root: Path) -> tuple[int, str]:
         "pytest": ["-m", "pytest", "-q"],
     }
     return command([sys.executable, *flags[name]], cwd=root, env=_child_env())
+
+
+def _run_coverage(root: Path) -> tuple[int, str]:
+    """Run the 3.12 coverage command without replacing the project environment.
+
+    ``uv run --python 3.12`` otherwise recreates ``.venv`` and drops the dev
+    extra, which removes pytest-cov and the build tools the sdist step needs.
+    """
+    env = _child_env()
+    env["UV_PROJECT_ENVIRONMENT"] = str(Path(tempfile.gettempdir()) / "essay-writer-gate-py312")
+    code, text = command(
+        ["uv", "sync", "--python", "3.12", "--extra", "dev", "--frozen"],
+        cwd=root,
+        env=env,
+    )
+    if code != 0:
+        return code, text
+    return command(
+        [
+            "uv",
+            "run",
+            "--python",
+            "3.12",
+            "pytest",
+            "-q",
+            "--cov=essay_writer",
+            "--cov-report=term",
+            "--cov-fail-under=85",
+        ],
+        cwd=root,
+        env=env,
+    )
 
 
 def _run_sdist(root: Path) -> tuple[int, str]:
