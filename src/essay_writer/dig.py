@@ -1081,7 +1081,11 @@ def _further_page(slots: list[dict[str, Any]]) -> bool:
     for slot in slots:
         openalex = slot.get("openalex")
         consensus = slot.get("consensus")
-        if isinstance(openalex, dict) and openalex.get("next_cursor") and not openalex.get("refused"):
+        if (
+            isinstance(openalex, dict)
+            and openalex.get("next_cursor")
+            and not openalex.get("refused")
+        ):
             return True
         if (
             isinstance(consensus, dict)
@@ -1134,10 +1138,7 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
             if isinstance(cursor, str) and cursor in seen_cursors:
                 slot["openalex"].pop("next_cursor", None)
                 cursor = None
-            if (
-                isinstance(cursor, str)
-                and not slot["openalex"].get("refused")
-            ):
+            if isinstance(cursor, str) and not slot["openalex"].get("refused"):
                 seen_cursors.add(cursor)
                 _take_openalex(slot, openalex_search(slot["question"], cursor=cursor), extend=True)
                 _remember_unpaywall(slot, seen)
@@ -1151,10 +1152,7 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
             if page_key is not None and page_key in seen_pages:
                 slot["consensus"].pop("next_page", None)
                 page_key = None
-            if (
-                page_key is not None
-                and not slot["consensus"].get("refused")
-            ):
+            if page_key is not None and not slot["consensus"].get("refused"):
                 seen_pages.add(page_key)
                 slot["consensus"].pop("next_page", None)
                 _take_consensus(
@@ -1442,10 +1440,19 @@ def essay_dig(
         body["markdown"] = f"{essay_id}/dig-card.md"
         return body
     candidates = _open_candidates(card)
-    from essay_writer.download_shortlist import rows_for_download
+    from essay_writer.download_shortlist import download_hold, rows_for_download
 
-    # The card keeps every hit. Downloads use the shortlist chosen after that list exists.
-    candidates = rows_for_download(essay_id, candidates, candidates)
+    # The card keeps every hit. A missing question or plan sends the student
+    # back and leaves the download set empty. Otherwise downloads use the shortlist.
+    held = download_hold(essay_id, candidates)
+    if held is not None:
+        body["download_ready"] = False
+        body["return_to"] = held["return_to"]
+        body["download_set"] = []
+        body["next"] = held["next"]
+        candidates = []
+    else:
+        candidates = rows_for_download(essay_id, candidates, candidates)
     if candidates:
         downloads = run_downloads(essay_id, candidates)
         body["downloads"] = downloads

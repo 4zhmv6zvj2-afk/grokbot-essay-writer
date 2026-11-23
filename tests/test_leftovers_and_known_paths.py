@@ -9,6 +9,7 @@ from helpers import (
     ESSAY,
     TOPIC,
     card_digest_for,
+    confirm_download_words,
     open_sequence,
     pack,
     plant_gathered_source,
@@ -102,6 +103,15 @@ def _ready(
 
 def _plant_4a(workspace, seq, url=None):
     plant_gathered_source(seq)
+    confirm_download_words(seq, "Chokepoints crude")
+    if url:
+        from essay_writer.state import load_state, save_state
+
+        state = load_state(seq)
+        source_row = state["research"]["summary"]["sources"][0]
+        source_row["doi"] = "10.1000/left"
+        source_row["url"] = url
+        save_state(seq, state)
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1"
     output = folder / "output"
     output.mkdir(parents=True, exist_ok=True)

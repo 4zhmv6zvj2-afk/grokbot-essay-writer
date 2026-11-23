@@ -1,3 +1,38 @@
+def confirm_download_words(seq: str, text: str) -> None:
+    """Store an essay question and a plan so a matching title can be downloaded.
+
+    The question and the plan use the same words. A title that shares one of
+    those words stays on the download set. An existing question or plan is
+    left as it is.
+    """
+    import re
+
+    from essay_writer.paths import essay_dir
+    from essay_writer.stage_note import render_tracking
+    from essay_writer.stage_state import _note_path
+
+    words = " ".join(text.split())
+    if not words:
+        return
+    folder = essay_dir(seq)
+    folder.mkdir(parents=True, exist_ok=True)
+    brief = folder / "brief.md"
+    prior = brief.read_text(encoding="utf-8") if brief.is_file() else ""
+    labelled = re.search(
+        r"(?im)^\s*(?:assignment\s+question|question|task|assignment\s+ask|ask|title)\s*:",
+        prior,
+    )
+    if labelled is None:
+        brief.write_text(f"Question: {words}\n{prior}", encoding="utf-8")
+    path = _note_path(seq, "3")
+    if not path.is_file():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            render_tracking("3", status="final", look=words, essay_id=seq),
+            encoding="utf-8",
+        )
+
+
 def plant_gathered_source(seq: str) -> None:
     """Store one gathered source so stage 4a confirm has a bibliography."""
     from essay_writer.paths import module_code

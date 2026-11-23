@@ -8,8 +8,16 @@ and any later writing type use that same handler.
 import inspect
 import json
 import os
+import re
 
-from helpers import TOPIC, card_digest_for, open_sequence, source, write_upload
+from helpers import (
+    TOPIC,
+    card_digest_for,
+    confirm_download_words,
+    open_sequence,
+    source,
+    write_upload,
+)
 
 from essay_writer.confirm import latest_draft, load_draft, save_draft
 from essay_writer.dig import TOOL as DIG_TOOL
@@ -97,6 +105,19 @@ def _stub_lookups(monkeypatch):
 
 
 def _dig_flip(seq, query, phase, calls, fetched):
+    from essay_writer.paths import essay_dir
+
+    brief = essay_dir(seq) / "brief.md"
+    if brief.is_file() and "draft" not in brief.read_text(encoding="utf-8").casefold():
+        text = brief.read_text(encoding="utf-8")
+        text = re.sub(
+            r"(?im)^((?:question|title)\s*:.*)$",
+            r"\1 Draft",
+            text,
+            count=1,
+        )
+        brief.write_text(text, encoding="utf-8")
+    confirm_download_words(seq, DRAFT_HIT)
     phase["live"] = "draft"
     before = dict(calls)
     draft = essay_dig(seq, query, "draft")

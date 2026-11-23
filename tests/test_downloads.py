@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from docx import Document
-from helpers import ESSAY, card_digest_for, open_sequence
+from helpers import ESSAY, card_digest_for, confirm_download_words, open_sequence
 
 from essay_writer.dig import essay_dig
 from essay_writer.downloads import classify_download, run_downloads
@@ -241,6 +241,7 @@ def test_idle_over_ten_minutes_stops_without_another_fetch(workspace):
 
 def test_dig_confirm_saves_only_real_pdfs_and_lists_the_html_page(workspace, monkeypatch):
     seq = open_sequence()
+    confirm_download_words(seq, "HTML only Real PDF")
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
     monkeypatch.setenv("ESSAY_WRITER_UNPAYWALL_EMAIL", "reader@example.com")
     fetches: list[str] = []

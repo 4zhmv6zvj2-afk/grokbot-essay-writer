@@ -16,9 +16,11 @@ from docx import Document
 from helpers import open_sequence, plant_gathered_source
 from test_first_draft_save import (
     BLANK_PDF,
+    BLANK_TITLE,
     BROKEN,
     CHAPTER_DOI,
     CHAPTER_PDF,
+    CHAPTER_TITLE,
     LANDING,
     _by_doi,
     _confirm,
@@ -274,7 +276,7 @@ def test_the_first_draft_save_still_keeps_official_fields(workspace, monkeypatch
     """
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "0")
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS_PAID", "0")
-    seq, saved, calls = _confirm(monkeypatch)
+    seq, saved, calls = _confirm(monkeypatch, words=f"{CHAPTER_TITLE} {BLANK_TITLE}")
     fetched = calls["fetch"]
     assert fetched
     assert set(fetched) <= {CHAPTER_PDF, BLANK_PDF}

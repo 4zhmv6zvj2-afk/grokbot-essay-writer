@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from helpers import card_digest_for, open_sequence
+from helpers import card_digest_for, confirm_download_words, open_sequence
 
 import essay_writer.shells as shells
 from essay_writer.cite_open import apply_opened_citation
@@ -162,9 +162,30 @@ def _install(monkeypatch, *, pdf_url: str | None = None) -> dict[str, list[str]]
     return calls
 
 
-def _confirm(monkeypatch, *, pdf_url: str | None = None) -> tuple[str, dict, dict]:
+def _download_words() -> str:
+    payload = _payload()
+    titles: list[str] = []
+    for key in ("openalex", "consensus"):
+        for row in payload.get(key) or []:
+            title = row.get("title") if isinstance(row, dict) else None
+            if isinstance(title, str) and title.strip():
+                titles.append(title)
+    unpaywall = payload.get("unpaywall") or {}
+    if isinstance(unpaywall, dict):
+        for row in unpaywall.values():
+            title = row.get("title") if isinstance(row, dict) else None
+            if isinstance(title, str) and title.strip():
+                titles.append(title)
+    return " ".join(titles)
+
+
+def _confirm(
+    monkeypatch, *, pdf_url: str | None = None, words: str | None = None
+) -> tuple[str, dict, dict]:
     calls = _install(monkeypatch, pdf_url=pdf_url)
     seq = open_sequence()
+    if words:
+        confirm_download_words(seq, words)
     draft = essay_dig(seq, "corridor capacity", "draft")
     assert draft["ok"] is True, draft
     saved = essay_dig(
@@ -377,7 +398,7 @@ def test_downloads_use_only_official_openalex_and_unpaywall_urls(workspace, monk
 
     The file is kept only when it is a real PDF. A Consensus URL is never fetched.
     """
-    seq, saved, calls = _confirm(monkeypatch, pdf_url=OPENALEX_PDF)
+    seq, saved, calls = _confirm(monkeypatch, pdf_url=OPENALEX_PDF, words=_download_words())
     fetched = calls["fetch"]
     assert fetched
     assert CONSENSUS_URL not in fetched
@@ -408,7 +429,7 @@ def test_a_failed_pdf_keeps_the_fields_already_on_the_source(workspace, monkeypa
     assert cursor_shell()["handlers"]["essay.dig"] is essay_dig
     assert _shared_office()["handlers"]["essay.dig"] is essay_dig
     assert researcher.essay_dig is essay_dig
-    seq, saved, calls = _confirm(monkeypatch)
+    seq, saved, calls = _confirm(monkeypatch, words=_download_words())
     fetched = set(calls["fetch"])
     assert CONSENSUS_URL not in fetched
     assert LANDING_NOT_USED not in fetched

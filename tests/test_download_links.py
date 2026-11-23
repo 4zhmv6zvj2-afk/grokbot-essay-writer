@@ -8,7 +8,15 @@ from pathlib import Path
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches
-from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, source, write_upload
+from helpers import (
+    ESSAY,
+    TOPIC,
+    card_digest_for,
+    confirm_download_words,
+    open_sequence,
+    source,
+    write_upload,
+)
 
 from essay_writer.dig import essay_dig
 from essay_writer.downloads import run_downloads
@@ -85,6 +93,10 @@ def _plant(workspace: Path) -> str:
             }
         ),
         encoding="utf-8",
+    )
+    confirm_download_words(
+        seq,
+        "Opened corridor paper Abstract only runway Needs a library PDF",
     )
     return seq
 
@@ -188,6 +200,7 @@ def test_ship_4a_and_dig_confirm_return_a_chat_links_card(workspace, monkeypatch
         ),
     )
     seq = open_sequence()
+    confirm_download_words(seq, "Chokepoints crude HTML only Real PDF")
     row = source()
     row["url"] = NEEDS_URL
     row["annotation"] = (
@@ -259,6 +272,7 @@ def test_ship_4a_and_dig_confirm_return_a_chat_links_card(workspace, monkeypatch
     monkeypatch.setattr("essay_writer.dig._get_json", fake_json)
     monkeypatch.setattr("essay_writer.downloads.fetch_url", fake_fetch)
     dig_seq = open_sequence()
+    confirm_download_words(dig_seq, "HTML only Real PDF")
     essay_dig(dig_seq, "zara supply chain", "draft")
     dug = front_office_call(
         "essay.dig",

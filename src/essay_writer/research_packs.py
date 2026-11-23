@@ -561,8 +561,9 @@ def ship_4a(essay_id: str, sources: list[dict[str, Any]], notes: dict[str, str])
         empty_note="No gathered source is on this bibliography.",
     )
     leftovers = bibliography_leftovers(bibliography, pdfs, opened)
-    from essay_writer.download_shortlist import rows_for_download
+    from essay_writer.download_shortlist import download_hold, rows_for_download
 
+    held = download_hold(essay_id, sources)
     failures = rows_for_download(essay_id, failures, sources)
     leftovers = rows_for_download(essay_id, leftovers, sources)
     listed = _write_download_list(
@@ -575,7 +576,7 @@ def ship_4a(essay_id: str, sources: list[dict[str, Any]], notes: dict[str, str])
     )
     from essay_writer.assignment_handoff import papers_zip_pointer
 
-    return {
+    delivered: dict[str, Any] = {
         "stage": "4a",
         "annotation": chat_docx(annotation),
         "download_list": {
@@ -586,6 +587,12 @@ def ship_4a(essay_id: str, sources: list[dict[str, Any]], notes: dict[str, str])
         "papers_zip": papers_zip_pointer(PAPERS_ZIP_NAME, relative(papers), entries=names),
         "links": download_links(failures, [], leftovers, opened=opened, pdfs=pdfs),
     }
+    if held is not None:
+        delivered["download_ready"] = False
+        delivered["return_to"] = held["return_to"]
+        delivered["download_set"] = []
+        delivered["next"] = held["next"]
+    return delivered
 
 
 def _review_body(essay_id: str, source: dict[str, Any], supplied: str | None) -> str:
@@ -711,7 +718,9 @@ def ship_4b(
             }
         )
         planned.append({"source": source, "md": md_path, "opened": opened, "docx_name": docx_name})
-    presented = receive_sources(essay_id, [item for item in sources if isinstance(item, dict)], notes)
+    presented = receive_sources(
+        essay_id, [item for item in sources if isinstance(item, dict)], notes
+    )
     list_text = student_list_text(essay_id) if presented.get("written") is True else ""
     members: list[tuple[str, bytes]] = []
     files: list[dict[str, object]] = []
