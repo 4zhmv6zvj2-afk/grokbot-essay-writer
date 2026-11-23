@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.9.17 — 2026-11-23
+
+- A stated source count is the floor. When the assignment is silent, the floor is eight sources for each 1,000 words of the stated length, rounded up. After the essay question is confirmed, both shells pass up to three smaller questions on the same tool field, `smallerQuestions`, and the gather asks once before the first catalog call. A missing or unusable reply searches only the confirmed question. Each question keeps its own result. OpenAlex follows its next-page cursor, and Consensus turns the page only when the stored plan allows it. Unpaywall stays a DOI fill. Crossref stays an exact-title fill. The citation list is still written at the end of stage 4b. A further official page blocks that list and the draft while the floor is unmet. An honest short gather writes the list and names the found count. An empty gather does not write a sourced essay. A refused lookup leaves the gather unfinished. Cursor and Grok Build call the same gather, the same one-shot ask, the same citation list, and the same pack gate. Build covered.
+- 0.9.17 ships the wheel, the sdist, and `SHA256SUMS`, and does not include Sigstore bundles or build-provenance attestations.
+
 ## 0.9.16 — 2026-11-23
 
 - Stage 10 treats an in-text citation as covered when it matches a short form stored on the citation list and that entry already has its Harvard line, including when the line names many authors and the year sits far from the first surname. A citation that is not on the list is still refused. A stored short form with no reference line is still refused. A failed last step is not stored, does not write a final Word file, and does not replace a final Word file or a first-draft Word file that is already saved. An author name that differs only by a hyphen character still matches. The findings Word file a student opens uses the heading Overall judgement. Cursor and Grok Build follow the same close and the same student-facing wording. Build covered.
