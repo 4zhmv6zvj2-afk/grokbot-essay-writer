@@ -1218,6 +1218,9 @@ def _rewrite_docx(path: Path, old: str, new: str) -> None:
         if not isinstance(current, str):
             continue
         updated = _replace_token(current, old, new)
+        if len(updated) > 255:
+            stem = path.stem.strip()
+            updated = stem if stem and len(stem) <= 255 else (stem or "Essay")[:255]
         if updated != current:
             setattr(props, name, updated)
             changed = True

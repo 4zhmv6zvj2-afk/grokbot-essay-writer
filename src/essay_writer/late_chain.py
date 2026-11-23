@@ -1518,7 +1518,12 @@ def _write_comments(essay_id: str, path: Path) -> None:
     from docx import Document
 
     from essay_writer.specialists.eqr import eqr_record, eqr_verdict
-    from essay_writer.word import _font, _style_document
+    from essay_writer.word import (
+        WORD_TITLE_LIMIT,
+        _font,
+        _style_document,
+        document_title,
+    )
 
     document = Document()
     _style_document(document)
@@ -1537,6 +1542,8 @@ def _write_comments(essay_id: str, path: Path) -> None:
             review = "The independent review is not recorded."
     record = load_stage7(essay_id)
     notes = comment_text(record)
+    opening = review if len(review) > WORD_TITLE_LIMIT else ""
+    document.core_properties.title = document_title(path.stem, opening=opening, fallback=path.stem)
     for paragraph_text in (review, notes):
         if not paragraph_text.strip():
             continue

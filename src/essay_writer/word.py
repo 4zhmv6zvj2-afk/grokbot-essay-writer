@@ -24,6 +24,7 @@ from essay_writer.confirm import (
     save_draft,
 )
 from essay_writer.diary import (
+    _cover_stored_title,
     conclusion_chat_line,
     cover_field_rows,
     cover_lines_from_field_rows,
@@ -333,6 +334,135 @@ def _write_body(
         _paragraph(document, line, justify=justify)
 
 
+WORD_TITLE_LIMIT = 255
+
+
+def _flat_title(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return " ".join(strip_word_labels(value).split())
+
+
+def document_title(
+    stored: object = "",
+    *candidates: object,
+    opening: str = "",
+    fallback: str = "",
+) -> str:
+    """A Word document title of at most 255 characters.
+
+    The short title already stored on the Word file is kept. A later candidate
+    is skipped when it is the opening paragraph or longer than that limit.
+    When nothing short is stored, the fallback is the assessment id or the
+    file name without .docx.
+    """
+    banned = _flat_title(opening)
+
+    def usable(value: object, *, reject_opening: bool) -> str:
+        text = _flat_title(value)
+        if not text or len(text) > WORD_TITLE_LIMIT:
+            return ""
+        if reject_opening and banned and text == banned:
+            return ""
+        return text
+
+    chosen = usable(stored, reject_opening=False)
+    if chosen:
+        return chosen
+    for candidate in candidates:
+        chosen = usable(candidate, reject_opening=True)
+        if chosen:
+            return chosen
+    spare = _flat_title(fallback)
+    if not spare or len(spare) > WORD_TITLE_LIMIT or (banned and spare == banned):
+        spare = "Essay"
+    return spare[:WORD_TITLE_LIMIT]
+
+
+def _title_and_opening(path: Path) -> tuple[str, str]:
+    """Document title and first paragraph already stored on a Word file."""
+    import zipfile
+
+    from docx.opc.exceptions import PackageNotFoundError
+
+    if not path.is_file():
+        return "", ""
+    try:
+        document = Document(str(path))
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile, PackageNotFoundError):
+        return "", ""
+    raw = document.core_properties.title
+    stored = raw if isinstance(raw, str) else ""
+    opening = ""
+    for paragraph in document.paragraphs:
+        flat = _flat_title(paragraph.text)
+        if flat:
+            opening = flat
+            break
+    return stored, opening
+
+
+def _section_opening(sections: object) -> str:
+    """First essay paragraph. A long recovered heading is that paragraph."""
+    if not isinstance(sections, list):
+        return ""
+    first_body = ""
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        heading = _flat_title(section.get("heading"))
+        if len(heading) > WORD_TITLE_LIMIT:
+            return heading
+        body = section.get("body")
+        if not isinstance(body, str):
+            continue
+        for line in body.splitlines():
+            flat = _flat_title(line)
+            if not flat:
+                continue
+            if len(flat) > WORD_TITLE_LIMIT:
+                return flat
+            if not first_body:
+                first_body = flat
+            break
+    return first_body
+
+
+def _word_document_title(
+    essay_id: str,
+    pack: dict[str, Any],
+    report: dict[str, Any],
+    path: Path,
+) -> str:
+    """Title for a student Word file. Never the opening paragraph."""
+    raw_stored, file_opening = _title_and_opening(
+        work_dir(essay_id) / "output" / f"{essay_id}.docx"
+    )
+    stored = _cover_stored_title(raw_stored)
+    if len(stored) > WORD_TITLE_LIMIT:
+        stored = ""
+    section_opening = _section_opening(report.get("sections")) or _section_opening(
+        pack.get("sections")
+    )
+    if len(_flat_title(file_opening)) > WORD_TITLE_LIMIT:
+        opening = file_opening
+    else:
+        opening = section_opening
+    if stored and _flat_title(stored) == _flat_title(opening):
+        stored = ""
+    stem = ""
+    if path.suffix.lower() == ".docx" and not path.name.startswith("."):
+        stem = path.stem
+    return document_title(
+        stored,
+        stored_cover_title(pack, report),
+        str(essay_id),
+        stem,
+        opening=opening,
+        fallback=str(essay_id) or stem,
+    )
+
+
 def write_critical_review_docx(path: Path, prose: str) -> None:
     """One critical-review note as Word for the student zip."""
     from essay_writer.context_fit import student_review_text
@@ -340,7 +470,7 @@ def write_critical_review_docx(path: Path, prose: str) -> None:
     prose = student_review_text(prose)
     document = Document()
     _style_document(document)
-    document.core_properties.title = "Critical review"
+    document.core_properties.title = document_title("Critical review", fallback="Critical review")
     document.core_properties.author = ""
     document.core_properties.last_modified_by = ""
     if prose:
@@ -384,8 +514,7 @@ def write_docx(
     _style_document(document, essay_id)
     if not _footer_has_page(document):
         raise EmptyFooter()
-    visible_title = stored_cover_title(pack, report)
-    document.core_properties.title = strip_word_labels(visible_title or str(essay_id))
+    document.core_properties.title = _word_document_title(essay_id, pack, report, Path(path))
     stored_cover = report.get("cover")
     lines = stored_cover if isinstance(stored_cover, list) else cover_lines(essay_id, pack, report)
     for index, line in enumerate(lines):
@@ -517,7 +646,19 @@ def write_first_draft_word(essay_id: str) -> dict[str, object]:
     _style_document(document, essay_id)
     if not _footer_has_page(document):
         raise EmptyFooter()
-    document.core_properties.title = strip_word_labels(str(essay_id))
+    opening = ""
+    for line in text.splitlines():
+        flat = _flat_title(line)
+        if flat:
+            opening = flat
+            break
+    document.core_properties.title = document_title(
+        "",
+        str(essay_id),
+        target.stem,
+        opening=opening,
+        fallback=str(essay_id) or target.stem,
+    )
     document.core_properties.author = ""
     document.core_properties.last_modified_by = ""
     for line in text.splitlines():

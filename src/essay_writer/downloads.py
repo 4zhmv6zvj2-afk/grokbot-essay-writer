@@ -42,7 +42,7 @@ from essay_writer.paths import (
     workspace_root,
 )
 from essay_writer.student_voice import _scrub_paths_in_text, prose_for_surface, say
-from essay_writer.word import _style_document
+from essay_writer.word import _style_document, document_title
 
 Fetch = Callable[[str], tuple[int, str | None, bytes]]
 
@@ -468,7 +468,10 @@ def _save_docx(path, lines: list[tuple[str, bool, bool]]) -> None:
 
     document = Document()
     _style_document(document)
-    document.core_properties.title = "Sources to download"
+    document.core_properties.title = document_title(
+        "Sources to download",
+        fallback="Sources to download",
+    )
     for index, (text, bold, hang) in enumerate(lines):
         _write_line(document, text, bold=bold, hang=hang, size=14 if index == 0 and bold else 12)
     path.parent.mkdir(parents=True, exist_ok=True)
