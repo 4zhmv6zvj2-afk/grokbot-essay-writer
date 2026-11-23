@@ -17,6 +17,7 @@ from test_word_references_4a import JONES_LINE, MODULE, QIN_LINE, _plant_stage10
 from essay_writer import __version__
 from essay_writer.build_office import stage_launch
 from essay_writer.citation_list import (
+    _stored_for_part,
     attach_note,
     load_citation_list,
     research_note_for,
@@ -647,6 +648,11 @@ def test_a_disagreement_is_named_and_not_silently_resolved(workspace):
     held = apply_body_cites(seq, "5", DRAFT)
     assert "(Smith, 2020)" not in held["text"]
     assert "(Froese and Quaas, 2012)" in held["text"]
+    blocked = essay_stage(seq, "5", "draft", DRAFT)
+    assert blocked["ok"] is False, blocked
+    assert blocked.get("stored") is not True
+    assert "do not agree" in str(blocked.get("reason", "")).casefold()
+    assert "(Smith, 2020)" not in (_note_look(seq, "5") or "")
     record_path.write_text(stored, encoding="utf-8")
     restored = _entry(seq, "smith")
     assert restored["usable"] is True
@@ -657,6 +663,52 @@ def test_a_disagreement_is_named_and_not_silently_resolved(workspace):
     assert saved["ok"] is True, saved
     assert "(Smith, 2020)" in (_note_look(seq, "5") or "")
     assert workspace is not None
+
+
+def test_two_editorials_stay_two_works(workspace):
+    """Two works titled Editorial stay two entries, two notes, and two source records."""
+    seq = open_sequence()
+    rows = [
+        _source(seq, "ed-ada", "Ada Lovelace", "2020", title="Editorial"),
+        _source(seq, "ed-grace", "Grace Hopper", "2021", title="Editorial"),
+    ]
+    _plant(seq, rows)
+    delivered = ship_4b(
+        seq,
+        rows,
+        {
+            "ed-ada": "Ada's editorial records one harbour decision.\n",
+            "ed-grace": "Grace's editorial records a different harbour decision.\n",
+        },
+    )
+    assert delivered.get("blocked") is not True, delivered
+    entries = load_citation_list(seq)["entries"]
+    assert {item["source_id"] for item in entries} == {"ed-ada", "ed-grace"}
+    assert {item["author"] for item in entries} == {"Ada Lovelace", "Grace Hopper"}
+    notes = list(_reviews(seq).glob("*.md"))
+    assert len(notes) == 2
+    records = list((work_dir(seq) / "output" / "source-records").glob("*.record.json"))
+    assert {path.stem.removesuffix(".record") for path in records} == {"ed-ada", "ed-grace"}
+    assert workspace is not None
+
+
+def test_the_exact_short_form_beats_the_longer_stored_form():
+    """(Smith, 2020) stays the Smith entry when Smith and Jones is also stored."""
+    rows = [
+        {
+            "in_text": "(Smith and Jones, 2020)",
+            "source_id": "both",
+            "author": "Smith, J. and Jones, A.",
+            "year": "2020",
+        },
+        {
+            "in_text": "(Smith, 2020)",
+            "source_id": "one",
+            "author": "Smith, J.",
+            "year": "2020",
+        },
+    ]
+    assert _stored_for_part("Smith, 2020", rows) == "Smith, 2020"
 
 
 def test_a_source_already_listed_is_reused(workspace):

@@ -551,33 +551,26 @@ def load_citation_list(essay_id: str) -> dict[str, Any]:
     return {"written": record.get("written") is True, "gap": gap, "entries": entries}
 
 
-def _equal_token(left: object, right: object) -> bool:
-    a = _text(left)
-    b = _text(right)
-    if len(a) < 6 or len(b) < 6:
-        return False
-    if a.casefold() == b.casefold():
-        return True
-    sa = re.sub(r"[^a-z0-9]+", "", a.casefold())
-    sb = re.sub(r"[^a-z0-9]+", "", b.casefold())
-    return len(sa) >= 6 and sa == sb
+def _same_doi(left: object, right: object) -> bool:
+    one = _text(left).casefold().removeprefix("https://doi.org/").rstrip(".")
+    other = _text(right).casefold().removeprefix("https://doi.org/").rstrip(".")
+    return bool(one) and one == other
 
 
 def _same(entry: dict[str, Any], source: dict[str, Any]) -> bool:
-    if _text(source.get("id")) and _text(source.get("id")) == _text(entry.get("source_id")):
+    """The same work when the source id, the locator, or the DOI is the same.
+
+    A shared title is not enough. Two works titled Editorial stay two works.
+    """
+    source_id = _text(source.get("id"))
+    entry_id = _text(entry.get("source_id"))
+    if source_id and entry_id and source_id == entry_id:
         return True
     left_locator = _text(entry.get("locator"))
     right_locator = _text(source.get("locator"))
     if left_locator and right_locator and left_locator == right_locator:
         return True
-    pairs = (
-        (entry.get("doi"), source.get("doi")),
-        (entry.get("title"), source.get("title")),
-        (entry.get("source_id"), source.get("id")),
-        (entry.get("doi"), source.get("url")),
-        (source.get("doi"), entry.get("locator")),
-    )
-    return any(_equal_token(left, right) for left, right in pairs)
+    return _same_doi(entry.get("doi"), source.get("doi"))
 
 
 def _match(entries: list[dict[str, Any]], source: dict[str, Any]) -> dict[str, Any] | None:
@@ -742,6 +735,14 @@ def first_write_block(essay_id: str) -> dict[str, Any] | None:
         return refuse("citation-list", NOT_WRITTEN, stored=False, advanced=False)
     if uncovered_notes(essay_id):
         return refuse("citation-list", NOTE_UNLISTED, stored=False, advanced=False)
+    if list_written(essay_id):
+        named = [
+            _text(entry.get("conflict"))
+            for entry in load_citation_list(essay_id)["entries"]
+            if _text(entry.get("conflict"))
+        ]
+        if named:
+            return refuse("citation-list", " ".join(named), stored=False, advanced=False)
     return None
 
 
@@ -784,10 +785,20 @@ def usable_sources(essay_id: str) -> list[dict[str, Any]] | None:
 
 
 def _token_matches(token: str, entry: dict[str, Any]) -> bool:
+    """True only when the token is the short form stored on this entry."""
     stored = _text(entry.get("in_text"))
     inner = stored[1:-1] if stored.startswith("(") and stored.endswith(")") else stored
-    if inner and fold_name(inner).casefold() == fold_name(token).casefold():
-        return True
+    if not inner:
+        return False
+    left = fold_name(inner).casefold().rstrip(".")
+    right = fold_name(token).casefold().rstrip(".")
+    return bool(left) and left == right
+
+
+def _wording_matches(token: str, entry: dict[str, Any]) -> bool:
+    """An allowed wording of this entry that is not itself the stored form."""
+    if _token_matches(token, entry):
+        return False
     author = _text(entry.get("author"))
     year = _text(entry.get("year"))
     if not author or not year:
@@ -816,12 +827,24 @@ def _short_inner(entry: dict[str, Any]) -> str:
 
 
 def _stored_for_part(part: str, rows: list[dict[str, Any]]) -> str | None:
-    """The stored short form for this parenthesis part, found by source id.
+    """The stored short form for this parenthesis part.
 
-    An author-year that names one list entry and is not that stored form is
-    the same lookup. The research-note heading is not read.
+    A source id is exact. The stored short form is next, and it beats a
+    co-author wording. Another wording is used only when it names exactly
+    one stored form. The research-note heading is not read.
     """
     folded = re.sub(r"\s+", " ", part).strip().casefold().rstrip(".")
+    exact = list(
+        dict.fromkeys(
+            _short_inner(entry)
+            for entry in rows
+            if _short_inner(entry) and _token_matches(folded, entry)
+        )
+    )
+    if len(exact) == 1:
+        return exact[0]
+    if len(exact) > 1:
+        return None
     bare = folded.removeprefix("doi:").strip()
     hits: list[str] = []
     for entry in rows:
@@ -837,13 +860,20 @@ def _stored_for_part(part: str, rows: list[dict[str, Any]]) -> str | None:
                     break
         if matched:
             hits.append(inner)
-            continue
-        if re.fullmatch(rf".+,\s*{YEAR}", folded) and _token_matches(folded, entry):
-            hits.append(inner)
     unique = list(dict.fromkeys(hits))
-    if len(unique) != 1:
+    if len(unique) == 1:
+        return unique[0]
+    if len(unique) > 1:
         return None
-    return unique[0]
+    wordings = [
+        _short_inner(entry)
+        for entry in rows
+        if _short_inner(entry) and _wording_matches(folded, entry)
+    ]
+    wordings = list(dict.fromkeys(wordings))
+    if len(wordings) == 1:
+        return wordings[0]
+    return None
 
 
 def use_stored_short_form(essay_id: str, text: str) -> str:
@@ -882,10 +912,10 @@ def use_stored_short_form(essay_id: str, text: str) -> str:
 def reference_entries_for_token(essay_id: str, token: str) -> list[dict[str, Any]]:
     """List entries this token names, keyed by source id.
 
-    A source id returns that one entry. A short form returns its entry only
-    when one work stores that form. When several works store it, every one
+    A source id returns that one entry. The stored short form is next, and it
+    beats a co-author wording. When several works store that form, every one
     of those entries is returned and none of them is chosen as the match.
-    Surname-plus-year is not a key.
+    Another wording is used only when it names exactly one stored form.
     """
     rows = _usable(essay_id)
     if not rows:
@@ -897,9 +927,9 @@ def reference_entries_for_token(essay_id: str, token: str) -> list[dict[str, Any
     if len(by_id) > 1:
         return []
     short = [entry for entry in rows if _token_matches(folded, entry)]
-    if len(short) == 1:
+    if short:
         return short
-    return short if len(short) > 1 else []
+    return [entry for entry in rows if _wording_matches(folded, entry)]
 
 
 def match_token(essay_id: str, token: str) -> dict[str, Any] | None:
