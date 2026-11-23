@@ -1,10 +1,12 @@
 """Create an annotated release tag only when a fresh full gate stamp matches HEAD.
 
 The tool never runs the gate and never pushes. A missing or stale stamp is a
-refusal. ``--dry-run`` prints the checks and creates nothing.
+refusal. A tag is created from ``main`` only, unless ``--allow-branch`` is
+set. ``--dry-run`` prints the checks and creates nothing.
 
     python tools/tag_release.py v0.9.19 --dry-run
     python tools/tag_release.py v0.9.19
+    python tools/tag_release.py v0.9.19 --allow-branch
 """
 
 from __future__ import annotations
@@ -54,6 +56,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="print the checks and do not create the tag",
     )
+    parser.add_argument(
+        "--allow-branch",
+        action="store_true",
+        help="tag from the current branch when it is not main",
+    )
     args = parser.parse_args(argv)
     tag = args.tag
     if TAG_PATTERN.fullmatch(tag) is None:
@@ -74,6 +81,20 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if porcelain.strip():
         print("the tree is dirty", file=sys.stderr)
+        return 1
+    branch_code, branch_text = run_gates.command(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=root,
+    )
+    branch = branch_text.strip()
+    if branch_code != 0 or not branch:
+        print("could not read the current branch", file=sys.stderr)
+        return 2
+    if branch != "main" and not args.allow_branch:
+        print(
+            f"refusing to tag: {branch} is not main. Pass --allow-branch to tag from this branch.",
+            file=sys.stderr,
+        )
         return 1
 
     directory = run_gates._git_dir(root)
@@ -138,6 +159,10 @@ def main(argv: list[str] | None = None) -> int:
 
     when = stamp.get("when") if isinstance(stamp, dict) else ""
     print(f"clean tree at {head}")
+    if branch == "main":
+        print("branch main")
+    else:
+        print(f"branch {branch} allowed by --allow-branch")
     print(f"stamp full at {when} for {head}")
     print(f"check_release_version passed for {tag}")
     print(f"tag {tag} is absent locally and on origin")

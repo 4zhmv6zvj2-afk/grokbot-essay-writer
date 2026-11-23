@@ -50,6 +50,7 @@ def git_box(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, object
         "recorded": recorded,
         "dirty": False,
         "head": HEAD,
+        "branch": "main",
         "docs_code": 0,
         "docs_output": "ok\n",
         "tag_exists": False,
@@ -70,7 +71,7 @@ def git_box(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, object
         if args == ["git", "rev-parse", "HEAD"]:
             return 0, f"{state['head']}\n"
         if args == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
-            return 0, "p05-local-gate\n"
+            return 0, f"{state['branch']}\n"
         if args[:3] == ["git", "rev-parse", "--verify"]:
             return (0, f"{HEAD}\n") if state["tag_exists"] else (1, "")
         if args[:3] == ["git", "ls-remote", "--tags"]:
@@ -180,6 +181,47 @@ def test_version_check_failure_refuses(
     )
     assert tag_release.main(["v0.9.19", "--dry-run"]) == 1
     assert "check_release_version" in capsys.readouterr().err
+    assert not _tagged(git_box)
+
+
+def test_feature_branch_refuses(
+    git_box: dict[str, object], capsys: pytest.CaptureFixture[str]
+) -> None:
+    git_box["branch"] = "p05-local-gate"
+    _write_stamp(Path(str(git_box["git_dir"])))
+    assert tag_release.main(["v0.9.19"]) == 1
+    assert "is not main" in capsys.readouterr().err
+    assert not _tagged(git_box)
+
+
+def test_main_branch_with_a_valid_stamp_creates_a_tag(
+    git_box: dict[str, object], capsys: pytest.CaptureFixture[str]
+) -> None:
+    git_box["branch"] = "main"
+    _write_stamp(Path(str(git_box["git_dir"])))
+    assert tag_release.main(["v0.9.19"]) == 0
+    assert "branch main" in capsys.readouterr().out
+    assert _tagged(git_box)
+
+
+def test_allow_branch_creates_a_tag_off_main(
+    git_box: dict[str, object], capsys: pytest.CaptureFixture[str]
+) -> None:
+    git_box["branch"] = "p05-local-gate"
+    _write_stamp(Path(str(git_box["git_dir"])))
+    assert tag_release.main(["v0.9.19", "--allow-branch"]) == 0
+    assert "allowed by --allow-branch" in capsys.readouterr().out
+    assert _tagged(git_box)
+    assert not _pushed(git_box)
+
+
+def test_dry_run_on_an_allowed_branch_creates_nothing(
+    git_box: dict[str, object], capsys: pytest.CaptureFixture[str]
+) -> None:
+    git_box["branch"] = "p05-local-gate"
+    _write_stamp(Path(str(git_box["git_dir"])))
+    assert tag_release.main(["v0.9.19", "--allow-branch", "--dry-run"]) == 0
+    assert "dry-run: no tag created" in capsys.readouterr().out
     assert not _tagged(git_box)
 
 
