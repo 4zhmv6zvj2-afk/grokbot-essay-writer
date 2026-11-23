@@ -21,6 +21,7 @@ from test_citation_list import (
 )
 from test_student_plain_close import _assert_plain
 
+from essay_writer import __version__
 from essay_writer.build_office import stage_launch
 from essay_writer.citation_list import load_citation_list, student_list_text
 from essay_writer.cite_fit import apply_body_cites, load_record
@@ -325,7 +326,7 @@ def test_the_writer_cannot_clear_the_review(workspace):
 
 
 def test_public_wording_covers_both_shells(workspace):
-    """AC-public-1: Public wording, one rule list, and the version stays 0.9.15."""
+    """AC-public-1: Public wording, one rule list, and the package version in the repository files."""
     stages = ("4b", "5", "6", "eqr")
     for stage in stages:
         cursor = cursor_stage_launch(stage)
@@ -342,7 +343,7 @@ def test_public_wording_covers_both_shells(workspace):
     assert "Build covered" in changelog
     assert "Cursor and Grok Build" in changelog
     version = (REPO / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "0.9.15"' in version
+    assert f'version = "{__version__}"' in version
     source = Path(__file__).read_text(encoding="utf-8")
     assert ("@pytest.mark." + "parametrize") not in source
     seated = {

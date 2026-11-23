@@ -36,6 +36,7 @@ from test_word_title_limit import (
     _rows,
 )
 
+from essay_writer import __version__
 from essay_writer.brief_contract import remember_registration
 from essay_writer.build_office import stage_launch
 from essay_writer.citation_list import list_written, load_citation_list, short_in_text
@@ -494,9 +495,9 @@ def test_public_wording_covers_cursor_and_grok_build(workspace):
     assert "_cover_without_opening(" in inspect.getsource(cover_lines)
     assert "_cover_without_opening(" in inspect.getsource(write_docx)
     version = REPO.joinpath("pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "0.9.15"' in version
+    assert f'version = "{__version__}"' in version
     init = REPO.joinpath("src/essay_writer/__init__.py").read_text(encoding="utf-8")
-    assert '__version__ = "0.9.15"' in init
+    assert f'__version__ = "{__version__}"' in init
     source = Path(__file__).read_text(encoding="utf-8")
     assert ("@pytest.mark." + "parametrize") not in source
     seated = {
