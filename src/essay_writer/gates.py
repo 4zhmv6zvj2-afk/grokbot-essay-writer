@@ -336,14 +336,23 @@ def evaluate_gates(
         if path is not None and path.is_file() and research_file(essay_id, str(path)) is not None:
             located += 1
     gathered_ok = located >= 1 and located == len(sources) and len(sources) >= 1
+    gathered_reason = (
+        "Every source locator is a file on this module."
+        if gathered_ok
+        else "Each source needs a locator that is a real file on this module."
+    )
+    from essay_writer.source_floor import gate_block
+
+    waiting = gate_block(essay_id)
+    if waiting:
+        gathered_ok = False
+        gathered_reason = waiting
     gates.append(
         _gate(
             5,
             "gathered-sources",
             gathered_ok,
-            "Every source locator is a file on this module."
-            if gathered_ok
-            else "Each source needs a locator that is a real file on this module.",
+            gathered_reason,
         )
     )
 

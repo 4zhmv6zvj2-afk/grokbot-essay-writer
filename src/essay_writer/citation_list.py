@@ -699,9 +699,18 @@ def unfinished_stage_reason(essay_id: str) -> str | None:
 
 
 def first_write_block(essay_id: str) -> dict[str, Any] | None:
-    """Refuse the first draft when the list is missing, or a note is not on it."""
-    from essay_writer.confirm import refuse
+    """Refuse the first draft when the list is missing, or a note is not on it.
 
+    A gather that is still short of its floor, or that came back empty, or that
+    stopped because a look-up was refused, also waits. A finished short gather
+    does not.
+    """
+    from essay_writer.confirm import refuse
+    from essay_writer.source_floor import draft_block
+
+    waiting = draft_block(essay_id)
+    if waiting:
+        return refuse("citation-list", waiting, stored=False, advanced=False)
     if all_gathered(essay_id) and not list_written(essay_id):
         return refuse("citation-list", NOT_WRITTEN, stored=False, advanced=False)
     if uncovered_notes(essay_id):
