@@ -86,8 +86,12 @@ def _card(seq: str) -> dict:
     return json.loads((work_dir(seq) / "dig-card.json").read_text(encoding="utf-8"))
 
 
+def _host(url: str) -> str:
+    return urlparse(str(url)).hostname or ""
+
+
 def _queries(url: str) -> dict[str, list[str]]:
-    return parse_qs(urlparse(url).query)
+    return parse_qs(urlparse(str(url)).query)
 
 
 def _work(title: str, year: int, author: str, doi: str | None = None) -> dict:
@@ -403,7 +407,7 @@ def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched
         {"api.openalex.org": lambda url: {"results": []}, "api.consensus.app": lambda url: {"results": []}},
     )
     essay_dig(failed, "other words", "draft")
-    searches = [item for item in seen_fail if "openalex" in item]
+    searches = [item for item in seen_fail if _host(item) == "api.openalex.org"]
     assert len(searches) == 1
     assert "How+do+ports+shape+coastal+trade" in searches[0] or "How%20do%20ports%20shape%20coastal%20trade" in searches[0]
     assert accept_split("How do ports shape coastal trade?", None) == ["How do ports shape coastal trade?"]
@@ -462,7 +466,7 @@ def test_openalex_follows_the_cursor_until_the_floor_or_the_last_page(workspace,
 
     seen = _install(monkeypatch, {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}})
     draft = essay_dig(seq, "How do ports shape coastal trade?", "draft")
-    urls = [item for item in seen if "api.openalex.org" in item]
+    urls = [item for item in seen if _host(item) == "api.openalex.org"]
     assert len(urls) == 2
     assert "cursor" not in _queries(urls[0])
     assert _queries(urls[1])["cursor"] == ["cursor-2"]
@@ -497,8 +501,9 @@ def test_consensus_turns_the_page_only_when_the_stored_plan_allows_it(workspace,
         },
     )
     draft = essay_dig(seq, "How do ports shape coastal trade?", "draft")
-    assert [item for item in seen if "api.consensus.app" in item]
-    assert all("page=" not in item for item in seen if "api.consensus.app" in item)
+    consensus_urls = [item for item in seen if _host(item) == "api.consensus.app"]
+    assert consensus_urls
+    assert all("page" not in _queries(item) for item in consensus_urls)
     assert draft["card"]["consensus"]["pagination"] == PLAN_PAGE
     assert draft["card"]["consensus"]["hits"]
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS_PAID", "1")
@@ -519,7 +524,7 @@ def test_consensus_turns_the_page_only_when_the_stored_plan_allows_it(workspace,
         },
     )
     essay_dig(paid_seq, "How do ports shape coastal trade?", "draft")
-    paid_urls = [item for item in seen_paid if "api.consensus.app" in item]
+    paid_urls = [item for item in seen_paid if _host(item) == "api.consensus.app"]
     assert any(_queries(item).get("page") == ["1"] for item in paid_urls)
     assert "paid-or-free-key" not in json.dumps(draft)
     assert workspace is not None
@@ -540,11 +545,13 @@ def test_unpaywall_and_crossref_are_not_question_searches(workspace, monkeypatch
     monkeypatch.setattr("essay_writer.resolvers.crossref_lookup", crossref)
 
     def route(url):
-        if "unpaywall" in url:
-            assert "How+do+ports" not in url and "How%20do%20ports" not in url
-            assert "/v2/10.10/one" in url or "/v2/10.10%2Fone" in url
+        host = _host(url)
+        if host == "api.unpaywall.org":
+            parsed = urlparse(url)
+            assert "How" not in parsed.path and "How" not in parsed.query
+            assert parsed.path.rsplit("/", 1)[-1] in {"10.10/one", "10.10%2Fone"}
             return {"best_oa_location": {"url_for_pdf": "https://oa.example/a.pdf"}, "year": 2020}
-        if "openalex" in url:
+        if host == "api.openalex.org":
             return {"results": [_work("One paper", 2020, "Ada", "10.10/one")]}
         return {"results": []}
 
@@ -557,7 +564,7 @@ def test_unpaywall_and_crossref_are_not_question_searches(workspace, monkeypatch
         },
     )
     draft = essay_dig(seq, "How do ports shape coastal trade?", "draft")
-    assert any("api.unpaywall.org" in item for item in seen)
+    assert any(_host(item) == "api.unpaywall.org" for item in seen)
     assert called["crossref"] == 0
     note = draft["card"]["questions"][0]["crossref"]["note"]
     assert note == "Crossref was not used as a question search."
@@ -579,7 +586,7 @@ def test_paging_stops_when_the_floor_is_met_and_keeps_extra_records(workspace, m
 
     seen = _install(monkeypatch, {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}})
     draft = essay_dig(seq, "How do ports shape coastal trade?", "draft")
-    assert len([item for item in seen if "api.openalex.org" in item]) == 1
+    assert len([item for item in seen if _host(item) == "api.openalex.org"]) == 1
     assert len(draft["card"]["openalex"]["hits"]) == 5
     assert draft["card"]["gather"]["met"] is True
     assert draft["card"]["gather"]["count"] == 5
@@ -776,9 +783,10 @@ def test_a_refused_lookup_leaves_the_gather_unfinished(workspace, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
 
     def fake(url, headers=None):
-        if "openalex" in str(url):
+        host = _host(url)
+        if host == "api.openalex.org":
             return openalex(str(url))
-        if "consensus" in str(url):
+        if host == "api.consensus.app":
             assert headers and headers.get("x-api-key") == "secret-consensus-key"
             return consensus(str(url))
         return {"results": []}
