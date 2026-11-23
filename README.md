@@ -311,11 +311,11 @@ manual install. There is no release on PyPI.
 
 GitHub releases include the wheel, the sdist, `SHA256SUMS`, a Sigstore signature
 bundle (`*.sigstore.json`) for each file, and `provenance.intoto.jsonl`.
-0.9.15 ships the wheel, the sdist, and `SHA256SUMS`, and does not include
+0.9.16 ships the wheel, the sdist, and `SHA256SUMS`, and does not include
 Sigstore bundles or build-provenance attestations.
 
-Download 0.9.15's files — `essay_writer-0.9.15-py3-none-any.whl`,
-`essay_writer-0.9.15.tar.gz`, and `SHA256SUMS` — into one folder, then check the
+Download 0.9.16's files — `essay_writer-0.9.16-py3-none-any.whl`,
+`essay_writer-0.9.16.tar.gz`, and `SHA256SUMS` — into one folder, then check the
 checksums:
 
 ```bash
@@ -350,13 +350,13 @@ Releases from 0.3.0 onward use a reproducible build on a pinned runner image
 wheel and the sdist twice in one run with `SOURCE_DATE_EPOCH` set to the tagged
 commit's time and the hash-pinned build tooling, requires identical SHA-256
 hashes before it uploads, signs, or attests anything, then verifies each
-Sigstore signature and the GitHub attestation after signing. 0.9.15 was not
+Sigstore signature and the GitHub attestation after signing. 0.9.16 was not
 built by that workflow. A separate reproduce workflow downloads a published
 release, rebuilds it from the tag with the same pinned toolchain, and fails if
 the SHA-256 set differs. You can rebuild a tag the same way:
 
 ```bash
-git checkout v0.9.15
+git checkout v0.9.16
 python -m pip install --require-hashes -r requirements-build.txt
 SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
     python tools/reproducible_build.py --outdir dist-rebuild
