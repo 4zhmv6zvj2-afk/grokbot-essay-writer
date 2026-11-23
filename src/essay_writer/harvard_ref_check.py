@@ -164,7 +164,7 @@ def compliance_misses(
             if token in seen:
                 continue
             seen.add(token)
-            if _cite_covered(token, references):
+            if _cite_covered(token, references, essay_id):
                 continue
             shown = token.strip()
             misses.append(
@@ -266,18 +266,29 @@ def _surname(author: str) -> str:
 def _name_present(text: str, surname: str) -> bool:
     if not surname:
         return False
-    return re.search(rf"\b{re.escape(surname)}\b", text, re.IGNORECASE) is not None
+    from essay_writer.textutil import fold_name
+
+    return (
+        re.search(rf"\b{re.escape(fold_name(surname))}\b", fold_name(text), re.IGNORECASE)
+        is not None
+    )
 
 
 def _author_year_present(text: str, surname: str, year: str) -> bool:
-    """True when the year sits in brackets after that family name."""
+    """True when the year is the first bracket after that family name.
+
+    The names between the family name and the year may be long. A normal
+    hyphen and hyphen U+2010 are the same character.
+    """
     if not surname or not year:
         return False
+    from essay_writer.textutil import fold_name
+
     pattern = (
-        rf"\b{re.escape(surname)}\b[^()\n]{{0,200}}"
+        rf"\b{re.escape(fold_name(surname))}\b[^()\n]*"
         rf"\(\s*{re.escape(year)}[a-z]?\s*\)"
     )
-    return re.search(pattern, text, re.IGNORECASE) is not None
+    return re.search(pattern, fold_name(text), re.IGNORECASE) is not None
 
 
 def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
@@ -297,19 +308,13 @@ def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
     return candidates[0]
 
 
-def _cite_covered(token: str, paragraphs: list[Any]) -> bool:
-    name, _, year = token.rpartition(", ")
-    year = year.strip()
-    name = re.sub(r"\bet al\.?", "", name, flags=re.IGNORECASE).strip()
-    primary = re.split(r"\s+and\s+|,", name)[0].strip()
-    surname = primary.split()[-1] if primary else ""
-    if not surname or not year:
-        return False
-    from essay_writer.word_references import _line_covers_cite
+def _cite_covered(token: str, paragraphs: list[Any], essay_id: str | None = None) -> bool:
+    from essay_writer.word_references import token_is_covered
 
-    # The year has to sit in brackets straight after that name. A year
-    # printed in the title of another year's entry is not this cite's year.
-    return any(_line_covers_cite(paragraph.text or "", token) for paragraph in paragraphs)
+    # A stored short form whose Harvard line is already on the list is covered.
+    # Otherwise the year is the first bracket after the family name on the line.
+    lines = [paragraph.text or "" for paragraph in paragraphs]
+    return token_is_covered(token, lines, essay_id)
 
 
 def _norm_span(value: str) -> str:
@@ -329,8 +334,9 @@ def _norm_date(value: str) -> str:
 
 
 def _norm_name(value: str) -> str:
-    text = re.sub(r"\s+", " ", value).strip().casefold()
-    return text.replace("’", "'").replace("‘", "'")
+    from essay_writer.textutil import fold_name
+
+    return re.sub(r"\s+", " ", fold_name(value)).strip().casefold()
 
 
 def _source_misses(paragraph, source: dict[str, object]) -> list[dict[str, str]]:

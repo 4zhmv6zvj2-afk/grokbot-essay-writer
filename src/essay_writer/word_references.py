@@ -316,13 +316,33 @@ def _line_covers_cite(line: str, token: str) -> bool:
     if not _line_names_surname(line, surname):
         return False
     folded = _plain_quotes(line).casefold()
-    # The year has to sit in brackets straight after that name. A year
-    # printed elsewhere in the entry is not this citation's year.
+    # The year is the first bracket after that family name. The names
+    # between them may be long. A year after that bracket is not this
+    # citation's year.
     pattern = (
         rf"\b{re.escape(_plain_quotes(surname).casefold())}\b"
-        rf"[^()\n]{{0,200}}\(\s*{re.escape(year.casefold())}\s*[a-z]?\s*\)"
+        rf"[^()\n]*\(\s*{re.escape(year.casefold())}\s*[a-z]?\s*\)"
     )
     return re.search(pattern, folded) is not None
+
+
+def token_is_covered(token: str, lines: list[str], essay_id: str | None = None) -> bool:
+    """True when this citation is already stored, or a reference line covers it.
+
+    A written citation list uses the stored short form. That entry's Harvard
+    line covers the citation. The year does not have to sit near the first
+    surname. A token that is not on the list is read from the reference lines.
+    An entry with no reference line is covered only when one of those lines
+    matches. When the list has not been written, the lines are read directly.
+    """
+    if isinstance(essay_id, str) and essay_id.strip():
+        from essay_writer.citation_list import list_written, match_token
+
+        if list_written(essay_id):
+            entry = match_token(essay_id, token)
+            if entry is not None and str(entry.get("reference") or "").strip():
+                return True
+    return any(_line_covers_cite(line, token) for line in lines)
 
 
 def _plain_quotes(text: str) -> str:
@@ -333,8 +353,12 @@ def _plain_quotes(text: str) -> str:
     return fold_name(text)
 
 
-def cite_reference_gaps(lines: list[str], sections: list[object]) -> list[str]:
-    """In-text citations that the References lines do not cover."""
+def cite_reference_gaps(
+    lines: list[str],
+    sections: list[object],
+    essay_id: str | None = None,
+) -> list[str]:
+    """In-text citations that the citation list and the reference lines do not cover."""
 
     missing: list[str] = []
     seen: set[str] = set()
@@ -343,7 +367,7 @@ def cite_reference_gaps(lines: list[str], sections: list[object]) -> list[str]:
             if token in seen:
                 continue
             seen.add(token)
-            if any(_line_covers_cite(line, token) for line in lines):
+            if token_is_covered(token, lines, essay_id):
                 continue
             shown = _cite_display(token)
             if shown:
@@ -370,10 +394,15 @@ def stage10_reference_block(
     sections: list[object],
 ) -> dict[str, object] | None:
     """Close gate: no heading-only References, and every in-text cite is listed."""
-    lines = usable_word_reference_lines(sources, pack)
+    ident = ""
+    if isinstance(pack, dict):
+        raw = pack.get("essay_id")
+        if isinstance(raw, str):
+            ident = raw
+    lines = usable_word_reference_lines(sources, pack, ident or None)
     if not lines:
         return empty_references_refusal(sources, pack)
-    gaps = cite_reference_gaps(lines, sections)
+    gaps = cite_reference_gaps(lines, sections, ident or None)
     if not gaps:
         return None
 

@@ -53,7 +53,7 @@ SIMILARLY_FIXTURE = REPO / "tests" / "fixtures" / "dig_cuts_similarly_cite_v1.js
 
 # Pinned dig-cut surfaces. A silent rewrite fails here before behaviour drifts.
 CITATION_TOKENS_SHA = "a4504c0d2d9adf3af44882a74d5060e3ca350ab5baa9efd43ffd941723bc9475"
-CITE_REFERENCE_GAPS_SHA = "30c9a4f08715e0d726b8cdde1028adeeb97e66a786aae243ffe3811c871ace38"
+CITE_REFERENCE_GAPS_SHA = "a4c4660b0e277378c6fbdd8a2739db0e70ead8f7c3a9b8a2830a804f0bb260c4"
 LOG_WORD_STEP_REFS_SHA = "7542c3c50ebcbaeebdb85cd7a47369b9afa12e215bee62344c07c1ff182e56ae"
 
 QUESTION = "How do chokepoints constrain the corridor?"

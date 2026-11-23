@@ -14,7 +14,7 @@ Stage 9 marks a mark scheme table row for argument, evidence, or critical thinki
 Say whether the essay is ready for that Word file, or whether it needs more work. Draft, show it, and approve the save only after an explicit yes.
 Do not invent sources in the review note.
 When a mark scheme is present, judge the highest band, the top descriptors, not merely a pass.
-The findings note opens with the north-star judgement: what the mark scheme scores, the format, and whether the draft does the assignment. Claim checks against the opened PDFs follow that section. A pass with no findings note does not clear the Word file.
+The findings note opens with Overall judgement: what the mark scheme scores, the format, and whether the draft does the assignment. Claim checks against the opened PDFs follow that section. A pass with no findings note does not clear the Word file.
 When that Word file also has a copy under Documents, open the copy as well. The findings note names each place that was opened. The findings Word file is the place the tool returns, in the project folder, not the stage 10 folder. When Documents is not mounted, do not invent that file.
 Review facts, structure, citation completeness, and what the brief asks. Do not polish voice, elegance, or parallelism. Keep the student's voice and the writer's voice.
 The findings note may name a leftover stock line, or a line that could sit on any assignment. Naming that line is not a score. Do not rewrite those lines. Naming them does not fail the review.
@@ -25,7 +25,7 @@ The findings note may name a weighted section the draft does not carry, and a he
 Review facts, structure, citation completeness, and what the brief asks. Do not polish voice, elegance, or parallelism. Keep the student's voice and the writer's voice.
 
 ## north_star
-North-star judgement
+Overall judgement
 
 ## claim_checks
 Claim checks
