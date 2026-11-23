@@ -339,8 +339,8 @@ def cmd_launch() -> None:
     launch_paths()
     evidence_dir().mkdir(parents=True, exist_ok=True)
     body = asyncio.run(with_server(do_launch))
-    if body.get("version") != "0.9.17":
-        fail(f"Launch health version is {body.get('version')}. Expected 0.9.17.")
+    if body.get("version") != "0.9.18":
+        fail(f"Launch health version is {body.get('version')}. Expected 0.9.18.")
     if body.get("app_path") != str(STUDENT):
         fail("essay.health is not using the empty student folder.")
     write_json("launch.json", body)
@@ -406,8 +406,8 @@ def cmd_doctor() -> None:
     report = asyncio.run(with_server(do_doctor))
     if report.get("alive") is not True or report.get("ok") is not True:
         fail("essay.health is not alive.")
-    if report.get("version") != "0.9.17":
-        fail(f"Doctor version is {report.get('version')}. Expected 0.9.17.")
+    if report.get("version") != "0.9.18":
+        fail(f"Doctor version is {report.get('version')}. Expected 0.9.18.")
     if report.get("app_path") != str(STUDENT):
         fail("Doctor is not attached to this run's student folder.")
     if report.get("has_dig") is not True:

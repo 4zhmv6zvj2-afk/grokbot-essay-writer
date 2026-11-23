@@ -99,7 +99,7 @@ def test_skill_names_the_student_path():
     ):
         assert heading in text
     assert "ESSAY_WRITER_ROOT" in text
-    assert "0.9.17" in text
+    assert essay_writer.__version__ in text
     assert "scripts/verify-essay-writer launch" in text
     assert "scripts/verify-essay-writer doctor" in text
     assert "scripts/verify-essay-writer drive-research-gather" in text
@@ -326,9 +326,8 @@ def test_cleanup_leaves_the_named_evidence():
 
 
 def test_package_version_matches_the_skill():
-    """AC-ver-7. The package and the skill stay on 0.9.17."""
+    """AC-ver-7. The package and the skill stay on the same version."""
     version = essay_writer.__version__
-    assert version == "0.9.17"
     project = (REPO / "pyproject.toml").read_text(encoding="utf-8")
     assert f'version = "{version}"' in project
     skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
