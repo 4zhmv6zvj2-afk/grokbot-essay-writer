@@ -53,6 +53,20 @@ LIST_KEYS = {
     "reference",
     "note",
 }
+# Stored with the Harvard line so a later check can mark the journal or the title.
+# These are allowed. Any other key is still a surprise.
+PRINT_KEYS = {
+    "accessed",
+    "article_number",
+    "container",
+    "edition",
+    "issue",
+    "pages",
+    "place",
+    "publisher",
+    "url",
+    "volume",
+}
 
 
 def _plant_keith() -> str:
@@ -125,7 +139,7 @@ def test_the_three_parts_share_one_source_id(workspace):
         assert _note_record(entry) != _source_record(seq, ident)
     raw = json.loads((work_dir(seq) / "citation-list.json").read_text(encoding="utf-8"))
     for item in raw["entries"]:
-        assert set(item) == LIST_KEYS
+        assert set(item) == LIST_KEYS | PRINT_KEYS
     _proof("citation-list-source-id-extract.txt", listed + "\n")
     assert workspace is not None
 
