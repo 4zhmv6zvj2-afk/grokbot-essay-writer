@@ -411,7 +411,13 @@ def student_findings_text(findings: str) -> str:
 def _save_findings_docx(path, findings: str) -> None:
     from docx import Document
 
-    from essay_writer.word import _add_heading, _font, _style_document
+    from essay_writer.word import (
+        WORD_TITLE_LIMIT,
+        _add_heading,
+        _font,
+        _style_document,
+        document_title,
+    )
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -419,6 +425,13 @@ def _save_findings_docx(path, findings: str) -> None:
     _style_document(document)
     _add_heading(document, "Findings", level=1)
     shown = student_findings_text(findings)
+    opening = ""
+    for line in shown.splitlines():
+        flat = " ".join(line.split())
+        if len(flat) > WORD_TITLE_LIMIT:
+            opening = flat
+            break
+    document.core_properties.title = document_title(path.stem, opening=opening, fallback=path.stem)
     for line in shown.splitlines():
         if not line.strip():
             continue

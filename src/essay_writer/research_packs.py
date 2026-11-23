@@ -113,11 +113,14 @@ def write_annotation_docx(
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Inches, Pt
 
-    from essay_writer.word import _font, _style_document
+    from essay_writer.word import _font, _style_document, document_title
 
     document = Document()
     _style_document(document)
-    document.core_properties.title = "Annotated bibliography"
+    document.core_properties.title = document_title(
+        "Annotated bibliography",
+        fallback="Annotated bibliography",
+    )
     document.core_properties.author = ""
     document.core_properties.last_modified_by = ""
     heading = document.add_heading(strip_word_labels("Annotated bibliography"), level=1)
