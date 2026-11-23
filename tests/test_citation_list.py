@@ -25,7 +25,7 @@ from essay_writer.citation_list import (
 )
 from essay_writer.cite_fit import apply_body_cites
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.dig import _save_lookup_pdfs
+from essay_writer.dig import _open_candidates, _save_lookup_pdfs
 from essay_writer.harvard_4a import harvard_4a_line
 from essay_writer.late_chain import write_stage10
 from essay_writer.paths import module_code, work_dir
@@ -415,6 +415,77 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     assert path.read_bytes() == before
     assert working.read_bytes() == working_before
     assert workspace is not None
+
+
+def test_a_kept_pdf_without_a_doi_keeps_the_lookup_fields():
+    """A kept PDF matches its hit by URL, locator, or title with author. A bare title does not."""
+    card = {
+        "openalex": {
+            "hits": [
+                {
+                    "authors": ["Ada Lovelace"],
+                    "year": "2019",
+                    "title": "Harbour capacity without a DOI",
+                    "pdf_url": "https://oa.example/harbour.pdf",
+                },
+                {
+                    "authors": ["Grace Hopper"],
+                    "year": "2018",
+                    "title": "Harbour capacity without a DOI",
+                    "doi": "10.1000/hopper",
+                    "pdf_url": "https://oa.example/hopper.pdf",
+                },
+            ]
+        },
+        "consensus": {"hits": []},
+        "unpaywall": [],
+    }
+    opened = _open_candidates(card)
+    by_url = {item["url"]: item for item in opened}
+    assert "doi" not in by_url["https://oa.example/harbour.pdf"]
+    assert by_url["https://oa.example/harbour.pdf"]["title"] == "Harbour capacity without a DOI"
+    assert by_url["https://oa.example/hopper.pdf"]["doi"] == "10.1000/hopper"
+    rows = _save_lookup_pdfs(
+        card,
+        [
+            {
+                "path": "uploads/MOD1004AA/harbour.pdf",
+                "url": "https://oa.example/harbour.pdf",
+            },
+            {
+                "path": "uploads/MOD1004AA/hopper.pdf",
+                "url": "https://oa.example/hopper.pdf",
+            },
+            {
+                "path": "uploads/MOD1004AA/title-only.pdf",
+                "title": "Harbour capacity without a DOI",
+            },
+            {
+                "path": "uploads/MOD1004AA/named.pdf",
+                "title": "Harbour capacity without a DOI",
+                "author": "Ada Lovelace",
+            },
+        ],
+    )
+    by_path = {row["locator"]: row for row in rows}
+    harbour = by_path["uploads/MOD1004AA/harbour.pdf"]
+    assert harbour["author"] == "Ada Lovelace"
+    assert harbour["year"] == "2019"
+    assert harbour["title"] == "Harbour capacity without a DOI"
+    assert "doi" not in harbour
+    assert harbour["field_sources"] == {
+        "author": "lookup",
+        "year": "lookup",
+        "title": "lookup",
+    }
+    hopper = by_path["uploads/MOD1004AA/hopper.pdf"]
+    assert hopper["author"] == "Grace Hopper"
+    assert hopper["doi"] == "10.1000/hopper"
+    assert "uploads/MOD1004AA/title-only.pdf" not in by_path
+    named = by_path["uploads/MOD1004AA/named.pdf"]
+    assert named["author"] == "Ada Lovelace"
+    assert named["year"] == "2019"
+    assert "doi" not in named
 
 
 def test_public_wording_and_shared_rules():

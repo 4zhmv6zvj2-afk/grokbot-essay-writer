@@ -722,47 +722,89 @@ def _save_lookup_abstracts(
 _PDF_LOOKUP_FIELDS = ("author", "year", "title", "doi")
 
 
-def _hits_by_doi(card: dict[str, Any]) -> dict[str, dict[str, str]]:
-    """Look-up author, year, title, and DOI, keyed by DOI.
+def _fold_lookup(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
+
+
+def _pdf_field_details(hit: dict[str, Any], *, author: bool) -> dict[str, str]:
+    return {
+        field: value
+        for field, value in _provided_details(hit).items()
+        if field in _PDF_LOOKUP_FIELDS and (author or field != "author")
+    }
+
+
+def _remember_lookup(index: dict[str, dict[str, str]], key: str, details: dict[str, str]) -> None:
+    if not key or not details:
+        return
+    _fill_blank_details(index.setdefault(key, {}), details)
+
+
+def _index_lookup_hit(
+    index: dict[str, dict[str, str]], hit: dict[str, Any], *, author: bool
+) -> None:
+    """Key one hit by DOI, by locator or URL, and by title with author."""
+    details = _pdf_field_details(hit, author=author)
+    if not details:
+        return
+    doi = details.get("doi")
+    if doi:
+        _remember_lookup(index, "doi:" + doi, details)
+    for field in ("locator", "path", "pdf_url", "oa_url", "url"):
+        raw = hit.get(field)
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        kind = "locator" if field in {"locator", "path"} else "url"
+        _remember_lookup(index, f"{kind}:{raw.strip().replace('\\', '/')}", details)
+    title = details.get("title")
+    writer = details.get("author")
+    if title and writer:
+        _remember_lookup(index, f"work:{_fold_lookup(title)}|{_fold_lookup(writer)}", details)
+
+
+def _lookup_index(card: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """Look-up author, year, title, and DOI.
 
     OpenAlex and Consensus supply those fields. Unpaywall may fill a blank
-    year, title, or DOI. Unpaywall does not supply an author.
+    year, title, or DOI. Unpaywall does not supply an author. A title alone
+    is not a key.
     """
-    by_doi: dict[str, dict[str, str]] = {}
+    index: dict[str, dict[str, str]] = {}
     for key in ("openalex", "consensus"):
         block = card.get(key)
         hits = block.get("hits") if isinstance(block, dict) else None
         if not isinstance(hits, list):
             continue
         for hit in hits:
-            if not isinstance(hit, dict):
-                continue
-            doi = _doi_key(hit.get("doi"))
-            if not doi:
-                continue
-            details = {
-                field: value
-                for field, value in _provided_details(hit).items()
-                if field in _PDF_LOOKUP_FIELDS
-            }
-            slot = by_doi.setdefault(doi, {})
-            _fill_blank_details(slot, details)
+            if isinstance(hit, dict):
+                _index_lookup_hit(index, hit, author=True)
     unpaywall = card.get("unpaywall")
     if isinstance(unpaywall, list):
         for item in unpaywall:
-            if not isinstance(item, dict):
-                continue
-            doi = _doi_key(item.get("doi"))
-            if not doi:
-                continue
-            details = {
-                field: value
-                for field, value in _provided_details(item).items()
-                if field in _PDF_LOOKUP_FIELDS and field != "author"
-            }
-            slot = by_doi.setdefault(doi, {})
-            _fill_blank_details(slot, details)
-    return by_doi
+            if isinstance(item, dict):
+                _index_lookup_hit(index, item, author=False)
+    return index
+
+
+def _paper_lookup_keys(paper: dict[str, Any]) -> list[str]:
+    """DOI, then URL, then locator, then title with author. A bare title is not a key."""
+    keys: list[str] = []
+    doi = _doi_key(paper.get("doi"))
+    if doi:
+        keys.append("doi:" + doi)
+    url = paper.get("url")
+    if isinstance(url, str) and url.strip():
+        keys.append("url:" + url.strip())
+    path = paper.get("path")
+    if isinstance(path, str) and path.strip():
+        keys.append("locator:" + path.strip().replace("\\", "/"))
+    title = paper.get("title")
+    author = paper.get("author")
+    if isinstance(author, list):
+        author = _lookup_author(paper)
+    if isinstance(title, str) and title.strip() and isinstance(author, str) and author.strip():
+        keys.append(f"work:{_fold_lookup(title)}|{_fold_lookup(author)}")
+    return keys
 
 
 def _save_lookup_pdfs(
@@ -772,11 +814,12 @@ def _save_lookup_pdfs(
     """Copy look-up author, year, title, and DOI onto each kept PDF.
 
     A field the look-up did not return stays off the record. A name is not
-    read from the PDF.
+    read from the PDF. A hit with no DOI still matches on its URL, its
+    locator, or its title together with its author.
     """
     if not isinstance(papers, list) or not papers:
         return []
-    by_doi = _hits_by_doi(card)
+    index = _lookup_index(card)
     saved: list[dict[str, Any]] = []
     for paper in papers:
         if not isinstance(paper, dict):
@@ -784,8 +827,12 @@ def _save_lookup_pdfs(
         path = paper.get("path")
         if not isinstance(path, str) or not path.strip():
             continue
-        doi = _doi_key(paper.get("doi"))
-        details = by_doi.get(doi, {}) if doi else {}
+        details: dict[str, str] = {}
+        for key in _paper_lookup_keys(paper):
+            found = index.get(key)
+            if found:
+                details = found
+                break
         present = {
             field: details[field]
             for field in _PDF_LOOKUP_FIELDS
@@ -840,13 +887,13 @@ def _open_candidates(card: dict[str, Any]) -> list[dict[str, Any]]:
             return
         seen.add(url)
         candidate: dict[str, Any] = {"url": url}
+        named = title if isinstance(title, str) and title.strip() else None
         if isinstance(doi, str) and doi.strip():
             candidate["doi"] = doi.strip()
-            named = title if isinstance(title, str) and title.strip() else None
             if named is None:
                 named = titles.get(doi.strip())
-            if isinstance(named, str) and named.strip():
-                candidate["title"] = named.strip()
+        if isinstance(named, str) and named.strip():
+            candidate["title"] = named.strip()
         candidates.append(candidate)
 
     for hit in card["openalex"]["hits"]:
