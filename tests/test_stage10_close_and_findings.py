@@ -57,7 +57,8 @@ _DENY = {
 
 
 def _proof(name: str, payload: str | bytes) -> None:
-    ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    if not ARTIFACTS.is_dir():
+        return
     target = ARTIFACTS / name
     if isinstance(payload, bytes):
         target.write_bytes(payload)
