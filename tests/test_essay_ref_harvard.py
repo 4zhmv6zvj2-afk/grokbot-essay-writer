@@ -331,6 +331,32 @@ def test_essay_ref_a7_gather_keeps_a_looked_up_doi(workspace):
     assert "10.1000/other" in bare_issues[0]["reason"]
 
 
+def test_mismatched_lookup_author_year_title_and_doi_are_refused(workspace):
+    """A remembered author, year, title, or DOI that differs from the claim is refused."""
+    seq = open_sequence()
+    locator = _paper(workspace, "mismatch.pdf")
+    _plant_lookup(
+        seq,
+        locator,
+        "27",
+        author="Smith, J.",
+        year="2020",
+        title="Chokepoints and crude",
+        doi="10.1000/looked",
+    )
+    claims = (
+        ("author", "Jones, A."),
+        ("year", "1999"),
+        ("title", "Other crude"),
+        ("doi", "10.1000/other"),
+    )
+    for field, claimed in claims:
+        kept, issues = gather_source(seq, _raw(locator, **{field: claimed}), 0)
+        assert kept is None, field
+        assert issues[0]["code"] == "invent-forbid"
+        assert claimed in issues[0]["reason"]
+
+
 def test_essay_ref_a8_a_web_page_keeps_its_access_date_with_a_publisher():
     """essay-ref-a8. A place or publisher on a web entry does not hide the access date."""
     source = {
