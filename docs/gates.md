@@ -1,6 +1,6 @@
 # Local gates
 
-`tools/run_gates.py` runs the checkout checks CI runs. A clean pass writes a stamp into the git directory (`git rev-parse --git-dir` / `gate-stamp.json`), never into the worktree. `tools/tag_release.py` creates an annotated tag only when that stamp is a fresh full pass for this commit. It does not run the gate, and it does not push.
+`tools/run_gates.py` runs the checkout checks CI runs. A clean pass writes a stamp into the git directory (`git rev-parse --git-dir` / `gate-stamp.json`), never into the worktree. `tools/tag_release.py` creates an annotated tag only when that stamp is a fresh full pass for this commit on `main`. `--allow-branch` is the maintainer exception for any other branch. It does not run the gate, and it does not push.
 
 Use the project interpreter so ruff, mypy, and pytest are the ones the suite uses:
 
@@ -24,4 +24,4 @@ Exit 1 means a step failed. Exit 2 means the environment cannot run the gate.
 git config core.hooksPath .githooks
 ```
 
-The hook runs the fast gate when a push updates `main`. Any other push prints a one-line skip. CI covers pull-request branches. If the gate fails, the push stops. `git push --no-verify` is the emergency path. Never use it to publish a tag.
+The hook runs the fast gate when a push updates `main`. It uses `uv run --no-sync python` when `uv` is on `PATH`, and `python3` otherwise. Any other push prints a one-line skip. CI covers pull-request branches. If the gate fails, the push stops and the message names the interpreter that ran it. `git push --no-verify` is the emergency path. Never use it to publish a tag.

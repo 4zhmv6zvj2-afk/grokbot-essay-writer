@@ -18,10 +18,16 @@ if [ "$updates_main" -eq 0 ]; then
     exit 0
 fi
 
-python tools/run_gates.py
+if command -v uv >/dev/null 2>&1; then
+    interpreter="uv run --no-sync python"
+    uv run --no-sync python tools/run_gates.py
+else
+    interpreter="python3"
+    python3 tools/run_gates.py
+fi
 status=$?
 if [ "$status" -ne 0 ]; then
-    echo "pre-push: the fast gate failed, so this push was refused."
+    echo "pre-push: the fast gate failed ($interpreter), so this push was refused."
     echo "Emergency path: git push --no-verify"
     echo "Never use it to publish a tag."
     exit "$status"
