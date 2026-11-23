@@ -258,7 +258,10 @@ def test_the_stated_count_scan_ignores_words_percents_and_class_names(workspace)
     assert assignment_floor(seq)["floor"] == 32
     _question_brief(seq, "The assignment is 4,000 words.\nEach section needs 2 sources.\n")
     assert assignment_floor(seq)["floor_from"] == "word_rate"
-    _write_brief(seq, "Question: How do ports shape coastal trade?\nSee the sources.\nThe assignment is 1,000 words.\n")
+    _write_brief(
+        seq,
+        "Question: How do ports shape coastal trade?\nSee the sources.\nThe assignment is 1,000 words.\n",
+    )
     unsure = assignment_floor(seq)
     assert unsure["floor"] == 8
     assert unsure["stated_counts"] == []
@@ -271,7 +274,12 @@ def test_the_floor_counts_distinct_works_and_keeps_gaps_uncounted(workspace):
     same = distinct_works(
         [
             {"title": "Harbour capacity", "year": "2020", "author": "Ada", "doi": "10.1/same"},
-            {"title": "A different title", "year": "1999", "author": "Bea", "doi": "https://doi.org/10.1/same"},
+            {
+                "title": "A different title",
+                "year": "1999",
+                "author": "Bea",
+                "doi": "https://doi.org/10.1/same",
+            },
             {"title": "Harbour capacity", "year": "2020", "author": "Ada"},
             {"title": "Harbour capacity", "year": "2020", "author": "Cara"},
             {"title": "Harbour capacity", "year": "2021", "author": "Ada"},
@@ -327,14 +335,26 @@ def test_the_floor_counts_distinct_works_and_keeps_gaps_uncounted(workspace):
     assert sample is None
     upload_and_catalog = distinct_works(
         [
-            {"title": "Harbour capacity and trade", "year": "2020", "author": "Smith, J.", "doi": "10.5/h"},
+            {
+                "title": "Harbour capacity and trade",
+                "year": "2020",
+                "author": "Smith, J.",
+                "doi": "10.5/h",
+            },
             dict(kept),
         ]
     )
     # Different DOIs are different works. The same DOI is one work.
     kept_doi = dict(kept)
     kept_doi["doi"] = "10.5/h"
-    assert len(distinct_works([{"title": "Other", "year": "2020", "author": "Ada", "doi": "10.5/h"}, kept_doi])) == 1
+    assert (
+        len(
+            distinct_works(
+                [{"title": "Other", "year": "2020", "author": "Ada", "doi": "10.5/h"}, kept_doi]
+            )
+        )
+        == 1
+    )
     assert len(upload_and_catalog) == 2
     hidden = abstract_only_ids(
         [{"id": "abs-1", "title": "Harbour capacity", "doi": "10.5/h"}],
@@ -347,7 +367,9 @@ def test_the_floor_counts_distinct_works_and_keeps_gaps_uncounted(workspace):
     assert workspace is not None
 
 
-def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched(workspace, monkeypatch):
+def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched(
+    workspace, monkeypatch
+):
     """AC-floor-6. Split the confirmed question once. Do not search a caller query or a blank."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
@@ -371,7 +393,9 @@ def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched
     seen = _install(
         monkeypatch,
         {
-            "api.openalex.org": lambda url: {"results": [_work("One paper", 2020, "Ada", "10.1/one")]},
+            "api.openalex.org": lambda url: {
+                "results": [_work("One paper", 2020, "Ada", "10.1/one")]
+            },
             "api.consensus.app": lambda url: {"results": []},
         },
     )
@@ -388,7 +412,10 @@ def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched
     assert "A later question that is not searched" not in stored
     joined = " ".join(seen)
     assert "unrelated" not in joined.casefold()
-    assert "How+do+ports+affect+coastal+towns" in joined or "How%20do%20ports%20affect%20coastal%20towns" in joined
+    assert (
+        "How+do+ports+affect+coastal+towns" in joined
+        or "How%20do%20ports%20affect%20coastal%20towns" in joined
+    )
     blank = open_sequence()
     _write_brief(blank, "Discuss the corridor in enough detail for a full essay.\n")
     assert confirmed_question(blank) == ""
@@ -408,13 +435,21 @@ def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched
     monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", boom)
     seen_fail = _install(
         monkeypatch,
-        {"api.openalex.org": lambda url: {"results": []}, "api.consensus.app": lambda url: {"results": []}},
+        {
+            "api.openalex.org": lambda url: {"results": []},
+            "api.consensus.app": lambda url: {"results": []},
+        },
     )
     essay_dig(failed, "other words", "draft")
     searches = [item for item in seen_fail if _host(item) == "api.openalex.org"]
     assert len(searches) == 1
-    assert "How+do+ports+shape+coastal+trade" in searches[0] or "How%20do%20ports%20shape%20coastal%20trade" in searches[0]
-    assert accept_split("How do ports shape coastal trade?", None) == ["How do ports shape coastal trade?"]
+    assert (
+        "How+do+ports+shape+coastal+trade" in searches[0]
+        or "How%20do%20ports%20shape%20coastal%20trade" in searches[0]
+    )
+    assert accept_split("How do ports shape coastal trade?", None) == [
+        "How do ports shape coastal trade?"
+    ]
     assert workspace is not None
 
 
@@ -430,7 +465,9 @@ def test_the_live_ask_uses_the_shell_field(workspace, monkeypatch):
     seen = _install(
         monkeypatch,
         {
-            "api.openalex.org": lambda url: {"results": [_work("One paper", 2020, "Ada", "10.6/one")]},
+            "api.openalex.org": lambda url: {
+                "results": [_work("One paper", 2020, "Ada", "10.6/one")]
+            },
             "api.consensus.app": lambda url: {"results": []},
         },
     )
@@ -484,7 +521,10 @@ def test_each_question_keeps_its_own_result_including_an_empty_one(workspace, mo
             return {"results": []}
         return {"results": [_work("One paper", 2020, "Ada", "10.2/one")]}
 
-    _install(monkeypatch, {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}})
+    _install(
+        monkeypatch,
+        {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}},
+    )
     _confirm(seq, "How do ports shape coastal trade?")
     card = _card(seq)
     by_question = {item["question"]: item for item in card["questions"]}
@@ -492,7 +532,10 @@ def test_each_question_keeps_its_own_result_including_an_empty_one(workspace, mo
     empty = by_question["What do harbours export?"]
     assert empty["openalex"]["hits"] == []
     assert empty["consensus"]["hits"] == []
-    assert by_question["How do ports shape coastal trade?"]["openalex"]["hits"][0]["title"] == "One paper"
+    assert (
+        by_question["How do ports shape coastal trade?"]["openalex"]["hits"][0]["title"]
+        == "One paper"
+    )
     text = (work_dir(seq) / "dig-card.md").read_text(encoding="utf-8")
     assert QUESTION_GAP in text
     _proof("source-floor-questions.json", json.dumps(card["questions"], indent=2) + "\n")
@@ -503,7 +546,9 @@ def test_openalex_follows_the_cursor_until_the_floor_or_the_last_page(workspace,
     """AC-floor-8. OpenAlex pages with the cursor. Five hits are not the whole search."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
+    monkeypatch.setattr(
+        "essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None
+    )
 
     def openalex(url):
         query = _queries(url)
@@ -513,12 +558,17 @@ def test_openalex_follows_the_cursor_until_the_floor_or_the_last_page(workspace,
         if not cursor:
             return {
                 "meta": {"next_cursor": "cursor-2"},
-                "results": [_work(f"Paper {index}", 2020, "Ada", f"10.8/{index}") for index in range(5)],
+                "results": [
+                    _work(f"Paper {index}", 2020, "Ada", f"10.8/{index}") for index in range(5)
+                ],
             }
         assert cursor == "cursor-2"
         return {"results": [_work("Last paper", 2021, "Bea", "10.8/last")]}
 
-    seen = _install(monkeypatch, {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}})
+    seen = _install(
+        monkeypatch,
+        {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}},
+    )
     draft = essay_dig(seq, "How do ports shape coastal trade?", "draft")
     urls = [item for item in seen if _host(item) == "api.openalex.org"]
     assert len(urls) == 2
@@ -537,7 +587,9 @@ def test_consensus_turns_the_page_only_when_the_stored_plan_allows_it(workspace,
     """AC-floor-9. A free plan records that it does not return another page."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 4,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
+    monkeypatch.setattr(
+        "essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None
+    )
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "1")
     monkeypatch.setenv("CONSENSUS_API_KEY", "paid-or-free-key")
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS_PAID", "0")
@@ -567,8 +619,18 @@ def test_consensus_turns_the_page_only_when_the_stored_plan_allows_it(workspace,
     def paid(url):
         page = _queries(url).get("page", ["0"])[0]
         if page == "0":
-            return {"plan": "pro", "results": papers, "page_size": 20, "is_end": False, "next_page": 1}
-        return {"plan": "pro", "results": [_paper("Paid later", 2021, "Bea", "10.9/later")], "is_end": True}
+            return {
+                "plan": "pro",
+                "results": papers,
+                "page_size": 20,
+                "is_end": False,
+                "next_page": 1,
+            }
+        return {
+            "plan": "pro",
+            "results": [_paper("Paid later", 2021, "Bea", "10.9/later")],
+            "is_end": True,
+        }
 
     seen_paid = _install(
         monkeypatch,
@@ -588,8 +650,10 @@ def test_unpaywall_and_crossref_are_not_question_searches(workspace, monkeypatch
     """AC-floor-10. Unpaywall is a DOI fill. Crossref is not sent the question."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
-    monkeypatch.setattr("essay_writer.dig.unpaywall_email", lambda: "study@example.edu")
+    monkeypatch.setattr(
+        "essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None
+    )
+    monkeypatch.setattr("essay_writer.dig.unpaywall_email", lambda: "study@example.org")
     called = {"crossref": 0}
 
     def crossref(*args, **kwargs):
@@ -622,7 +686,7 @@ def test_unpaywall_and_crossref_are_not_question_searches(workspace, monkeypatch
     assert called["crossref"] == 0
     note = draft["card"]["questions"][0]["crossref"]["note"]
     assert note == "Crossref was not used as a question search."
-    assert "study@example.edu" not in json.dumps(draft["card"])
+    assert "study@example.org" not in json.dumps(draft["card"])
     assert workspace is not None
 
 
@@ -630,15 +694,22 @@ def test_paging_stops_when_the_floor_is_met_and_keeps_extra_records(workspace, m
     """AC-floor-11. No further page is fetched once the floor is met. Extras stay."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\nUse 2 sources.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
+    monkeypatch.setattr(
+        "essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None
+    )
 
     def openalex(url):
         return {
             "meta": {"next_cursor": "more"},
-            "results": [_work(f"Paper {index}", 2020, "Ada", f"10.11/{index}") for index in range(5)],
+            "results": [
+                _work(f"Paper {index}", 2020, "Ada", f"10.11/{index}") for index in range(5)
+            ],
         }
 
-    seen = _install(monkeypatch, {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}})
+    seen = _install(
+        monkeypatch,
+        {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}},
+    )
     draft = essay_dig(seq, "How do ports shape coastal trade?", "draft")
     assert len([item for item in seen if _host(item) == "api.openalex.org"]) == 1
     assert len(draft["card"]["openalex"]["hits"]) == 5
@@ -651,7 +722,9 @@ def test_a_further_page_blocks_the_list_and_the_draft(workspace):
     """AC-floor-12. A further official page blocks the citation list and the draft."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
-    write_upload(workspace, essay_id=ESSAY, name="one.md", text="A real file sits on this module.\n")
+    write_upload(
+        workspace, essay_id=ESSAY, name="one.md", text="A real file sits on this module.\n"
+    )
     folder = work_dir(seq)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "dig-card.json").write_text(
@@ -726,7 +799,9 @@ def test_honest_exhaustion_writes_the_list_and_allows_the_draft(workspace):
     """AC-floor-13. A finished short gather writes the list and names the found count."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
-    write_upload(workspace, essay_id=ESSAY, name="two.md", text="A second real file sits on this module.\n")
+    write_upload(
+        workspace, essay_id=ESSAY, name="two.md", text="A second real file sits on this module.\n"
+    )
     folder = work_dir(seq)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "dig-card.json").write_text(
@@ -787,14 +862,19 @@ def test_an_empty_catalog_does_not_write_a_sourced_essay(workspace, monkeypatch)
     """AC-floor-14. An empty honest gather names the catalogs and writes no sourced essay."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
+    monkeypatch.setattr(
+        "essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None
+    )
     monkeypatch.setattr("essay_writer.dig.consensus_api_key", lambda: None)
     monkeypatch.setattr("essay_writer.dig.unpaywall_email", lambda: None)
     monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
     monkeypatch.delenv("CONSENSUS_API_KEY", raising=False)
     _install(
         monkeypatch,
-        {"api.openalex.org": lambda url: {"results": []}, "api.consensus.app": lambda url: {"results": []}},
+        {
+            "api.openalex.org": lambda url: {"results": []},
+            "api.consensus.app": lambda url: {"results": []},
+        },
     )
     saved = _confirm(seq, "How do ports shape coastal trade?")
     note = saved["gather_note"]
@@ -817,7 +897,9 @@ def test_a_refused_lookup_leaves_the_gather_unfinished(workspace, monkeypatch):
     """AC-floor-15. A refused look-up is not exhaustion. Another catalog can still turn the page."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 4,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
+    monkeypatch.setattr(
+        "essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None
+    )
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "1")
     monkeypatch.setenv("CONSENSUS_API_KEY", "secret-consensus-key")
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS_PAID", "1")
@@ -831,8 +913,18 @@ def test_a_refused_lookup_leaves_the_gather_unfinished(workspace, monkeypatch):
         page = _queries(url).get("page", ["0"])[0]
         if page == "0":
             papers = [_paper(f"C {index}", 2020, "Ada", f"10.15/{index}") for index in range(20)]
-            return {"plan": "pro", "results": papers, "page_size": 20, "is_end": False, "next_page": 1}
-        return {"plan": "pro", "results": [_paper("Later", 2021, "Bea", "10.15/later")], "is_end": True}
+            return {
+                "plan": "pro",
+                "results": papers,
+                "page_size": 20,
+                "is_end": False,
+                "next_page": 1,
+            }
+        return {
+            "plan": "pro",
+            "results": [_paper("Later", 2021, "Bea", "10.15/later")],
+            "is_end": True,
+        }
 
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
 
@@ -856,10 +948,14 @@ def test_a_refused_lookup_leaves_the_gather_unfinished(workspace, monkeypatch):
     assert "secret-consensus-key" not in note
     assert draft["card"]["gather"]["unfinished"] is True
     assert draft["card"]["consensus"]["hits"]
-    saved = essay_dig(seq, "How do ports shape coastal trade?", "confirm", cardDigest=draft["cardDigest"])
+    saved = essay_dig(
+        seq, "How do ports shape coastal trade?", "confirm", cardDigest=draft["cardDigest"]
+    )
     assert saved["ok"] is True
     assert ship_4b(seq, [], None)["blocked"] is True
-    assert first_write_block(seq)["reason"] == note or UNFINISHED in first_write_block(seq)["reason"]
+    assert (
+        first_write_block(seq)["reason"] == note or UNFINISHED in first_write_block(seq)["reason"]
+    )
     assert workspace is not None
 
 
@@ -878,7 +974,10 @@ def test_one_empty_question_does_not_block_the_essay(workspace, monkeypatch):
             return {"results": []}
         return {"results": [_work("Kept paper", 2020, "Ada", "10.16/one")]}
 
-    _install(monkeypatch, {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}})
+    _install(
+        monkeypatch,
+        {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}},
+    )
     saved = _confirm(seq, "How do ports shape coastal trade?")
     text = (work_dir(seq) / "dig-card.md").read_text(encoding="utf-8")
     assert QUESTION_GAP in text
@@ -888,7 +987,10 @@ def test_one_empty_question_does_not_block_the_essay(workspace, monkeypatch):
 
 
 def test_the_citation_list_stays_before_the_draft_and_uses_the_stored_short_form(workspace):
-    """AC-floor-17. The list is written at stage 4b. A sentence uses the stored short form."""
+    """AC-floor-17. The list is written at stage 4b. A sentence uses the stored short form.
+
+    Before that list exists, the short form comes from the stored author and year.
+    """
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
     write_upload(
@@ -910,11 +1012,11 @@ def test_the_citation_list_stays_before_the_draft_and_uses_the_stored_short_form
     }
     before = _source_texts_with_cite(seq, pack)
     assert before
-    assert before[0][1] is None
+    assert before[0][1] == short_in_text("Smith, J.", "2020")
     writer = Path(researcher.__file__).read_text(encoding="utf-8")
-    source = (Path(__file__).resolve().parents[1] / "src" / "essay_writer" / "specialists" / "writer.py").read_text(
-        encoding="utf-8"
-    )
+    source = (
+        Path(__file__).resolve().parents[1] / "src" / "essay_writer" / "specialists" / "writer.py"
+    ).read_text(encoding="utf-8")
     assert 'f"({family_name' not in source
     delivered = ship_4b(seq, pack["sources"], None)
     assert delivered["citation_list"]["written"] is True
@@ -946,7 +1048,9 @@ def test_confirm_does_not_call_the_catalogs_again(workspace, monkeypatch):
     seen = _install(
         monkeypatch,
         {
-            "api.openalex.org": lambda url: {"results": [_work("One paper", 2020, "Ada", "10.18/one")]},
+            "api.openalex.org": lambda url: {
+                "results": [_work("One paper", 2020, "Ada", "10.18/one")]
+            },
             "api.consensus.app": lambda url: {"results": []},
         },
     )
@@ -974,7 +1078,9 @@ def test_public_wording_and_both_shells_share_the_gather(workspace):
     assert researcher.essay_dig is essay_dig
     parts = [
         Path(__file__).read_text(encoding="utf-8"),
-        (Path(__file__).resolve().parents[1] / "src" / "essay_writer" / "source_floor.py").read_text(encoding="utf-8"),
+        (
+            Path(__file__).resolve().parents[1] / "src" / "essay_writer" / "source_floor.py"
+        ).read_text(encoding="utf-8"),
     ]
     grams: set[str] = set()
     for part in parts:

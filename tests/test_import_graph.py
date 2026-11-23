@@ -10,8 +10,12 @@ specialist ``__getattr__`` map entry.
 
 The load graph stays a DAG. Deferred pairs that would cycle it, and direct
 two-module mutual imports, are checked-in allowlists. Either allowlist may
-shrink in the change that removes a pair. Neither may grow. A new direct
-mutual pair fails even when both directions are deferred.
+shrink in the change that removes a pair. A pair is added only when the
+import is the real call and moving the helper would change a pinned
+behaviour. The one added mutual pair is specialists.eqr and stage_llm.
+Student findings strip the house model name, and that name stays assigned
+in stage_llm.py. A mutual pair that is not on the list still fails, even
+when both directions are deferred.
 """
 
 from __future__ import annotations
@@ -44,7 +48,6 @@ CYCLE_BREAKERS: frozenset[tuple[str, str]] = frozenset(
         ("projects", "fo_chat_locks"),
         ("setup", "dig"),
         ("specialists.eqr", "review"),
-        ("specialists.eqr", "word"),
         ("specialists.grok_bot", "fo_chat_locks"),
         ("specialists.grok_bot", "server"),
         ("specialists.grok_bot", "stage_llm"),
@@ -103,10 +106,11 @@ MUTUAL_PAIRS: frozenset[tuple[str, str]] = frozenset(
         ("rewrite_baseline", "specialists.writer"),
         ("server", "shells"),
         ("specialists.eqr", "specialists.grok_bot"),
+        # Findings text strips the house model name. The assignment stays in stage_llm.py.
+        ("specialists.eqr", "stage_llm"),
         ("specialists.eqr", "word"),
         ("specialists.grok_bot", "stage_llm"),
         ("specialists.writer", "textutil"),
-        ("specialists.writer", "validate"),
         ("specialists.writer", "word"),
         ("textutil", "validate"),
     }

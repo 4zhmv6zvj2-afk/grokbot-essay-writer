@@ -66,8 +66,10 @@ def _work_id(work: dict[str, Any]) -> str:
     if ident:
         return ident
     title = _title(work).casefold()
-    url = work.get("url") if isinstance(work.get("url"), str) else ""
-    doi = work.get("doi") if isinstance(work.get("doi"), str) else ""
+    url_value = work.get("url")
+    url = url_value if isinstance(url_value, str) else ""
+    doi_value = work.get("doi")
+    doi = doi_value if isinstance(doi_value, str) else ""
     return "row:" + title + "|" + doi.casefold().strip() + "|" + url.strip()
 
 
@@ -195,7 +197,7 @@ def download_hold(essay_id: str, works: list[dict[str, Any]]) -> dict[str, Any] 
 
 
 def _same(row: dict[str, Any], other: dict[str, Any]) -> bool:
-    from essay_writer.research_packs import same_source
+    from essay_writer.source_match import same_source
 
     ident = stable_source_id(row)
     if ident and ident == stable_source_id(other):

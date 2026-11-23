@@ -339,7 +339,7 @@ def test_review_titles_stay_italic_for_a_long_list_a_review_and_a_plan(workspace
         ("review", review_runs),
         ("plan", plan_runs),
     ):
-        extract.append(f"{label}: { _italic_of(runs)}")
+        extract.append(f"{label}: {_italic_of(runs)}")
     _proof("italic-line-extract.txt", "\n".join(extract) + "\n")
     _proof("italic-lines.docx", path.read_bytes())
     assert checker
@@ -425,7 +425,9 @@ def test_an_off_list_cite_still_refuses_and_keeps_the_first_draft(workspace):
     if copied_list.is_file():
         copied_list.unlink()
     kept = _sequence_docx(other)
-    _write_word(kept, "The first draft stays.", [lone], [_review_source()], italic=True, title=other)
+    _write_word(
+        kept, "The first draft stays.", [lone], [_review_source()], italic=True, title=other
+    )
     kept_hash = _sha(kept)
     missing = write_stage10(other)
     assert missing.get("ok") is False, missing
@@ -515,7 +517,9 @@ def test_the_finished_essay_cites_within_the_locked_floor_and_cap(workspace, mon
     assert workspace is not None
 
 
-def test_the_final_document_title_is_the_short_title_on_the_first_draft(workspace, monkeypatch, tmp_path):
+def test_the_final_document_title_is_the_short_title_on_the_first_draft(
+    workspace, monkeypatch, tmp_path
+):
     """AC-close-6: The document title on the final Word file is the short title already on the first-draft Word file, never the opening paragraph, and within Word's 255-character limit. After the cover, the essay wording still matches the first draft, once."""
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
     seq = _open()
@@ -772,7 +776,9 @@ def test_each_review_gate_allows_a_second_review(workspace):
     assert short.get("stored") is not True
     assert "not intact" in str(short.get("reason") or "").casefold()
     long = _essay([_plan_source()], words=1900)
-    note.write_text(render_tracking("5", status="final", look=long, essay_id=intact), encoding="utf-8")
+    note.write_text(
+        render_tracking("5", status="final", look=long, essay_id=intact), encoding="utf-8"
+    )
     draft = essay_review(intact, "6", "PASS", "draft", constitution=LOOK)
     assert draft.get("ok") is True, draft
     stored = essay_review(intact, "6", "PASS", "confirm", constitution=LOOK)
@@ -805,7 +811,10 @@ def test_each_review_gate_allows_a_second_review(workspace):
 def test_public_wording_covers_cursor_and_build(workspace):
     """AC-public-1: Public wording. Cursor and Build share the review gates and the last step. Build covered."""
     for stage in ("6", "9", "10", "eqr"):
-        assert cursor_stage_launch(stage)["settings"]["rules"] == stage_launch(stage)["settings"]["rules"]
+        assert (
+            cursor_stage_launch(stage)["settings"]["rules"]
+            == stage_launch(stage)["settings"]["rules"]
+        )
         assert cursor_stage_launch(stage)["settings"] == stage_settings(stage)
     assert build_opened_word_gate is not cursor_opened_word_gate
     assert "opened_word_gate" in inspect.getsource(build_opened_word_gate)
@@ -813,6 +822,8 @@ def test_public_wording_covers_cursor_and_build(workspace):
     assert "A first refusal does not end the job" in REVIEW_PROMPT
     assert student_surface_hits(REVIEW_PROMPT) == []
     assert _leaked(REVIEW_PROMPT) == []
-    version = Path(__file__).resolve().parents[1].joinpath("pyproject.toml").read_text(encoding="utf-8")
+    version = (
+        Path(__file__).resolve().parents[1].joinpath("pyproject.toml").read_text(encoding="utf-8")
+    )
     assert f'version = "{__version__}"' in version
     assert workspace is not None

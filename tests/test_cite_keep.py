@@ -222,7 +222,9 @@ def test_reviewer_pass_writes_the_first_draft_word_with_citations(workspace):
         assert citation in look
         assert citation in text
     assert "Nobody" not in text
-    assert stored.get("next") == "The first-draft Word file is saved from the draft that was reviewed."
+    assert (
+        stored.get("next") == "The first-draft Word file is saved from the draft that was reviewed."
+    )
     _proof("cite-keep-word-extract.txt", text + "\n")
     _proof("cite-keep-first-draft.docx", _word_path(seq).read_bytes())
     assert workspace is not None
@@ -264,10 +266,10 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
     held = {item["token"]: item["reason"] for item in saved["cite_held"]}
     assert held["nobody, 1999"] == "claim-fit"
     assert "nobody, 1999" in load_record(seq)["withheld"]
-    rows = [
-        _source(seq, ident, author, year) for ident, (author, year) in _authors().items()
-    ]
-    missing = _citation_gate(seq, "A paper outside the gathered set is not used (Nobody, 1999).", rows)
+    rows = [_source(seq, ident, author, year) for ident, (author, year) in _authors().items()]
+    missing = _citation_gate(
+        seq, "A paper outside the gathered set is not used (Nobody, 1999).", rows
+    )
     assert missing["passed"] is False
     assert "nobody, 1999" in missing["reason"]
     kept = _citation_gate(seq, DRAFT.replace(" (Nobody, 1999)", ""), rows)
@@ -277,15 +279,28 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
         f"{hyphen_name}, M. and Nash, R. (2010) 'Herring recovery', "
         "Fisheries Journal, 1(1), pp. 1-9."
     )
-    assert stage10_reference_block(
-        [],
-        {"references_markdown": reference},
-        [{"heading": "Findings", "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010)."}],
-    ) is None
+    assert (
+        stage10_reference_block(
+            [],
+            {"references_markdown": reference},
+            [
+                {
+                    "heading": "Findings",
+                    "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010).",
+                }
+            ],
+        )
+        is None
+    )
     empty = stage10_reference_block(
         [],
         {},
-        [{"heading": "Findings", "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010)."}],
+        [
+            {
+                "heading": "Findings",
+                "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010).",
+            }
+        ],
     )
     assert empty is not None
     assert empty["reason"] == EMPTY_REFERENCES
@@ -388,7 +403,9 @@ def test_student_files_stay_plain_and_lookup_fields_stay(workspace):
     assert abstract["year"] == "2018"
     assert abstract["title"] == "A saved abstract title"
     assert abstract["doi"] == "10.1000/kept-abs"
-    saved_text = (uploads_dir(seq) / Path(str(abstract["locator"])).name).read_text(encoding="utf-8")
+    saved_text = (uploads_dir(seq) / Path(str(abstract["locator"])).name).read_text(
+        encoding="utf-8"
+    )
     assert "Grace Hopper" in saved_text
     assert workspace is not None
 

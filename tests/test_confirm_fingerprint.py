@@ -227,6 +227,7 @@ def test_ac4_essay_and_diary_use_the_same_essay_dig_handler(workspace, monkeypat
         "query",
         "confirmPhase",
         "cardDigest",
+        "smallerQuestions",
     ]
     source = inspect.getsource(essay_dig)
     assert "genre" not in source

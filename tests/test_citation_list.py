@@ -119,7 +119,9 @@ def _walk(seq: str, stop_before: str | None = "5") -> None:
 def _ready(seq: str | None = None) -> tuple[str, list[dict[str, str]]]:
     seq = open_sequence() if seq is None else seq
     rows = [
-        _source(seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"),
+        _source(
+            seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"
+        ),
         _source(
             seq,
             "froese",
@@ -135,11 +137,7 @@ def _ready(seq: str | None = None) -> tuple[str, list[dict[str, str]]]:
 
 
 def _entry(seq: str, ident: str) -> dict:
-    found = [
-        item
-        for item in load_citation_list(seq)["entries"]
-        if item.get("source_id") == ident
-    ]
+    found = [item for item in load_citation_list(seq)["entries"] if item.get("source_id") == ident]
     assert len(found) == 1, load_citation_list(seq)
     return found[0]
 
@@ -299,8 +297,12 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     seq = open_sequence()
     hyphen_author = f"Dickey{HYPHEN}Collas, M."
     rows = [
-        _source(seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"),
-        _source(seq, "dickey", hyphen_author, "2010", title="Herring recovery", doi="10.1000/herring"),
+        _source(
+            seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"
+        ),
+        _source(
+            seq, "dickey", hyphen_author, "2010", title="Herring recovery", doi="10.1000/herring"
+        ),
     ]
     _plant(seq, rows)
     _walk(seq)
@@ -377,27 +379,38 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     assert listed["stage"] == "4b"
 
     reference = (
-        f"Dickey{HYPHEN}Collas, M. (2010) 'Herring recovery', "
-        "Fisheries Journal, 1(1), pp. 1-9."
+        f"Dickey{HYPHEN}Collas, M. (2010) 'Herring recovery', Fisheries Journal, 1(1), pp. 1-9."
     )
     assert (
         stage10_reference_block(
             [],
             {"references_markdown": reference},
-            [{"heading": "Findings", "body": "Herring collapsed and later recovered (Dickey-Collas, 2010)."}],
+            [
+                {
+                    "heading": "Findings",
+                    "body": "Herring collapsed and later recovered (Dickey-Collas, 2010).",
+                }
+            ],
         )
         is None
     )
     empty = stage10_reference_block(
         [],
         {},
-        [{"heading": "Findings", "body": "Herring collapsed and later recovered (Dickey-Collas, 2010)."}],
+        [
+            {
+                "heading": "Findings",
+                "body": "Herring collapsed and later recovered (Dickey-Collas, 2010).",
+            }
+        ],
     )
     assert empty is not None
     assert empty["reason"] == EMPTY_REFERENCES
 
     diary = open_sequence(MODULE)
-    pack = _close_pack(diary, references=QIN_LINE, body="One decision used (Qin, 2021) as evidence for this diary.")
+    pack = _close_pack(
+        diary, references=QIN_LINE, body="One decision used (Qin, 2021) as evidence for this diary."
+    )
     written = write_stage10(diary)
     assert written["ok"] is True, written
     path = _final_file(diary)
@@ -498,7 +511,9 @@ def test_a_missing_research_note_stays_visible(workspace):
 def test_a_note_without_an_entry_blocks_the_draft(workspace):
     """AC-cite-lib-10: A research note that is not on the list blocks stage 4b and the first draft."""
     seq = open_sequence()
-    row = _source(seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait")
+    row = _source(
+        seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"
+    )
     _plant(seq, [row])
     _walk(seq, stop_before="4b")
     folder = _reviews(seq)
@@ -520,7 +535,9 @@ def test_a_note_without_an_entry_blocks_the_draft(workspace):
     blocked = essay_stage(seq, "5", "draft", DRAFT)
     assert blocked["ok"] is False, blocked
     assert blocked["reason"] == NOTE_UNLISTED
-    fresh = _source(seq, "later-note", "Jones, A.", "2021", title="Added after the list", doi="10.1000/later")
+    fresh = _source(
+        seq, "later-note", "Jones, A.", "2021", title="Added after the list", doi="10.1000/later"
+    )
     ship_4b(seq, [row, fresh], None)
     assert later.is_file()
     assert _entry(seq, "later-note")["usable"] is True
@@ -593,14 +610,18 @@ def test_a_source_already_listed_is_reused(workspace):
     notes_before = sorted(path.name for path in _reviews(seq).glob("*.md"))
     copy = dict(rows[0])
     copy["id"] = "smith-copy"
-    fresh = _source(seq, "jones", "Jones, A.", "2021", title="A second corridor paper", doi="10.1000/second")
+    fresh = _source(
+        seq, "jones", "Jones, A.", "2021", title="A second corridor paper", doi="10.1000/second"
+    )
     early = apply_body_cites(
         seq,
         "5",
         "A later paper records the same corridor limit (Jones, 2021). The stock stayed outside safe limits.",
     )
     assert "(Jones, 2021)" not in early["text"]
-    delivered = ship_4b(seq, [copy, fresh], {"jones": "The second paper is a new gathered source.\n"})
+    delivered = ship_4b(
+        seq, [copy, fresh], {"jones": "The second paper is a new gathered source.\n"}
+    )
     assert "already" in delivered["student_note"].casefold()
     assert "(Smith, 2020)" in delivered["student_note"]
     assert note.read_bytes() == before

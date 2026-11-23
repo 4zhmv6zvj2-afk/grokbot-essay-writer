@@ -155,7 +155,9 @@ def test_ac3_stage6_question_only_not_requirement_list(workspace):
     assert path.read_bytes() == before
 
     source = inspect.getsource(essay_review)
-    stage6 = source.split('stage == "6"', 1)[1].split('stage == "9"', 1)[0]
+    stage6 = source.split('if verdict == "PASS" and stage == "6":', 1)[1].split(
+        'if verdict == "PASS" and stage == "9":', 1
+    )[0]
     assert "opened_word_gate" not in stage6
     assert "answers_assignment_question" in stage6
 

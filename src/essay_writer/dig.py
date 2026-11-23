@@ -31,6 +31,16 @@ from essay_writer.confirm import (
 )
 from essay_writer.downloads import BUCKET_LABELS, run_downloads
 from essay_writer.known_paths import guard_write_door
+from essay_writer.lookup_fields import (
+    _KEPT_ON_ABSTRACT,
+    _doi_key,
+)
+from essay_writer.lookup_fields import (
+    abstract_lookup_fields as abstract_lookup_fields,
+)
+from essay_writer.lookup_fields import (
+    same_lookup_value as same_lookup_value,
+)
 from essay_writer.paths import module_code, sequence_write_error, uploads_dir, work_dir
 from essay_writer.resolvers import (
     openalex_api_key,
@@ -292,7 +302,8 @@ def openalex_search(query: str, cursor: str | None = None) -> dict[str, Any]:
             _copy_openalex_urls(hit, work)
             hits.append(hit)
     body: dict[str, Any] = {"called": True, "hits": hits, "row_count": row_count}
-    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    meta_value = payload.get("meta")
+    meta = meta_value if isinstance(meta_value, dict) else {}
     next_cursor = meta.get("next_cursor")
     # A short page, or a missing cursor, has no further official page.
     if isinstance(next_cursor, str) and next_cursor.strip() and row_count >= 5:
@@ -516,12 +527,6 @@ def _download_name(item: dict[str, Any]) -> str:
     return "Untitled download"
 
 
-def _doi_key(value: object) -> str:
-    if not isinstance(value, str):
-        return ""
-    return value.strip().removeprefix("https://doi.org/").casefold()
-
-
 def _pdf_dois(downloads: object) -> set[str]:
     if not isinstance(downloads, dict):
         return set()
@@ -544,18 +549,6 @@ def _abstract_name(doi_key: str, index: int, used: set[str]) -> str:
     return name
 
 
-_KEPT_ON_ABSTRACT = (
-    "author",
-    "year",
-    "title",
-    "doi",
-    "oa_url",
-    "pdf_url",
-    "journal",
-    "pages",
-    "volume",
-    "url",
-)
 _HIT_TEXT_FIELDS = ("oa_url", "pdf_url", "journal", "pages", "volume", "url")
 
 
@@ -632,60 +625,6 @@ def _abstract_text(abstract: str, details: dict[str, str]) -> str:
     if not heading:
         return body + "\n"
     return f"{heading}\n\n{body}\n"
-
-
-def same_lookup_value(field: str, claimed: str, stored: str) -> bool:
-    """True when the claimed value is the one the look-up already stored."""
-    if field == "doi":
-        return bool(_doi_key(stored)) and _doi_key(claimed) == _doi_key(stored)
-    return claimed.strip() == stored.strip()
-
-
-def _fields_on_row(row: dict[str, Any]) -> dict[str, str]:
-    kept: dict[str, str] = {}
-    for field in _KEPT_ON_ABSTRACT:
-        value = row.get(field)
-        if isinstance(value, str) and value.strip():
-            kept[field] = value.strip()
-    return kept
-
-
-def _matching_lookup_row(rows: object, wanted: str) -> dict[str, str] | None:
-    if not isinstance(rows, list):
-        return None
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        found = row.get("locator")
-        if not isinstance(found, str) or found.strip().replace("\\", "/") != wanted:
-            continue
-        return _fields_on_row(row)
-    return None
-
-
-def abstract_lookup_fields(essay_id: str, locator: str) -> dict[str, str]:
-    """Bibliographic fields stored when this file was saved from a look-up.
-
-    A saved abstract and a kept PDF use the same record. Only fields the
-    look-up returned are present. Nothing is invented.
-    """
-    if not isinstance(locator, str) or not locator.strip():
-        return {}
-    wanted = locator.strip().replace("\\", "/")
-    path = work_dir(essay_id) / "dig-card.json"
-    if not path.is_file():
-        return {}
-    try:
-        stored = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(stored, dict):
-        return {}
-    for key in ("abstract_files", "pdf_files"):
-        matched = _matching_lookup_row(stored.get(key), wanted)
-        if matched is not None:
-            return matched
-    return {}
 
 
 def _abstract_hits(card: dict[str, Any]) -> list[dict[str, Any]]:

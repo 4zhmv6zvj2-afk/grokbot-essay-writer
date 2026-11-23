@@ -459,8 +459,8 @@ def test_a_failed_pdf_keeps_the_fields_already_on_the_source(workspace, monkeypa
 def test_a_pdf_body_does_not_invent_or_replace_an_author(workspace, monkeypatch):
     """AC-src-7. The tool does not invent an author from PDF body text.
 
-    A missing author stays blank. A look-up author is not replaced by a name
-    taken only from the PDF.
+    A missing author stays blank. A claimed name that differs from the
+    look-up author refuses the source.
     """
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "off")
     seq = open_sequence()
@@ -502,13 +502,9 @@ def test_a_pdf_body_does_not_invent_or_replace_an_author(workspace, monkeypatch)
         },
         0,
     )
-    assert kept_issues == []
-    assert kept is not None
-    assert kept["author"] == "Ada Lovelace"
-    assert kept["field_sources"]["author"] == "lookup"
-    assert "Fosso Wamba" not in kept["author"]
-    cited = apply_opened_citation(kept, seq)
-    assert cited["author"] == "Ada Lovelace"
+    assert kept is None
+    assert kept_issues[0]["code"] == "invent-forbid"
+    assert "Wamba, S.F." in kept_issues[0]["reason"]
 
 
 def test_first_run_does_not_present_mailto_as_openalex_practice():

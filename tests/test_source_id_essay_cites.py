@@ -184,9 +184,7 @@ def test_reordering_keeps_each_papers_source_id(workspace):
 def test_a_shared_short_form_stays_two_works(tmp_path):
     """AC-id-2: Two works that share a short form are checked on their own lines."""
     lead = "Elizabeth Drury O'Neill and Tim Daw and Ada Lane and Emilie Lindkvist"
-    other = (
-        "Elizabeth Drury O'Neill and Tim Daw and Bea Lane and Cole Lane and Emilie Lindkvist"
-    )
+    other = "Elizabeth Drury O'Neill and Tim Daw and Bea Lane and Cole Lane and Emilie Lindkvist"
     first = {
         "id": "oneill-compliance",
         "author": lead,
@@ -426,7 +424,11 @@ def test_an_off_list_citation_does_not_write_the_final_file(workspace):
     seq = open_sequence(MODULE)
     rows = _shared_rows()
     shared = short_in_text(rows[0]["author"], rows[0]["year"])
-    _plant_close(seq, f"The closure is discussed {shared}. An unlisted paper is not added (Nobody, 1999).", rows)
+    _plant_close(
+        seq,
+        f"The closure is discussed {shared}. An unlisted paper is not added (Nobody, 1999).",
+        rows,
+    )
     first = _seed_first_draft(seq)
     before = first.read_bytes()
     refused = write_stage10(seq)

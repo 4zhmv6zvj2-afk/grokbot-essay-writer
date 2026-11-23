@@ -635,9 +635,7 @@ def all_gathered(essay_id: str) -> list[dict[str, Any]]:
     return found
 
 
-def entry_among(
-    entries: list[dict[str, Any]], source: dict[str, Any]
-) -> dict[str, Any] | None:
+def entry_among(entries: list[dict[str, Any]], source: dict[str, Any]) -> dict[str, Any] | None:
     """The entry in this batch that names the same gathered source."""
     return _match(entries, source)
 
@@ -755,7 +753,9 @@ def _usable(essay_id: str) -> list[dict[str, Any]] | None:
     """
     if not list_written(essay_id):
         return None
-    return [entry for entry in load_citation_list(essay_id)["entries"] if entry.get("usable") is True]
+    return [
+        entry for entry in load_citation_list(essay_id)["entries"] if entry.get("usable") is True
+    ]
 
 
 def usable_sources(essay_id: str) -> list[dict[str, Any]] | None:
@@ -924,7 +924,9 @@ def stored_in_text(essay_id: str, source: dict[str, Any]) -> str | None:
     """The short citation stored for this source. None when the list does not list it."""
     if not list_written(essay_id):
         return None
-    entry = _match([item for item in load_citation_list(essay_id)["entries"] if item.get("usable")], source)
+    entry = _match(
+        [item for item in load_citation_list(essay_id)["entries"] if item.get("usable")], source
+    )
     if entry is None:
         return None
     text = _text(entry.get("in_text"))
@@ -968,10 +970,10 @@ def stored_reference_lines(
     for source in sources:
         if not isinstance(source, dict):
             continue
-        entry = match_source(essay_id, source)
-        if entry is None or entry.get("usable") is not True:
+        matched = match_source(essay_id, source)
+        if matched is None or matched.get("usable") is not True:
             continue
-        line = _text(entry.get("reference"))
+        line = _text(matched.get("reference"))
         if line and line not in seen:
             seen.add(line)
             lines.append(line)

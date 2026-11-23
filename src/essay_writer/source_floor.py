@@ -26,9 +26,7 @@ ASK_QUESTION = "Name the essay question. An empty question is not searched."
 PLAN_PAGE = "This plan does not return another page."
 QUESTION_GAP = "This question returned no records."
 CROSSREF_NOTE = "Crossref was not used as a question search."
-FURTHER = (
-    "The source floor is not met, and more official records were still available."
-)
+FURTHER = "The source floor is not met, and more official records were still available."
 GAP_ONLY = (
     "A returned record is missing a name or a year, so it is not counted. "
     "No sourced essay will be written."
@@ -37,7 +35,9 @@ DID_NOT_RUN = "{name} did not run."
 
 _SOURCE_WORD = re.compile(r"(?i)\b(?:sources?|references?|citations?)\b")
 _CLASS_NAME = re.compile(r"(?i)\bspecialist industry sources?\b")
-_SECTION_BUDGET = re.compile(r"(?i)\bsection budgets?\b|\b(?:each|per|every)\s+(?:section|entry|part)\b")
+_SECTION_BUDGET = re.compile(
+    r"(?i)\bsection budgets?\b|\b(?:each|per|every)\s+(?:section|entry|part)\b"
+)
 _RANGE_COUNT = re.compile(
     r"(?i)\b(\d[\d,]*)\s*(?:–|-|—|to)\s*(\d[\d,]*)\s+"
     r"(?:(?:academic|scholarly|peer-reviewed|relevant|credible)\s+)*"
@@ -52,9 +52,7 @@ _BARE_COUNT = re.compile(
     r"(?:sources?|references?|citations?)\b"
 )
 _WORD_COUNT = re.compile(r"(?i)\b(\d[\d,]*)\s+words?\b")
-_WORD_RANGE = re.compile(
-    r"(?i)\b(\d[\d,]*)\s*(?:–|-|—|to)\s*(\d[\d,]*)\s+words?\b"
-)
+_WORD_RANGE = re.compile(r"(?i)\b(\d[\d,]*)\s*(?:–|-|—|to)\s*(\d[\d,]*)\s+words?\b")
 _PERCENT = re.compile(r"(\d[\d,]*)\s*%")
 _PART_SUBJECT = re.compile(
     r"(?i)^\s*(?:(?:the|a|an|your|its|this|that)\s+)?"
@@ -142,7 +140,7 @@ def assignment_floor(essay_id: str) -> dict[str, Any]:
 
     scheme = mark_scheme_text(essay_id)
     brief = module_brief_text(essay_id)
-    stated = _stated_counts(scheme) 
+    stated = _stated_counts(scheme)
     stated = _merge_counts(stated, _stated_counts(brief))
     scheme_band = word_band_from_brief_text(scheme)
     band_text = scheme if scheme_band else brief
@@ -368,8 +366,10 @@ def question_lines(questions: list[dict[str, Any]]) -> list[str]:
         text = item.get("question")
         if not isinstance(text, str) or not text.strip():
             continue
-        openalex = item.get("openalex") if isinstance(item.get("openalex"), dict) else {}
-        consensus = item.get("consensus") if isinstance(item.get("consensus"), dict) else {}
+        openalex_value = item.get("openalex")
+        openalex = openalex_value if isinstance(openalex_value, dict) else {}
+        consensus_value = item.get("consensus")
+        consensus = consensus_value if isinstance(consensus_value, dict) else {}
         hits = list(openalex.get("hits") or []) + list(consensus.get("hits") or [])
         gaps = [hit for hit in hits if isinstance(hit, dict) and is_gap(hit)]
         if not hits:
@@ -377,7 +377,9 @@ def question_lines(questions: list[dict[str, Any]]) -> list[str]:
         elif gaps and not any(isinstance(hit, dict) and work_key(hit) for hit in hits):
             lines.append(f"- {text.strip()}: a returned record is missing a name or a year.")
         else:
-            lines.append(f"- {text.strip()}: {len(distinct_works([h for h in hits if isinstance(h, dict)]))} sources.")
+            lines.append(
+                f"- {text.strip()}: {len(distinct_works([h for h in hits if isinstance(h, dict)]))} sources."
+            )
         pagination = consensus.get("pagination")
         if isinstance(pagination, str) and pagination.strip():
             lines.append(f"- {pagination.strip()}")
@@ -675,7 +677,11 @@ def _refusal_sentence(questions: list[dict[str, Any]]) -> str:
             if not isinstance(detail, str) or not detail.strip():
                 detail = "no reason given"
             status = refused.get("status")
-            code = f"HTTP {status}: " if isinstance(status, int) and not isinstance(status, bool) and status else ""
+            code = (
+                f"HTTP {status}: "
+                if isinstance(status, int) and not isinstance(status, bool) and status
+                else ""
+            )
             lines.append(f"{name} refused the look-up. {code}{detail.strip()[:200]}")
     return " ".join(lines)
 
@@ -686,7 +692,11 @@ def _empty_sentence(
     consensus_called: bool,
 ) -> str:
     parts: list[str] = []
-    called = [name for name, flag in (("OpenAlex", openalex_called), ("Consensus", consensus_called)) if flag]
+    called = [
+        name
+        for name, flag in (("OpenAlex", openalex_called), ("Consensus", consensus_called))
+        if flag
+    ]
     if len(called) == 1:
         parts.append(f"{called[0]} was called.")
     elif len(called) == 2:
