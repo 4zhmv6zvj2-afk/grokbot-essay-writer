@@ -24,6 +24,7 @@ from test_word_references_4a import (
     _plant_stage10_pack,
 )
 
+from essay_writer import __version__
 from essay_writer.build_office import stage_launch
 from essay_writer.citation_list import list_written, load_citation_list, short_in_text
 from essay_writer.cursor_office import cursor_stage_launch
@@ -459,7 +460,7 @@ def test_public_wording_is_shared(workspace):
     gate = inspect.getsource(stage_launch)
     assert "Cursor reads that same row" in gate or "stage_settings" in gate
     version = REPO.joinpath("pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "0.9.15"' in version
+    assert f'version = "{__version__}"' in version
     source = Path(__file__).read_text(encoding="utf-8")
     assert ("@pytest.mark." + "parametrize") not in source
     seated = {

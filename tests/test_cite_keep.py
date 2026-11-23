@@ -14,6 +14,7 @@ from helpers import open_sequence, picked
 from test_student_plain_close import _assert_plain, _close_pack, _final_file
 from test_word_references_4a import JONES_LINE, MODULE, QIN_LINE, _plant_stage10_pack
 
+from essay_writer import __version__
 from essay_writer.build_office import stage_launch
 from essay_writer.cite_fit import load_record
 from essay_writer.cursor_office import cursor_stage_launch
@@ -424,4 +425,4 @@ def test_public_wording_and_shared_rules():
     gate = inspect.getsource(stage_launch)
     assert "Cursor reads that same row" in gate
     version = REPO.joinpath("pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "0.9.15"' in version
+    assert f'version = "{__version__}"' in version
