@@ -1442,6 +1442,10 @@ def essay_dig(
         body["markdown"] = f"{essay_id}/dig-card.md"
         return body
     candidates = _open_candidates(card)
+    from essay_writer.download_shortlist import rows_for_download
+
+    # The card keeps every hit. Downloads use the shortlist chosen after that list exists.
+    candidates = rows_for_download(essay_id, candidates, candidates)
     if candidates:
         downloads = run_downloads(essay_id, candidates)
         body["downloads"] = downloads

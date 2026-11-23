@@ -143,7 +143,7 @@ Read the helper the brief picked. An essay plan is introduction, body, and concl
 - A missing page, DOI, volume, journal, place, publisher, or access date stays blank.
 - Do not invent it.
 - The full reference pass is stage 9.
-- download-list.docx is leftovers only: gathered sources not already in the papers zip, plus failed look-up addresses that are not saved PDFs. Do not repeat citation lines from annotation.docx.
+- download-list.docx is leftovers only: sources that match the assignment question and support the plan, and that are not already in the papers zip, plus failed look-up addresses for those sources that are not saved PDFs. A gathered source that does not match stays off that list. Do not repeat citation lines from annotation.docx.
 - When you name other gathered sources or free alternatives already found after this save, speech only. Do not open a new look-up or free-alt download in this step.
 - After this save is approved, a later download step can fetch leftover free alternatives already found. That step does not open a new look-up and does not invent an address.
 - The citation year is the year in the PDF page title or header. Do not use the file's modified time as the year.

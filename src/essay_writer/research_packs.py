@@ -561,6 +561,10 @@ def ship_4a(essay_id: str, sources: list[dict[str, Any]], notes: dict[str, str])
         empty_note="No gathered source is on this bibliography.",
     )
     leftovers = bibliography_leftovers(bibliography, pdfs, opened)
+    from essay_writer.download_shortlist import rows_for_download
+
+    failures = rows_for_download(essay_id, failures, sources)
+    leftovers = rows_for_download(essay_id, leftovers, sources)
     listed = _write_download_list(
         essay_id,
         failures,
@@ -795,7 +799,9 @@ def _list_rows(essay_id: str, sources: list[dict[str, Any]]) -> list[dict[str, A
     hidden = abstract_only_ids(sources, rows, pdfs, opened)
     visible = [source for source in sources if str(source.get("id")) not in hidden]
     rows.extend(bibliography_leftovers(visible, pdfs, opened))
-    return rows
+    from essay_writer.download_shortlist import rows_for_download
+
+    return rows_for_download(essay_id, rows, sources)
 
 
 def _append_citation(essay_id: str, annotation: Path, paper: dict[str, Any]) -> None:
@@ -862,6 +868,10 @@ def _refresh_4a(
         if isinstance(paper, dict):
             _append_citation(essay_id, annotation, paper)
     leftovers = bibliography_leftovers(bibliography, pdfs, opened)
+    from essay_writer.download_shortlist import rows_for_download
+
+    failures = rows_for_download(essay_id, failures, sources)
+    leftovers = rows_for_download(essay_id, leftovers, sources)
     listed = _write_download_list(
         essay_id,
         failures,
