@@ -1270,7 +1270,13 @@ def token_allowed(token: str, forms: set[str]) -> bool:
     year = match.group(2)
 
     def person_ok(words: list[str]) -> bool:
-        return any(f"{key}, {year}" in folded_forms for key in _person_form_keys(words))
+        keys = _person_form_keys(words)
+        if not keys:
+            return False
+        # A given name matches that person. A one-word citation may use the family name.
+        if len(keys) > 1 and len(_content_words(words)) > 1:
+            return f"{keys[0]}, {year}" in folded_forms
+        return any(f"{key}, {year}" in folded_forms for key in keys)
 
     return all(person_ok(words) for words in people)
 

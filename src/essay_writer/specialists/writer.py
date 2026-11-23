@@ -627,9 +627,14 @@ def finish_first_draft(essay_id: str, text: str) -> dict[str, Any]:
     claims can carry the length, the returned text is inside the band. A draft
     that is still short is not the finished first draft. A draft a citation
     removal left unreadable is not saved and is not treated as inside the band.
+    The essay cites relevant works up to its own count, which is not the
+    length of the citation list.
     """
+    from essay_writer.essay_cites import fit_essay_cites
     from essay_writer.rewrite_baseline import band_edges
 
+    if isinstance(text, str) and text.strip():
+        text = fit_essay_cites(essay_id, text)
     broken = first_draft_unreadable(text)
     if broken is not None:
         return {"ready": False, "text": text, "block": broken}

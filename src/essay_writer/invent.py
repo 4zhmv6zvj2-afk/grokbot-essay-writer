@@ -264,8 +264,10 @@ def gather_source(
     if opened is not None:
         text = opened.text
     issues: list[dict[str, str]] = []
+    # A supplied id is kept. A missing id is minted from the work. The list
+    # position in the label above is not the source id.
     kept: dict[str, Any] = {
-        "id": _as_text(raw.get("id")) or f"src-{index + 1}",
+        "id": _as_text(raw.get("id")) or "",
         "origin": origin,
         "locator": locator.strip().replace("\\", "/"),
         "gathered": True,
@@ -363,6 +365,10 @@ def gather_source(
         kept["field_sources"] = field_sources
     if issues:
         return None, issues
+    if not kept["id"]:
+        from essay_writer.source_ids import stable_source_id
+
+        kept["id"] = stable_source_id(kept) or ("loc:" + kept["locator"].casefold())
     return kept, []
 
 
@@ -381,7 +387,12 @@ def gather_sources(
         issues.extend(source_issues)
         if source is None:
             continue
+        supplied = _as_text(raw.get("id")) if isinstance(raw, dict) else ""
         if source["id"] in seen:
+            # The same work minted the same id. It is not stored twice.
+            # A caller that sent one id for two records is still refused.
+            if not supplied:
+                continue
             issues.append(
                 {"code": "invent-forbid", "reason": f"duplicate source id {source['id']}"}
             )

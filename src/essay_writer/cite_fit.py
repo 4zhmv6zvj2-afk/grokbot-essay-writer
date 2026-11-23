@@ -227,22 +227,43 @@ def _sources(essay_id: str) -> list[dict[str, Any]]:
 
 
 def _source_for(token: str, sources: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The gathered work this token names.
 
+    A source id names that work. A short form names a work only when one
+    gathered work uses it. A shared short form still names gathered works,
+    so the sentence is kept, and it does not pick the first of those works
+    as the only match for a later look-up.
+    """
+    by_id: list[dict[str, Any]] = []
+    short: list[dict[str, Any]] = []
     for source in sources:
+        ident = source.get("id")
+        if isinstance(ident, str) and ident.strip():
+            if fold_name(ident).casefold() == fold_name(token).casefold():
+                by_id.append(source)
+                continue
         stored = source.get("in_text")
+        matched = False
         if isinstance(stored, str) and stored.strip():
             inner = stored.strip()
             if inner.startswith("(") and inner.endswith(")"):
                 inner = inner[1:-1]
             if inner and fold_name(inner).casefold() == fold_name(token).casefold():
-                return source
-        author = source.get("author")
-        year = source.get("year")
-        if not author or year is None or year == "":
-            continue
-        forms = in_text_forms(str(author), str(year))
-        if token_allowed(token, forms):
-            return source
+                matched = True
+        if not matched:
+            author = source.get("author")
+            year = source.get("year")
+            if author and year is not None and year != "":
+                forms = in_text_forms(str(author), str(year))
+                matched = token_allowed(token, forms)
+        if matched:
+            short.append(source)
+    if len(by_id) == 1:
+        return by_id[0]
+    if len(short) == 1:
+        return short[0]
+    if len(short) > 1:
+        return {"id": "", "ambiguous": True}
     return None
 
 
