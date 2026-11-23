@@ -618,10 +618,21 @@ def ship_4b(
         student_list_text,
     )
     from essay_writer.known_paths import research_file
-    from essay_writer.source_floor import draft_block, exhaustion_sentence
+    from essay_writer.source_floor import (
+        NO_PAPERS,
+        draft_block,
+        exhaustion_sentence,
+        record_empty_gather,
+        saved_research_works,
+    )
     from essay_writer.word import write_critical_review_docx
 
     blocked = draft_block(essay_id)
+    if not blocked:
+        incoming = [item for item in sources if isinstance(item, dict) and item.get("id")]
+        if not incoming and not saved_research_works(essay_id):
+            record_empty_gather(essay_id)
+            blocked = NO_PAPERS
     if blocked:
         return {
             "stage": "4b",

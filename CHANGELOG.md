@@ -3,6 +3,11 @@
 ## Unreleased
 
 - The sdist ships `.cursor/skills/**`, so the verify-skill checks pass from the extracted tarball.
+- A printed source range uses its low end. "Up to N sources" is a cap, not a floor. A stated source count beside a word count stays the floor.
+- A silent brief cites at least ceil(words / 1000 * 8) works and at most 12 per 1,000 words. A stated count above that cap raises the cap. The rate is not added to the stated count.
+- One work counts once across a DOI record and a no-DOI record. Two works that share a title and a year and name different authors stay two. Uploaded files do not meet the official floor. The gather reports both counts.
+- When the OpenAlex page budget stops a gather, the note names the found count, the floor, and that budget, and it either saves the OpenAlex cursor or says that no more official pages are available.
+- An empty gather does not write a sourced essay when no source record and no citation entry exist, including when dig-card.json is absent. Stage 4b, stage 5, and stage 10 wait.
 - A gather with no confirmed question asks for the question and does not search.
 - A gathered sentence keeps the citation-list short form when that source is listed. When it is not, the short form comes from the stored author and year, including the stored look-up record. A source with no stored author or year is not appended.
 - A remembered author, year, title, or DOI is kept only when it matches the claimed value. A different claimed value refuses the source.

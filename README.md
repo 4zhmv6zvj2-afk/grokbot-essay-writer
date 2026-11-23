@@ -136,6 +136,8 @@ the answer is stored beside the brief rather than written into it.
 
 ## Citation policy
 
+When the assignment states no source count, the essay cites at most 12 distinct works per 1,000 words. A stated count above that cap raises the cap. The rate is not added to the stated count.
+
 A parenthetical citation, or a narrative citation with a person cue (`et al.`,
 a title, an initial, a joint list, a multi-word personal name, or a shouted
 surname of five or more letters), must match a gathered source or Word is not

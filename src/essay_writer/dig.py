@@ -993,16 +993,44 @@ def _take_consensus(
     _refresh_gaps(slot)
 
 
-def _count_slots(slots: list[dict[str, Any]], essay_id: str) -> int:
-    from essay_writer.source_floor import distinct_works, saved_upload_records, work_key
+def _count_slots(slots: list[dict[str, Any]]) -> int:
+    from essay_writer.source_floor import distinct_works, work_key
 
     records: list[dict[str, Any]] = []
     for slot in slots:
         for hit in _slot_hits(slot["openalex"]) + _slot_hits(slot["consensus"]):
             if work_key(hit):
                 records.append(hit)
-    records.extend(saved_upload_records(essay_id))
     return len(distinct_works(records))
+
+
+def _upload_count(essay_id: str) -> int:
+    from essay_writer.source_floor import distinct_works, saved_upload_records
+
+    return len(distinct_works(saved_upload_records(essay_id)))
+
+
+def _resume_cursor(essay_id: str, question: str) -> str | None:
+    """The OpenAlex cursor saved when the page budget stopped the previous gather."""
+    path = work_dir(essay_id) / "dig-card.json"
+    if not path.is_file():
+        return None
+    try:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(stored, dict):
+        return None
+    saved_question = stored.get("question")
+    if not isinstance(saved_question, str) or not _same_question(saved_question, question):
+        return None
+    gather = stored.get("gather")
+    if not isinstance(gather, dict):
+        return None
+    cursor = gather.get("openalex_cursor")
+    if isinstance(cursor, str) and cursor.strip():
+        return cursor.strip()
+    return None
 
 
 def _further_page(slots: list[dict[str, Any]]) -> bool:
@@ -1031,6 +1059,7 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
         ask_planning_model,
         assignment_floor,
         decide_gather,
+        rate_for_words,
     )
 
     floor = assignment_floor(essay_id)
@@ -1049,16 +1078,26 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
     seen: set[str] = set()
     seen_cursors: set[str] = set()
     seen_pages: set[tuple[str, int]] = set()
+    resume = _resume_cursor(essay_id, question)
+    if resume:
+        seen_cursors.add(resume)
     for slot in slots:
-        _take_openalex(slot, openalex_search(slot["question"]), extend=False)
+        cursor = resume if _same_question(slot["question"], question) else None
+        _take_openalex(slot, openalex_search(slot["question"], cursor=cursor), extend=False)
         _take_consensus(slot, consensus_search(slot["question"]), status, extend=False)
         _remember_unpaywall(slot, seen)
-    count = _count_slots(slots, essay_id)
+    count = _count_slots(slots)
+    raw_floor = floor.get("floor")
+    needed = (
+        raw_floor
+        if isinstance(raw_floor, int) and not isinstance(raw_floor, bool)
+        else rate_for_words(None)
+    )
     pages = 0
-    while count < int(floor.get("floor") or 0) and pages < _PAGE_CAP:
+    while count < needed and pages < _PAGE_CAP:
         moved = False
         for slot in slots:
-            if count >= int(floor.get("floor") or 0):
+            if count >= needed:
                 break
             cursor = slot["openalex"].get("next_cursor")
             if isinstance(cursor, str) and cursor in seen_cursors:
@@ -1070,8 +1109,8 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
                 _remember_unpaywall(slot, seen)
                 moved = True
                 pages += 1
-                count = _count_slots(slots, essay_id)
-                if count >= int(floor.get("floor") or 0) or pages >= _PAGE_CAP:
+                count = _count_slots(slots)
+                if count >= needed or pages >= _PAGE_CAP:
                     break
             next_page = slot["consensus"].get("next_page")
             page_key = (slot["question"], next_page) if isinstance(next_page, int) else None
@@ -1090,12 +1129,27 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
                 _remember_unpaywall(slot, seen)
                 moved = True
                 pages += 1
-                count = _count_slots(slots, essay_id)
-                if count >= int(floor.get("floor") or 0) or pages >= _PAGE_CAP:
+                count = _count_slots(slots)
+                if count >= needed or pages >= _PAGE_CAP:
                     break
         if not moved:
             break
-    gather = decide_gather(slots, floor, count, _further_page(slots))
+    page_cursor = None
+    if pages >= _PAGE_CAP and count < needed:
+        for slot in slots:
+            raw_cursor = slot["openalex"].get("next_cursor")
+            if isinstance(raw_cursor, str) and raw_cursor.strip():
+                page_cursor = raw_cursor.strip()
+                break
+    gather = decide_gather(
+        slots,
+        floor,
+        count,
+        _further_page(slots),
+        _upload_count(essay_id),
+        page_capped=pages >= _PAGE_CAP and count < needed,
+        page_cursor=page_cursor,
+    )
     openalex_hits: list[dict[str, Any]] = []
     consensus_hits: list[dict[str, Any]] = []
     unpaywall: list[dict[str, Any]] = []

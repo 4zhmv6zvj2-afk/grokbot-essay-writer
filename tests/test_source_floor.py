@@ -23,7 +23,9 @@ from essay_writer.citation_list import (
     stored_in_text,
 )
 from essay_writer.dig import essay_dig, openalex_search
+from essay_writer.essay_cites import essay_cite_bounds
 from essay_writer.gates import essay_gates
+from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, module_code, work_dir
 from essay_writer.research_packs import abstract_only_ids, ship_4b
 from essay_writer.shells import cursor_shell, mount_handler
@@ -33,6 +35,7 @@ from essay_writer.source_floor import (
     FURTHER,
     NO_LENGTH,
     NO_PAPERS,
+    PAGE_BUDGET,
     PLAN_PAGE,
     QUESTION_GAP,
     UNFINISHED,
@@ -340,7 +343,40 @@ def test_the_floor_counts_distinct_works_and_keeps_gaps_uncounted(workspace):
         )
         == 1
     )
-    assert len(upload_and_catalog) == 2
+    assert len(upload_and_catalog) == 1
+    assert any(item.get("author") == "Cara" for item in same)
+    assert (
+        len(
+            distinct_works(
+                [
+                    {"title": "Harbour capacity", "year": "2020", "author": "Ada"},
+                    {"title": "Harbour capacity", "year": "2020", "author": "Cara"},
+                ]
+            )
+        )
+        == 2
+    )
+    assert (
+        len(
+            distinct_works(
+                [
+                    {
+                        "title": "Harbour capacity",
+                        "year": "2020",
+                        "author": "Ada",
+                        "doi": "10.1/left",
+                    },
+                    {
+                        "title": "Harbour capacity",
+                        "year": "2020",
+                        "author": "Ada",
+                        "doi": "10.1/right",
+                    },
+                ]
+            )
+        )
+        == 2
+    )
     hidden = abstract_only_ids(
         [{"id": "abs-1", "title": "Harbour capacity", "doi": "10.5/h"}],
         [{"bucket": "html-abstract", "doi": "10.5/h", "title": "Harbour capacity"}],
@@ -1052,6 +1088,155 @@ def test_confirm_does_not_call_the_catalogs_again(workspace, monkeypatch):
     assert saved["wrote"] is True
     assert len(seen) == after_draft
     assert asked["n"] == 1
+    assert workspace is not None
+
+
+def test_the_cite_bounds_follow_the_stated_count_and_the_rate_cap(workspace):
+    """A stated count is the minimum. Above the rate cap, it is also the maximum."""
+    seq = open_sequence()
+    _question_brief(seq, "The assignment is 2,000 words.\n")
+    silent = essay_cite_bounds(seq)
+    assert silent["minimum"] == 16
+    assert silent["maximum"] == 24
+    _question_brief(seq, "The assignment is 2,000 words.\nUse at least 30 sources.\n")
+    stated = essay_cite_bounds(seq)
+    assert stated["minimum"] == 30
+    assert stated["maximum"] == 30
+    _question_brief(seq, "The assignment is 1,000 words.\nUse between 6 and 8 sources.\n")
+    ranged = essay_cite_bounds(seq)
+    assert ranged["minimum"] == 6
+    assert ranged["maximum"] == 12
+    _question_brief(seq, "The assignment is 1,000 words.\nYou may use up to 10 sources.\n")
+    capped = assignment_floor(seq)
+    assert capped["floor"] == 8
+    assert capped["floor_from"] == "word_rate"
+    assert capped["writing_limit"] == 10
+    _question_brief(seq, "Write at least 1,000 words with at least 10 references.\n")
+    words_and_sources = assignment_floor(seq)
+    assert words_and_sources["floor"] == 10
+    assert words_and_sources["floor_from"] == "stated"
+    assert words_and_sources["words"] == 1000
+    assert workspace is not None
+
+
+def test_uploaded_files_do_not_meet_the_official_floor(workspace, monkeypatch):
+    """An upload is reported and does not count toward the official floor."""
+    seq = open_sequence()
+    _question_brief(seq, "The assignment is 1,000 words.\n")
+    write_upload(
+        workspace,
+        essay_id=ESSAY,
+        name="harbour.md",
+        text="Smith, J. (2020) 'Harbour capacity and trade'.\nThe harbour handles a large share.\n",
+    )
+    monkeypatch.setattr(
+        "essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None
+    )
+    monkeypatch.setattr("essay_writer.dig.consensus_api_key", lambda: None)
+    _install(
+        monkeypatch,
+        {
+            "api.openalex.org": lambda url: {"results": []},
+            "api.consensus.app": lambda url: {"results": []},
+        },
+    )
+    draft = essay_dig(seq, "How do ports shape coastal trade?", "draft")
+    gather = draft["card"]["gather"]
+    assert gather["count"] == 0
+    assert gather["uploads"] == 1
+    assert gather["met"] is False
+    assert "Official sources: 0." in gather["note"]
+    assert "Uploaded files: 1." in gather["note"]
+    assert workspace is not None
+
+
+def test_the_page_budget_saves_the_cursor_or_says_pages_are_finished(workspace, monkeypatch):
+    """The page-budget note names the found count, the floor, and the budget."""
+    seq = open_sequence()
+    _question_brief(seq, "The assignment is 4,000 words.\n")
+    monkeypatch.setattr(
+        "essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None
+    )
+    monkeypatch.setattr("essay_writer.dig._PAGE_CAP", 1)
+
+    page = [_work("Budget paper", 2020, "Ada", "10.20/budget") for _ in range(5)]
+
+    def openalex(url):
+        return {"meta": {"next_cursor": "cursor-next"}, "results": page}
+
+    _install(
+        monkeypatch,
+        {"api.openalex.org": openalex, "api.consensus.app": lambda url: {"results": []}},
+    )
+    draft = essay_dig(seq, "How do ports shape coastal trade?", "draft")
+    gather = draft["card"]["gather"]
+    assert gather["openalex_cursor"] == "cursor-next"
+    assert PAGE_BUDGET in gather["note"]
+    assert f"floor is {gather['floor']}" in gather["note"]
+    assert "Found 1 official source." in gather["note"]
+    assert "saved for a later gather" in gather["note"]
+    saved = essay_dig(
+        seq,
+        "How do ports shape coastal trade?",
+        "confirm",
+        cardDigest=draft["cardDigest"],
+    )
+    assert saved["ok"] is True, saved
+    resumed: list[str] = []
+
+    def remember(url, headers=None):
+        resumed.append(str(url))
+        host = _host(url)
+        if host == "api.openalex.org":
+            return openalex(url)
+        return {"results": []}
+
+    monkeypatch.setattr("essay_writer.dig._get_json", remember)
+    essay_dig(seq, "How do ports shape coastal trade?", "draft")
+    opened = [item for item in resumed if _host(item) == "api.openalex.org"]
+    assert opened
+    assert _queries(opened[0]).get("cursor") == ["cursor-next"]
+
+    finished = open_sequence()
+    _question_brief(finished, "The assignment is 4,000 words.\n")
+    calls = {"n": 0}
+
+    def once(url):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {
+                "meta": {"next_cursor": "only-once"},
+                "results": [_work("First page", 2020, "Ada", "10.21/one") for _ in range(5)],
+            }
+        return {"results": [_work("Last page", 2021, "Bea", "10.21/two")]}
+
+    _install(
+        monkeypatch,
+        {"api.openalex.org": once, "api.consensus.app": lambda url: {"results": []}},
+    )
+    stopped = essay_dig(finished, "How do ports shape coastal trade?", "draft")
+    stopped_gather = stopped["card"]["gather"]
+    assert "openalex_cursor" not in stopped_gather
+    assert PAGE_BUDGET in stopped_gather["note"]
+    assert "No more official pages are available." in stopped_gather["note"]
+    assert f"floor is {stopped_gather['floor']}" in stopped_gather["note"]
+    assert workspace is not None
+
+
+def test_an_empty_gather_blocks_without_a_saved_card(workspace):
+    """Stage 4b, stage 5, and stage 10 wait when no work was saved and no card exists."""
+    seq = open_sequence()
+    _question_brief(seq, "The assignment is 1,000 words.\n")
+    assert not (work_dir(seq) / "dig-card.json").is_file()
+    delivered = ship_4b(seq, [], None)
+    assert delivered["blocked"] is True
+    assert delivered["citation_list"]["written"] is False
+    assert list_written(seq) is False
+    assert NO_PAPERS in delivered["student_note"]
+    assert first_write_block(seq)["reason"] == NO_PAPERS
+    stage10 = write_stage10(seq)
+    assert stage10["ok"] is False
+    assert stage10["reason"] == NO_PAPERS
     assert workspace is not None
 
 
