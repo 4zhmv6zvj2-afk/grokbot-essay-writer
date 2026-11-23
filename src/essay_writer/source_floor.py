@@ -101,23 +101,13 @@ def confirmed_question(essay_id: str) -> str:
     return ""
 
 
-def ask_planning_model(question: str, reply: Any = None) -> Any:
-    """One-shot ask. The shell supplies the smaller questions on this call.
+def accept_smaller_questions(question: str, reply: Any = None) -> list[str]:
+    """Smaller questions the shell passed, then the confirmed question.
 
-    Both shells pass them as smallerQuestions on the gather. A missing reply
-    is a failed call. This does not invent a question, and it does not ask again.
-    """
-    if not isinstance(question, str) or not question.strip():
-        return None
-    return reply
-
-
-def accept_split(question: str, reply: Any) -> list[str]:
-    """Smaller questions the model returned, then the confirmed question.
-
-    Blanks, duplicates, and strings the model did not return are left out.
-    At most three smaller questions are kept. A failed reply leaves only
-    the confirmed question.
+    The shell asks once before the gather and passes at most three smaller
+    questions. This reads that reply. It does not ask again. Blanks,
+    duplicates, and search operators are left out. A missing or unusable
+    reply leaves only the confirmed question.
     """
     confirmed = " ".join(question.split())
     if not confirmed:
