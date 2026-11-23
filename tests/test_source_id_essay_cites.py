@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 
 from docx import Document
-from helpers import open_sequence, write_upload
+from helpers import open_sequence, write_proof, write_upload
 from test_stage10_close_and_findings import _docx_text, _final_file, _seed_first_draft
 from test_word_references_4a import (
     MODULE,
@@ -56,7 +56,6 @@ from essay_writer.stage_state import _note_path, load_pointer
 from essay_writer.word_references import token_is_covered
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 NOTE = "The opened file states the limit, and the year is the one stored on the list."
 QUESTION = "Question: When is it fair to close a fishery so a fish stock can recover?\n"
 PLAN = (
@@ -71,12 +70,6 @@ _DENY = {
     "w-4": "add92b9cde2bdbf3daaf65a0db79e9b1a7fa428b71b4d6ce38c742eb6dca0c1c",
     "w-5": "459415a966d88d3e30f7e0408fa7b6ce3eef5316ab8bde26d78213aaf583a606",
 }
-
-
-def _proof(name: str, payload: str) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    (ARTIFACTS / name).write_text(payload, encoding="utf-8")
 
 
 def _pieces(text: str) -> set[str]:
@@ -174,7 +167,7 @@ def test_reordering_keeps_each_papers_source_id(workspace):
     assert by_doi == again
     assert len(set(by_doi.values())) == 2
     assert all(not ident.startswith("src-") for ident in by_doi.values())
-    _proof(
+    write_proof(
         "source-id-reorder.txt",
         "\n".join(f"{doi} {ident}" for doi, ident in sorted(by_doi.items())) + "\n",
     )
@@ -223,7 +216,7 @@ def test_a_shared_short_form_stays_two_works(tmp_path):
     misses = compliance_misses(path, [first, second], essay_id=seq)
     assert misses == []
     assert token_is_covered(inner, lines, seq) is True
-    _proof(
+    write_proof(
         "shared-short-form-close.txt",
         "\n".join(
             [
@@ -264,7 +257,7 @@ def test_a_silent_brief_cites_the_essay_not_only_the_list(workspace):
     count = len(cited_source_ids(fitted, sources))
     assert count >= 16
     assert count <= 24
-    _proof(
+    write_proof(
         "essay-cite-floor.txt",
         f"list entries: {len(listed['entries'])}\nessay before: 9\nessay after: {count}\n\n{fitted}\n",
     )
@@ -281,7 +274,7 @@ def test_a_silent_brief_cites_the_essay_not_only_the_list(workspace):
     raised = fit_essay_cites(stated, short)
     raised_count = len(cited_source_ids(raised, sources[:12]))
     assert raised_count == 5
-    _proof(
+    write_proof(
         "essay-cite-stated.txt",
         f"minimum: {bounds['minimum']}\nessay after: {raised_count}\n\n{raised}\n",
     )
@@ -313,7 +306,7 @@ def test_the_essay_stops_at_twelve_works_per_thousand_words(workspace):
     count = len(cited_source_ids(fitted, sources))
     assert count == 24
     assert len(load_citation_list(seq)["entries"]) == 30
-    _proof(
+    write_proof(
         "essay-cite-cap.txt",
         f"list entries: 30\nessay after: {count}\n\n{fitted}\n",
     )
@@ -350,7 +343,7 @@ def test_a_work_is_cited_only_when_it_bears_on_the_question_and_plan(workspace):
     assert stray["id"] not in cited_source_ids(fitted, sources)
     assert len(load_citation_list(seq)["entries"]) == 4
     assert len(cited_source_ids(draft, sources)) == 0
-    _proof("essay-cite-relevant.txt", fitted + "\n")
+    write_proof("essay-cite-relevant.txt", fitted + "\n")
     assert workspace is not None
 
 
@@ -406,7 +399,7 @@ def test_stage10_writes_the_final_file_when_the_close_passes(workspace, monkeypa
     text = _docx_text(final)
     assert "10.1002/pan3.10742" in text
     assert "10.1080/26395916.2024.2412616" in text
-    _proof(
+    write_proof(
         "stage10-shared-close.txt",
         json.dumps(
             {"ok": written["ok"], "final": final.name, "refused": written.get("refused")},
@@ -440,7 +433,7 @@ def test_an_off_list_citation_does_not_write_the_final_file(workspace):
     assert not list((work_dir(seq) / "output").rglob("*-final.docx"))
     pointer = load_pointer(seq)
     assert pointer["closed"] is False
-    _proof("stage10-nobody-refusal.txt", str(refused.get("reason") or "") + "\n")
+    write_proof("stage10-nobody-refusal.txt", str(refused.get("reason") or "") + "\n")
     assert workspace is not None
 
 
@@ -470,7 +463,7 @@ def test_a_matched_line_can_still_fail_the_harvard_close(tmp_path):
     assert "url" in codes
     checker = inspect.getsource(compliance_misses)
     assert "Figshare" not in checker
-    _proof(
+    write_proof(
         "harvard-leftover.txt",
         "A listed line matched its own work and still failed the Harvard close.\n"
         + "\n".join(item["detail"] for item in misses)
@@ -488,7 +481,7 @@ def test_student_facing_copy_stays_plain(workspace):
     for path in files:
         leaked.extend(_leaked(path.read_text(encoding="utf-8")))
     assert leaked == []
-    _proof("wording-scan.txt", "scanned: " + ", ".join(path.name for path in files) + "\n")
+    write_proof("wording-scan.txt", "scanned: " + ", ".join(path.name for path in files) + "\n")
     assert workspace is not None
 
 

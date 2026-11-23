@@ -10,11 +10,10 @@ import inspect
 import json
 from pathlib import Path
 
-from helpers import open_sequence
+from helpers import open_sequence, write_proof
 from test_citation_list import (
     _entry,
     _plant,
-    _proof,
     _ready,
     _source,
     _walk,
@@ -140,7 +139,7 @@ def test_the_three_parts_share_one_source_id(workspace):
     raw = json.loads((work_dir(seq) / "citation-list.json").read_text(encoding="utf-8"))
     for item in raw["entries"]:
         assert set(item) == LIST_KEYS | PRINT_KEYS
-    _proof("citation-list-source-id-extract.txt", listed + "\n")
+    write_proof("citation-list-source-id-extract.txt", listed + "\n")
     assert workspace is not None
 
 
@@ -157,7 +156,7 @@ def test_a_year_left_off_the_first_line_stays_usable(workspace):
     assert shown["in_text"] == KEITH_SHORT
     look = _save_draft(seq, f"The count after the closure used the stored paper {KEITH_SHORT}.")
     assert KEITH_SHORT in look
-    _proof("saved-draft-year-omitted.txt", look + "\n")
+    write_proof("saved-draft-year-omitted.txt", look + "\n")
     assert workspace is not None
 
 
@@ -188,7 +187,7 @@ def test_an_in_text_citation_uses_the_stored_short_form(workspace):
     assert "10.1371_journal.pone.0340369" not in look
     assert "Keith and others" not in look
     assert "(Keith, 1999)" not in look
-    _proof("saved-draft-stored-short-form.txt", look + "\n")
+    write_proof("saved-draft-stored-short-form.txt", look + "\n")
     assert workspace is not None
 
 
@@ -204,7 +203,7 @@ def test_an_unlisted_citation_is_left_out(workspace):
     assert "(Nobody, 1999)" not in look
     record = load_record(seq)
     assert not any("nobody" in item.casefold() for item in record["ok"])
-    _proof("saved-draft-unlisted-cite.txt", look + "\n")
+    write_proof("saved-draft-unlisted-cite.txt", look + "\n")
     assert workspace is not None
 
 
@@ -307,7 +306,7 @@ def test_a_short_fragment_does_not_block_the_pass(workspace):
     assert eqr_verdict(seq, "6") == "PASS"
     word = work_dir(seq) / "output" / f"{seq}.docx"
     assert word.is_file()
-    _proof("review-response-fragment.txt", "pass recorded\n" + look + "\n")
+    write_proof("review-response-fragment.txt", "pass recorded\n" + look + "\n")
     assert workspace is not None
 
 
@@ -325,7 +324,7 @@ def test_an_unquoted_sentence_is_refused(workspace):
     assert eqr_verdict(seq, "6") is None
     word = work_dir(seq) / "output" / f"{seq}.docx"
     assert not word.is_file()
-    _proof("review-response-unquoted-sentence.txt", str(refused.get("reason") or "") + "\n")
+    write_proof("review-response-unquoted-sentence.txt", str(refused.get("reason") or "") + "\n")
     assert workspace is not None
 
 

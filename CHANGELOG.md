@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A gather with no confirmed question asks for the question and does not search.
 - A gathered sentence keeps the citation-list short form when that source is listed. When it is not, the short form comes from the stored author and year, including the stored look-up record. A source with no stored author or year is not appended.
 - A remembered author, year, title, or DOI is kept only when it matches the claimed value. A different claimed value refuses the source.
 - A first draft that misses the named parts is refused for those parts before the word band is checked. A note that already names those parts is not refused for the word band.

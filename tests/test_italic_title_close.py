@@ -17,7 +17,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from helpers import open_sequence, picked
+from helpers import open_sequence, picked, write_proof
 from test_stage10_close_and_findings import _leaked
 from test_word_references_4a import NUMBER, _park_stage10
 
@@ -52,7 +52,6 @@ from essay_writer.student_voice import student_surface_hits
 from essay_writer.textutil import count_words
 from essay_writer.word_references import reference_runs_for_stored, styled_reference_runs
 
-ARTIFACTS = Path("/opt/cursor/artifacts")
 MODULE = "ENVS5003HK"
 QUESTION = "How does a fishery closure let a herring stock recover?"
 PLAN = "The plan follows a fishery closure that lets a herring stock recover."
@@ -84,16 +83,6 @@ TOP_TABLE = """
 | Citations | missing harvard | some harvard | exact citation lines |
 """
 COPIED = "The opened file states the limit for this herring closure."
-
-
-def _proof(name: str, payload: str | bytes) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    target = ARTIFACTS / name
-    if isinstance(payload, bytes):
-        target.write_bytes(payload)
-        return
-    target.write_text(payload, encoding="utf-8")
 
 
 def _brief(text: str = BRIEF) -> None:
@@ -340,8 +329,8 @@ def test_review_titles_stay_italic_for_a_long_list_a_review_and_a_plan(workspace
         ("plan", plan_runs),
     ):
         extract.append(f"{label}: {_italic_of(runs)}")
-    _proof("italic-line-extract.txt", "\n".join(extract) + "\n")
-    _proof("italic-lines.docx", path.read_bytes())
+    write_proof("italic-line-extract.txt", "\n".join(extract) + "\n")
+    write_proof("italic-lines.docx", path.read_bytes())
     assert checker
     assert workspace is not None
 
@@ -375,8 +364,8 @@ def test_a_fair_review_then_writes_the_final_word_file(workspace, monkeypatch, t
     assert final.name != draft.name
     assert final.name.endswith("-final.docx")
     assert "10" in (load_pointer(seq).get("saved") or [])
-    _proof("fair-review-final.docx", final.read_bytes())
-    _proof("fair-review-first-draft.docx", first_draft)
+    write_proof("fair-review-final.docx", final.read_bytes())
+    write_proof("fair-review-first-draft.docx", first_draft)
     assert workspace is not None
 
 
@@ -511,9 +500,9 @@ def test_the_finished_essay_cites_within_the_locked_floor_and_cap(workspace, mon
     assert closed.get("ok") is True, closed
     final = _final_file(seq)
     counted = "\n".join(ident for ident in cited)
-    _proof("cite-count-by-source-id.txt", f"floor 16\ncap 24\ncited {len(cited)}\n{counted}\n")
-    _proof("finished-essay.docx", first_draft)
-    _proof("finished-essay-final.docx", final.read_bytes())
+    write_proof("cite-count-by-source-id.txt", f"floor 16\ncap 24\ncited {len(cited)}\n{counted}\n")
+    write_proof("finished-essay.docx", first_draft)
+    write_proof("finished-essay-final.docx", final.read_bytes())
     assert workspace is not None
 
 
@@ -545,8 +534,8 @@ def test_the_final_document_title_is_the_short_title_on_the_first_draft(
     final_text = "\n".join(paragraph.text for paragraph in Document(str(final)).paragraphs)
     assert body in final_text
     assert final_text.count(body) == 1
-    _proof("document-title.txt", f"{title}\n")
-    _proof("document-title-final.docx", final.read_bytes())
+    write_proof("document-title.txt", f"{title}\n")
+    write_proof("document-title-final.docx", final.read_bytes())
     assert workspace is not None
 
 
@@ -624,8 +613,8 @@ def test_a_title_italic_refusal_can_be_amended_and_reviewed_again(workspace, mon
             f"final: {final.name}",
         ]
     )
-    _proof("refusal-then-pass.txt", record + "\n")
-    _proof("refusal-then-pass-final.docx", final.read_bytes())
+    write_proof("refusal-then-pass.txt", record + "\n")
+    write_proof("refusal-then-pass-final.docx", final.read_bytes())
     assert workspace is not None
 
 
@@ -793,7 +782,7 @@ def test_each_review_gate_allows_a_second_review(workspace):
     assert _review(writer).get("stored") is True
     checked.append("writer-seat")
 
-    _proof("review-gates.txt", "\n".join(checked) + "\nresidual: saved-but-not-opened\n")
+    write_proof("review-gates.txt", "\n".join(checked) + "\nresidual: saved-but-not-opened\n")
     assert checked == [
         "harvard-title",
         "no-citations",

@@ -22,6 +22,7 @@ from helpers import (
     open_sequence,
     picked,
     plant_gathered_source,
+    write_proof,
 )
 
 import essay_writer.shells as shells
@@ -47,7 +48,6 @@ from essay_writer.textutil import count_words
 
 REPO = Path(__file__).resolve().parents[1]
 BROKEN = REPO / "tests" / "fixtures" / "first-draft-broken-v1.md"
-ARTIFACTS = Path("/opt/cursor/artifacts")
 CHAPTER_DOI = "10.52779/9781998951130/02"
 CHAPTER_AUTHOR = "Kenosi Molato and Musa W. Dube"
 CHAPTER_YEAR = "2022"
@@ -252,12 +252,6 @@ def _first_draft_word(seq: str) -> Path:
     return work_dir(seq) / "output" / f"{seq}.docx"
 
 
-def _write_artifact(name: str, text: str) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    (ARTIFACTS / name).write_text(text, encoding="utf-8")
-
-
 def _grams(text: str) -> set[str]:
     tokens = re.findall(r"[a-z0-9]+", text.casefold())
     found = set(tokens)
@@ -359,7 +353,7 @@ def test_lookup_fields_stay_when_a_full_pdf_is_kept(workspace, monkeypatch):
     note = _note_look(seq, "5") or ""
     assert f"{CHAPTER_AUTHOR} ({CHAPTER_YEAR})" in note
     assert not _first_draft_word(seq).is_file()
-    _write_artifact(
+    write_proof(
         "first-draft-save-kept.json",
         json.dumps(
             {
@@ -423,7 +417,7 @@ def test_an_unreadable_first_draft_is_not_saved(workspace):
     assert bare["advanced"] is False
     assert bare["refused"] == "draft"
     assert not _first_draft_word(seq).is_file()
-    _write_artifact(
+    write_proof(
         "first-draft-save-refused.txt",
         (
             f"counted: {counted}\nminimum: 1800\nmaximum: 2200\n"

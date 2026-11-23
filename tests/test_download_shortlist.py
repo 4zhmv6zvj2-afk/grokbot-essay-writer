@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from docx import Document
-from helpers import OTHER, card_digest_for, open_sequence
+from helpers import OTHER, card_digest_for, open_sequence, write_proof
 
 import essay_writer.shells as shells
 from essay_writer.build_office import stage_launch
@@ -33,7 +33,7 @@ from essay_writer.essay_cites import essay_cite_bounds
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.research_packs import ship_4a
 from essay_writer.shells import cursor_shell
-from essay_writer.source_floor import confirmed_question
+from essay_writer.source_floor import ASK_QUESTION, confirmed_question
 from essay_writer.source_ids import stable_source_id
 from essay_writer.specialists import researcher
 from essay_writer.stage_llm import stage_settings
@@ -42,7 +42,6 @@ from essay_writer.stage_state import _note_path
 from essay_writer.student_voice import student_surface_hits
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 QUESTION = "When is it fair to close a fishery so a fish stock can recover?"
 PLAN = "Coastal community bears the cost. Measured recovery is the test of the closure."
 PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
@@ -55,12 +54,6 @@ _DENY = {
     "d-4": "c89de1c0dd3f16b6b3462941a5bb2f2ef3c8728d3e7f48e221727e858b123a04",
     "d-5": "459415a966d88d3e30f7e0408fa7b6ce3eef5316ab8bde26d78213aaf583a606",
 }
-
-
-def _proof(name: str, payload: str) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    (ARTIFACTS / name).write_text(payload, encoding="utf-8")
 
 
 def _pieces(text: str) -> set[str]:
@@ -211,7 +204,7 @@ def test_the_full_gather_stays_on_the_card(workspace, monkeypatch):
     titles = [hit["title"] for hit in hits]
     assert any(title.startswith("Quantum") for title in titles)
     assert any(title.startswith("Fair fishery") for title in titles)
-    _proof(
+    write_proof(
         "download-full-list.txt",
         "\n".join(
             [
@@ -237,7 +230,7 @@ def test_works_outside_the_question_are_dropped_first(workspace, monkeypatch):
     for row in dropped:
         assert row["doi"] not in listed
         assert row["url"] not in calls
-    _proof(
+    write_proof(
         "download-question-filter.txt",
         "\n".join(
             [
@@ -267,7 +260,7 @@ def test_the_plan_keeps_works_that_support_the_argument(workspace, monkeypatch):
     short_titles = [str(row["title"]) for row in choice["shortlist"]]
     assert short_titles
     assert all(title.startswith("Coastal community") for title in short_titles)
-    _proof(
+    write_proof(
         "download-plan-shortlist.txt",
         "\n".join(
             [
@@ -300,7 +293,7 @@ def test_open_pdf_downloads_use_only_the_shortlist(workspace, monkeypatch):
     assert touched <= {row["doi"] for row in choice["shortlist"]}
     assert "10.1000/case37" not in touched
     assert "10.1000/case31" not in touched
-    _proof(
+    write_proof(
         "download-set.txt",
         "\n".join(
             [
@@ -340,7 +333,7 @@ def test_the_manual_list_uses_only_the_shortlist(workspace, monkeypatch):
     assert "Coastal community bears fishery closure cost case01" in manual_text
     assert "Coastal community bears fishery closure cost case25" not in manual_text
     assert len(_ids(manual_choice["shortlist"])) == 24
-    _proof(
+    write_proof(
         "download-manual-list.txt",
         "\n".join(
             [
@@ -366,7 +359,7 @@ def test_the_shortlist_stops_at_twelve_works_per_thousand_words(workspace, monke
     assert len(choice["plan_kept"]) == 30
     assert len(_ids(choice["shortlist"])) == 24
     assert len(set(calls)) == 24
-    _proof(
+    write_proof(
         "download-cap-count.txt",
         "\n".join(
             [
@@ -411,7 +404,7 @@ def test_the_shortlist_meets_the_essay_floor(workspace):
     assert "Coastal community bears fishery closure cost case01" in listed
     assert "Fair fishery stock access case31" not in listed
     assert "Quantum entanglement superconductors case37" not in listed
-    _proof(
+    write_proof(
         "download-floor-count.txt",
         "\n".join(
             [
@@ -453,7 +446,7 @@ def test_student_download_notes_stay_plain(workspace):
     assert "Critical note" not in plan_line
     assert "support the plan" in overlay
     assert "stays off that list" in overlay
-    _proof(
+    write_proof(
         "download-wording.txt",
         "\n".join(
             [
@@ -528,7 +521,7 @@ def test_both_shells_download_the_same_shortlist(workspace, monkeypatch):
         returned.append(str(saved.get("next")))
     assert returned[0] == returned[1]
     assert "Stage 3" in returned[0]
-    _proof(
+    write_proof(
         "download-shells.txt",
         "\n".join(
             [
@@ -565,8 +558,22 @@ def _missing(monkeypatch, *, question: bool, plan: bool):
         _plan(seq)
     brief = (essay_dir(seq) / "brief.md").read_text(encoding="utf-8")
     _install(monkeypatch, calls)
-    saved = _confirm(seq, essay_dig)
-    return seq, saved, calls, _choice(seq), brief
+    if question:
+        saved = _confirm(seq, essay_dig)
+        return seq, saved, calls, _choice(seq), brief
+    searched: list[str] = []
+
+    def fake(url, headers=None):
+        searched.append(str(url))
+        return {"results": []}
+
+    monkeypatch.setattr("essay_writer.dig._get_json", fake)
+    saved = essay_dig(seq, "fishery closure", "draft")
+    assert searched == [], searched
+    assert saved["ok"] is False, saved
+    assert saved["reason"] == ASK_QUESTION
+    choice = choose_downloads(seq, [_work(number) for number in range(1, 41)])
+    return seq, saved, calls, choice, brief
 
 
 def _manual(seq: str) -> str:
@@ -592,18 +599,19 @@ def _extract(saved: dict, calls: list[str], choice: dict, listed: str, target: s
 
 
 def test_a_missing_question_returns_before_any_download(workspace, monkeypatch):
-    """AC-4a-miss-q-1: A missing essay question returns to the question-confirm step and downloads nothing."""
+    """AC-4a-miss-q-1: A missing essay question asks for the question and downloads nothing."""
     seq, saved, calls, choice, _brief_text = _missing(monkeypatch, question=False, plan=True)
     listed = _manual(seq)
     works = [_source(number) for number in range(1, 41)]
-    assert saved.get("return_to") == QUESTION_STEP
-    assert saved.get("download_ready") is False
-    assert saved.get("download_set") == []
+    sentence = return_sentence(seq, QUESTION_STEP)
+    assert saved["reason"] == ASK_QUESTION
+    assert saved["wrote"] is False
     assert "downloads" not in saved
-    assert "confirm the essay question" in str(saved.get("next"))
-    assert "before any papers are downloaded" in str(saved.get("next"))
-    assert "Stage 3" not in str(saved.get("next"))
+    assert "confirm the essay question" in sentence
+    assert "before any papers are downloaded" in sentence
+    assert "Stage 3" not in sentence
     assert calls == []
+    assert not (work_dir(seq) / "dig-card.json").exists()
     assert choice["ready"] is False
     assert choice["return_to"] == QUESTION_STEP
     assert choice["shortlist"] == []
@@ -612,7 +620,7 @@ def test_a_missing_question_returns_before_any_download(workspace, monkeypatch):
     assert "Nothing is waiting on this list." in listed
     assert "10.1000/case01" not in listed
     assert "10.1000/case37" not in listed
-    _proof(
+    write_proof(
         "missing-question-return.txt",
         _extract(saved, calls, choice, listed, "question-confirm step"),
     )
@@ -638,7 +646,7 @@ def test_a_missing_plan_returns_before_any_download(workspace, monkeypatch):
     assert rows_for_download(seq, works, works) == []
     assert "Nothing is waiting on this list." in listed
     assert "10.1000/case01" not in listed
-    _proof(
+    write_proof(
         "missing-plan-return.txt",
         _extract(saved, calls, choice, listed, "plan stage"),
     )
@@ -646,19 +654,20 @@ def test_a_missing_plan_returns_before_any_download(workspace, monkeypatch):
 
 
 def test_both_missing_returns_to_the_question_first(workspace, monkeypatch):
-    """AC-4a-miss-both-1: When the question and the plan are both missing, the question-confirm step comes first."""
+    """AC-4a-miss-both-1: When the question and the plan are both missing, the gather asks for the question first."""
     seq, saved, calls, choice, _brief_text = _missing(monkeypatch, question=False, plan=False)
     listed = _manual(seq)
-    assert saved.get("return_to") == QUESTION_STEP
-    assert saved.get("download_set") == []
+    sentence = return_sentence(seq, QUESTION_STEP)
+    assert saved["reason"] == ASK_QUESTION
     assert choice["return_to"] == QUESTION_STEP
     assert choice["shortlist"] == []
     assert calls == []
-    assert "confirm the essay question" in str(saved.get("next"))
-    assert "Stage 3" not in str(saved.get("next"))
+    assert not (work_dir(seq) / "dig-card.json").exists()
+    assert "confirm the essay question" in sentence
+    assert "Stage 3" not in sentence
     assert "Nothing is waiting on this list." in listed
     assert "10.1000/case37" not in listed
-    _proof(
+    write_proof(
         "missing-both-return.txt",
         _extract(saved, calls, choice, listed, "question-confirm step"),
     )
@@ -674,9 +683,29 @@ def test_a_missing_step_keeps_the_gather_without_downloading_it(workspace, monke
         (False, False, "question-confirm step"),
     ):
         seq, saved, calls, choice, _brief_text = _missing(monkeypatch, question=question, plan=plan)
+        listed = _manual(seq)
+        if not question:
+            assert saved["reason"] == ASK_QUESTION
+            assert calls == []
+            assert choice["shortlist"] == []
+            assert choice["return_to"] == QUESTION_STEP
+            assert len(choice["full"]) == 40
+            assert "Quantum entanglement" not in listed
+            assert "Coastal community bears fishery closure cost case01" not in listed
+            sections.extend(
+                [
+                    f"return to: {target}",
+                    "gather written: no",
+                    f"download set: {len(choice['shortlist'])}",
+                    f"automatic downloads: {len(calls)}",
+                    "manual download list:",
+                    listed,
+                    "",
+                ]
+            )
+            continue
         hits = _card(seq)["openalex"]["hits"]
         titles = [str(hit["title"]) for hit in hits]
-        listed = _manual(seq)
         annotation = _docx(work_dir(seq) / "output" / "annotation.docx")
         assert len(hits) == 40
         assert len(choice["full"]) == 40
@@ -701,7 +730,7 @@ def test_a_missing_step_keeps_the_gather_without_downloading_it(workspace, monke
                 "",
             ]
         )
-    _proof("missing-gather-kept.txt", "\n".join(sections))
+    write_proof("missing-gather-kept.txt", "\n".join(sections))
     assert workspace is not None
 
 
@@ -715,6 +744,7 @@ def test_a_missing_step_does_not_invent_a_question_or_start_the_essay(workspace,
         if question:
             assert confirmed_question(seq) == QUESTION
         else:
+            assert saved["reason"] == ASK_QUESTION
             assert confirmed_question(seq) == ""
         if plan:
             assert _note_path(seq, "3").is_file()
@@ -733,5 +763,5 @@ def test_a_missing_step_does_not_invent_a_question_or_start_the_essay(workspace,
                 "",
             ]
         )
-    _proof("missing-no-invent.txt", "\n".join(lines))
+    write_proof("missing-no-invent.txt", "\n".join(lines))
     assert workspace is not None

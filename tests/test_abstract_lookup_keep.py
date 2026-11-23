@@ -14,7 +14,15 @@ import re
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from helpers import OTHER, TOPIC, card_digest_for, confirm_download_words, open_sequence
+from helpers import (
+    OTHER,
+    TOPIC,
+    card_digest_for,
+    confirm_download_words,
+    open_sequence,
+    store_confirmed_question,
+    write_proof,
+)
 
 import essay_writer.shells as shells
 from essay_writer.build_office import stage_launch
@@ -36,7 +44,6 @@ from essay_writer.textutil import count_words, word_band_from_brief_text
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE = REPO / "tests" / "fixtures" / "lookup-abstract-paywall-v1.json"
-ARTIFACTS = Path("/opt/cursor/artifacts")
 BRIEF = (
     "Genre: essay\n"
     "Question: How do chokepoints constrain tanker flows through the corridor?\n"
@@ -138,6 +145,7 @@ def _install_lookup(monkeypatch) -> None:
 
 def _confirm(seq: str, door, monkeypatch) -> dict:
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
+    store_confirmed_question(seq, "corridor capacity")
     draft = door(seq, "corridor capacity", "draft")
     assert draft["ok"] is True, draft
     assert draft["wrote"] is False
@@ -205,12 +213,6 @@ def _walk(seq: str, stop: str) -> None:
             return
 
 
-def _write_artifact(name: str, text: str) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    (ARTIFACTS / name).write_text(text, encoding="utf-8")
-
-
 def _grams(text: str) -> set[str]:
     tokens = re.findall(r"[a-z0-9]+", text.casefold())
     found = set(tokens)
@@ -267,8 +269,8 @@ def test_lookup_details_stay_on_the_saved_abstract(workspace, monkeypatch):
     assert stored["title"] == KEPT_TITLE
     assert stored["doi"] == KEPT_DOI
     assert "fixture-key-not-echoed" not in json.dumps(card)
-    _write_artifact("abstract-source-kept.json", json.dumps(stored, indent=2) + "\n")
-    _write_artifact("abstract-source-kept.txt", text)
+    write_proof("abstract-source-kept.json", json.dumps(stored, indent=2) + "\n")
+    write_proof("abstract-source-kept.txt", text)
 
 
 def test_a_missing_lookup_field_stays_blank(workspace, monkeypatch):
@@ -376,7 +378,7 @@ def test_a_later_first_draft_uses_the_kept_name_and_year(workspace, monkeypatch)
     assert 60 <= counted <= 120, counted
     assert f"({KEPT_AUTHOR}, {KEPT_YEAR})" in note
     assert draft.get("counted_words") == counted
-    _write_artifact(
+    write_proof(
         "abstract-first-draft-count.txt",
         f"counted: {counted}\nminimum: 60\nmaximum: 120\nstored: true\n",
     )
@@ -399,7 +401,7 @@ def test_a_later_first_draft_uses_the_kept_name_and_year(workspace, monkeypatch)
     assert "not the finished first draft" in refused["reason"]
     assert FIRST_DRAFT_READY not in str(refused.get("next") or "")
     assert _note_look(short, "5") in (None, "")
-    _write_artifact(
+    write_proof(
         "abstract-short-draft-refused.txt",
         (
             f"counted: {refused['counted']}\nminimum: {refused['minimum']}\n"

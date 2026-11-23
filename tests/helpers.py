@@ -1,17 +1,14 @@
-def confirm_download_words(seq: str, text: str) -> None:
-    """Store an essay question and a plan so a matching title can be downloaded.
+def store_confirmed_question(seq: str, question: str) -> None:
+    """Store a labelled question on the module brief so a gather can search it.
 
-    The question and the plan use the same words. A title that shares one of
-    those words stays on the download set. An existing question or plan is
-    left as it is.
+    An existing labelled question is left as it is. A caller query is not a
+    question until this line is stored.
     """
     import re
 
     from essay_writer.paths import essay_dir
-    from essay_writer.stage_note import render_tracking
-    from essay_writer.stage_state import _note_path
 
-    words = " ".join(text.split())
+    words = " ".join(question.split())
     if not words:
         return
     folder = essay_dir(seq)
@@ -24,6 +21,22 @@ def confirm_download_words(seq: str, text: str) -> None:
     )
     if labelled is None:
         brief.write_text(f"Question: {words}\n{prior}", encoding="utf-8")
+
+
+def confirm_download_words(seq: str, text: str) -> None:
+    """Store an essay question and a plan so a matching title can be downloaded.
+
+    The question and the plan use the same words. A title that shares one of
+    those words stays on the download set. An existing question or plan is
+    left as it is.
+    """
+    from essay_writer.stage_note import render_tracking
+    from essay_writer.stage_state import _note_path
+
+    store_confirmed_question(seq, text)
+    words = " ".join(text.split())
+    if not words:
+        return
     path = _note_path(seq, "3")
     if not path.is_file():
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -235,3 +248,28 @@ CLARIFY_OPEN = {
     "issues": {"leave_open": True},
     "guidance": {"leave_open": True},
 }
+
+
+def write_proof(name: str, payload: str | bytes, directory=None) -> None:
+    """Write one evidence file when a directory is chosen.
+
+    ESSAY_WRITER_VERIFY_EVIDENCE names that directory when it is set.
+    Otherwise the caller may pass a temp directory. With neither, this
+    writes nothing. A test does not read the file.
+    """
+    import os
+    from pathlib import Path
+
+    chosen = directory
+    raw = os.environ.get("ESSAY_WRITER_VERIFY_EVIDENCE", "").strip()
+    if raw:
+        chosen = Path(raw)
+    if chosen is None:
+        return
+    folder = Path(chosen)
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / name
+    if isinstance(payload, bytes):
+        target.write_bytes(payload)
+        return
+    target.write_text(payload, encoding="utf-8")

@@ -27,7 +27,7 @@ import zipfile
 from pathlib import Path
 
 from docx import Document
-from helpers import open_sequence, picked
+from helpers import open_sequence, picked, write_proof
 from test_stage10_close_and_findings import _leaked
 from test_word_references_4a import (
     NUMBER,
@@ -56,7 +56,6 @@ from essay_writer.word import write_critical_review_docx, write_docx, write_firs
 from essay_writer.word_references import cite_reference_gaps
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 MODULE = "ENVS5003HK"
 STORED_TITLE = "ENVS5003HK-1"
 OPENING = (
@@ -86,16 +85,6 @@ The name stays off the title page and the file.
 
 Pages: Arial, size 12. 2.5 cm margins on all sides. Page numbers in the lower right.
 """
-
-
-def _proof(name: str, payload: str | bytes) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    target = ARTIFACTS / name
-    if isinstance(payload, bytes):
-        target.write_bytes(payload)
-        return
-    target.write_text(payload, encoding="utf-8")
 
 
 def _docx_text(path: Path) -> str:
@@ -243,7 +232,7 @@ def test_stage10_close_writes_the_final_when_the_opening_is_long(workspace, monk
     assert "first-draft" not in final.name
     text = _docx_text(final)
     assert OPENING in text
-    _proof(
+    write_proof(
         "word-title-close-response.json",
         json.dumps(
             {
@@ -257,7 +246,7 @@ def test_stage10_close_writes_the_final_when_the_opening_is_long(workspace, monk
         )
         + "\n",
     )
-    _proof("word-title-final.docx", final.read_bytes())
+    write_proof("word-title-final.docx", final.read_bytes())
     assert workspace is not None
 
 
@@ -274,7 +263,7 @@ def test_the_live_opening_does_not_raise_the_title_limit(workspace, monkeypatch,
     final = _final_file(seq)
     assert final.is_file()
     assert OPENING in _docx_text(final)
-    _proof("word-title-live-final.docx", final.read_bytes())
+    write_proof("word-title-live-final.docx", final.read_bytes())
     assert workspace is not None
 
 
@@ -291,7 +280,7 @@ def test_the_final_document_title_is_the_short_title_already_stored(
     assert written["ok"] is True, written
     final = _final_file(seq)
     assert _assert_short_title(final, banned=OPENING) == "Plaice Box"
-    _proof("word-title-property.txt", _title_of(final) + "\n")
+    write_proof("word-title-property.txt", _title_of(final) + "\n")
 
     other = open_sequence(MODULE)
     other_body = _listed(other)
@@ -448,7 +437,7 @@ def test_an_off_list_cite_and_a_missing_line_are_still_refused(workspace):
     pointer = load_pointer(seq)
     assert pointer["current"] == "10"
     assert pointer["closed"] is False
-    _proof("word-title-unlisted-refusal.txt", str(refused.get("reason") or "") + "\n")
+    write_proof("word-title-unlisted-refusal.txt", str(refused.get("reason") or "") + "\n")
 
     other = open_sequence(MODULE)
     rows = _rows()
@@ -473,7 +462,7 @@ def test_an_off_list_cite_and_a_missing_line_are_still_refused(workspace):
     assert other_first.read_bytes() == other_before
     assert not list((work_dir(other) / "output").rglob("*-final.docx"))
     assert first.read_bytes() == before
-    _proof("word-title-missing-line-refusal.txt", str(missing.get("reason") or "") + "\n")
+    write_proof("word-title-missing-line-refusal.txt", str(missing.get("reason") or "") + "\n")
     assert workspace is not None
 
 
@@ -497,7 +486,7 @@ def test_findings_heading_stays_overall_judgement(workspace, tmp_path):
     assert lines[1] == "Overall judgement"
     assert _leaked(text) == []
     assert _assert_short_title(path, banned=OPENING) in {"", path.stem}
-    _proof("word-title-findings-lines.txt", "\n".join(lines[:6]) + "\n")
+    write_proof("word-title-findings-lines.txt", "\n".join(lines[:6]) + "\n")
     assert workspace is not None
 
 

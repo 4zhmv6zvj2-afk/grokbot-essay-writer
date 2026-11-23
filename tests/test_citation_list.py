@@ -10,7 +10,7 @@ import inspect
 from pathlib import Path
 
 from docx import Document
-from helpers import open_sequence, picked
+from helpers import open_sequence, picked, write_proof
 from test_student_plain_close import _assert_plain, _close_pack, _final_file
 from test_word_references_4a import JONES_LINE, MODULE, QIN_LINE, _plant_stage10_pack
 
@@ -39,7 +39,6 @@ from essay_writer.word_references import stage10_reference_block, usable_word_re
 from essay_writer.writing_basics import STAGE_ORDER
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 HYPHEN = "\u2010"
 NOT_WRITTEN = (
     "The citation list has not been written. The first draft waits until that list is saved."
@@ -60,16 +59,6 @@ DRAFT = (
     "(Smith, 2020). Effort limits had cut fishing mortality by the middle of the decade "
     "(Froese and Quaas, 2012). A paper outside the gathered set is not used (Nobody, 1999)."
 )
-
-
-def _proof(name: str, payload: str | bytes) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    target = ARTIFACTS / name
-    if isinstance(payload, bytes):
-        target.write_bytes(payload)
-        return
-    target.write_text(payload, encoding="utf-8")
 
 
 def _docx_text(path: Path) -> str:
@@ -162,7 +151,7 @@ def test_citation_list_is_written_when_stage_4b_finishes(workspace):
     for row in rows:
         assert row["author"] in extract
         assert row["year"] in extract
-    _proof("citation-list-stage-4b.txt", extract + "\n")
+    write_proof("citation-list-stage-4b.txt", extract + "\n")
     assert workspace is not None
 
 
@@ -179,7 +168,7 @@ def test_student_research_notes_show_the_same_list(workspace):
         assert row["title"] in text
         assert "Research note:" in text
         assert row["id"] in text
-    _proof("citation-list-student-extract.txt", text + "\n")
+    write_proof("citation-list-student-extract.txt", text + "\n")
     assert workspace is not None
 
 
@@ -204,8 +193,8 @@ def test_first_draft_uses_the_list_citation(workspace):
     assert "(Smith, 2020)" in text
     assert "(Froese and Quaas, 2012)" in text
     assert "Nobody" not in text
-    _proof("citation-list-stored-draft.txt", look + "\n")
-    _proof("citation-list-word-extract.txt", text + "\n")
+    write_proof("citation-list-stored-draft.txt", look + "\n")
+    write_proof("citation-list-word-extract.txt", text + "\n")
     assert workspace is not None
 
 
@@ -288,7 +277,7 @@ def test_first_write_waits_for_the_list_and_does_not_invent(workspace):
     )
     assert "(Nobody, 1999)" not in cleaned["text"]
     assert "Nobody" not in cleaned["text"]
-    _proof("citation-list-empty-gap.txt", student_list_text(seq) + "\n")
+    write_proof("citation-list-empty-gap.txt", student_list_text(seq) + "\n")
     assert workspace is not None
 
 
@@ -664,7 +653,7 @@ def test_each_entry_stores_the_short_form_and_the_full_line(workspace, monkeypat
     assert smith["reference"] in extract
     assert "(Froese and Quaas, 2012)" in extract
     assert froese["reference"] in extract
-    _proof("citation-list-forms.txt", extract + "\n")
+    write_proof("citation-list-forms.txt", extract + "\n")
     saved = essay_stage(seq, "5", "draft", DRAFT)
     assert saved["ok"] is True, saved
     assert "(Smith, 2020)" in (_note_look(seq, "5") or "")

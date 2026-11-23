@@ -13,10 +13,8 @@ import re
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-import pytest
-from helpers import ESSAY, card_digest_for, open_sequence, write_upload
+from helpers import ESSAY, card_digest_for, open_sequence, write_proof, write_upload
 
-from essay_writer import dig as dig_mod
 from essay_writer import shells
 from essay_writer.citation_list import (
     first_write_block,
@@ -52,8 +50,6 @@ from essay_writer.source_floor import (
 from essay_writer.specialists import researcher
 from essay_writer.specialists.writer import _source_texts_with_cite
 
-ARTIFACTS = Path("/opt/cursor/artifacts")
-# Opaque ids. A match reports the id, not the phrase.
 _DENY = {
     "f-1": "5d2c13d6f9fa421125a9f55e56fd0e4df9319ef30087f8f4675cd6f05135f397",
     "f-2": "2530aa222c31f46dda5c7f589aeb063ad0e7c3be5fb0dd8e23bb38f620366c90",
@@ -64,11 +60,6 @@ _DENY = {
     "f-7": "813c2438a6dfd1020354d0c3ea9b99d4438f04ee78532b4c8a30638b5d2cf3a2",
     "f-8": "634c994592e182e3666815b60e7cec0eece3c758f4026146d0ed6762c4a6abc0",
 }
-
-
-@pytest.fixture(autouse=True)
-def _strict_floor(monkeypatch):
-    monkeypatch.setenv("ESSAY_WRITER_FLOOR_STRICT", "1")
 
 
 def _write_brief(seq: str, text: str, name: str = "brief.md") -> None:
@@ -144,12 +135,6 @@ def _grams(text: str) -> set[str]:
     found = set(tokens)
     found.update(f"{left} {right}" for left, right in zip(tokens, tokens[1:], strict=False))
     return found
-
-
-def _proof(name: str, text: str) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    (ARTIFACTS / name).write_text(text, encoding="utf-8")
 
 
 def test_a_stated_source_count_is_the_floor(workspace):
@@ -403,7 +388,7 @@ def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched
     assert draft["ok"] is True, draft
     assert asked["n"] == 1
     assert asked["question"] == "How do ports shape coastal trade?"
-    stored = dig_mod._prepared_questions
+    stored = draft["card"]["searches"]
     assert stored[0] == "How do ports affect coastal towns?"
     assert "How do ports shape coastal trade?" in stored
     assert "How do tides change a harbour?" in stored
@@ -481,7 +466,7 @@ def test_the_live_ask_uses_the_shell_field(workspace, monkeypatch):
         smallerQuestions=smaller,
     )
     assert draft["ok"] is True, draft
-    stored = list(dig_mod._prepared_questions)
+    stored = list(draft["card"]["searches"])
     assert stored[:2] == smaller
     assert stored[-1] == question
     assert len([item for item in seen if _host(item) == "api.openalex.org"]) == 3
@@ -500,7 +485,7 @@ def test_the_live_ask_uses_the_shell_field(workspace, monkeypatch):
     assert "smallerQuestions" in mounted.parameters
     assert mounted.parameters["smallerQuestions"].default is None
     assert "smallerQuestions" in inspect.signature(essay_dig).parameters
-    _proof("source-floor-split.txt", "\n".join(stored) + "\n")
+    write_proof("source-floor-split.txt", "\n".join(stored) + "\n")
     assert workspace is not None
 
 
@@ -538,7 +523,7 @@ def test_each_question_keeps_its_own_result_including_an_empty_one(workspace, mo
     )
     text = (work_dir(seq) / "dig-card.md").read_text(encoding="utf-8")
     assert QUESTION_GAP in text
-    _proof("source-floor-questions.json", json.dumps(card["questions"], indent=2) + "\n")
+    write_proof("source-floor-questions.json", json.dumps(card["questions"], indent=2) + "\n")
     assert workspace is not None
 
 
@@ -854,7 +839,7 @@ def test_honest_exhaustion_writes_the_list_and_allows_the_draft(workspace):
     gathered = next(item for item in report["gates"] if item["name"] == "gathered-sources")
     assert gathered["passed"] is True
     assert first_write_block(seq) is None
-    _proof("source-floor-exhaustion.txt", delivered["student_note"] + "\n")
+    write_proof("source-floor-exhaustion.txt", delivered["student_note"] + "\n")
     assert workspace is not None
 
 
@@ -889,7 +874,7 @@ def test_an_empty_catalog_does_not_write_a_sourced_essay(workspace, monkeypatch)
     delivered = ship_4b(seq, [], None)
     assert delivered["blocked"] is True
     assert delivered["citation_list"]["written"] is False
-    _proof("source-floor-empty.txt", note + "\n")
+    write_proof("source-floor-empty.txt", note + "\n")
     assert workspace is not None
 
 

@@ -870,18 +870,7 @@ def _hit_lines(hits: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
-_prepared_questions: list[str] = []
 _PAGE_CAP = 200
-
-
-def _legacy_query_allowed() -> bool:
-    """Existing tests open a look-up with the caller query when no question is stored.
-
-    A normal run does not. It asks for the question and does not search.
-    """
-    if os.environ.get("ESSAY_WRITER_FLOOR_STRICT") == "1":
-        return False
-    return bool(os.environ.get("PYTEST_CURRENT_TEST"))
 
 
 def _same_question(left: str, right: str) -> bool:
@@ -1037,7 +1026,6 @@ def _further_page(slots: list[dict[str, Any]]) -> bool:
 
 def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[str, Any]:
     """Search each stored question, then further pages until the floor is met."""
-    global _prepared_questions
     from essay_writer.source_floor import (
         accept_split,
         ask_planning_model,
@@ -1053,7 +1041,6 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
     searches = accept_split(question, reply)
     if not searches:
         searches = [question]
-    _prepared_questions = list(searches)
     status = consensus_status()
     slots = [
         _new_question_slot(text, "confirmed" if _same_question(text, question) else "split")
@@ -1181,38 +1168,6 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
     return omit_keepers_from_card(essay_id, card)
 
 
-def _build_card(query: str, essay_id: str) -> dict[str, Any]:
-    status = consensus_status()
-    openalex = openalex_search(query)
-    consensus = consensus_search(query)
-    unpaywall: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for hit in list(openalex["hits"]) + list(consensus["hits"]):
-        doi = hit.get("doi")
-        if isinstance(doi, str) and doi not in seen:
-            seen.add(doi)
-            unpaywall.append(unpaywall_lookup(doi))
-    card = {
-        "essay_id": essay_id,
-        "query": query,
-        "openalex": openalex,
-        "consensus": {
-            "called": consensus.get("called"),
-            "tier": consensus.get("tier"),
-            "hits": consensus.get("hits") or [],
-            "switch": status["switch"],
-            "enabled": status["enabled"],
-            "key_present": status["key_present"],
-            "remind": consensus.get("remind") or status["remind"],
-        },
-        "unpaywall": unpaywall,
-        "invent_forbid": True,
-    }
-    from essay_writer.roll_forward import omit_keepers_from_card
-
-    return omit_keepers_from_card(essay_id, card)
-
-
 def _dig_fingerprint(query: str) -> dict[str, Any]:
     """Student arguments only. Live look-up bodies are not fingerprint fields."""
     return {"query": query}
@@ -1323,8 +1278,6 @@ def essay_dig(
     caller = query.strip() if isinstance(query, str) else ""
     if question:
         query = caller
-    elif caller and _legacy_query_allowed():
-        query = caller
     elif not caller:
         return refuse("dig", "Name the dig query. An empty query does not invent papers.")
     else:
@@ -1332,11 +1285,8 @@ def essay_dig(
     payload = {"essay_id": essay_id, "query": query}
     fingerprint = _dig_fingerprint(query)
     if confirmPhase == DRAFT:
-        if question:
-            card = _build_floor_card(question, essay_id, smallerQuestions)
-            card["query"] = query
-        else:
-            card = _build_card(query, essay_id)
+        card = _build_floor_card(question, essay_id, smallerQuestions)
+        card["query"] = query
         body = _dig_reply(essay_id, query, confirmPhase, card)
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint, shown=card)
         body["cardDigest"] = card_digest(payload, card)

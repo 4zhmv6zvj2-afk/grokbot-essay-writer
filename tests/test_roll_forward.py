@@ -15,7 +15,7 @@ import inspect
 import json
 from pathlib import Path
 
-from helpers import picked
+from helpers import picked, store_confirmed_question
 
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
@@ -450,6 +450,7 @@ def test_ac7_keepers_are_not_redug_or_relisted(workspace, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
     monkeypatch.setenv("ESSAY_WRITER_UNPAYWALL_EMAIL", "study@example.test")
     monkeypatch.setattr("essay_writer.dig._get_json", fake)
+    store_confirmed_question(child, "ports")
     card = essay_dig(child, "ports", "draft")
     assert card["ok"] is True, card
     hits = card["card"]["openalex"]["hits"]
