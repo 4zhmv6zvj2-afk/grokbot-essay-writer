@@ -84,9 +84,12 @@ def leftover_addresses(essay_id: str) -> list[dict[str, str]]:
             for source in record.get("sources") or []:
                 if isinstance(source, dict):
                     add(source.get("url"), doi=source.get("doi"), title=source.get("title"))
+    from essay_writer.download_shortlist import rows_for_download
+    from essay_writer.research_packs import bibliography_sources
     from essay_writer.roll_forward import without_keepers
 
-    return without_keepers(essay_id, found)
+    works = bibliography_sources(essay_id) or found
+    return without_keepers(essay_id, rows_for_download(essay_id, found, works))
 
 
 @guard_damaged_records
