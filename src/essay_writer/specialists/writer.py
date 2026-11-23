@@ -24,7 +24,6 @@ from essay_writer.paths import locator_target
 from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.textutil import (
     count_words,
-    family_name,
     word_band_from_brief_text,
     word_rules_for,
 )
@@ -154,18 +153,10 @@ def _source_texts(essay_id: str, pack: dict[str, Any]) -> list[str]:
 def _source_texts_with_cite(essay_id: str, pack: dict[str, Any]) -> list[tuple[str, str | None]]:
     """Each gathered source text with the in-text citation its author-year gives.
 
-    A source with no stored author or year has no citation, and the stretch does
-    not append a sentence from it. Nothing is invented.
+    A source is cited only by the short form stored for its source id. When the
+    citation list has not been written, no citation is added. Nothing is invented.
     """
     from essay_writer.invent import read_gathered_text
-
-    try:
-        from essay_writer.state import load_state
-        from essay_writer.validate import research_index
-
-        allowed, _digests = research_index(load_state(essay_id))
-    except (OSError, ValueError):
-        allowed = {}
 
     out: list[tuple[str, str | None]] = []
     for source in pack.get("sources") or []:
@@ -189,22 +180,9 @@ def _source_texts_with_cite(essay_id: str, pack: dict[str, Any]) -> list[tuple[s
             continue
         if not isinstance(text, str) or not text.strip():
             continue
-        record = allowed.get(locator) if isinstance(allowed, dict) else None
-        if not isinstance(record, dict):
-            record = allowed.get(str(path)) if isinstance(allowed, dict) else None
-        author = source.get("author")
-        year = source.get("year")
-        if not (isinstance(author, str) and author.strip()):
-            author = record.get("author") if isinstance(record, dict) else None
-        if not (isinstance(year, str) and year.strip()):
-            year = record.get("year") if isinstance(record, dict) else None
         from essay_writer.citation_list import list_written, stored_in_text
 
-        citation = None
-        if list_written(essay_id):
-            citation = stored_in_text(essay_id, source)
-        elif isinstance(author, str) and author.strip() and isinstance(year, str) and year.strip():
-            citation = f"({family_name(author)}, {year.strip()})"
+        citation = stored_in_text(essay_id, source) if list_written(essay_id) else None
         out.append((text, citation))
     return out
 

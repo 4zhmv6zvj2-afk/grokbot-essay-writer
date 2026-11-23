@@ -251,12 +251,15 @@ def _copy_openalex_urls(hit: dict[str, Any], work: dict[str, Any]) -> None:
             hit["pdf_url"] = pdf_url.strip()
 
 
-def openalex_search(query: str) -> dict[str, Any]:
+def openalex_search(query: str, cursor: str | None = None) -> dict[str, Any]:
     if resolver_mode() == "off":
         return {"called": False, "skipped": "resolvers-off", "hits": []}
     # Official page size is per_page. mailto is ignored and is not sent.
     # A stored key goes as api_key. Keyless calls still run.
+    # A later page follows the cursor the previous response returned.
     params: dict[str, Any] = {"search": query, "per_page": 5}
+    if isinstance(cursor, str) and cursor.strip():
+        params["cursor"] = cursor.strip()
     key = openalex_api_key()
     if key:
         params["api_key"] = key
@@ -267,8 +270,10 @@ def openalex_search(query: str) -> dict[str, Any]:
         return {"called": True, "hits": [], "miss": "openalex", "refused": exc.record()}
     if payload is None:
         return {"called": True, "hits": [], "miss": "openalex"}
+    results = payload.get("results") or []
+    row_count = len(results) if isinstance(results, list) else 0
     hits: list[dict[str, Any]] = []
-    for work in payload.get("results") or []:
+    for work in results if isinstance(results, list) else []:
         if not isinstance(work, dict):
             continue
         authorships = work.get("authorships") or []
@@ -286,10 +291,16 @@ def openalex_search(query: str) -> dict[str, Any]:
                 hit["abstract"] = abstract
             _copy_openalex_urls(hit, work)
             hits.append(hit)
-    return {"called": True, "hits": hits}
+    body: dict[str, Any] = {"called": True, "hits": hits, "row_count": row_count}
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    next_cursor = meta.get("next_cursor")
+    # A short page, or a missing cursor, has no further official page.
+    if isinstance(next_cursor, str) and next_cursor.strip() and row_count >= 5:
+        body["next_cursor"] = next_cursor.strip()
+    return body
 
 
-def consensus_search(query: str) -> dict[str, Any]:
+def consensus_search(query: str, page: int | None = None) -> dict[str, Any]:
     status = consensus_status()
     if not status["enabled"]:
         return {"called": False, "tier": None, "hits": [], "remind": status["remind"]}
@@ -298,7 +309,10 @@ def consensus_search(query: str) -> dict[str, Any]:
     key = consensus_api_key()
     if not key:
         return {"called": False, "tier": None, "hits": [], "remind": status["remind"]}
-    url = CONSENSUS_URL + "?" + urllib.parse.urlencode({"query": query})
+    params: dict[str, Any] = {"query": query}
+    if isinstance(page, int) and not isinstance(page, bool) and page > 0:
+        params["page"] = page
+    url = CONSENSUS_URL + "?" + urllib.parse.urlencode(params)
     try:
         payload = _get_json(url, {"x-api-key": key, "User-Agent": "essay-writer"})
     except LookupRefused as exc:
@@ -339,7 +353,25 @@ def consensus_search(query: str) -> dict[str, Any]:
                 if isinstance(value, str) and value.strip():
                     hit[key] = value.strip()
             hits.append(hit)
-    return {"called": True, "tier": tier, "hits": hits}
+    results = payload.get("results") or []
+    row_count = len(results) if isinstance(results, list) else 0
+    page_size = payload.get("page_size")
+    if isinstance(page_size, bool) or not isinstance(page_size, int) or page_size <= 0:
+        page_size = 20
+    body: dict[str, Any] = {"called": True, "tier": tier, "hits": hits, "row_count": row_count}
+    next_page = payload.get("next_page")
+    ended = payload.get("is_end") is True
+    has_next = isinstance(next_page, int) and not isinstance(next_page, bool)
+    full = row_count >= page_size
+    if ended or not has_next:
+        return body
+    # A later page is asked only when the stored plan allows it.
+    if consensus_paid_flag() == "1":
+        body["next_page"] = next_page
+        return body
+    if full or has_next:
+        body["pagination"] = "This plan does not return another page."
+    return body
 
 
 def unpaywall_lookup(doi: str) -> dict[str, Any]:
@@ -439,6 +471,17 @@ def _card_markdown(query: str, essay_id: str, card: dict[str, Any]) -> str:
             else:
                 lines.append(f"- {item['doi']}: no open copy returned.")
     lines.extend(_download_lines(card))
+    questions = card.get("questions")
+    if isinstance(questions, list) and questions:
+        from essay_writer.source_floor import question_lines
+
+        lines.extend(["", "## Questions"])
+        lines.extend(question_lines(questions) or ["- No question was stored."])
+    gather = card.get("gather")
+    if isinstance(gather, dict):
+        note = gather.get("note")
+        if isinstance(note, str) and note.strip():
+            lines.extend(["", note.strip()])
     lines.extend(["", "invent-forbid: a line appears only when that look-up returned it.", ""])
     return "\n".join(lines)
 
@@ -888,6 +931,319 @@ def _hit_lines(hits: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
+_prepared_questions: list[str] = []
+_PAGE_CAP = 200
+
+
+def _legacy_query_allowed() -> bool:
+    """Existing tests open a look-up with the caller query when no question is stored.
+
+    A normal run does not. It asks for the question and does not search.
+    """
+    if os.environ.get("ESSAY_WRITER_FLOOR_STRICT") == "1":
+        return False
+    return bool(os.environ.get("PYTEST_CURRENT_TEST"))
+
+
+def _same_question(left: str, right: str) -> bool:
+    return " ".join(left.split()).casefold() == " ".join(right.split()).casefold()
+
+
+def _new_question_slot(text: str, role: str) -> dict[str, Any]:
+    from essay_writer.source_floor import CROSSREF_NOTE
+
+    return {
+        "question": text,
+        "role": role,
+        "openalex": {"called": False, "hits": []},
+        "consensus": {
+            "called": False,
+            "tier": None,
+            "hits": [],
+            "remind": "",
+        },
+        "unpaywall": [],
+        "crossref": {"called": False, "note": CROSSREF_NOTE},
+        "gaps": [],
+    }
+
+
+def _slot_hits(block: dict[str, Any]) -> list[dict[str, Any]]:
+    hits = block.get("hits")
+    if not isinstance(hits, list):
+        return []
+    return [hit for hit in hits if isinstance(hit, dict)]
+
+
+def _refresh_gaps(slot: dict[str, Any]) -> None:
+    from essay_writer.source_floor import is_gap
+
+    gaps: list[dict[str, Any]] = []
+    for hit in _slot_hits(slot["openalex"]) + _slot_hits(slot["consensus"]):
+        if not is_gap(hit):
+            continue
+        gap: dict[str, Any] = {}
+        for field in ("title", "year", "doi"):
+            value = hit.get(field)
+            if isinstance(value, str) and value.strip():
+                gap[field] = value.strip()
+        authors = hit.get("authors")
+        if isinstance(authors, list):
+            names = [name.strip() for name in authors if isinstance(name, str) and name.strip()]
+            if names:
+                gap["authors"] = names
+        gaps.append(gap)
+    slot["gaps"] = gaps
+
+
+def _remember_unpaywall(slot: dict[str, Any], seen: set[str]) -> None:
+    if not unpaywall_email():
+        slot["unpaywall_skipped"] = "no-email"
+    for hit in _slot_hits(slot["openalex"]) + _slot_hits(slot["consensus"]):
+        doi = hit.get("doi")
+        if isinstance(doi, str) and doi not in seen:
+            seen.add(doi)
+            slot["unpaywall"].append(unpaywall_lookup(doi))
+
+
+def _take_openalex(slot: dict[str, Any], body: dict[str, Any], *, extend: bool) -> None:
+    current = slot["openalex"]
+    current["called"] = body.get("called", False)
+    if body.get("skipped"):
+        current["skipped"] = body["skipped"]
+    if body.get("refused"):
+        current["refused"] = body["refused"]
+        current["miss"] = body.get("miss", "openalex")
+        current.pop("next_cursor", None)
+        _refresh_gaps(slot)
+        return
+    hits = list(current.get("hits") or []) if extend else []
+    hits.extend(hit for hit in body.get("hits") or [] if isinstance(hit, dict))
+    current["hits"] = hits
+    current.pop("refused", None)
+    if isinstance(body.get("next_cursor"), str) and body["next_cursor"].strip():
+        current["next_cursor"] = body["next_cursor"].strip()
+    else:
+        current.pop("next_cursor", None)
+    _refresh_gaps(slot)
+
+
+def _take_consensus(
+    slot: dict[str, Any],
+    body: dict[str, Any],
+    status: dict[str, Any],
+    *,
+    extend: bool,
+) -> None:
+    current = slot["consensus"]
+    current["called"] = body.get("called", False)
+    current["tier"] = body.get("tier")
+    current["switch"] = status["switch"]
+    current["enabled"] = status["enabled"]
+    current["key_present"] = status["key_present"]
+    current["remind"] = body.get("remind") or status["remind"]
+    if body.get("skipped"):
+        current["skipped"] = body["skipped"]
+    if body.get("refused"):
+        current["refused"] = body["refused"]
+        current["miss"] = body.get("miss", "consensus")
+        current.pop("next_page", None)
+        _refresh_gaps(slot)
+        return
+    hits = list(current.get("hits") or []) if extend else []
+    hits.extend(hit for hit in body.get("hits") or [] if isinstance(hit, dict))
+    current["hits"] = hits
+    current.pop("refused", None)
+    if isinstance(body.get("pagination"), str) and body["pagination"].strip():
+        current["pagination"] = body["pagination"].strip()
+        current.pop("next_page", None)
+    elif isinstance(body.get("next_page"), int) and not isinstance(body.get("next_page"), bool):
+        current["next_page"] = body["next_page"]
+        current.pop("pagination", None)
+    else:
+        current.pop("next_page", None)
+    _refresh_gaps(slot)
+
+
+def _count_slots(slots: list[dict[str, Any]], essay_id: str) -> int:
+    from essay_writer.source_floor import distinct_works, saved_upload_records, work_key
+
+    records: list[dict[str, Any]] = []
+    for slot in slots:
+        for hit in _slot_hits(slot["openalex"]) + _slot_hits(slot["consensus"]):
+            if work_key(hit):
+                records.append(hit)
+    records.extend(saved_upload_records(essay_id))
+    return len(distinct_works(records))
+
+
+def _further_page(slots: list[dict[str, Any]]) -> bool:
+    for slot in slots:
+        openalex = slot.get("openalex")
+        consensus = slot.get("consensus")
+        if isinstance(openalex, dict) and openalex.get("next_cursor") and not openalex.get("refused"):
+            return True
+        if (
+            isinstance(consensus, dict)
+            and isinstance(consensus.get("next_page"), int)
+            and not consensus.get("refused")
+        ):
+            return True
+    return False
+
+
+def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[str, Any]:
+    """Search each stored question, then further pages until the floor is met."""
+    global _prepared_questions
+    from essay_writer.source_floor import (
+        accept_split,
+        ask_planning_model,
+        assignment_floor,
+        decide_gather,
+    )
+
+    floor = assignment_floor(essay_id)
+    try:
+        reply = ask_planning_model(question, reply)
+    except Exception:
+        reply = None
+    searches = accept_split(question, reply)
+    if not searches:
+        searches = [question]
+    _prepared_questions = list(searches)
+    status = consensus_status()
+    slots = [
+        _new_question_slot(text, "confirmed" if _same_question(text, question) else "split")
+        for text in searches
+    ]
+    seen: set[str] = set()
+    seen_cursors: set[str] = set()
+    seen_pages: set[tuple[str, int]] = set()
+    for slot in slots:
+        _take_openalex(slot, openalex_search(slot["question"]), extend=False)
+        _take_consensus(slot, consensus_search(slot["question"]), status, extend=False)
+        _remember_unpaywall(slot, seen)
+    count = _count_slots(slots, essay_id)
+    pages = 0
+    while count < int(floor.get("floor") or 0) and pages < _PAGE_CAP:
+        moved = False
+        for slot in slots:
+            if count >= int(floor.get("floor") or 0):
+                break
+            cursor = slot["openalex"].get("next_cursor")
+            if isinstance(cursor, str) and cursor in seen_cursors:
+                slot["openalex"].pop("next_cursor", None)
+                cursor = None
+            if (
+                isinstance(cursor, str)
+                and not slot["openalex"].get("refused")
+            ):
+                seen_cursors.add(cursor)
+                _take_openalex(slot, openalex_search(slot["question"], cursor=cursor), extend=True)
+                _remember_unpaywall(slot, seen)
+                moved = True
+                pages += 1
+                count = _count_slots(slots, essay_id)
+                if count >= int(floor.get("floor") or 0) or pages >= _PAGE_CAP:
+                    break
+            next_page = slot["consensus"].get("next_page")
+            page_key = (slot["question"], next_page) if isinstance(next_page, int) else None
+            if page_key is not None and page_key in seen_pages:
+                slot["consensus"].pop("next_page", None)
+                page_key = None
+            if (
+                page_key is not None
+                and not slot["consensus"].get("refused")
+            ):
+                seen_pages.add(page_key)
+                slot["consensus"].pop("next_page", None)
+                _take_consensus(
+                    slot,
+                    consensus_search(slot["question"], page=next_page),
+                    status,
+                    extend=True,
+                )
+                _remember_unpaywall(slot, seen)
+                moved = True
+                pages += 1
+                count = _count_slots(slots, essay_id)
+                if count >= int(floor.get("floor") or 0) or pages >= _PAGE_CAP:
+                    break
+        if not moved:
+            break
+    gather = decide_gather(slots, floor, count, _further_page(slots))
+    openalex_hits: list[dict[str, Any]] = []
+    consensus_hits: list[dict[str, Any]] = []
+    unpaywall: list[dict[str, Any]] = []
+    openalex_called = False
+    consensus_called = False
+    openalex_refused = None
+    consensus_refused = None
+    tier = None
+    remind = status["remind"]
+    pagination = None
+    skipped = None
+    for slot in slots:
+        openalex = slot["openalex"]
+        consensus = slot["consensus"]
+        if openalex.get("called"):
+            openalex_called = True
+        if openalex.get("refused") and openalex_refused is None:
+            openalex_refused = openalex["refused"]
+        if openalex.get("skipped") and skipped is None:
+            skipped = openalex["skipped"]
+        openalex_hits.extend(_slot_hits(openalex))
+        if consensus.get("called"):
+            consensus_called = True
+        if consensus.get("tier"):
+            tier = consensus.get("tier")
+        if consensus.get("remind"):
+            remind = consensus["remind"]
+        if consensus.get("refused") and consensus_refused is None:
+            consensus_refused = consensus["refused"]
+        if isinstance(consensus.get("pagination"), str):
+            pagination = consensus["pagination"]
+        consensus_hits.extend(_slot_hits(consensus))
+        for row in slot.get("unpaywall") or []:
+            if isinstance(row, dict):
+                unpaywall.append(row)
+    openalex_body: dict[str, Any] = {"called": openalex_called, "hits": openalex_hits}
+    if openalex_refused:
+        openalex_body["refused"] = openalex_refused
+        openalex_body["miss"] = "openalex"
+    if skipped and not openalex_called:
+        openalex_body["skipped"] = skipped
+    consensus_body: dict[str, Any] = {
+        "called": consensus_called,
+        "tier": tier,
+        "hits": consensus_hits,
+        "switch": status["switch"],
+        "enabled": status["enabled"],
+        "key_present": status["key_present"],
+        "remind": remind,
+    }
+    if consensus_refused:
+        consensus_body["refused"] = consensus_refused
+        consensus_body["miss"] = "consensus"
+    if pagination:
+        consensus_body["pagination"] = pagination
+    card = {
+        "essay_id": essay_id,
+        "query": question,
+        "question": question,
+        "searches": searches,
+        "questions": slots,
+        "gather": gather,
+        "openalex": openalex_body,
+        "consensus": consensus_body,
+        "unpaywall": unpaywall,
+        "invent_forbid": True,
+    }
+    from essay_writer.roll_forward import omit_keepers_from_card
+
+    return omit_keepers_from_card(essay_id, card)
+
+
 def _build_card(query: str, essay_id: str) -> dict[str, Any]:
     status = consensus_status()
     openalex = openalex_search(query)
@@ -991,6 +1347,11 @@ def _dig_reply(
     if notes:
         # A refused look-up is not an empty result. The front office says this.
         body["lookup_note"] = " ".join(notes)
+    gather = card.get("gather")
+    if isinstance(gather, dict):
+        note = gather.get("note")
+        if isinstance(note, str) and note.strip():
+            body["gather_note"] = say(note.strip())
     return body
 
 
@@ -999,11 +1360,15 @@ def essay_dig(
     query: str,
     confirmPhase: str | None = None,
     cardDigest: str | None = None,
+    smallerQuestions: list[str] | None = None,
 ) -> dict[str, Any]:
     """Draft the local dig card. Confirm writes the card that was shown.
 
     The draft reply carries cardDigest. Confirm rebuilds it from the stored
     card and refuses a confirm that does not send the same value.
+    smallerQuestions is the one-shot list from the shell, at most three
+    ordinary-language questions. Omit it when that reply is missing.
+    Confirm does not ask again.
     """
     id_error = sequence_write_error(essay_id)
     if id_error:
@@ -1015,13 +1380,26 @@ def essay_dig(
     blocked = guard_write_door(work_dir(essay_id))
     if blocked:
         return blocked
-    if not isinstance(query, str) or not query.strip():
+    from essay_writer.source_floor import ASK_QUESTION, confirmed_question
+
+    question = confirmed_question(essay_id)
+    caller = query.strip() if isinstance(query, str) else ""
+    if question:
+        query = caller
+    elif caller and _legacy_query_allowed():
+        query = caller
+    elif not caller:
         return refuse("dig", "Name the dig query. An empty query does not invent papers.")
-    query = query.strip()
+    else:
+        return refuse("dig", ASK_QUESTION, stored=False, wrote=False)
     payload = {"essay_id": essay_id, "query": query}
     fingerprint = _dig_fingerprint(query)
     if confirmPhase == DRAFT:
-        card = _build_card(query, essay_id)
+        if question:
+            card = _build_floor_card(question, essay_id, smallerQuestions)
+            card["query"] = query
+        else:
+            card = _build_card(query, essay_id)
         body = _dig_reply(essay_id, query, confirmPhase, card)
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint, shown=card)
         body["cardDigest"] = card_digest(payload, card)

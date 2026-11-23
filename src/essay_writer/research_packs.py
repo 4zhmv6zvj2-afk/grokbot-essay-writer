@@ -642,8 +642,18 @@ def ship_4b(
         student_list_text,
     )
     from essay_writer.known_paths import research_file
+    from essay_writer.source_floor import draft_block, exhaustion_sentence
     from essay_writer.word import write_critical_review_docx
 
+    blocked = draft_block(essay_id)
+    if blocked:
+        return {
+            "stage": "4b",
+            "reviews": [],
+            "citation_list": {"written": False, "entries": []},
+            "student_note": blocked,
+            "blocked": True,
+        }
     folder = _output(essay_id) / "reviews"
     folder.mkdir(parents=True, exist_ok=True)
     planned: list[dict[str, Any]] = []
@@ -734,6 +744,9 @@ def ship_4b(
 
     mac_copy = copy_deliverable_to_mac(archive)
     messages = [item for item in presented.get("already") or [] if isinstance(item, str) and item]
+    short = exhaustion_sentence(essay_id)
+    if short:
+        messages.insert(0, short)
     if not presented.get("entries"):
         gap = presented.get("gap")
         if isinstance(gap, str) and gap.strip():
