@@ -1,0 +1,863 @@
+#!/usr/bin/env python3
+"""Drive Essay Writer the way a student does, then keep the proof.
+
+Each command starts the stdio server from this checkout, talks to the writer
+doors, and stops that process. Evidence is written outside the student folder.
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import asyncio
+import hashlib
+import importlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+REPO = Path(__file__).resolve().parents[4]
+SRC = REPO / "src"
+EVIDENCE = Path(
+    os.environ.get("ESSAY_WRITER_EVIDENCE", "/opt/cursor/artifacts/verify-essay-writer")
+)
+RUN_ID = os.environ.get("ESSAY_WRITER_VERIFY_ID", "student")
+RUN_DIR = Path(os.environ.get("ESSAY_WRITER_VERIFY_RUN", f"/tmp/essay-verify-{RUN_ID}"))
+STUDENT = Path(os.environ.get("ESSAY_WRITER_ROOT", str(RUN_DIR / "student")))
+KB1 = Path(os.environ.get("ESSAY_WRITER_VERIFY_KB1", str(RUN_DIR / "KB1")))
+DEPS = Path(os.environ.get("ESSAY_WRITER_VERIFY_DEPS", str(RUN_DIR / "deps")))
+STATE_NAME = "run-state.json"
+MODULE = "MOD1004AA"
+QUESTION = "How do ports shape coastal trade?"
+BRIEF = f"Question: {QUESTION}\nThe assignment is 2000 words.\n"
+FLOOR_WORDS = 2000
+FLOOR_COUNT = 16
+SECRET_NAMES = (
+    "CONSENSUS_API_KEY",
+    "ESSAY_WRITER_UNPAYWALL_EMAIL",
+    "OPENALEX_API_KEY",
+)
+FORWARDED = SECRET_NAMES + (
+    "ESSAY_WRITER_CONSENSUS",
+    "ESSAY_WRITER_CONSENSUS_PAID",
+    "ESSAY_WRITER_RESOLVERS",
+)
+SAFE_BASE = (
+    "PATH",
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "USER",
+    "LOGNAME",
+    "TMPDIR",
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "REQUESTS_CA_BUNDLE",
+    "CURL_CA_BUNDLE",
+    "SYSTEMROOT",
+)
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+QUERY_SECRET_RE = re.compile(r"(?i)(api_key|apikey|email|key|token)=([^&\s\"']+)")
+
+
+def repo_root() -> Path:
+    return REPO
+
+
+def evidence_dir() -> Path:
+    return EVIDENCE
+
+
+def state_path() -> Path:
+    return evidence_dir() / STATE_NAME
+
+
+def load_state() -> dict[str, Any]:
+    path = state_path()
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
+
+
+def save_state(body: dict[str, Any]) -> None:
+    evidence_dir().mkdir(parents=True, exist_ok=True)
+    current = load_state()
+    current.update(body)
+    state_path().write_text(json.dumps(current, indent=2) + "\n", encoding="utf-8")
+
+
+def secret_values() -> list[str]:
+    found: list[str] = []
+    for name in SECRET_NAMES:
+        raw = os.environ.get(name, "").strip()
+        if len(raw) >= 4:
+            found.append(raw)
+    return found
+
+
+def redact(text: str) -> str:
+    cleaned = text
+    for value in secret_values():
+        cleaned = cleaned.replace(value, "[redacted]")
+    cleaned = EMAIL_RE.sub("[redacted]", cleaned)
+    cleaned = QUERY_SECRET_RE.sub(r"\1=[redacted]", cleaned)
+    return cleaned
+
+
+def redact_obj(value: Any) -> Any:
+    if isinstance(value, str):
+        return redact(value)
+    if isinstance(value, list):
+        return [redact_obj(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): redact_obj(item) for key, item in value.items()}
+    return value
+
+
+def write_json(name: str, body: Any) -> Path:
+    evidence_dir().mkdir(parents=True, exist_ok=True)
+    path = evidence_dir() / name
+    path.write_text(
+        json.dumps(redact_obj(body), indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def say(line: str) -> None:
+    print(redact(line), flush=True)
+
+
+def fail(line: str, code: int = 1) -> None:
+    say(line)
+    raise SystemExit(code)
+
+
+def ensure_outside_checkout(path: Path, label: str) -> Path:
+    resolved = path.expanduser().resolve()
+    repo = repo_root().resolve()
+    if resolved == repo or repo in resolved.parents:
+        fail(f"{label} is inside the code checkout. Name a folder outside it.")
+    workspace = Path("/workspace")
+    if (
+        workspace.exists()
+        and workspace.resolve() == repo
+        and (resolved == workspace.resolve() or workspace.resolve() in resolved.parents)
+    ):
+        fail(f"{label} is the code checkout. Name a folder outside it.")
+    evidence = evidence_dir().resolve()
+    if resolved == evidence or evidence in resolved.parents or resolved in evidence.parents:
+        fail(f"{label} must not be the evidence folder.")
+    return resolved
+
+
+def ensure_deps() -> None:
+    src = str(SRC)
+    deps = str(DEPS)
+    for entry in (src, deps):
+        if entry not in sys.path:
+            sys.path.insert(0, entry)
+    try:
+        import essay_writer  # noqa: F401
+        import mcp  # noqa: F401
+    except ImportError:
+        DEPS.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--target",
+            str(DEPS),
+            "mcp==2.3.0",
+            "python-docx==1.2.0",
+        ]
+        completed = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        if completed.returncode != 0:
+            detail = redact((completed.stderr or completed.stdout or "pip failed")[-500:])
+            fail(f"Runtime install failed. {detail}")
+        importlib.invalidate_caches()
+        import essay_writer  # noqa: F401
+        import mcp  # noqa: F401
+
+
+def server_env() -> dict[str, str]:
+    env: dict[str, str] = {}
+    for name in SAFE_BASE:
+        value = os.environ.get(name)
+        if value:
+            env[name] = value
+    env["PYTHONPATH"] = os.pathsep.join([str(SRC), str(DEPS)])
+    env["PYTHONUNBUFFERED"] = "1"
+    env["ESSAY_WRITER_ROOT"] = str(STUDENT)
+    for name in FORWARDED:
+        value = os.environ.get(name)
+        if value:
+            env[name] = value
+    return env
+
+
+def tool_payload(result: Any) -> dict[str, Any]:
+    if getattr(result, "isError", False):
+        chunks: list[str] = []
+        for block in getattr(result, "content", None) or []:
+            text = getattr(block, "text", None)
+            if isinstance(text, str):
+                chunks.append(text)
+        fail("A door returned an error. " + redact(" ".join(chunks)[:500]))
+    structured = getattr(result, "structuredContent", None)
+    if isinstance(structured, dict):
+        return structured
+    texts: list[str] = []
+    for block in getattr(result, "content", None) or []:
+        text = getattr(block, "text", None)
+        if isinstance(text, str) and text.strip():
+            texts.append(text)
+    raw = "\n".join(texts).strip()
+    if not raw:
+        fail("A door returned no text.")
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        fail("A door reply was not JSON. " + redact(raw[:300]))
+    if not isinstance(parsed, dict):
+        fail("A door reply was not an object.")
+    return parsed
+
+
+async def raw_call(
+    session: Any, name: str, arguments: dict[str, Any], timeout: float
+) -> dict[str, Any]:
+    result = await session.call_tool(name, arguments, read_timeout_seconds=timeout)
+    return tool_payload(result)
+
+
+async def call(
+    session: Any, name: str, arguments: dict[str, Any], timeout: float
+) -> dict[str, Any]:
+    body = await raw_call(session, name, arguments, timeout)
+    if body.get("ok") is False:
+        reason = body.get("reason") or body.get("next") or body.get("code") or "refused"
+        fail(f"{name} refused. {redact(str(reason)[:400])}")
+    return body
+
+
+async def with_server(action: Any) -> Any:
+    ensure_deps()
+    import mcp.client.stdio as stdio
+    from mcp.client.session import ClientSession
+
+    log_path = RUN_DIR / "server.err"
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    log_handle = log_path.open("a", encoding="utf-8")
+    params = stdio.StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "essay_writer"],
+        env=server_env(),
+        cwd=str(REPO),
+    )
+    try:
+        async with stdio.stdio_client(params, errlog=log_handle) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                return await action(session)
+    finally:
+        log_handle.close()
+
+
+def confirm_pair(
+    session: Any,
+    name: str,
+    draft_args: dict[str, Any],
+    timeout: float,
+) -> Any:
+    async def run() -> dict[str, Any]:
+        draft = await call(session, name, {**draft_args, "confirmPhase": "draft"}, timeout)
+        digest = draft.get("cardDigest")
+        confirm_args = dict(draft_args)
+        confirm_args["confirmPhase"] = "confirm"
+        if isinstance(digest, str) and digest:
+            confirm_args["cardDigest"] = digest
+        saved = await call(session, name, confirm_args, timeout)
+        return {"draft": draft, "confirm": saved}
+
+    return run()
+
+
+def launch_paths() -> None:
+    global STUDENT, KB1, DEPS, RUN_DIR
+    STUDENT = ensure_outside_checkout(STUDENT, "ESSAY_WRITER_ROOT")
+    KB1 = ensure_outside_checkout(KB1, "KB1")
+    evidence = evidence_dir().resolve()
+    if evidence == REPO.resolve() or REPO.resolve() in evidence.parents:
+        fail("Evidence must stay outside the code checkout.")
+    if STUDENT == evidence or evidence in STUDENT.parents or STUDENT in evidence.parents:
+        fail("The student folder and the evidence folder must be different.")
+    RUN_DIR = STUDENT.parent if STUDENT.parent == KB1.parent else RUN_DIR
+    DEPS = ensure_outside_checkout(DEPS, "Dependency folder") if DEPS.exists() or True else DEPS
+    if DEPS.resolve() == REPO.resolve() or REPO.resolve() in DEPS.resolve().parents:
+        fail("Install runtime dependencies outside the code checkout.")
+
+
+async def do_launch(session: Any) -> dict[str, Any]:
+    if any(STUDENT.iterdir()) if STUDENT.exists() else False:
+        fail("The student folder is not empty. Cleanup that run before launching another.")
+    STUDENT.mkdir(parents=True, exist_ok=True)
+    KB1.mkdir(parents=True, exist_ok=True)
+    draft_args = {
+        "app_path": str(STUDENT),
+        "kb1_path": str(KB1),
+        "acknowledge_skipped_searches": True,
+    }
+    saved = await confirm_pair(session, "essay.setup", draft_args, 60)
+    confirm = saved["confirm"]
+    if confirm.get("stored") is not True and confirm.get("wrote") is not True:
+        fail("essay.setup did not create the student folders.")
+    for name in ("Essay-writer", "uploads", "unassigned"):
+        if not (STUDENT / name).is_dir():
+            fail(f"essay.setup did not create {name}.")
+    health = await call(session, "essay.health", {}, 60)
+    return {
+        "student_root": str(STUDENT),
+        "kb1": str(KB1),
+        "evidence": str(evidence_dir()),
+        "version": health.get("version"),
+        "alive": health.get("alive"),
+        "app_path": health.get("app_path"),
+        "doors": [door.get("tool") for door in health.get("doors") or [] if isinstance(door, dict)],
+        "setup_stored": True,
+    }
+
+
+def cmd_launch() -> None:
+    launch_paths()
+    evidence_dir().mkdir(parents=True, exist_ok=True)
+    body = asyncio.run(with_server(do_launch))
+    if body.get("version") != "0.9.17":
+        fail(f"Launch health version is {body.get('version')}. Expected 0.9.17.")
+    if body.get("app_path") != str(STUDENT):
+        fail("essay.health is not using the empty student folder.")
+    write_json("launch.json", body)
+    save_state(
+        {
+            "student_root": str(STUDENT),
+            "kb1": str(KB1),
+            "deps": str(DEPS),
+            "run_dir": str(RUN_DIR),
+            "evidence": str(evidence_dir()),
+        }
+    )
+    say(f"Launch ready at {STUDENT}. Version {body.get('version')}.")
+
+
+def apply_saved_paths() -> None:
+    global STUDENT, KB1, DEPS, RUN_DIR
+    state = load_state()
+    if state.get("student_root"):
+        STUDENT = Path(state["student_root"])
+    if state.get("kb1"):
+        KB1 = Path(state["kb1"])
+    if state.get("deps"):
+        DEPS = Path(state["deps"])
+    if state.get("run_dir"):
+        RUN_DIR = Path(state["run_dir"])
+    launch_paths()
+
+
+async def do_doctor(session: Any) -> dict[str, Any]:
+    health = await call(session, "essay.health", {}, 60)
+    doors = [
+        door.get("tool")
+        for door in health.get("doors") or []
+        if isinstance(door, dict) and isinstance(door.get("tool"), str)
+    ]
+    consensus = health.get("consensus") if isinstance(health.get("consensus"), dict) else {}
+    openalex = health.get("openalex") if isinstance(health.get("openalex"), dict) else {}
+    unpaywall = health.get("unpaywall") if isinstance(health.get("unpaywall"), dict) else {}
+    report = {
+        "ok": health.get("ok"),
+        "alive": health.get("alive"),
+        "version": health.get("version"),
+        "app_path": health.get("app_path"),
+        "python_ok": health.get("python_ok"),
+        "door_count": len(doors),
+        "has_dig": "essay.dig" in doors,
+        "has_health": "essay.health" in doors,
+        "has_research_full": "essay.research.full" in doors,
+        "has_render_word": "essay.pack.render_word" in doors,
+        "consensus_enabled": consensus.get("enabled"),
+        "consensus_key_present": consensus.get("key_present"),
+        "openalex_key_present": openalex.get("key_present"),
+        "unpaywall_email_present": unpaywall.get("email_present"),
+    }
+    return report
+
+
+def cmd_doctor() -> None:
+    apply_saved_paths()
+    if not (STUDENT / "Essay-writer").is_dir():
+        fail("The student folder has no Essay-writer directory. Run launch first.")
+    report = asyncio.run(with_server(do_doctor))
+    if report.get("alive") is not True or report.get("ok") is not True:
+        fail("essay.health is not alive.")
+    if report.get("version") != "0.9.17":
+        fail(f"Doctor version is {report.get('version')}. Expected 0.9.17.")
+    if report.get("app_path") != str(STUDENT):
+        fail("Doctor is not attached to this run's student folder.")
+    if report.get("has_dig") is not True:
+        fail("essay.dig is not mounted.")
+    write_json("doctor.json", report)
+    say(
+        "Doctor passed. "
+        f"version {report['version']}, doors {report['door_count']}, "
+        f"consensus {report['consensus_enabled']}, "
+        f"openalex key {report['openalex_key_present']}, "
+        f"unpaywall email {report['unpaywall_email_present']}."
+    )
+
+
+def distinct_records(card: dict[str, Any]) -> list[dict[str, str]]:
+    sys.path.insert(0, str(SRC))
+    os.environ["ESSAY_WRITER_ROOT"] = str(STUDENT)
+    from essay_writer.source_floor import author_text, distinct_works, title_text, year_text
+
+    rows: list[dict[str, Any]] = []
+    for catalog in ("openalex", "consensus"):
+        block = card.get(catalog)
+        hits = block.get("hits") if isinstance(block, dict) else None
+        if isinstance(hits, list):
+            rows.extend(item for item in hits if isinstance(item, dict))
+    kept: list[dict[str, str]] = []
+    for item in distinct_works(rows):
+        title = title_text(item)
+        author = author_text(item)
+        year = year_text(item)
+        if not title or not author or not year:
+            continue
+        row = {"title": title, "author": author, "year": year}
+        doi = item.get("doi")
+        if isinstance(doi, str) and doi.strip():
+            row["doi"] = doi.strip()
+        kept.append(row)
+    return kept
+
+
+def gather_view(card: dict[str, Any]) -> dict[str, Any]:
+    gather = card.get("gather") if isinstance(card.get("gather"), dict) else {}
+    openalex = card.get("openalex") if isinstance(card.get("openalex"), dict) else {}
+    consensus = card.get("consensus") if isinstance(card.get("consensus"), dict) else {}
+    unpaywall = card.get("unpaywall") if isinstance(card.get("unpaywall"), list) else []
+    called = any(isinstance(row, dict) and row.get("called") is True for row in unpaywall)
+    return {
+        "floor": gather.get("floor"),
+        "floor_from": gather.get("floor_from"),
+        "words": gather.get("words"),
+        "count": gather.get("count"),
+        "met": gather.get("met"),
+        "blocked": gather.get("blocked"),
+        "further_page": gather.get("further_page"),
+        "exhausted": gather.get("exhausted"),
+        "empty": gather.get("empty"),
+        "unfinished": gather.get("unfinished"),
+        "kind": gather.get("kind"),
+        "note": gather.get("note"),
+        "openalex_called": openalex.get("called"),
+        "consensus_called": consensus.get("called"),
+        "consensus_enabled": consensus.get("enabled"),
+        "consensus_refused": bool(consensus.get("refused")),
+        "unpaywall_called": called,
+    }
+
+
+def tied_sources(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep gathered files that use a word from the assignment question."""
+    sys.path.insert(0, str(SRC))
+    os.environ["ESSAY_WRITER_ROOT"] = str(STUDENT)
+    from essay_writer.assignment_gate import ask_word_in_text
+
+    kept: list[dict[str, Any]] = []
+    for source in sources:
+        locator = source.get("locator")
+        if not isinstance(locator, str):
+            continue
+        path = STUDENT / locator
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+        if ask_word_in_text(text, QUESTION):
+            kept.append(source)
+    for index, source in enumerate(kept, start=1):
+        source["id"] = f"src-{index}"
+    return kept
+
+
+def saved_sources(confirm: dict[str, Any]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for key in ("abstract_files", "pdf_files"):
+        rows = confirm.get(key)
+        if not isinstance(rows, list):
+            continue
+        for index, row in enumerate(rows, start=1):
+            if not isinstance(row, dict):
+                continue
+            locator = row.get("locator")
+            if not isinstance(locator, str) or not locator.strip():
+                continue
+            source: dict[str, Any] = {
+                "id": f"src-{len(sources) + 1}",
+                "origin": "upload",
+                "locator": locator.strip(),
+            }
+            for field in ("author", "year", "title", "doi"):
+                value = row.get(field)
+                if isinstance(value, str) and value.strip():
+                    source[field] = value.strip()
+            sources.append(source)
+    return sources
+
+
+def citation_on_disk(sequence_id: str) -> dict[str, Any]:
+    path = (
+        STUDENT
+        / "Essay-writer"
+        / MODULE
+        / "sequences"
+        / sequence_id.split("-")[-1]
+        / "citation-list.json"
+    )
+    if not path.is_file():
+        return {"written": False, "entries": 0, "path": str(path)}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    entries = data.get("entries") if isinstance(data, dict) else None
+    count = len(entries) if isinstance(entries, list) else 0
+    return {
+        "written": bool(isinstance(data, dict) and data.get("written") is True),
+        "entries": count,
+        "path": str(path),
+    }
+
+
+def draft_docx(sequence_id: str) -> list[str]:
+    """Essay drafts only. The gather's download list is not an essay draft."""
+    number = sequence_id.split("-")[-1]
+    folder = STUDENT / "Essay-writer" / MODULE / "sequences" / number
+    if not folder.is_dir():
+        return []
+    names = {f"{sequence_id}.docx", f"{MODULE}-final.docx"}
+    return [str(path.relative_to(STUDENT)) for path in folder.rglob("*.docx") if path.name in names]
+
+
+async def do_drive(session: Any) -> dict[str, Any]:
+    brief_dir = STUDENT / "unassigned"
+    if not brief_dir.is_dir():
+        fail("unassigned/ is missing. Run launch first.")
+    brief_path = brief_dir / "brief.md"
+    brief_path.write_text(BRIEF, encoding="utf-8")
+    intake = await confirm_pair(
+        session,
+        "essay.intake",
+        {"name": "brief.md", "module": MODULE},
+        60,
+    )
+    if not str(intake["confirm"].get("path", "")).endswith("brief.md"):
+        fail("essay.intake did not file the brief.")
+    opened = await confirm_pair(session, "essay.sequence.new", {"module": MODULE}, 60)
+    sequence_id = opened["confirm"].get("sequence_id")
+    if not isinstance(sequence_id, str) or not sequence_id.startswith(MODULE + "-"):
+        fail("essay.sequence.new did not open a sequence.")
+    draft = await call(
+        session,
+        "essay.dig",
+        {"essay_id": sequence_id, "query": QUESTION, "confirmPhase": "draft"},
+        900,
+    )
+    digest = draft.get("cardDigest")
+    if not isinstance(digest, str) or not digest:
+        fail("essay.dig draft did not return cardDigest.")
+    saved = await call(
+        session,
+        "essay.dig",
+        {
+            "essay_id": sequence_id,
+            "query": QUESTION,
+            "confirmPhase": "confirm",
+            "cardDigest": digest,
+        },
+        900,
+    )
+    number = sequence_id.split("-")[-1]
+    card_path = STUDENT / "Essay-writer" / MODULE / "sequences" / number / "dig-card.json"
+    if not card_path.is_file():
+        fail("Confirm did not write dig-card.json.")
+    card = json.loads(card_path.read_text(encoding="utf-8"))
+    if not isinstance(card, dict):
+        fail("dig-card.json is not an object.")
+    works = distinct_records(card)
+    view = gather_view(card)
+    sources = tied_sources(saved_sources(saved))
+    research: dict[str, Any] | None = None
+    if view.get("blocked") is not True and sources:
+        clarify = {
+            key: {"leave_open": True} for key in ("objective", "background", "issues", "guidance")
+        }
+        research_args = {
+            "essay_id": sequence_id,
+            "topic": QUESTION,
+            "sources": sources,
+            "clarify_context": clarify,
+        }
+        research_draft = await raw_call(
+            session,
+            "essay.research.full",
+            {**research_args, "confirmPhase": "draft"},
+            900,
+        )
+        research_digest = research_draft.get("cardDigest")
+        if research_draft.get("ok") is False or not isinstance(research_digest, str):
+            research = {
+                "stored": False,
+                "refused": True,
+                "reason": research_draft.get("reason") or research_draft.get("code"),
+            }
+        else:
+            research_saved = await raw_call(
+                session,
+                "essay.research.full",
+                {**research_args, "confirmPhase": "confirm", "cardDigest": research_digest},
+                900,
+            )
+            delivery = (
+                research_saved.get("delivery")
+                if isinstance(research_saved.get("delivery"), dict)
+                else {}
+            )
+            listed = (
+                delivery.get("citation_list")
+                if isinstance(delivery.get("citation_list"), dict)
+                else {}
+            )
+            research = {
+                "stored": research_saved.get("stored"),
+                "refused": research_saved.get("ok") is False,
+                "reason": research_saved.get("reason"),
+                "blocked": delivery.get("blocked"),
+                "student_note": delivery.get("student_note"),
+                "citation_list_written": listed.get("written"),
+                "citation_list_entries": len(listed.get("entries") or [])
+                if isinstance(listed.get("entries"), list)
+                else 0,
+            }
+    citation = citation_on_disk(sequence_id)
+    drafts = draft_docx(sequence_id)
+    report = {
+        "sequence_id": sequence_id,
+        "question": QUESTION,
+        "brief_words": FLOOR_WORDS,
+        "expected_floor": FLOOR_COUNT,
+        "distinct_works": len(works),
+        "works": works,
+        "gather": view,
+        "saved_files": len(sources),
+        "research_full": research,
+        "citation_list": citation,
+        "draft_docx": drafts,
+        "dig_card": str(card_path.relative_to(STUDENT)),
+    }
+    short = len(works) < FLOOR_COUNT and view.get("further_page") is True
+    wrote_list = citation.get("written") is True
+    wrote_draft = bool(drafts)
+    wrong_floor = (
+        view.get("words") != FLOOR_WORDS
+        or view.get("floor") != FLOOR_COUNT
+        or view.get("floor_from") != "word_rate"
+    )
+    if view.get("openalex_called") is not True:
+        report["floor_check"] = "fail"
+        write_json("research-gather.json", report)
+        fail("OpenAlex was not called.")
+    consensus_key = bool(os.environ.get("CONSENSUS_API_KEY", "").strip())
+    if (
+        consensus_key
+        and view.get("consensus_called") is not True
+        and not view.get("consensus_refused")
+    ):
+        report["floor_check"] = "fail"
+        write_json("research-gather.json", report)
+        fail("A Consensus key is present and essay.dig did not call Consensus.")
+    if wrong_floor:
+        report["floor_check"] = "fail"
+        write_json("research-gather.json", report)
+        fail(
+            "The silent 2000-word brief did not keep a floor of 16. "
+            f"words {view.get('words')} floor {view.get('floor')} from {view.get('floor_from')}.",
+            code=2,
+        )
+    if short and (wrote_list or wrote_draft):
+        report["floor_check"] = "fail"
+        write_json("research-gather.json", report)
+        fail(
+            "A sourced list or draft was written below the floor while more official pages were available. "
+            f"Distinct works {len(works)}. Floor {FLOOR_COUNT}.",
+            code=2,
+        )
+    report["floor_check"] = "pass"
+    write_json("research-gather.json", report)
+    return report
+
+
+def cmd_drive() -> None:
+    apply_saved_paths()
+    report = asyncio.run(with_server(do_drive))
+    gather = report["gather"]
+    say(
+        "Research gather finished. "
+        f"Distinct works {report['distinct_works']}. "
+        f"Floor {gather.get('floor')} from {gather.get('floor_from')} "
+        f"at {gather.get('words')} words. "
+        f"OpenAlex called {gather.get('openalex_called')}. "
+        f"Consensus called {gather.get('consensus_called')}. "
+        f"Unpaywall called {gather.get('unpaywall_called')}. "
+        f"Citation list written {report['citation_list'].get('written')}."
+    )
+
+
+def cmdline_matches(pid: int) -> bool:
+    comm = Path(f"/proc/{pid}/cmdline")
+    if not comm.exists():
+        return False
+    raw = comm.read_bytes().replace(b"\x00", b" ").decode("utf-8", errors="replace")
+    return "essay_writer" in raw and str(STUDENT) in raw
+
+
+def cmd_cleanup() -> None:
+    apply_saved_paths()
+    state = load_state()
+    pid = state.get("server_pid")
+    if isinstance(pid, int) and pid > 0 and cmdline_matches(pid):
+        os.kill(pid, 15)
+    run_dir = Path(state.get("run_dir") or RUN_DIR)
+    student = Path(state.get("student_root") or STUDENT)
+    if run_dir.exists() and run_dir.resolve() != evidence_dir().resolve():
+        if (
+            run_dir.resolve() != repo_root().resolve()
+            and repo_root().resolve() not in run_dir.resolve().parents
+        ):
+            shutil.rmtree(run_dir)
+    elif student.exists() and repo_root().resolve() not in student.resolve().parents:
+        shutil.rmtree(student)
+        kb1 = Path(state.get("kb1") or KB1)
+        if kb1.exists() and kb1.resolve() != student.resolve():
+            shutil.rmtree(kb1)
+    names = (
+        sorted(path.name for path in evidence_dir().iterdir()) if evidence_dir().is_dir() else []
+    )
+    proof = evidence_dir() / "cleanup.txt"
+    proof.write_text(
+        "Cleanup removed the student folder this run created.\n"
+        "Evidence files still present:\n" + "\n".join(names) + "\n",
+        encoding="utf-8",
+    )
+    missing = [
+        name for name in ("launch.json", "doctor.json", "research-gather.json") if name not in names
+    ]
+    if missing:
+        fail("Cleanup kept the folder, but expected evidence is missing: " + ", ".join(missing))
+    say("Cleanup finished. Evidence remains in " + str(evidence_dir()) + ".")
+
+
+def grams(text: str) -> set[str]:
+    folded = text.casefold()
+    tokens = re.findall(r"[a-z0-9]+(?:[._+-][a-z0-9]+)*", folded)
+    found = set(tokens)
+    found.update(f"{left} {right}" for left, right in zip(tokens, tokens[1:], strict=False))
+    found.update(line.strip() for line in folded.splitlines() if line.strip())
+    return found
+
+
+def deny_hashes() -> dict[str, str]:
+    found: dict[str, str] = {}
+    for path in sorted((REPO / "tests").glob("test_*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in tree.body:
+            target = None
+            value = None
+            if isinstance(node, ast.Assign):
+                if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                    target = node.targets[0].id
+                    value = node.value
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                target = node.target.id
+                value = node.value
+            if target != "_DENY" or not isinstance(value, ast.Dict):
+                continue
+            for key, item in zip(value.keys, value.values, strict=False):
+                if isinstance(key, ast.Constant) and isinstance(item, ast.Constant):
+                    if isinstance(key.value, str) and isinstance(item.value, str):
+                        found[f"{path.name}:{key.value}"] = item.value
+    return found
+
+
+def scan_texts(parts: list[tuple[str, str]]) -> list[str]:
+    denied = deny_hashes()
+    hits: list[str] = []
+    for label, text in parts:
+        digests = {hashlib.sha256(gram.encode()).hexdigest() for gram in grams(text)}
+        for opaque, digest in denied.items():
+            if digest in digests:
+                hits.append(f"{label} {opaque}")
+    return hits
+
+
+def cmd_scan(paths: list[str]) -> None:
+    parts: list[tuple[str, str]] = []
+    for raw in paths:
+        path = Path(raw)
+        if path.is_dir():
+            for child in sorted(path.rglob("*")):
+                if child.is_file():
+                    parts.append((str(child), child.read_text(encoding="utf-8", errors="replace")))
+        elif path.is_file():
+            parts.append((str(path), path.read_text(encoding="utf-8", errors="replace")))
+        else:
+            parts.append((raw, raw))
+    hits = scan_texts(parts)
+    report = {"hits": hits, "result": "NO HITS" if not hits else "HITS"}
+    write_json("deny-list.txt.json", report)
+    (evidence_dir() / "deny-list.txt").write_text(
+        report["result"] + "\n" + "\n".join(hits) + ("\n" if hits else ""),
+        encoding="utf-8",
+    )
+    if hits:
+        fail("Deny-list scan found " + ", ".join(hits))
+    say("Deny-list scan: NO HITS")
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Verify Essay Writer on the student path.")
+    parser.add_argument(
+        "command",
+        choices=("launch", "doctor", "drive-research-gather", "cleanup", "scan-public"),
+    )
+    parser.add_argument("paths", nargs="*")
+    args = parser.parse_args(argv)
+    if args.command == "launch":
+        cmd_launch()
+    elif args.command == "doctor":
+        cmd_doctor()
+    elif args.command == "drive-research-gather":
+        cmd_drive()
+    elif args.command == "cleanup":
+        cmd_cleanup()
+    else:
+        cmd_scan(args.paths)
+
+
+if __name__ == "__main__":
+    main()
