@@ -2,7 +2,17 @@
 
 ## Unreleased
 
-- If the essay question is not confirmed, or the plan is not saved, the download step does not fetch the full list of gathered works. The student goes back to confirm the essay question, or to finish the plan when the question is already confirmed. When both are missing, the essay question comes first. Nothing is downloaded, and the student is not given that full list to fetch by hand. The gathered list can stay on file. When both are present, the shorter download set is unchanged. Cursor and Grok Build follow the same rule. Build covered.
+## 0.9.18 — 2026-11-23
+
+- Each stored work has one unique source id that does not change when the list is rebuilt. The opened file, the research note, and the citation-list entry share that id. Matching and look-up use that id, not a short in-text form.
+- The finished essay cites at least the locked floor and at most the locked cap, and only relevant works.
+- After research, the download step first drops works that are not relevant, then selects from the rest the ones that fit the plan, and only that shortlist is the download set, which must not exceed the essay cite maximum of 12 distinct works per 1,000 words.
+- If the essay question is not confirmed, or the plan is not saved, the download step does not fetch the full list of gathered works. The student goes back to confirm the essay question, or to finish the plan when the question is already confirmed. When both are missing, the essay question comes first. Nothing is downloaded, and the student is not given that full list to fetch by hand. The gathered list can stay on file. When both are present, the shorter download set is unchanged.
+- A saved Harvard reference keeps the journal or the full work title italic, including a long author list, a review-style title, and a management-plan title.
+- A first review refusal does not end the job: the writer can amend and be reviewed again at each review gate on the path, and the last step stays closed while that review is still open. After a fair review pass, the last step writes a new final Word file.
+- The citation list keeps the print fields the Harvard line was made from.
+- Cursor and Grok Build follow the same rules. Build covered.
+- 0.9.18 ships the wheel, the sdist, and `SHA256SUMS`, and does not include Sigstore bundles or build-provenance attestations.
 
 ## 0.9.17 — 2026-11-23
 

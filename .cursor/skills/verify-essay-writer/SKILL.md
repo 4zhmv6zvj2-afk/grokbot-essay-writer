@@ -15,7 +15,7 @@ Keep one run on its own student folder. Set `ESSAY_WRITER_ROOT` to that folder. 
 
 Do not print `CONSENSUS_API_KEY`, `OPENALEX_API_KEY`, or `ESSAY_WRITER_UNPAYWALL_EMAIL`. The helper forwards those values into the server process when they are already set. It does not put them on a door argument.
 
-The package version this skill was written against is 0.9.17. Doctor fails when `essay.health` reports a different version.
+The package version this skill was written against is 0.9.18. Doctor fails when `essay.health` reports a different version.
 
 ## Launch
 
@@ -31,7 +31,7 @@ What that does:
 2. Installs `mcp==2.3.0` and `python-docx==1.2.0` under `/tmp/essay-verify-student/deps` when those imports are missing. The checkout is imported from `src` on `PYTHONPATH`.
 3. Starts `python -m essay_writer` on stdio with `ESSAY_WRITER_ROOT` set to the student folder.
 4. Calls `essay.setup` with `confirmPhase` `draft`, then `confirm`. `app_path` is the student folder. `kb1_path` is the KB1 folder. `acknowledge_skipped_searches` is true so a missing stored email or key does not block the folders. Values already in the environment are not sent as arguments.
-5. Checks that `Essay-writer/`, `uploads/`, and `unassigned/` exist, then calls `essay.health`. Ready means `alive` is true, `version` is `0.9.17`, and `app_path` is the student folder.
+5. Checks that `Essay-writer/`, `uploads/`, and `unassigned/` exist, then calls `essay.health`. Ready means `alive` is true, `version` is `0.9.18`, and `app_path` is the student folder.
 
 Override the folders with `ESSAY_WRITER_ROOT`, `ESSAY_WRITER_VERIFY_KB1`, `ESSAY_WRITER_VERIFY_DEPS`, and `ESSAY_WRITER_VERIFY_RUN`. Evidence defaults to `/opt/cursor/artifacts/verify-essay-writer` (`ESSAY_WRITER_EVIDENCE`).
 
@@ -46,7 +46,7 @@ Run this before a drive, and again whenever a door looks wrong.
 Doctor starts a new server on the same `ESSAY_WRITER_ROOT` and calls `essay.health`. It passes only when all of these hold.
 
 - `ok` and `alive` are true.
-- `version` is `0.9.17`.
+- `version` is `0.9.18`.
 - `app_path` is this run's student folder.
 - The mounted doors include `essay.dig`, `essay.health`, `essay.research.full`, and `essay.pack.render_word`.
 - Consensus, OpenAlex, and Unpaywall are reported as present or absent. The values are not included.

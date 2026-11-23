@@ -9,7 +9,7 @@ The surface is the writer MCP server. The command is `essay-writer` with no argu
 - Launch with `.cursor/skills/verify-essay-writer/scripts/verify-essay-writer launch` so the student folder starts empty.
 - `ESSAY_WRITER_ROOT` is that student folder and sits outside the checkout.
 - `essay.setup` has created `Essay-writer/`, `uploads/`, and `unassigned/` there.
-- Doctor reports version `0.9.17`, `alive` true, and `app_path` equal to that folder.
+- Doctor reports version `0.9.18`, `alive` true, and `app_path` equal to that folder.
 - Do not drive a server that this run did not start. Do not point `ESSAY_WRITER_ROOT` at the checkout or at another live essay folder.
 
 ## Driving conventions
