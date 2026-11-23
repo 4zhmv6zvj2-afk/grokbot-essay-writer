@@ -1092,7 +1092,7 @@ def _further_page(slots: list[dict[str, Any]]) -> bool:
     return False
 
 
-def _build_floor_card(question: str, essay_id: str) -> dict[str, Any]:
+def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[str, Any]:
     """Search each stored question, then further pages until the floor is met."""
     global _prepared_questions
     from essay_writer.source_floor import (
@@ -1104,7 +1104,7 @@ def _build_floor_card(question: str, essay_id: str) -> dict[str, Any]:
 
     floor = assignment_floor(essay_id)
     try:
-        reply = ask_planning_model(question)
+        reply = ask_planning_model(question, reply)
     except Exception:
         reply = None
     searches = accept_split(question, reply)
@@ -1360,11 +1360,15 @@ def essay_dig(
     query: str,
     confirmPhase: str | None = None,
     cardDigest: str | None = None,
+    smallerQuestions: list[str] | None = None,
 ) -> dict[str, Any]:
     """Draft the local dig card. Confirm writes the card that was shown.
 
     The draft reply carries cardDigest. Confirm rebuilds it from the stored
     card and refuses a confirm that does not send the same value.
+    smallerQuestions is the one-shot list from the shell, at most three
+    ordinary-language questions. Omit it when that reply is missing.
+    Confirm does not ask again.
     """
     id_error = sequence_write_error(essay_id)
     if id_error:
@@ -1392,7 +1396,7 @@ def essay_dig(
     fingerprint = _dig_fingerprint(query)
     if confirmPhase == DRAFT:
         if question:
-            card = _build_floor_card(question, essay_id)
+            card = _build_floor_card(question, essay_id, smallerQuestions)
             card["query"] = query
         else:
             card = _build_card(query, essay_id)

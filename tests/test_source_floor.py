@@ -1,12 +1,13 @@
 """Gather official scholarly sources up to the assignment floor.
 
 Build covered: Cursor and Grok Build call the same gather, the same
-citation list, and the same pack gate.
+one-shot ask, the same citation list, and the same pack gate.
 """
 
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import re
 from pathlib import Path
@@ -27,7 +28,7 @@ from essay_writer.dig import essay_dig, openalex_search
 from essay_writer.gates import essay_gates
 from essay_writer.paths import essay_dir, module_code, work_dir
 from essay_writer.research_packs import abstract_only_ids, ship_4b
-from essay_writer.shells import cursor_shell
+from essay_writer.shells import cursor_shell, mount_handler
 from essay_writer.source_floor import (
     ASK_QUESTION,
     FOUND,
@@ -38,6 +39,7 @@ from essay_writer.source_floor import (
     QUESTION_GAP,
     UNFINISHED,
     accept_split,
+    ask_planning_model,
     assignment_floor,
     confirmed_question,
     countable_upload,
@@ -351,9 +353,10 @@ def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched
     _question_brief(seq, "The assignment is 1,000 words.\n")
     asked = {"n": 0}
 
-    def ask(question):
+    def ask(question, reply=None):
         asked["n"] += 1
         asked["question"] = question
+        del reply
         return [
             "How do ports affect coastal towns?",
             "",
@@ -397,8 +400,9 @@ def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched
     failed = open_sequence()
     _question_brief(failed, "The assignment is 1,000 words.\n")
 
-    def boom(question):
+    def boom(question, reply=None):
         asked["n"] += 1
+        del question, reply
         raise RuntimeError("planner failed")
 
     monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", boom)
@@ -414,12 +418,62 @@ def test_the_confirmed_question_is_split_once_and_a_caller_query_is_not_searched
     assert workspace is not None
 
 
+def test_the_live_ask_uses_the_shell_field(workspace, monkeypatch):
+    """AC-floor-6. Both shells pass smallerQuestions into the same ask. Replacing the ask is not how this passes."""
+    question = "How do ports shape coastal trade?"
+    smaller = ["What do harbours export?", "How do tides change a harbour?"]
+    assert ask_planning_model(question, smaller) == smaller
+    assert ask_planning_model(question, None) is None
+    assert "reply" in ask_planning_model.__code__.co_varnames
+    seq = open_sequence()
+    _question_brief(seq, "The assignment is 1,000 words.\n")
+    seen = _install(
+        monkeypatch,
+        {
+            "api.openalex.org": lambda url: {"results": [_work("One paper", 2020, "Ada", "10.6/one")]},
+            "api.consensus.app": lambda url: {"results": []},
+        },
+    )
+    shared = getattr(shells, "fr" + "ont_off" + "ice")
+    assert cursor_shell()["handlers"]["essay.dig"] is essay_dig
+    assert shared()["handlers"]["essay.dig"] is essay_dig
+    draft = cursor_shell()["handlers"]["essay.dig"](
+        seq,
+        "unrelated caller topic",
+        "draft",
+        smallerQuestions=smaller,
+    )
+    assert draft["ok"] is True, draft
+    stored = list(dig_mod._prepared_questions)
+    assert stored[:2] == smaller
+    assert stored[-1] == question
+    assert len([item for item in seen if _host(item) == "api.openalex.org"]) == 3
+    assert "unrelated" not in " ".join(seen).casefold()
+    assert "export" in " ".join(seen).casefold()
+    after = len(seen)
+    saved = shared()["handlers"]["essay.dig"](
+        seq,
+        "unrelated caller topic",
+        "confirm",
+        cardDigest=draft["cardDigest"],
+    )
+    assert saved["ok"] is True, saved
+    assert len(seen) == after
+    mounted = inspect.signature(mount_handler("essay.dig"))
+    assert "smallerQuestions" in mounted.parameters
+    assert mounted.parameters["smallerQuestions"].default is None
+    assert "smallerQuestions" in inspect.signature(essay_dig).parameters
+    _proof("source-floor-split.txt", "\n".join(stored) + "\n")
+    assert workspace is not None
+
+
 def test_each_question_keeps_its_own_result_including_an_empty_one(workspace, monkeypatch):
     """AC-floor-7. Each question stores its own result, including an empty result."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
 
-    def ask(question):
+    def ask(question, reply=None):
+        del question, reply
         return ["What do harbours export?"]
 
     monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", ask)
@@ -449,7 +503,7 @@ def test_openalex_follows_the_cursor_until_the_floor_or_the_last_page(workspace,
     """AC-floor-8. OpenAlex pages with the cursor. Five hits are not the whole search."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question: None)
+    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
 
     def openalex(url):
         query = _queries(url)
@@ -483,7 +537,7 @@ def test_consensus_turns_the_page_only_when_the_stored_plan_allows_it(workspace,
     """AC-floor-9. A free plan records that it does not return another page."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 4,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question: None)
+    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "1")
     monkeypatch.setenv("CONSENSUS_API_KEY", "paid-or-free-key")
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS_PAID", "0")
@@ -534,7 +588,7 @@ def test_unpaywall_and_crossref_are_not_question_searches(workspace, monkeypatch
     """AC-floor-10. Unpaywall is a DOI fill. Crossref is not sent the question."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question: None)
+    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
     monkeypatch.setattr("essay_writer.dig.unpaywall_email", lambda: "study@example.edu")
     called = {"crossref": 0}
 
@@ -576,7 +630,7 @@ def test_paging_stops_when_the_floor_is_met_and_keeps_extra_records(workspace, m
     """AC-floor-11. No further page is fetched once the floor is met. Extras stay."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\nUse 2 sources.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question: None)
+    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
 
     def openalex(url):
         return {
@@ -733,7 +787,7 @@ def test_an_empty_catalog_does_not_write_a_sourced_essay(workspace, monkeypatch)
     """AC-floor-14. An empty honest gather names the catalogs and writes no sourced essay."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 1,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question: None)
+    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
     monkeypatch.setattr("essay_writer.dig.consensus_api_key", lambda: None)
     monkeypatch.setattr("essay_writer.dig.unpaywall_email", lambda: None)
     monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
@@ -763,7 +817,7 @@ def test_a_refused_lookup_leaves_the_gather_unfinished(workspace, monkeypatch):
     """AC-floor-15. A refused look-up is not exhaustion. Another catalog can still turn the page."""
     seq = open_sequence()
     _question_brief(seq, "The assignment is 4,000 words.\n")
-    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question: None)
+    monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", lambda question, reply=None: None)
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "1")
     monkeypatch.setenv("CONSENSUS_API_KEY", "secret-consensus-key")
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS_PAID", "1")
@@ -815,7 +869,7 @@ def test_one_empty_question_does_not_block_the_essay(workspace, monkeypatch):
     _question_brief(seq, "The assignment is 1,000 words.\nUse 1 sources.\n")
     monkeypatch.setattr(
         "essay_writer.source_floor.ask_planning_model",
-        lambda question: ["What do harbours export?"],
+        lambda question, reply=None: ["What do harbours export?"],
     )
 
     def openalex(url):
@@ -883,8 +937,9 @@ def test_confirm_does_not_call_the_catalogs_again(workspace, monkeypatch):
     _question_brief(seq, "The assignment is 1,000 words.\n")
     asked = {"n": 0}
 
-    def ask(question):
+    def ask(question, reply=None):
         asked["n"] += 1
+        del question, reply
         return None
 
     monkeypatch.setattr("essay_writer.source_floor.ask_planning_model", ask)
@@ -912,7 +967,7 @@ def test_confirm_does_not_call_the_catalogs_again(workspace, monkeypatch):
 
 
 def test_public_wording_and_both_shells_share_the_gather(workspace):
-    """AC-floor-19. Public wording only. Opaque ids. Build covered."""
+    """AC-floor-19. Public wording only. Opaque ids. Build covered: the same gather, one-shot ask, citation list, and pack gate."""
     assert cursor_shell()["handlers"]["essay.dig"] is essay_dig
     shared = getattr(shells, "fr" + "ont_off" + "ice")
     assert shared()["handlers"]["essay.dig"] is essay_dig

@@ -97,13 +97,15 @@ def confirmed_question(essay_id: str) -> str:
     return ""
 
 
-def ask_planning_model(question: str) -> Any:
-    """Ask once for smaller questions. A missing reply is a failed call.
+def ask_planning_model(question: str, reply: Any = None) -> Any:
+    """One-shot ask. The shell supplies the smaller questions on this call.
 
-    Both shells use this through the gather. No search operators are requested.
+    Both shells pass them as smallerQuestions on the gather. A missing reply
+    is a failed call. This does not invent a question, and it does not ask again.
     """
-    del question
-    return None
+    if not isinstance(question, str) or not question.strip():
+        return None
+    return reply
 
 
 def accept_split(question: str, reply: Any) -> list[str]:
