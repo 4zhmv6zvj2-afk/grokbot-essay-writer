@@ -46,6 +46,11 @@ validation, and Word output.
     address checked, redirects re-validated, and a hard byte cap per caller.
   - `spine.py`, `stage_llm.py` — stage definitions and prompts.
   - `validate.py`, `gates.py`, `invent.py` — pack checks, citation integrity, and invent-forbid.
+  - `citation_list.py` — the citation list for one sequence, written when stage 4b finishes.
+  - `source_ids.py` — one stable id for each stored work. A later DOI, author, or title keeps the id stored on first sight.
+  - `source_floor.py` — the gather floor. A stated count is that floor. A silent brief uses eight works per 1,000 words, rounded up.
+  - `essay_cites.py` — how many distinct relevant works the essay cites.
+  - `download_shortlist.py` — the download set that fits the saved plan, after works that do not fit the question are dropped.
   - `word.py`, `word_references.py` — Word output and Harvard reference lines.
   - `specialists/` — writer, reviewer, researcher, and front-office helpers.
 - `tests/` — behaviour tests and synthetic fixtures.
@@ -103,8 +108,10 @@ its own floor through `python_bootstrap.py` (`REQUIRED = (3, 12, 0)`).
 3. Drafts and confirms are stored under `Essay-writer/<module>/sequences/<n>/`.
 4. A save needs the matching draft and file fingerprint; stage 5 is the
    draft-store exception described below (it stores its first draft and advances
-   to stage 6 on the draft call when its gate passes). A Word file is written
-   only from a confirmed stage.
+   to stage 6 on the draft call when its gate passes). Review writes the
+   first-draft Word file from the intact saved draft, and records the stage 6
+   pass after that write. The last stage writes the final Word file when that
+   stage is confirmed.
 5. `essay.health` reports the doors, packs, and build marker.
 
 The stage runner keeps the public entry points and the stage decision tree. The

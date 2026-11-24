@@ -311,39 +311,47 @@ manual install. There is no release on PyPI.
 
 ## Verify a release
 
-GitHub releases include the wheel, the sdist, `SHA256SUMS`, a Sigstore signature
-bundle (`*.sigstore.json`) for each file, and `provenance.intoto.jsonl`.
-0.9.18 ships the wheel, the sdist, and `SHA256SUMS`, and does not include
-Sigstore bundles or build-provenance attestations.
+From 0.9.19, a GitHub release includes the wheel, the sdist, and `SHA256SUMS`.
+Each of those three files has a Sigstore signature bundle (`*.sigstore.json`).
+The release also includes `provenance.intoto.jsonl`. Releases 0.9.15 through
+0.9.18 shipped the wheel, the sdist, and `SHA256SUMS`. Those releases have no
+Sigstore bundles and no build-provenance attestations.
 
-Download 0.9.18's files — `essay_writer-0.9.18-py3-none-any.whl`,
-`essay_writer-0.9.18.tar.gz`, and `SHA256SUMS` — into one folder, then check the
-checksums:
+Download 0.9.19's files into one folder, then check the checksums. The files
+are `essay_writer-0.9.19-py3-none-any.whl`, `essay_writer-0.9.19.tar.gz`,
+`SHA256SUMS`, the `.sigstore.json` bundle for each of those three files, and
+`provenance.intoto.jsonl`.
 
 ```bash
 # The checksums and filenames come from the release:
 shasum -a 256 -c SHA256SUMS        # macOS; Linux: sha256sum -c SHA256SUMS
 
-# For a release the Release workflow signed, check the Sigstore signature on
-# each artifact; the snippet below shows 0.9.14. The certificate identity is
+# Check the Sigstore signature on each signed file. The certificate identity is
 # this repository's Release workflow on main, where the workflow is
 # dispatched from.
 cosign verify-blob \
-  --bundle essay_writer-0.9.14-py3-none-any.whl.sigstore.json \
+  --bundle essay_writer-0.9.19-py3-none-any.whl.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.9.14-py3-none-any.whl
+  essay_writer-0.9.19-py3-none-any.whl
 
 cosign verify-blob \
-  --bundle essay_writer-0.9.14.tar.gz.sigstore.json \
+  --bundle essay_writer-0.9.19.tar.gz.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.9.14.tar.gz
+  essay_writer-0.9.19.tar.gz
 
-# Check the build provenance GitHub recorded for that release workflow run:
-gh attestation verify essay_writer-0.9.14-py3-none-any.whl \
+cosign verify-blob \
+  --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  SHA256SUMS
+
+# Check the build provenance GitHub recorded for that release workflow run.
+# The attestation covers the wheel and the sdist.
+gh attestation verify essay_writer-0.9.19-py3-none-any.whl \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
-gh attestation verify essay_writer-0.9.14.tar.gz \
+gh attestation verify essay_writer-0.9.19.tar.gz \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
 ```
 
@@ -352,13 +360,14 @@ Releases from 0.3.0 onward use a reproducible build on a pinned runner image
 wheel and the sdist twice in one run with `SOURCE_DATE_EPOCH` set to the tagged
 commit's time and the hash-pinned build tooling, requires identical SHA-256
 hashes before it uploads, signs, or attests anything, then verifies each
-Sigstore signature and the GitHub attestation after signing. 0.9.18 was not
-built by that workflow. A separate reproduce workflow downloads a published
-release, rebuilds it from the tag with the same pinned toolchain, and fails if
-the SHA-256 set differs. You can rebuild a tag the same way:
+Sigstore signature and the GitHub attestation after signing. Releases 0.9.15
+through 0.9.18 were not built by that workflow. A separate reproduce workflow
+downloads a published release, rebuilds it from the tag with the same pinned
+toolchain, and fails if the SHA-256 set differs. You can rebuild a tag the same
+way:
 
 ```bash
-git checkout v0.9.18
+git checkout v0.9.19
 python -m pip install --require-hashes -r requirements-build.txt
 SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
     python tools/reproducible_build.py --outdir dist-rebuild

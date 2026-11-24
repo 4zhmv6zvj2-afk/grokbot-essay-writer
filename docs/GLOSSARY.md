@@ -11,6 +11,12 @@ are unchanged.
 | **spine** | The ordered stage definitions, and the one rule that stage 5 stores on its draft and starts stage 6 without a confirm card. | `src/essay_writer/spine.py` |
 | **shelf** | The local per-essay store for confirmed research packs (`essay.shelf.get` / `essay.shelf.put`). Both directions are draft-then-confirm. | `src/essay_writer/shelf.py` |
 | **dig** | The research card: an OpenAlex lookup (no key), an optional Consensus lookup, and an Unpaywall lookup for free copies. Draft shows the card; confirm writes `dig-card.json` / `dig-card.md`. | `src/essay_writer/dig.py` |
+| **citation list** | The stored sources for one essay, written when stage 4b finishes. Each entry keeps the author, year, title, DOI, the short in-text citation, and the Harvard line. | `src/essay_writer/citation_list.py` |
+| **source id** | The stable name of one stored work. It stays the same when the list is rebuilt. A short in-text form is not an id. | `src/essay_writer/source_ids.py` |
+| **source floor** | How many official works a gather must reach. A count on the assignment is the floor. When the assignment is silent, the floor is eight works for each 1,000 words, rounded up. | `src/essay_writer/source_floor.py` |
+| **essay cites** | How many distinct relevant works the essay cites. The citation list may be longer. The cap is 12 works per 1,000 words, or the stated count when that count is higher. | `src/essay_writer/essay_cites.py` |
+| **download shortlist** | The works chosen for download after research. Works that do not fit the confirmed question are dropped. From what remains, the works that fit the saved plan are the download set. A missing question or a missing plan leaves that set empty. | `src/essay_writer/download_shortlist.py` |
+| **stage next** | The one writer of the "what happens next" sentence on an `essay.stage` reply. Dig, shelf, setup, intake, review, and projects still write their own next sentence. | `src/essay_writer/stage_next.py` |
 | **canon** | Canonical JSON (sorted keys, no whitespace) plus SHA-256. It makes a Confirm identity: same arguments, same digest. | `src/essay_writer/canon.py` |
 | **confirm / card** | The two-phase write protocol. A write call with `confirmPhase: "draft"` returns a card; the same call with `confirmPhase: "confirm"` writes, and only if the canonical digest and the on-disk file fingerprint still match. | `src/essay_writer/confirm.py` |
 | **pack** | A validated research pack. A pack's ending is **noted** when it stands on gathered evidence, and **open** when it does not. The door never turns open into noted. | `src/essay_writer/research_packs.py`, `docs/workflow.md` |
@@ -52,3 +58,5 @@ plain words. It does not change what the tools do.
 | **EQR** | The independent review of the draft. The chat is meant to say independent review. |
 | **MCP** | The local connection the chat uses to call these tools. You do not set it up inside the essay. |
 | **4a and 4b** | The two parts of stage 4: the annotated bibliography, then the critical review. |
+| **references confirm** | The stage 9 Word file the independent review reads, before the final Word file. |
+| **Counted words** | The number of words in the essay. The cover prints it. A first draft inside the word band also says it in the chat. |

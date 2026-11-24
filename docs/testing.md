@@ -37,10 +37,13 @@ lines.
 CI runs the suite on Ubuntu and macOS, then builds the sdist and wheel, installs
 the wheel into a clean environment, extracts the sdist, requires it to carry
 every tracked file, builds a wheel from it that must be byte-identical to the
-checkout wheel, and runs the suite from the extracted sdist. A release is only
-signed after that artifact run passes, and the release workflow repeats the
-sdist checks before signing. A separate reproduce workflow rebuilds a published
-release from its tag with the pinned toolchain and compares the SHA-256 set.
+checkout wheel, and runs the suite from the extracted sdist. From 0.9.19,
+signing is part of the release flow again. A release is signed after that
+artifact run passes. The release workflow repeats the sdist checks before
+signing. Releases 0.9.15 through 0.9.18 shipped the wheel, the sdist, and
+`SHA256SUMS`. Those releases were not signed. A separate reproduce workflow
+rebuilds a published release from its tag with the pinned toolchain and
+compares the SHA-256 set.
 
 ## Layout
 

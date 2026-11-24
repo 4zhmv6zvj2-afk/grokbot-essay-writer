@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.19 — 2026-11-24
 
 - Captured live-test text is replaced with a synthetic essay of the same shape. A tree scan fails if that module code or that fishery opening returns.
 - Cleanup refuses a run directory that is inside the evidence directory or that contains it.
