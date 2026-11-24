@@ -250,29 +250,31 @@ def product_source_id(row: dict[str, Any], essay_id: str) -> str:
     return stable_source_id(row)
 
 
-def process_command(pid: int) -> str:
+def _ps(args: list[str]) -> str:
+    """Process list with the full command. Session leaders stay included.
+
+    ``ps -ax`` on Linux hides session leaders, and a narrow column cuts a long
+    command before ``essay_writer``. ``-e`` and ``-ww`` keep both.
+    """
     completed = subprocess.run(
-        ["ps", "-p", str(pid), "-o", "command="],
+        ["ps", "-ww", *args],
         check=False,
         capture_output=True,
         text=True,
     )
     if completed.returncode != 0:
         return ""
-    return completed.stdout.strip()
+    return completed.stdout
+
+
+def process_command(pid: int) -> str:
+    return _ps(["-p", str(pid), "-o", "args="]).strip()
 
 
 def current_server_pid() -> int | None:
     me = str(os.getpid())
-    completed = subprocess.run(
-        ["ps", "-ax", "-o", "pid=,ppid=,command="],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if completed.returncode != 0:
-        return None
-    for line in completed.stdout.splitlines():
+    listing = _ps(["-e", "-o", "pid=,ppid=,args="])
+    for line in listing.splitlines():
         parts = line.strip().split(None, 2)
         if len(parts) != 3:
             continue

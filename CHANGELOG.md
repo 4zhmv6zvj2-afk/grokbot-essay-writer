@@ -4,7 +4,7 @@
 
 - Captured live-test text is replaced with a synthetic essay of the same shape. A tree scan fails if that module code or that fishery opening returns.
 - Cleanup deletes a run directory only when this script created it. The directory must carry the marker written at launch, and it must be `/tmp/essay-verify-*` or the directory passed with `--run-dir`. A shared parent, a pre-existing directory, and a missing marker stay in place.
-- Cleanup stops the server process id stored at launch when that process is still `essay_writer`. It does not read `/proc`.
+- Cleanup stops the server process id stored at launch when that process is still `essay_writer`. The process list includes session leaders and the full command. It does not read `/proc`.
 - The verify script installs from `requirements-runtime.txt` with `--require-hashes`. Evidence defaults to `/tmp/essay-verify-evidence`, and `ESSAY_WRITER_EVIDENCE` still overrides that path. The dependency folder is checked even when it does not exist yet.
 - Doctor fails unless `essay.health` is alive and the doors `essay.dig`, `essay.health`, `essay.research.full`, and `essay.pack.render_word` are mounted. The expected version is the installed package version.
 - Research sources keep the id the product stored or minted. The verify script does not rewrite them to `src-n`.
