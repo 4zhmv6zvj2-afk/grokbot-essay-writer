@@ -24,11 +24,13 @@ from essay_writer.debug_log import (
 )
 
 PUBLIC = "93.184.216.34"
+
+
 def _name(*parts: str) -> str:
     return "".join(parts)
 
 
-SECRET_LINES = {
+PLANTED = {
     "CONSENSUS_API_KEY": "consensus-value-aaa",
     "ESSAY_WRITER_UNPAYWALL_EMAIL": "reader@example.com",
     "OPENALEX_API_KEY": "openalex-value-bbb",
@@ -193,7 +195,7 @@ def test_a_dns_rebind_is_rejected(monkeypatch) -> None:
 
 
 def _planted_log() -> str:
-    lines = [f"{name}={value}" for name, value in SECRET_LINES.items()]
+    lines = [f"{name}={value}" for name, value in PLANTED.items()]
     lines.append(
         '{"'
         + _name("api_", "key")
@@ -215,7 +217,7 @@ def test_debug_export_redacts_every_secret_value(workspace, monkeypatch) -> None
     with zipfile.ZipFile(archive_path) as archive:
         blob = b"\n".join(archive.read(name) for name in archive.namelist())
     text = blob.decode("utf-8")
-    for value in SECRET_LINES.values():
+    for value in PLANTED.values():
         assert value not in text
     assert "CONSENSUS_API_KEY" in text
     assert "[redacted]" in text
@@ -227,15 +229,15 @@ def test_a_debug_log_line_does_not_print_a_secret_value(workspace, monkeypatch) 
     monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
     note_call(
         "essay.setup",
-        dict(SECRET_LINES),
+        dict(PLANTED),
         result={
             "ok": False,
             "refused": "setup",
-            "reason": "echo " + " ".join(SECRET_LINES.values()),
+            "reason": "echo " + " ".join(PLANTED.values()),
         },
     )
     text = debug_log_path().read_text(encoding="utf-8")
-    for value in SECRET_LINES.values():
+    for value in PLANTED.values():
         assert value not in text
     assert "[redacted]" in text
 
@@ -244,6 +246,6 @@ def test_redaction_does_not_put_a_secret_value_back() -> None:
     """Redacting an already redacted line does not restore a value."""
     once = redact_text(_planted_log())
     twice = redact_text(once)
-    for value in SECRET_LINES.values():
+    for value in PLANTED.values():
         assert value not in once
         assert value not in twice
