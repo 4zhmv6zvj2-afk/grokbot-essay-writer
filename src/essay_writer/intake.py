@@ -614,7 +614,8 @@ def _unchanged(
             "confirm",
             "The latest Word file changed after the draft. Fresh draft required.",
             digest=digest(payload),
-        next="Ask me to show this step again, then save.")
+            next="Ask me to show this step again, then save.",
+        )
     return body
 
 

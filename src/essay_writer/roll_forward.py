@@ -277,7 +277,9 @@ def choose_paper(essay_id: str, choice: object) -> dict[str, Any]:
         return refuse("papers", "Name the paper and whether to keep, drop, or replace it.")
     decision = choice.get("choice")
     if decision not in _CHOICES:
-        return refuse("papers", "choice must be keep, drop, or replace.", next="Send keep, drop, or replace.")
+        return refuse(
+            "papers", "choice must be keep, drop, or replace.", next="Send keep, drop, or replace."
+        )
     which = choice.get("paper") or choice.get("id") or choice.get("doi") or choice.get("url")
     record = load_record(essay_id)
     if record is None:
@@ -285,7 +287,11 @@ def choose_paper(essay_id: str, choice: object) -> dict[str, Any]:
     papers = [item for item in record.get("papers") or [] if isinstance(item, dict)]
     paper = _match_paper(papers, which)
     if paper is None:
-        return refuse("papers", "That paper is not on this sequence.", next="Choose a paper that is on this sequence.")
+        return refuse(
+            "papers",
+            "That paper is not on this sequence.",
+            next="Choose a paper that is on this sequence.",
+        )
     before = {key: paper.get(key) for key in ("doi", "title", "url", "path")}
     paper["choice"] = decision
     if decision in {"drop", "replace"}:

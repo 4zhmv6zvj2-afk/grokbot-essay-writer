@@ -66,7 +66,11 @@ def _door_options(
             "packs must be a list of local pack names from essay.health. Do not invent one.",
         )
     elif len(packs) > 2:
-        return None, refuse("packs", "At most two local packs. Do not invent extras.", next="Keep at most two local packs.")
+        return None, refuse(
+            "packs",
+            "At most two local packs. Do not invent extras.",
+            next="Keep at most two local packs.",
+        )
     else:
         allowed = set(local_pack_names(essay_id))
         names = []
@@ -87,7 +91,8 @@ def _door_options(
         return None, refuse(
             "exclude",
             "exclude_section_ids must be the section ids a person chose to leave closed.",
-        next="Send the section ids you chose to leave closed.")
+            next="Send the section ids you chose to leave closed.",
+        )
     else:
         excluded = [item.strip() for item in exclude_section_ids]
     if industry is not None and not isinstance(industry, dict):
@@ -98,8 +103,10 @@ def _door_options(
         digest({"industry": industry, "host_voice": host_voice})
     except TypeError:
         return None, refuse(
-            "host_voice", "host_voice must be data the door can store. It is not evidence."
-        , next="Leave host_voice off this save.")
+            "host_voice",
+            "host_voice must be data the door can store. It is not evidence.",
+            next="Leave host_voice off this save.",
+        )
     return {
         "packs": names,
         "exclude_section_ids": excluded,

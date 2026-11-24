@@ -79,7 +79,11 @@ def essay_shelf_put(
     if not isinstance(pack, dict):
         return refuse("pack", "pack must be an object", next="Send the pack as an object.")
     if pack_id is not None and _clean_id(pack_id) is None:
-        return refuse("shelf", "pack_id has characters the local shelf will not store", next="Use a pack id this shelf can store.")
+        return refuse(
+            "shelf",
+            "pack_id has characters the local shelf will not store",
+            next="Use a pack id this shelf can store.",
+        )
     if (
         isinstance(topic, str)
         and topic.strip()
@@ -173,7 +177,9 @@ def essay_shelf_get(
         return blocked
     cleaned = _clean_id(pack_id)
     if cleaned is None:
-        return refuse("shelf", "pack_id is not a local shelf id", next="Choose a pack id from this shelf.")
+        return refuse(
+            "shelf", "pack_id is not a local shelf id", next="Choose a pack id from this shelf."
+        )
     path = _shelf_file(essay_id, cleaned)
     if not path.is_file():
         return refuse("shelf", "no shelf pack for this essay id")

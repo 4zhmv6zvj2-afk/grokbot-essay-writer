@@ -293,7 +293,8 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         return refuse(
             "stage",
             "stage must be 1, 2, 3, 4a, 4b, 5, 6, 7, 8, 9, or 10.",
-        next="Send a stage from 1 to 10, including 4a and 4b.")
+            next="Send a stage from 1 to 10, including 4a and 4b.",
+        )
     if look is None:
         text = ""
     elif isinstance(look, str):

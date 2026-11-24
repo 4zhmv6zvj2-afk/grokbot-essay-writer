@@ -81,7 +81,11 @@ def essay_review(
     if id_error:
         return refuse("essay-id", id_error)
     if stage not in STAGES:
-        return refuse("review", "EQR stage is 6 (first Word) or 9 (final Word).", next="Send stage 6 or stage 9.")
+        return refuse(
+            "review",
+            "EQR stage is 6 (first Word) or 9 (final Word).",
+            next="Send stage 6 or stage 9.",
+        )
     from essay_writer.model_contract import ContractRefusal, parse_verdict
 
     parsed_verdict = parse_verdict(verdict)
@@ -153,7 +157,8 @@ def essay_review(
             return refuse(
                 "review",
                 "Stage 6 only checks whether the draft answers the assignment question. Nothing was recorded.",
-            next="Ask the question check again. Nothing was recorded.")
+                next="Ask the question check again. Nothing was recorded.",
+            )
     top_band = None
     if verdict == "PASS" and stage == "9":
         from essay_writer.specialists.eqr import mark_top_band_rows

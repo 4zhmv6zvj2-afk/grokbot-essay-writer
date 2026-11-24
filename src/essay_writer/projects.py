@@ -335,7 +335,8 @@ def essay_projects(view: str, module: str | None = None) -> dict[str, Any]:
         return refuse(
             "projects",
             "view must be continue, roll-forward, archive, delete, or unarchive.",
-        next="Send view as continue, roll-forward, archive, delete, or unarchive.")
+            next="Send view as continue, roll-forward, archive, delete, or unarchive.",
+        )
     if view == "continue":
         rows = [_continue_row(module) for module in modules_on_disk() if not is_archived(module)]
         return {
@@ -553,7 +554,8 @@ def _coerce_local_paths(local_paths: object) -> tuple[list[str], dict[str, Any] 
                 return [], refuse(
                     "delete",
                     "Each path must be a Word file or a zip on your computer. Nothing was removed.",
-                next="Name a Word file or a zip on this computer.")
+                    next="Name a Word file or a zip on this computer.",
+                )
             paths.append(item.strip())
         return paths, None
     return [], refuse(
@@ -1412,8 +1414,10 @@ def essay_sequence_new(
         parsed = parse_sequence_id(parent)
         if parsed is None or parsed[0] != module:
             return refuse(
-                "sequence", "parent must be a sequence id of this module, such as MOD1011AA-5."
-            , next="Name a sequence in this module, such as MOD1011AA-5.")
+                "sequence",
+                "parent must be a sequence id of this module, such as MOD1011AA-5.",
+                next="Name a sequence in this module, such as MOD1011AA-5.",
+            )
         parent_number = parsed[1]
         parent_id = sequence_id(module, parent_number)
         if parent_number not in numbers:
