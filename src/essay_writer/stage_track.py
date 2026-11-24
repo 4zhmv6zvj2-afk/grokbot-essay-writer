@@ -293,13 +293,13 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         return refuse(
             "stage",
             "stage must be 1, 2, 3, 4a, 4b, 5, 6, 7, 8, 9, or 10.",
-        )
+        next="Send a stage from 1 to 10, including 4a and 4b.")
     if look is None:
         text = ""
     elif isinstance(look, str):
         text = look.strip()
     else:
-        return refuse("stage", "look must be plain text.")
+        return refuse("stage", "look must be plain text.", next="Send the look as plain text.")
     redirected = _turn_redirect(stage, confirmPhase, text, args.answers)
     if redirected is not None:
         return redirected

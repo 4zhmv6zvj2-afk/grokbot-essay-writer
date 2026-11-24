@@ -48,7 +48,7 @@ def claim_reference_pass(seat: str = "writer") -> dict[str, object]:
         "The independent reviewer cannot clear without running the Harvard reference check.",
         checked=False,
         seat="reviewer",
-    )
+    next="Run the Harvard reference check, then clear the review.")
 
 
 def sources_the_file_accounts_for(

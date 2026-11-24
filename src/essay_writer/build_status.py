@@ -1014,6 +1014,7 @@ def follow_mid_process(
                 if stdout is not None and hasattr(stdout, "close"):
                     stdout.close()
             except Exception:
+                # Closing the child output must not stop the office thread.
                 pass
             try:
                 finish_mid_process(

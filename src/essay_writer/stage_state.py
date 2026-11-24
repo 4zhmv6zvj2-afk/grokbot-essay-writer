@@ -319,6 +319,15 @@ def _read_pointer_data(essay_id: str) -> dict[str, object] | None:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
+        from essay_writer.incident import note
+
+        note(
+            "pointer-damaged",
+            severity="warn",
+            disposition="fallback",
+            tool="stage",
+            stage="pointer",
+        )
         return None
     if not isinstance(data, dict):
         return None

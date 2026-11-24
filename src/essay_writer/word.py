@@ -462,6 +462,15 @@ def document_title(
             return chosen
     spare = _flat_title(fallback)
     if not spare or len(spare) > WORD_TITLE_LIMIT or (banned and spare == banned):
+        from essay_writer.incident import note
+
+        note(
+            "word-title-spare",
+            severity="info",
+            disposition="fallback",
+            tool="word",
+            stage="title",
+        )
         spare = WORD_TITLE_SPARE
     return spare[:WORD_TITLE_LIMIT]
 
@@ -748,7 +757,7 @@ def essay_pack_render_word(
     if blocked:
         return blocked
     if not isinstance(pack, dict):
-        return refuse("pack", "pack must be an object")
+        return refuse("pack", "pack must be an object", next="Send the pack as an object.")
     from essay_writer.brief_contract import student_fields_label, word_contract_refusal
     from essay_writer.validate import _pack_assignment_text
 
@@ -763,7 +772,12 @@ def essay_pack_render_word(
     if blocked_gate:
         return blocked_gate
     if pack.get("format", "docx") != "docx":
-        return refuse("word-only", "Word .docx is the only output. PDF is refused.", wrote=False)
+        return refuse(
+            "word-only",
+            "Word .docx is the only output. PDF is refused.",
+            wrote=False,
+            next="Send a Word .docx file.",
+        )
     if stage is not None and stage not in {"6", "7", "9"}:
         return refuse(
             "stage",
@@ -901,6 +915,7 @@ def essay_pack_render_word(
             blockers=report["blockers"],
             path=planned,
             pack_digest=identity,
+            next="Fix the pack, then ask me to write the Word file again.",
         )
     if not isinstance(validation, dict) or not validation.get("ok"):
         return refuse(
@@ -916,6 +931,7 @@ def essay_pack_render_word(
             "Gathered files changed after validation. Fresh validate draft required.",
             path=planned,
             pack_digest=identity,
+            next="Ask me to validate again, then save.",
         )
     if stage == "9":
         from essay_writer.specialists.eqr import submit_pass_unlocked
@@ -980,6 +996,7 @@ def essay_pack_render_word(
             "The page number is missing. An empty footer is refused.",
             path=planned,
             wrote=False,
+            next="Add the page number, then save the Word file again.",
         )
     if stage in {"7", "9"}:
         from essay_writer.stage7 import rewrite_first_draft_md

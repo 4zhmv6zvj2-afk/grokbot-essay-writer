@@ -511,7 +511,7 @@ def _build_stage_body(
                     block = refuse(
                         "word-band",
                         "This first draft is not inside the brief's word band.",
-                    )
+                    next="Change the draft so it fits the brief, then save again.")
                 block["stage"] = stage
                 block["current"] = pointer.get("current")
                 block["advanced"] = False

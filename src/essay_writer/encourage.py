@@ -411,6 +411,15 @@ def attach_plan_encourage(body: dict[str, Any], essay_id: str, plan_text: str) -
     try:
         _save(essay_id, record)
     except OSError:
+        from essay_writer.incident import note
+
+        note(
+            "encourage-unwritten",
+            severity="warn",
+            disposition="fallback",
+            tool="encourage",
+            stage="plan",
+        )
         return body
     ask = _current_ask(essay_id, record)
     if ask is None:
@@ -522,6 +531,15 @@ def answer_encourage(essay_id: str, choice: str | None) -> dict[str, Any]:
     try:
         _save(essay_id, record)
     except OSError:
+        from essay_writer.incident import note
+
+        note(
+            "encourage-unwritten",
+            severity="warn",
+            disposition="fallback",
+            tool="encourage",
+            stage="answer",
+        )
         return _reply(essay_id, record, silence=False, accepted=False)
     return _reply(essay_id, record, silence=False, accepted=True)
 

@@ -8,7 +8,7 @@ Sequence state is the last file in its pair. `state.json` is written, then `last
 
 These writes stay outside that replace. Each one is a stream, a download, or a tree that is renamed into place:
 
-- `debug.log` and `ml-events.jsonl` headers are append logs.
+- `debug.log` and `ml-events.jsonl` headers are append logs. `incident.jsonl` is a separate always-on metadata log for a fallback. It is not part of that opt-in stream.
 - An update download is the installer body, not sequence state.
 - The first-run installer extracts an archive into a new tree.
 - The vendored pin file is not sequence state.

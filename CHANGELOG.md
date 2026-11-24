@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A new saved file is published as 0644. A file that already exists keeps its mode. A path inside the code checkout is refused, except the host attach files the installer writes. A fallback writes one metadata line to incident.jsonl and the student keeps going. A refusal names the next step.
 - A saved file is replaced as a whole. A crash before the rename leaves the previous file. Sequence state is written before its pointer, and the next load finishes a stage pair whose pointer did not land.
 
 ## 0.9.19 — 2026-11-24

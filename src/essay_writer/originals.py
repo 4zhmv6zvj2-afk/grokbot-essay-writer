@@ -60,7 +60,7 @@ def essay_originals(
     if error:
         return refuse("essay-id", error)
     if action not in {"list", "read"}:
-        return refuse("originals", "action must be list or read")
+        return refuse("originals", "action must be list or read", next="Send action as list or read.")
     if kind not in {"upload", "brief"}:
         return refuse("originals", "kind must be upload or brief")
     if action == "list":
@@ -91,7 +91,7 @@ def essay_originals(
         from essay_writer.known_paths import research_file
 
         if research_file(essay_id, str(path)) is None:
-            return refuse("invented", "Do not invent a student folder path.")
+            return refuse("invented", "Do not invent a student folder path.", next="Name a folder you chose. I will not invent one.")
         text = read_gathered_text(path, essay_id)
     except ValueError as exc:
         return {

@@ -614,7 +614,7 @@ def _unchanged(
             "confirm",
             "The latest Word file changed after the draft. Fresh draft required.",
             digest=digest(payload),
-        )
+        next="Ask me to show this step again, then save.")
     return body
 
 
@@ -856,9 +856,9 @@ def essay_intake(
             "Say whether this is a new module or a roll-forward onto a module you already have.",
         )
     if create is not True and create:
-        return refuse("intake", "create is yes or no.")
+        return refuse("intake", "create is yes or no.", next="Send create as yes or no.")
     if rollForward is not True and rollForward:
-        return refuse("intake", "rollForward is yes or no.")
+        return refuse("intake", "rollForward is yes or no.", next="Send rollForward as yes or no.")
     try:
         path = confine(unassigned_dir(), name)
     except ValueError as exc:

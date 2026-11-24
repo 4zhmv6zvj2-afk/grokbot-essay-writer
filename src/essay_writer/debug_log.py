@@ -449,7 +449,11 @@ def essay_debug_export() -> dict[str, Any]:
         try:
             payload = redact_bytes(path.read_bytes())
         except OSError:
-            return refuse("debug-export", "The export could not be written.")
+            return refuse(
+                "debug-export",
+                "The export could not be written.",
+                next="Ask me to export the log again.",
+            )
         members.append((name, payload))
     snapshot = _health_land_snapshot()
     if snapshot:
@@ -466,7 +470,11 @@ def essay_debug_export() -> dict[str, Any]:
     try:
         _write_debug_zip(dest, members)
     except OSError:
-        return refuse("debug-export", "The export could not be written.")
+        return refuse(
+            "debug-export",
+            "The export could not be written.",
+            next="Ask me to export the log again.",
+        )
     if not _zip_matches(dest, members):
         try:
             if dest.is_file():
@@ -504,7 +512,11 @@ def essay_debug_wipe(speech: str | None = None) -> dict[str, Any]:
                 "debug-wipe",
                 "Say what you want cleared, such as delete the logs or clear debug log.",
             )
-        return refuse("debug-wipe", "That request does not clear the run log.")
+        return refuse(
+            "debug-wipe",
+            "That request does not clear the run log.",
+            next="Ask for the log clear again with the phrase this door accepts.",
+        )
     removed = wipe_operator_log_files()
     cleared = any(removed.values())
     next_line = "Cleared the run logs." if cleared else "The run logs were already empty."
@@ -1260,6 +1272,7 @@ def note_call(
             with path.open("a", encoding="utf-8") as handle:
                 handle.write(line + "\n")
     except Exception:
+        # A failed debug line must not stop the door the student just called.
         pass
     try:
         from essay_writer.ml_events import note_events
