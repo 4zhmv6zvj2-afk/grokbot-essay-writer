@@ -12,6 +12,8 @@ import json
 import re
 from typing import Any
 
+from essay_writer.sources import distinct_works, title_text, work_key, year_text
+
 NO_LENGTH = "The assignment stated no length."
 FOUND = (
     "Found {found} sources. This assignment's floor is {floor}. "
@@ -71,7 +73,6 @@ _UPLOAD_HEAD = re.compile(
     r"^(?P<author>.+?)\s+\((?P<year>1[0-9]{3}|20[0-9]{2})\)\s+"
     r"['\"]?(?P<title>.+?)['\"]?\.?\s*$"
 )
-_DOI = re.compile(r"^(?:https?://(?:dx\.)?doi\.org/)", re.IGNORECASE)
 
 
 def confirmed_question(essay_id: str) -> str:
@@ -160,93 +161,6 @@ def cap_for_words(words: int | None) -> int | None:
     if isinstance(words, bool) or not isinstance(words, int) or words <= 0:
         return None
     return max(1, (words * 12) // 1000)
-
-
-def _fold_piece(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
-
-
-def _identity_keys(record: dict[str, Any]) -> list[str]:
-    keys: list[str] = []
-    for field in ("source_id", "id"):
-        value = record.get(field)
-        if isinstance(value, str) and value.strip():
-            keys.append("id:" + value.strip())
-            break
-    doi = doi_key(record.get("doi"))
-    if doi:
-        keys.append("doi:" + doi)
-    title = _fold_piece(title_text(record))
-    year = year_text(record)
-    author = _fold_piece(author_text(record))
-    if title and year and author:
-        keys.append(f"tya:{title}|{year}|{author}")
-    return keys
-
-
-def work_key(record: dict[str, Any]) -> str | None:
-    """None when author, title, or year is missing. Otherwise one identity token."""
-    if not title_text(record) or not year_text(record) or not author_text(record):
-        return None
-    keys = _identity_keys(record)
-    return keys[0] if keys else None
-
-
-def distinct_works(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Countable works, first occurrence kept.
-
-    The same source id is one work. The same DOI is one work. A DOI record
-    and a no-DOI record with the same normalized title, year, and author are
-    one work. Two works that share a title and a year and name different
-    authors stay two. Two different DOIs stay two.
-    """
-    countable = [record for record in records if isinstance(record, dict) and work_key(record)]
-    parent = list(range(len(countable)))
-
-    def find(index: int) -> int:
-        while parent[index] != index:
-            parent[index] = parent[parent[index]]
-            index = parent[index]
-        return index
-
-    def union(left: int, right: int) -> None:
-        root_left = find(left)
-        root_right = find(right)
-        if root_left != root_right:
-            parent[root_right] = root_left
-
-    by_key: dict[str, int] = {}
-    for index, record in enumerate(countable):
-        for key in _identity_keys(record):
-            if key.startswith("tya:"):
-                continue
-            previous = by_key.get(key)
-            if previous is None:
-                by_key[key] = index
-            else:
-                union(index, previous)
-    grouped: dict[str, list[int]] = {}
-    for index, record in enumerate(countable):
-        for key in _identity_keys(record):
-            if key.startswith("tya:"):
-                grouped.setdefault(key, []).append(index)
-    for indexes in grouped.values():
-        with_doi = [index for index in indexes if doi_key(countable[index].get("doi"))]
-        without_doi = [index for index in indexes if index not in with_doi]
-        for index in without_doi[1:]:
-            union(without_doi[0], index)
-        distinct_dois = {doi_key(countable[index].get("doi")) for index in with_doi}
-        if len(distinct_dois) == 1 and without_doi:
-            union(with_doi[0], without_doi[0])
-    kept: list[dict[str, Any]] = []
-    seen: set[int] = set()
-    for index, record in enumerate(countable):
-        root = find(index)
-        if root in seen:
-            continue
-        seen.add(root)
-        kept.append(record)
-    return kept
 
 
 def is_gap(record: dict[str, Any]) -> bool:
@@ -489,42 +403,6 @@ def question_lines(questions: list[dict[str, Any]]) -> list[str]:
         if isinstance(note, dict) and isinstance(note.get("note"), str):
             lines.append(f"- {note['note']}")
     return lines
-
-
-def author_text(record: dict[str, Any]) -> str:
-    authors = record.get("authors")
-    if isinstance(authors, list):
-        names = [item.strip() for item in authors if isinstance(item, str) and item.strip()]
-        if names:
-            return " and ".join(names)
-    author = record.get("author")
-    if isinstance(author, str) and author.strip():
-        return author.strip()
-    return ""
-
-
-def year_text(record: dict[str, Any]) -> str:
-    year = record.get("year")
-    if isinstance(year, bool):
-        return ""
-    if isinstance(year, int):
-        return str(year)
-    if isinstance(year, str) and year.strip().isdigit():
-        return year.strip()
-    return ""
-
-
-def title_text(record: dict[str, Any]) -> str:
-    title = record.get("title")
-    if isinstance(title, str) and title.strip():
-        return title.strip()
-    return ""
-
-
-def doi_key(value: object) -> str:
-    if not isinstance(value, str):
-        return ""
-    return _DOI.sub("", value.strip()).casefold()
 
 
 def _floor_record(

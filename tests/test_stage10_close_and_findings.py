@@ -28,10 +28,10 @@ from essay_writer import __version__
 from essay_writer.build_office import stage_launch
 from essay_writer.citation_list import list_written, load_citation_list, short_in_text
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.harvard_ref_check import _author_year_present
 from essay_writer.late_chain import write_stage10
 from essay_writer.paths import module_code, work_dir
 from essay_writer.research_packs import ship_4a, ship_4b
+from essay_writer.sources import author_year_present
 from essay_writer.specialists.eqr import (
     CLAIM_CHECKS,
     NORTH_STAR,
@@ -235,7 +235,7 @@ def test_long_harvard_lines_stay_covered(workspace):
     assert token_is_covered("quinn et al., 2026", [], seq) is True
     assert token_is_covered("alden and marlow, 2012", [], seq) is True
     assert "{0,200}" not in inspect.getsource(_line_covers_cite)
-    assert "{0,200}" not in inspect.getsource(_author_year_present)
+    assert "{0,200}" not in inspect.getsource(author_year_present)
     assert workspace is not None
 
 

@@ -21,26 +21,18 @@ from essay_writer.cite_open import (
 from essay_writer.paths import TEXT_SUFFIXES, locator_target
 from essay_writer.programme import PAID_RESOLVERS
 from essay_writer.resolvers import RESOLVER_FILLABLE
+from essay_writer.sources import (
+    ABSTRACT_KEPT,
+    BIBLIO_FIELDS,
+    FILE,
+    FILE_BIBLIO_FIELDS,
+    LOOKUP,
+    LOOKUP_KEPT,
+)
 from essay_writer.state import load_state
 from essay_writer.vision import is_image_suffix, saved_photo_words
 
-BIBLIO_FIELDS = (
-    "author",
-    "title",
-    "year",
-    "container",
-    "volume",
-    "issue",
-    "pages",
-    "doi",
-    "url",
-    "accessed",
-    "publisher",
-    "place",
-    "edition",
-)
 CLAIM_FIELDS = BIBLIO_FIELDS + ("quote",)
-FILE_BIBLIO_FIELDS = ("author", "title", "year", "edition")
 
 
 def read_gathered_text(path: Any, essay_id: str | None = None) -> str:
@@ -101,21 +93,8 @@ def _paid(raw: dict[str, Any]) -> str | None:
     return None
 
 
-_LOOKUP_KEPT = (
-    "author",
-    "title",
-    "year",
-    "doi",
-    "volume",
-    "issue",
-    "pages",
-    "url",
-    "publisher",
-    "place",
-    "container",
-    "accessed",
-)
-_ABSTRACT_KEPT = ("author", "year", "title", "doi")
+_LOOKUP_KEPT = LOOKUP_KEPT
+_ABSTRACT_KEPT = ABSTRACT_KEPT
 
 
 def _lookup_kept(essay_id: str, locator: str) -> dict[str, str]:
@@ -136,7 +115,7 @@ def _lookup_kept(essay_id: str, locator: str) -> dict[str, str]:
         return {}
     kept: dict[str, str] = {}
     for field in _LOOKUP_KEPT:
-        if provenance.get(field) != "lookup":
+        if provenance.get(field) != LOOKUP:
             continue
         value = prior.get(field)
         if isinstance(value, str) and value.strip():
@@ -291,7 +270,7 @@ def gather_source(
             # kept PDF. A different claimed value refuses the source.
             if text_value is None or same_lookup_value(field, text_value, remembered):
                 kept[field] = remembered
-                field_sources[field] = "lookup"
+                field_sources[field] = LOOKUP
                 continue
             issues.append(
                 {
@@ -309,14 +288,14 @@ def gather_source(
             corrected = author_kept(text_value, opened)
             if corrected:
                 kept["author"] = corrected
-                field_sources[field] = "file"
+                field_sources[field] = FILE
                 continue
         if field == "pages":
             kind = page_value_kind(text_value)
             from_lookup = lookup_kept.get("pages") == text_value
             if kind == "article" and from_lookup:
                 kept["article_number"] = text_value
-                field_sources["article_number"] = "lookup"
+                field_sources["article_number"] = LOOKUP
                 continue
             if opened is not None:
                 printed = page_span_printed(text_value, opened.printed_pages)
@@ -325,15 +304,15 @@ def gather_source(
                     # page. A page the file does not print and no look-up
                     # marks stays blank rather than being kept on a guess.
                     kept["pages"] = text_value
-                    field_sources[field] = "lookup" if from_lookup else "file"
+                    field_sources[field] = LOOKUP if from_lookup else FILE
                     continue
                 if printed:
                     kept["pages"] = text_value
-                    field_sources[field] = "file"
+                    field_sources[field] = FILE
                 continue
         if remembered and same_lookup_value(field, text_value, remembered):
             kept[field] = remembered
-            field_sources[field] = "lookup"
+            field_sources[field] = LOOKUP
             continue
         if text_value.casefold() not in folded:
             issues.append(
@@ -348,7 +327,7 @@ def gather_source(
             continue
         kept[field] = text_value
         if field in FILE_BIBLIO_FIELDS or field in RESOLVER_FILLABLE:
-            field_sources[field] = "file"
+            field_sources[field] = FILE
     if opened is not None and opened.article_number:
         claimed_article = _as_text(raw.get("article_number"))
         if claimed_article is None or claimed_article == opened.article_number:
@@ -374,16 +353,14 @@ def gather_source(
         kept["field_sources"] = field_sources
     if issues:
         return None, issues
-    from essay_writer.source_ids import saved_source_id, stable_source_id, valid_source_id
+    from essay_writer.source_ids import saved_source_id
+    from essay_writer.sources import mint_source_id
 
     saved = saved_source_id(essay_id, kept["locator"])
-    supplied = valid_source_id(kept["id"])
     if saved:
         kept["id"] = saved
-    elif supplied:
-        kept["id"] = supplied
     else:
-        kept["id"] = stable_source_id(kept) or ("loc:" + kept["locator"].casefold())
+        kept["id"] = mint_source_id(kept) or ("loc:" + kept["locator"].casefold())
     return kept, []
 
 

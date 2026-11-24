@@ -17,10 +17,16 @@ from typing import Any
 
 from essay_writer.paths import work_dir, workspace_root
 from essay_writer.records import read_json, write_json
+from essay_writer.sources import (
+    identifier_keys,
+    part_names,
+    same_source,
+    short_form,
+    stored_for_part,
+    token_matches,
+)
 from essay_writer.textutil import (
     PAREN,
-    YEAR,
-    _is_initial,
     fold_name,
     in_text_forms,
     token_allowed,
@@ -117,66 +123,9 @@ def _text(value: object) -> str:
     return ""
 
 
-def _display_surname(words: list[str]) -> str:
-    kept = list(words)
-    while kept and _is_initial(kept[0]):
-        kept = kept[1:]
-    while kept and _is_initial(kept[-1]):
-        kept = kept[:-1]
-    if not kept:
-        return ""
-    return kept[-1].rstrip(".")
-
-
-def _author_groups(author: str) -> list[list[str]]:
-    """Co-authors as words. The author's own hyphen character is kept."""
-    text = re.sub(r"\s+et\s+al\.?$", "", author.strip(), flags=re.IGNORECASE)
-    text = re.sub(r"\s+and\s+others$", "", text, flags=re.IGNORECASE)
-    chunks = [
-        chunk.strip()
-        for chunk in re.split(r"\s*(?:&|\band\b)\s*", text, flags=re.IGNORECASE)
-        if chunk.strip()
-    ]
-    people: list[list[str]] = []
-    for chunk in chunks:
-        current: list[str] = []
-        for part in [piece.strip() for piece in chunk.split(",") if piece.strip()]:
-            words = [word for word in part.split() if word]
-            if words and all(_is_initial(word) for word in words):
-                current.extend(words)
-                continue
-            if current:
-                people.append(current)
-            current = words
-        if current:
-            people.append(current)
-    return people
-
-
 def short_in_text(author: object, year: object) -> str:
     """Short Harvard citation stored on the entry. Empty when the name or year is missing."""
-    year_text = _text(year)
-    author_text = _text(author)
-    if not year_text or not author_text:
-        return ""
-    groups = _author_groups(author_text)
-    if len(groups) == 1 and "," not in author_text:
-        shown = " ".join(groups[0]).strip()
-        if not shown:
-            return ""
-        return f"({shown}, {year_text})"
-    surnames = [name for name in (_display_surname(words) for words in groups) if name]
-    if not surnames:
-        return ""
-    if len(surnames) >= 4:
-        shown = f"{surnames[0]} et al."
-    elif len(surnames) == 2:
-        shown = f"{surnames[0]} and {surnames[1]}"
-    elif len(surnames) > 2:
-        shown = ", ".join(surnames[:-1]) + " and " + surnames[-1]
-    else:
-        shown = surnames[0]
-    return f"({shown}, {year_text})"
+    return short_form({"author": author, "year": year})
 
 
 def full_reference(source: dict[str, Any]) -> str:
@@ -507,12 +456,7 @@ def _fields_conflict(
 
 def _part_names(source_id: str) -> dict[str, str]:
     """The opened file, the note, and the list entry, named with the role at the back."""
-    ident = source_id.strip()
-    return {
-        "part_source": f"{ident}:source",
-        "part_note": f"{ident}:note",
-        "part_list": f"{ident}:list",
-    }
+    return part_names(source_id)
 
 
 def _present_entry(essay_id: str, entry: dict[str, Any]) -> dict[str, Any]:
@@ -551,31 +495,10 @@ def load_citation_list(essay_id: str) -> dict[str, Any]:
     return {"written": record.get("written") is True, "gap": gap, "entries": entries}
 
 
-def _same_doi(left: object, right: object) -> bool:
-    one = _text(left).casefold().removeprefix("https://doi.org/").rstrip(".")
-    other = _text(right).casefold().removeprefix("https://doi.org/").rstrip(".")
-    return bool(one) and one == other
-
-
-def _same(entry: dict[str, Any], source: dict[str, Any]) -> bool:
-    """The same work when the source id, the locator, or the DOI is the same.
-
-    A shared title is not enough. Two works titled Editorial stay two works.
-    """
-    source_id = _text(source.get("id"))
-    entry_id = _text(entry.get("source_id"))
-    if source_id and entry_id and source_id == entry_id:
-        return True
-    left_locator = _text(entry.get("locator"))
-    right_locator = _text(source.get("locator"))
-    if left_locator and right_locator and left_locator == right_locator:
-        return True
-    return _same_doi(entry.get("doi"), source.get("doi"))
-
-
 def _match(entries: list[dict[str, Any]], source: dict[str, Any]) -> dict[str, Any] | None:
+    """The entry that names this work. A shared title is not enough."""
     for entry in entries:
-        if _same(entry, source):
+        if same_source(entry, source):
             return entry
     return None
 
@@ -784,20 +707,9 @@ def usable_sources(essay_id: str) -> list[dict[str, Any]] | None:
     return sources
 
 
-def _token_matches(token: str, entry: dict[str, Any]) -> bool:
-    """True only when the token is the short form stored on this entry."""
-    stored = _text(entry.get("in_text"))
-    inner = stored[1:-1] if stored.startswith("(") and stored.endswith(")") else stored
-    if not inner:
-        return False
-    left = fold_name(inner).casefold().rstrip(".")
-    right = fold_name(token).casefold().rstrip(".")
-    return bool(left) and left == right
-
-
 def _wording_matches(token: str, entry: dict[str, Any]) -> bool:
     """An allowed wording of this entry that is not itself the stored form."""
-    if _token_matches(token, entry):
+    if token_matches(token, entry):
         return False
     author = _text(entry.get("author"))
     year = _text(entry.get("year"))
@@ -806,74 +718,9 @@ def _wording_matches(token: str, entry: dict[str, Any]) -> bool:
     return token_allowed(token, in_text_forms(author, year))
 
 
-def _identifier_keys(entry: dict[str, Any]) -> set[str]:
-    keys: set[str] = set()
-    source_id = _text(entry.get("source_id")).casefold()
-    if source_id:
-        keys.add(source_id)
-        keys.update(name.casefold() for name in _part_names(source_id).values())
-    doi = _text(entry.get("doi")).casefold().rstrip(".")
-    if doi:
-        keys.add(doi)
-        keys.add(f"doi:{doi}")
-    return {key for key in keys if len(key) >= 6}
-
-
-def _short_inner(entry: dict[str, Any]) -> str:
-    stored = _text(entry.get("in_text"))
-    if stored.startswith("(") and stored.endswith(")"):
-        return stored[1:-1]
-    return stored
-
-
 def _stored_for_part(part: str, rows: list[dict[str, Any]]) -> str | None:
-    """The stored short form for this parenthesis part.
-
-    A source id is exact. The stored short form is next, and it beats a
-    co-author wording. Another wording is used only when it names exactly
-    one stored form. The research-note heading is not read.
-    """
-    folded = re.sub(r"\s+", " ", part).strip().casefold().rstrip(".")
-    exact = list(
-        dict.fromkeys(
-            _short_inner(entry)
-            for entry in rows
-            if _short_inner(entry) and _token_matches(folded, entry)
-        )
-    )
-    if len(exact) == 1:
-        return exact[0]
-    if len(exact) > 1:
-        return None
-    bare = folded.removeprefix("doi:").strip()
-    hits: list[str] = []
-    for entry in rows:
-        inner = _short_inner(entry)
-        if not inner:
-            continue
-        keys = _identifier_keys(entry)
-        matched = folded in keys or bare in keys
-        if not matched:
-            for key in keys:
-                if re.fullmatch(re.escape(key) + rf"(?:,\s*{YEAR})?", bare):
-                    matched = True
-                    break
-        if matched:
-            hits.append(inner)
-    unique = list(dict.fromkeys(hits))
-    if len(unique) == 1:
-        return unique[0]
-    if len(unique) > 1:
-        return None
-    wordings = [
-        _short_inner(entry)
-        for entry in rows
-        if _short_inner(entry) and _wording_matches(folded, entry)
-    ]
-    wordings = list(dict.fromkeys(wordings))
-    if len(wordings) == 1:
-        return wordings[0]
-    return None
+    """The stored short form for this parenthesis part."""
+    return stored_for_part(part, rows, _wording_matches)
 
 
 def use_stored_short_form(essay_id: str, text: str) -> str:
@@ -921,12 +768,12 @@ def reference_entries_for_token(essay_id: str, token: str) -> list[dict[str, Any
     if not rows:
         return []
     folded = fold_name(token).casefold().strip().rstrip(".")
-    by_id = [entry for entry in rows if folded in _identifier_keys(entry)]
+    by_id = [entry for entry in rows if folded in identifier_keys(entry)]
     if len(by_id) == 1:
         return by_id
     if len(by_id) > 1:
         return []
-    short = [entry for entry in rows if _token_matches(folded, entry)]
+    short = [entry for entry in rows if token_matches(folded, entry)]
     if short:
         return short
     return [entry for entry in rows if _wording_matches(folded, entry)]

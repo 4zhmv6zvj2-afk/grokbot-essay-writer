@@ -49,6 +49,7 @@ from essay_writer.resolvers import (
     unpaywall_email,
 )
 from essay_writer.setup import read_setup_secret
+from essay_writer.sources import LOOKUP, PDF_LOOKUP_FIELDS, field_is_known, field_value
 from essay_writer.student_voice import say
 
 TOOL = "essay.dig"
@@ -709,17 +710,17 @@ def _save_lookup_abstracts(
         row: dict[str, Any] = {"locator": f"uploads/{module}/{name}"}
         provenance: dict[str, str] = {}
         for field in _KEPT_ON_ABSTRACT:
-            value = kept_details.get(field)
-            if isinstance(value, str) and value.strip():
-                row[field] = value.strip()
-                provenance[field] = "lookup"
+            value = field_value(kept_details, field)
+            if field_is_known(kept_details, field):
+                row[field] = value
+                provenance[field] = LOOKUP
         if provenance:
             row["field_sources"] = provenance
         saved.append(row)
     return saved
 
 
-_PDF_LOOKUP_FIELDS = ("author", "year", "title", "doi")
+_PDF_LOOKUP_FIELDS = PDF_LOOKUP_FIELDS
 
 
 def _fold_lookup(text: str) -> str:
@@ -844,7 +845,7 @@ def _save_lookup_pdfs(
         provenance: dict[str, str] = {}
         for field, value in present.items():
             row[field] = value.strip()
-            provenance[field] = "lookup"
+            provenance[field] = LOOKUP
         row["field_sources"] = provenance
         saved.append(row)
     return saved

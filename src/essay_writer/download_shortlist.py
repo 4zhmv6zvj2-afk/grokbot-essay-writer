@@ -228,13 +228,14 @@ def download_hold(essay_id: str, works: list[dict[str, Any]]) -> dict[str, Any] 
     }
 
 
-def _same(row: dict[str, Any], other: dict[str, Any]) -> bool:
-    from essay_writer.source_match import same_source
+def _on_shortlist(row: dict[str, Any], other: dict[str, Any]) -> bool:
+    """True when the stable id matches, or the opened-file tokens overlap."""
+    from essay_writer.sources import token_overlap
 
     ident = stable_source_id(row)
     if ident and ident == stable_source_id(other):
         return True
-    return same_source(row, other)
+    return token_overlap(row, other)
 
 
 def rows_for_download(
@@ -252,4 +253,4 @@ def rows_for_download(
     if not choice["ready"]:
         return []
     shortlist = choice["shortlist"]
-    return [row for row in picked if any(_same(row, item) for item in shortlist)]
+    return [row for row in picked if any(_on_shortlist(row, item) for item in shortlist)]

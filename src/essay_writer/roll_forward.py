@@ -23,6 +23,7 @@ from essay_writer.confirm import refuse
 from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import sequence_write_error, work_dir, workspace_root
 from essay_writer.records import read_json, write_json
+from essay_writer.sources import TOKEN_MIN, token_overlap
 
 RECORD = "roll-forward.json"
 REFERENCE = "reference"
@@ -164,10 +165,8 @@ def shape_cloned_child(folder: Path, essay_id: str) -> None:
     _write_record(folder, record)
 
 
-def _same(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    from essay_writer.research_packs import same_source
-
-    return same_source(_as_source(left), _as_source(right))
+def _same_paper(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    return token_overlap(_as_source(left), _as_source(right))
 
 
 def _as_source(row: dict[str, Any]) -> dict[str, Any]:
@@ -190,7 +189,7 @@ def _match_paper(papers: list[dict[str, Any]], which: object) -> dict[str, Any] 
         "path": which.strip(),
     }
     for paper in papers:
-        if paper.get("id") == which.strip() or _same(paper, probe):
+        if paper.get("id") == which.strip() or _same_paper(paper, probe):
             return paper
     return None
 
@@ -254,7 +253,7 @@ def _unlist(essay_id: str, paper: dict[str, Any]) -> None:
     state["papers"] = [
         item
         for item in state.get("papers") or []
-        if isinstance(item, dict) and not _same(item, paper)
+        if isinstance(item, dict) and not _same_paper(item, paper)
     ]
     _save_state(essay_id, state)
 
@@ -345,7 +344,7 @@ def has_critical_note(essay_id: str, paper: dict[str, Any]) -> bool:
         value = paper.get(key)
         if isinstance(value, str) and value.strip():
             tokens.append(value.strip())
-    slugs = [_slug(token) for token in tokens if len(_slug(token)) >= 6]
+    slugs = [_slug(token) for token in tokens if len(_slug(token)) >= TOKEN_MIN]
     for path in folder.glob("*.md"):
         try:
             text = path.read_text(encoding="utf-8")
@@ -355,7 +354,7 @@ def has_critical_note(essay_id: str, paper: dict[str, Any]) -> bool:
             continue
         hay = text.casefold()
         name = _slug(path.stem)
-        if any(token.casefold() in hay for token in tokens if len(token) >= 6):
+        if any(token.casefold() in hay for token in tokens if len(token) >= TOKEN_MIN):
             return True
         if any(slug and (slug == name or slug in name) for slug in slugs):
             return True
@@ -394,7 +393,7 @@ def without_keepers(essay_id: str, rows: list[Any] | None) -> list[Any]:
         return list(rows)
     found: list[Any] = []
     for row in rows:
-        if isinstance(row, dict) and any(_same(row, paper) for paper in kept):
+        if isinstance(row, dict) and any(_same_paper(row, paper) for paper in kept):
             continue
         found.append(row)
     return found
@@ -407,7 +406,7 @@ def omit_keepers_from_card(essay_id: str, card: dict[str, Any]) -> dict[str, Any
         return card
 
     def held(row: dict[str, Any]) -> bool:
-        return any(_same(row, paper) for paper in kept)
+        return any(_same_paper(row, paper) for paper in kept)
 
     for bucket in ("openalex", "consensus"):
         block = card.get(bucket)
