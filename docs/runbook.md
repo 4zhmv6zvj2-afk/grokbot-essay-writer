@@ -32,3 +32,58 @@ A load does not rewrite the file. A missing known field is filled in memory and 
 A `current` value that is not a stage becomes stage 1 in memory and is recorded as `pointer-unknown-current`. A `saved` or `files` value that is not a list or an object is left out of the loaded pointer and recorded as `pointer-field-dropped`. The bytes on disk stay until the next save, and that save writes the value the stage machine can use.
 
 A `state.json` that is not a JSON object is the existing damage refusal. The load records `state-damaged` and does not replace the file. A stage pointer that is not a JSON object stays the existing in-memory fallback. It records `pointer-damaged` and does not replace the file. Neither case adds a new student stop.
+
+## Verify a release in five minutes
+
+From the repository root, on the commit you are about to call the release:
+
+```bash
+uv run python tools/check_release_version.py --tag v0.9.19
+uv run essay-writer --health
+```
+
+The version check exits 0 when `pyproject.toml`, `uv.lock`, and the newest `CHANGELOG.md` release heading agree with that tag. `## Unreleased` does not count as a release heading. `--health` prints JSON. Read `version` and `build_commit`. They are the version and the commit you have checked out.
+
+The published bytes are checked from the GitHub release, not from this checkout. Download the wheel, the sdist, `SHA256SUMS`, each `*.sigstore.json`, and `provenance.intoto.jsonl` into one folder, then run the checksum, `cosign verify-blob`, and `gh attestation verify` commands in the README section "Verify a release". Do not publish a release whose checksum or attestation fails.
+
+## A student report
+
+Ask for these, and nothing that contains the essay:
+
+- `support.zip`, from `essay-writer --support-bundle`
+- the sequence id, such as `MOD1004AA-1`
+- the step they were on
+- the time they saw the problem
+- a screenshot of the refusal
+
+Open the zip. `health.json` names the version, the build commit, the prompt hash, and the door names. `incident.jsonl` is one JSON object per line. A line names the tool, the stage, the stable code, and the build. `files.json` names the sequence id and the SHA-256 of `state.json` and, when the pointer exists, of `tracking/stage.json`. It does not contain the file body. `manifest.json` counts lines by code, including soft incidents (`warn` and `info`).
+
+`debug.log` and `ml-events.jsonl` are not in the zip. Those files can contain the essay. When the student already had debug on, `essay-writer --debug-export` is a separate zip and it is redacted. Do not turn debug on to produce that zip.
+
+A line is enough to name the tool, the stage, the code, and the build. Match the code to `docs/refusals.md`. Match `build_commit` in `--health` to `health.json`. Match `state_sha256` to the sequence file only when the student still has that file. Do not ask the student to paste the essay.
+
+## A bad release
+
+A published release is immutable. Do not replace its wheel, sdist, `SHA256SUMS`, signature, or provenance. Do not move or delete the tag.
+
+Ship a new patch tag. Follow "Releases" in `CONTRIBUTING.md`. Create the draft, dispatch the Release workflow, and publish the draft only after that workflow succeeds.
+
+On the bad release, edit the release notes so the first line says it is superseded by the new tag. Notes are not assets. Leave the old assets where they are.
+
+The maintainer is the person who cuts the tag. There is no second on-call. The public notice is the GitHub release note plus a GitHub issue if a student already has the bad bytes.
+
+## Rollback
+
+A rollback is a new patch whose tree restores the last good behavior. It is not a retag and it is not an asset swap. Students who installed the bad tag keep those bytes until they check out the new tag.
+
+`v0.9.19` stays where it was published. Later tags stay where they were published.
+
+## A broken gather
+
+The student is not stopped. The incident line uses a stable code such as `read-bad-json` or `page-cursor-repeat`, with severity `warn` or `info`. The spoken reply already names the next step. Ask for `support.zip` and the sequence id. Do not delete the sequence files to clear the gather.
+
+## A corrupted state file
+
+`state-damaged` means `state.json` is not a JSON object. `pointer-damaged` means the stage pointer is not a JSON object. The load records the code and does not replace the file. Ask for `support.zip`. Use `files.json` for the sequence id and the state hash. Do not tell the student to delete `state.json`.
+
+`essay.debug.wipe` removes `incident.jsonl`, `incident.jsonl.1`, `debug.log`, and `ml-events.jsonl`. It does not remove sequence state.
