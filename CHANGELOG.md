@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The sdist ships `.githooks/pre-push`, so the local push hook is in the extracted tree.
 - The sdist ships `.cursor/skills/**`, so the verify-skill checks pass from the extracted tarball.
 - A printed source range uses its low end. "Up to N sources" is a cap, not a floor. A stated source count beside a word count stays the floor.
 - A silent brief cites at least ceil(words / 1000 * 8) works and at most 12 per 1,000 words. A stated count above that cap raises the cap. The rate is not added to the stated count.
