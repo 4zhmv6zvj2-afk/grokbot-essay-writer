@@ -22,6 +22,7 @@ from essay_writer.diary import (
     assignment_on_cover,
     cover_residue_line,
 )
+from essay_writer.durable import replace_bytes, replace_text
 from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import module_code, work_dir, workspace_root
 from essay_writer.prompt_loader import text as prompt_text
@@ -797,15 +798,9 @@ def _pack_from_docx(essay_id: str, source: Path) -> dict[str, Any] | None:
 
 def _copy_word_bytes(source: Path, dest: Path) -> None:
     """Copy one built Word file byte-for-byte. This does not build the document again."""
-    import os
-
-    from essay_writer.word import docx_temp
-
     refuse_repo_write(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    pending = docx_temp(dest)
-    pending.write_bytes(source.read_bytes())
-    os.replace(pending, dest)
+    replace_bytes(dest, source.read_bytes())
 
 
 def _refresh_sequence_final(source: Path, project: str) -> Path:
@@ -917,8 +912,7 @@ def _remember_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) 
         "reason": body.get("reason") if isinstance(body.get("reason"), str) else "",
     }
     path = _stage10_mark_path(source)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    replace_text(path, json.dumps(record) + "\n", mkdir=True)
 
 
 def _reuse_stage10(

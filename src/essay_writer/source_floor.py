@@ -12,6 +12,7 @@ import json
 import re
 from typing import Any
 
+from essay_writer.durable import replace_text
 from essay_writer.sources import distinct_works, title_text, work_key, year_text
 
 NO_LENGTH = "The assignment stated no length."
@@ -798,8 +799,4 @@ def record_empty_gather(essay_id: str) -> None:
     path = _citation_path(essay_id)
     if path.is_file():
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps({"written": False, "entries": []}) + "\n",
-        encoding="utf-8",
-    )
+    replace_text(path, json.dumps({"written": False, "entries": []}) + "\n", mkdir=True)

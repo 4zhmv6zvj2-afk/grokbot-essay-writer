@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from essay_writer import textutil as essay_textutil
+from essay_writer.durable import replace_text
 from essay_writer.paths import essay_dir, module_code, sequence_number
 from essay_writer.textutil import section_word_band, unmarked_labels, word_band_from_brief_text
 
@@ -374,7 +375,7 @@ def extract_marking_table(essay_id: str) -> str:
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / "marking-table.md"
     if not path.is_file():
-        path.write_text(span, encoding="utf-8")
+        replace_text(path, span)
     return path.read_text(encoding="utf-8")
 
 

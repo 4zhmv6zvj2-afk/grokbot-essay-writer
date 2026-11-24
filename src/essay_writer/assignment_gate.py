@@ -839,8 +839,7 @@ def _store_refusal() -> dict[str, Any]:
 
 def _rollback_brief_meta(path, before: bytes | None) -> None:
     """Put the previous side file back. Drop a new file that is not the old bytes."""
-    import os
-    import tempfile
+    from essay_writer.durable import replace_bytes
 
     if _linked_answer_path(path):
         return
@@ -850,28 +849,15 @@ def _rollback_brief_meta(path, before: bytes | None) -> None:
                 path.unlink()
             return
         path.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, temporary = tempfile.mkstemp(
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            dir=path.parent,
-        )
-        try:
-            with os.fdopen(descriptor, "wb") as handle:
-                handle.write(before)
-            os.replace(temporary, path)
-        except OSError:
-            try:
-                os.unlink(temporary)
-            except OSError:
-                pass
-            if _regular_file(path):
-                try:
-                    current = path.read_bytes()
-                except OSError:
-                    current = b""
-                if current != before:
-                    path.unlink()
+        replace_bytes(path, before)
     except OSError:
+        if _regular_file(path):
+            try:
+                current = path.read_bytes()
+            except OSError:
+                current = b""
+            if current != before:
+                path.unlink(missing_ok=True)
         return
 
 

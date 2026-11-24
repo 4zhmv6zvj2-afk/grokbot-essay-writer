@@ -4,21 +4,20 @@ Every small store on the sequence tree repeats the same three steps. This
 module is that shape once, so the stores keep their own defaults and their
 own validation but not their own error handling or temp-file naming.
 
-A write lands through `tempfile.mkstemp` in the target folder and
-`os.replace`, so two writers of the same record never share a temp file and
-a reader never sees a half-written record. The temp name carries a random
-suffix, not the fixed `.json.tmp` name the hand-rolled writers used.
+A write lands through ``durable.replace_bytes``. The temp file is in the
+target folder, the bytes are fsynced, then ``os.replace`` publishes them.
+Two writers of the same record never share a temp file, and a reader never
+sees a half-written record.
 """
 
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from essay_writer.durable import replace_bytes
 from essay_writer.known_paths import refuse_repo_write
 
 
@@ -68,17 +67,5 @@ def write_json(
         refuse_repo_write(target)
     if mkdir:
         target.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(record, indent=2, ensure_ascii=False) + "\n"
-    descriptor, temporary = tempfile.mkstemp(
-        prefix=f".{target.name}.", suffix=".tmp", dir=target.parent
-    )
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-            handle.write(payload)
-        os.replace(temporary, target)
-    except BaseException:
-        try:
-            os.unlink(temporary)
-        except OSError:
-            pass
-        raise
+    payload = (json.dumps(record, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    replace_bytes(target, payload)

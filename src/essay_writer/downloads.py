@@ -22,7 +22,6 @@ host, or a bad redirect is an empty download, never a truncated paper.
 from __future__ import annotations
 
 import json
-import os
 import re
 import urllib.error
 import urllib.parse
@@ -33,6 +32,7 @@ from typing import Any
 
 from essay_writer import safe_url
 from essay_writer.confirm import refuse
+from essay_writer.durable import replace_bytes, replace_text
 from essay_writer.known_paths import guard_write_door, research_file
 from essay_writer.paths import (
     relative,
@@ -225,9 +225,7 @@ def _save_state(essay_id: str, state: dict[str, Any]) -> None:
         refuse_repo_write(path)
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    replace_text(path, json.dumps(state, indent=2, ensure_ascii=False) + "\n")
 
 
 def _parse_time(value: str | None) -> datetime | None:
@@ -990,9 +988,7 @@ def _save_pdf(
 
     if research_file(essay_id, str(path), save=True) is None:
         return None
-    temporary = path.with_suffix(".pdf.tmp")
-    temporary.write_bytes(body)
-    os.replace(temporary, path)
+    replace_bytes(path, body)
     from essay_writer.pdf_read import PART_LIMIT, chop_pdf, readable_pdf
 
     if not readable_pdf(body) or len(body) > PART_LIMIT:

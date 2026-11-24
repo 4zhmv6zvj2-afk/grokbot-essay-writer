@@ -10,12 +10,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
 from essay_writer import paths as essay_paths
+from essay_writer.durable import replace_bytes, replace_text
 from essay_writer.first_run_common import _internal_volume
 from essay_writer.known_paths import RepoSaveRefused, refuse_repo_write
 from essay_writer.paths import SETUP_DIRNAME, kb1_root, work_dir, workspace_root
@@ -147,9 +147,7 @@ def _take_upgrade_reread_card(root: Path) -> str | None:
             return None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(".json.tmp")
-        temporary.write_text(json.dumps({"shown": True}, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, path)
+        replace_text(path, json.dumps({"shown": True}, indent=2) + "\n")
     except OSError:
         return UPGRADE_REREAD_SPEECH
     return UPGRADE_REREAD_SPEECH
@@ -516,10 +514,7 @@ def remember_mac_deliverable(source: Path, target: Path) -> None:
         existing.append(stored)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps({"paths": existing}, indent=2) + "\n"
-        temporary = path.with_suffix(".json.tmp")
-        temporary.write_text(payload, encoding="utf-8")
-        os.replace(temporary, path)
+        replace_text(path, json.dumps({"paths": existing}, indent=2) + "\n")
     except OSError:
         return
 
@@ -640,7 +635,7 @@ def copy_deliverable_to_mac(source: Path, *, mac_dir: Path | None = None) -> dic
                 "quarantine": cleared,
             }
         replaced = target.is_file()
-        shutil.copy2(path, target)
+        replace_bytes(target, path.read_bytes())
         cleared = _clear_delivered(target, generated=generated)
     except OSError as exc:
         return {"ok": False, "copied": False, "source": str(path), "reason": str(exc)}

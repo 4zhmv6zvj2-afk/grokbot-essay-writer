@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from essay_writer.build_office import RESIDUALS
+from essay_writer.durable import replace_text
 from essay_writer.first_run_common import Enable, package_root
 
 MCP_RESIDUAL = (
@@ -163,10 +164,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    replace_text(path, json.dumps(payload, indent=2) + "\n", mkdir=True)
 
 
 def grok_config_home() -> str:
@@ -426,10 +424,7 @@ def _merge_build_toml(path: Path, reviewer: bool) -> None:
     body = _strip_toml_tables(existing, headers)
     addition = render_build_config(reviewer).rstrip("\n")
     text = f"{body}\n\n{addition}\n" if body else addition + "\n"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(text, encoding="utf-8")
-    os.replace(temporary, path)
+    replace_text(path, text, mkdir=True)
 
 
 def resolve_build_config(

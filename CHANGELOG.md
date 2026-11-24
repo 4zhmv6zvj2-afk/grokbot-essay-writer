@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A saved file is replaced as a whole. A crash before the rename leaves the previous file. Sequence state is written before its pointer, and the next load finishes a stage pair whose pointer did not land.
+
 ## 0.9.19 — 2026-11-24
 
 - Captured live-test text is replaced with a synthetic essay of the same shape. A tree scan fails if that module code or that fishery opening returns.

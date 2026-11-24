@@ -763,7 +763,7 @@ def test_a_failed_write_leaves_the_brief_and_invents_no_band(case_id, workspace,
     def blocked(*_args, **_kwargs):
         raise OSError("disk full")
 
-    monkeypatch.setattr("essay_writer.records.os.replace", blocked)
+    monkeypatch.setattr("essay_writer.durable.os.replace", blocked)
     reply = essay_stage(
         seq,
         "1",

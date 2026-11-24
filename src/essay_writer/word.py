@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -31,6 +30,7 @@ from essay_writer.diary import (
     layout_for,
 )
 from essay_writer.draft_from_review import CRITICAL_REVIEW
+from essay_writer.durable import replace_bytes
 from essay_writer.known_paths import guard_write_door, refuse_repo_write
 from essay_writer.paths import (
     module_code,
@@ -291,12 +291,14 @@ def docx_temp(path: Path) -> Path:
 
 
 def save_docx(path: Path, document) -> None:
-    """Write a Word file to that temporary name, then replace the destination."""
+    """Write a Word file to a temp file, fsync it, then replace the destination."""
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = docx_temp(destination)
     document.save(str(temporary))
-    os.replace(temporary, destination)
+    data = temporary.read_bytes()
+    temporary.unlink()
+    replace_bytes(destination, data)
 
 
 def _paragraph(
