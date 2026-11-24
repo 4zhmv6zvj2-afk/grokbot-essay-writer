@@ -104,10 +104,10 @@ jobs:
       # ~87%.
       - name: Pytest
         if: matrix.python-version != '3.12'
-        run: python -m pytest -q
+        run: python -m pytest -q -n 4
       - name: Pytest with coverage
         if: matrix.python-version == '3.12'
-        run: python -m pytest -q --cov=essay_writer --cov-report=term --cov-fail-under=85
+        run: python -m pytest -q -n 4 --cov=essay_writer --cov-report=term --cov-fail-under=85
       - name: Pin audit
         if: matrix.python-version == '3.12'
         run: |
@@ -141,7 +141,7 @@ jobs:
           python -m pip install --require-hashes -r requirements-build.txt -r requirements-ci.txt
           python -m pip install --no-build-isolation --no-deps -e .
       - name: Pytest
-        run: python -m pytest -q
+        run: python -m pytest -q -n 4
 
   artifacts:
     name: Build and test the shipped artifacts
@@ -250,4 +250,4 @@ jobs:
           git init -q .
           git add -A
           git -c user.name=ci -c user.email=ci@example.invalid commit -qm "extracted sdist"
-          python -m pytest -q
+          python -m pytest -q -n 4
