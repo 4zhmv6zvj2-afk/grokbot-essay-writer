@@ -31,7 +31,7 @@ Internal detail stays in the operator log.
 | debug-export | (built at the door) | refuse | The reason sentence names the next step. | debug_log.py:460 |
 | debug-export | (built at the door) | refuse | The reason sentence names the next step. | debug_log.py:463 |
 | debug-export | (built at the door) | refuse | The reason sentence names the next step. | debug_log.py:476 |
-| debug-wipe | That request does not clear the run log. | refuse | Ask for the log clear again with the phrase this door accepts. | debug_log.py:507 |
+| debug-wipe | That request does not clear the run log. | refuse | Ask again with delete the logs, or clear debug log. | debug_log.py:507 |
 | debug-export | (built at the door) | refuse | The reason sentence names the next step. | debug_log.py:447 |
 | debug-export | (built at the door) | refuse | The reason sentence names the next step. | debug_log.py:457 |
 | debug-export | The export could not be written. | refuse | Ask me to export the log again. | debug_log.py:469 |
@@ -148,7 +148,7 @@ Internal detail stays in the operator log.
 | clarify | (built at the door) | refuse | The reason sentence names the next step. | research.py:414 |
 | packs | packs must be a list of local pack names from essay.health. Do not invent one. | refuse | The reason sentence names the next step. | research.py:64 |
 | exclude | exclude_section_ids must be the section ids a person chose to leave closed. | refuse | Send the section ids you chose to leave closed. | research.py:87 |
-| host_voice | host_voice must be data the door can store. It is not evidence. | refuse | Leave host_voice off this save. | research.py:100 |
+| host_voice | That extra field is not stored evidence. Leave it off this save. | refuse | The reason sentence names the next step. | research.py:100 |
 | packs | At most two local packs. Do not invent extras. | refuse | Keep at most two local packs. | research.py:69 |
 | packs | (built at the door) | refuse | The reason sentence names the next step. | research.py:76 |
 | seat | (built at the door) | refuse | The reason sentence names the next step. | review.py:74 |
@@ -162,7 +162,7 @@ Internal detail stays in the operator log.
 | review | Stage 6 only checks whether the draft answers the assignment question. Nothing was recorded. | refuse | Ask the question check again. Nothing was recorded. | review.py:153 |
 | review | (built at the door) | refuse | The reason sentence names the next step. | review.py:167 |
 | review | The opened Word file has no citations. Nothing was recorded. | refuse | The reason sentence names the next step. | review.py:175 |
-| review | not-intact | refuse | Ask me to show the review again. | review.py:256 |
+| review | The saved draft is not intact. Ask me to show this step again. | refuse | The reason sentence names the next step. | review.py:256 |
 | review | (built at the door) | refuse | The reason sentence names the next step. | review.py:262 |
 | review | The saved first draft is not intact. Nothing was recorded. | refuse | The reason sentence names the next step. | review.py:145 |
 | essay-id | (built at the door) | refuse | The reason sentence names the next step. | revise.py:42 |

@@ -86,9 +86,15 @@ def essay_originals(
     except ValueError as exc:
         return refuse("cross-essay" if "escape" in str(exc) else "originals", str(exc))
     if kind == "brief" and path.name.lower() not in BRIEF_NAMES:
-        return refuse("originals", "brief read only opens brief.md, brief.txt, or brief.docx")
+        return refuse(
+            "originals",
+            "brief read only opens brief.md, brief.txt, or brief.docx",
+            next="Ask for brief.md, brief.txt, or brief.docx.",
+        )
     if not path.is_file():
-        return refuse("originals", "that file is not in this essay")
+        return refuse(
+            "originals", "that file is not in this essay", next="Name a file that is in this essay."
+        )
     try:
         from essay_writer.known_paths import research_file
 

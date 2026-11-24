@@ -194,7 +194,9 @@ def test_a_broken_or_unreviewed_draft_does_not_write_a_word_file(workspace):
     assert shown["ok"] is True, shown
     recorded = essay_review(seq, "6", "PASS", "confirm", constitution=OPENER)
     assert recorded["stored"] is not True, recorded
-    assert recorded.get("reason") == "not-intact"
+    assert (
+        recorded.get("reason") == "The saved draft is not intact. Ask me to show this step again."
+    )
     assert (
         "first_draft_word" not in recorded
         or recorded.get("first_draft_word", {}).get("wrote") is not True

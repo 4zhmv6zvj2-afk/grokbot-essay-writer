@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from pathlib import Path
 
 from helpers import open_sequence
@@ -77,7 +78,8 @@ def test_a_literal_refusal_names_a_next_step() -> None:
         if not isinstance(reason, ast.Constant) or not isinstance(reason.value, str):
             continue
         keys = {kw.arg for kw in node.keywords}
-        if "next" in keys or any(cue in reason.value.casefold() for cue in CUES):
+        words = re.compile(r"\b(" + "|".join(CUES) + r")\b")
+        if "next" in keys or words.search(reason.value.casefold()):
             continue
         bare.append(f"{path.name}:{node.lineno}")
     assert bare == []
@@ -105,6 +107,21 @@ def test_a_fallback_is_recorded_with_debug_off(workspace, monkeypatch) -> None:
         "tool": "word",
     } in recorded
     assert "essay" not in incident_path().read_text(encoding="utf-8").casefold()
+
+
+def test_a_non_utf8_pointer_is_not_rewritten(workspace) -> None:
+    seq = open_sequence()
+    path = work_dir(seq) / "tracking" / "stage.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\xff\n")
+    loaded = load_pointer(seq)
+    assert loaded["current"] == "1"
+    assert path.read_bytes() == b"\xff\n"
+    codes = [
+        json.loads(line)["code"]
+        for line in incident_path().read_text(encoding="utf-8").splitlines()
+    ]
+    assert "pointer-damaged" in codes
 
 
 def test_a_damaged_pointer_is_not_rewritten(workspace) -> None:

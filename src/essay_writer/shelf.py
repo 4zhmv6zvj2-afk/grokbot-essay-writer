@@ -182,12 +182,20 @@ def essay_shelf_get(
         )
     path = _shelf_file(essay_id, cleaned)
     if not path.is_file():
-        return refuse("shelf", "no shelf pack for this essay id")
+        return refuse(
+            "shelf", "no shelf pack for this essay id", next="Choose a pack that is on this shelf."
+        )
     record = read_json(path)
     if record is None:
-        return refuse("shelf", "no shelf pack for this essay id")
+        return refuse(
+            "shelf", "no shelf pack for this essay id", next="Choose a pack that is on this shelf."
+        )
     if record.get("essay_id") != essay_id:
-        return refuse("cross-essay", "that shelf record is not this essay")
+        return refuse(
+            "cross-essay",
+            "that shelf record is not this essay",
+            next="Choose a pack saved for this essay.",
+        )
     payload = {"essay_id": essay_id, "pack_id": cleaned}
     fingerprint = {"sha256": file_sha256(path)}
     body: dict[str, object] = {

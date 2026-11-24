@@ -437,6 +437,7 @@ def essay_setup(
             "The file-work program stays where it is already installed. "
             "This door does not install it, and it does not install it on the Mac. "
             "Call essay.setup without install_grokbuild.",
+            next="Call essay.setup without install_grokbuild.",
         )
     shell = resolve_setup_shell(mid_office_shell)
     if isinstance(shell, dict):
@@ -531,6 +532,7 @@ def essay_setup(
             wrote=False,
             search_warning=warning,
             skipped_searches=skipped,
+            next="Confirm the warning, then skip.",
         )
 
     phase = phase_refusal(confirmPhase)
@@ -646,6 +648,7 @@ def essay_setup(
                 app=str(app),
                 kb1=str(kb1),
                 wrote=False,
+                next="Allow file access, then call essay.setup again.",
             )
 
     record = {

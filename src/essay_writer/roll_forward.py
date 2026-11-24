@@ -283,7 +283,11 @@ def choose_paper(essay_id: str, choice: object) -> dict[str, Any]:
     which = choice.get("paper") or choice.get("id") or choice.get("doi") or choice.get("url")
     record = load_record(essay_id)
     if record is None:
-        return refuse("papers", "This sequence has no saved papers to keep, drop, or replace.")
+        return refuse(
+            "papers",
+            "This sequence has no saved papers to keep, drop, or replace.",
+            next="Choose keep, drop, or replace for a paper that is saved.",
+        )
     papers = [item for item in record.get("papers") or [] if isinstance(item, dict)]
     paper = _match_paper(papers, which)
     if paper is None:

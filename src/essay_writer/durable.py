@@ -102,6 +102,10 @@ def replace_text(
 ) -> None:
     """Publish UTF-8 text. ``mkdir`` creates the parent when the store is new."""
     target = Path(path)
+    if not host_config:
+        from essay_writer.known_paths import refuse_repo_write
+
+        refuse_repo_write(target)
     if mkdir:
         target.parent.mkdir(parents=True, exist_ok=True)
     replace_bytes(target, text.encode("utf-8"), host_config=host_config)

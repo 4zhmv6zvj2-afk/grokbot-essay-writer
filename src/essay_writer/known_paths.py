@@ -235,7 +235,11 @@ def guard_write_door(*paths: object) -> dict[str, object] | None:
             continue
         path = raw if isinstance(raw, Path) else Path(str(raw))
         if repo_save_refused(path):
-            return refuse("repo-not-save", "The code checkout is not a student save.")
+            return refuse(
+                "repo-not-save",
+                "The code checkout is not a student save.",
+                next="Save this in the essay folder, not in the code checkout.",
+            )
     return None
 
 

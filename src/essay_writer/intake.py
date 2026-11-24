@@ -807,6 +807,7 @@ def _file_photo(
         return refuse(
             "intake",
             "I couldn't file this photo. It is still waiting, and nothing was saved.",
+            next="Ask me to file the photo again.",
         )
     body["wrote"] = True
     body["stored"] = True

@@ -597,6 +597,7 @@ def _local_pin(raw: str) -> dict[str, Any]:
             "delete",
             "That path is not a named file on this computer. Nothing was removed.",
             path=str(expanded),
+            next="Name a file on this computer.",
         )
     if _linked(expanded):
         return refuse(
@@ -622,6 +623,7 @@ def _local_pin(raw: str) -> dict[str, Any]:
             "delete",
             "That file is in this essay workspace. It is not a copy on your computer. Nothing was removed.",
             path=str(expanded),
+            next="Name a copy on this computer, outside the essay folder.",
         )
     if expanded.is_dir():
         return refuse(
@@ -1085,6 +1087,7 @@ def essay_project_delete(
                 where=chosen,
                 confirmPhase=CONFIRM,
                 removed_local=removed,
+                next="Name the files again. The essay folder was left in place.",
             )
         body["removed_local"] = removed
         body["deleted_local"] = True

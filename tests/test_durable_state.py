@@ -180,6 +180,20 @@ def test_a_replace_keeps_the_previous_mode(tmp_path):
     assert path.stat().st_mode & 0o777 == 0o640
 
 
+def test_a_refused_text_write_does_not_create_the_directory(tmp_path, monkeypatch):
+    from essay_writer.durable import replace_text
+    from essay_writer.known_paths import RepoSaveRefused
+
+    install = tmp_path / "install"
+    (install / "src" / "essay_writer").mkdir(parents=True)
+    (install / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+    monkeypatch.setattr("essay_writer.known_paths.repo_root", lambda: install)
+    target = install / "src" / "p92-probe-dir" / "note.json"
+    with pytest.raises(RepoSaveRefused):
+        replace_text(target, "{}\n", mkdir=True)
+    assert not target.parent.exists()
+
+
 def test_replace_bytes_refuses_a_checkout_path(tmp_path, monkeypatch):
     from essay_writer.known_paths import RepoSaveRefused
 

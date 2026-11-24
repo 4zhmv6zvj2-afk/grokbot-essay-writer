@@ -515,7 +515,7 @@ def essay_debug_wipe(speech: str | None = None) -> dict[str, Any]:
         return refuse(
             "debug-wipe",
             "That request does not clear the run log.",
-            next="Ask for the log clear again with the phrase this door accepts.",
+            next="Ask again with delete the logs, or clear debug log.",
         )
     removed = wipe_operator_log_files()
     cleared = any(removed.values())

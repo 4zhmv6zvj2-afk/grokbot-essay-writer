@@ -64,6 +64,7 @@ def _door_options(
         return None, refuse(
             "packs",
             "packs must be a list of local pack names from essay.health. Do not invent one.",
+            next="Send the local pack names from essay.health.",
         )
     elif len(packs) > 2:
         return None, refuse(
@@ -97,15 +98,16 @@ def _door_options(
         excluded = [item.strip() for item in exclude_section_ids]
     if industry is not None and not isinstance(industry, dict):
         return None, refuse(
-            "industry", "industry must be an object when it is sent. It is not evidence."
+            "industry",
+            "industry must be an object when it is sent. It is not evidence.",
+            next="Send industry as an object, or leave it off.",
         )
     try:
         digest({"industry": industry, "host_voice": host_voice})
     except TypeError:
         return None, refuse(
             "host_voice",
-            "host_voice must be data the door can store. It is not evidence.",
-            next="Leave host_voice off this save.",
+            "That extra field is not stored evidence. Leave it off this save.",
         )
     return {
         "packs": names,
