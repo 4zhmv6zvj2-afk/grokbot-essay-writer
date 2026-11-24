@@ -442,7 +442,11 @@ def document_title(
         from essay_writer.model_contract import ContractRefusal, parse_word_title
 
         text = _flat_title(value)
-        parsed = parse_word_title(text, opening=banned if reject_opening else "")
+        parsed = parse_word_title(
+            text,
+            opening=banned if reject_opening else "",
+            limit=WORD_TITLE_LIMIT,
+        )
         if isinstance(parsed, ContractRefusal):
             return ""
         return parsed.text

@@ -259,10 +259,13 @@ def parse_findings(value: object, essay_id: str | None = None) -> FindingsNote |
     return FindingsNote(value)
 
 
-def parse_word_title(value: object, opening: str = "") -> WordTitle | ContractRefusal:
+def parse_word_title(
+    value: object,
+    opening: str = "",
+    *,
+    limit: int = 255,
+) -> WordTitle | ContractRefusal:
     """A Word document title is a short string, and it is not the opening paragraph."""
-    from essay_writer.word import WORD_TITLE_LIMIT
-
     if isinstance(value, dict):
         extra = set(value) - {"title"}
         if extra:
@@ -275,7 +278,7 @@ def parse_word_title(value: object, opening: str = "") -> WordTitle | ContractRe
     if not isinstance(value, str):
         return _refuse("malformed", "Word title")
     text = value.strip()
-    if len(text) > WORD_TITLE_LIMIT:
+    if len(text) > limit:
         return _refuse("malformed", "Word title")
     if opening.strip() and text == opening.strip():
         return _refuse("contradictory", "Word title")
