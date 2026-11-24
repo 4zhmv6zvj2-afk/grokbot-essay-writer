@@ -123,13 +123,13 @@ def test_a_stripped_name_reports_the_gap_and_a_can_do_phrase_stays(workspace):
         (counted, "The count from stays"),
         (joint, "and Jones (2021) argue"),
     ):
-        assert leftover in report
+        assert leftover in report.text
         assert report.removed
         assert any("2020" in span for span in report.removed)
         assert report.subject_gap is True
         assert first_draft_unreadable(report) is not None
     kept = strip_token("A can-do attitude (Ada, 2020) keeps the work moving.", "ada, 2020")
-    assert "can-do attitude" in kept
+    assert "can-do attitude" in kept.text
     assert kept.removed
     assert kept.subject_gap is False
     assert first_draft_unreadable(kept) is None

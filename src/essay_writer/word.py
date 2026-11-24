@@ -439,12 +439,17 @@ def document_title(
     banned = _flat_title(opening)
 
     def usable(value: object, *, reject_opening: bool) -> str:
+        from essay_writer.model_contract import ContractRefusal, parse_word_title
+
         text = _flat_title(value)
-        if not text or len(text) > WORD_TITLE_LIMIT:
+        parsed = parse_word_title(
+            text,
+            opening=banned if reject_opening else "",
+            limit=WORD_TITLE_LIMIT,
+        )
+        if isinstance(parsed, ContractRefusal):
             return ""
-        if reject_opening and banned and text == banned:
-            return ""
-        return text
+        return parsed.text
 
     chosen = usable(stored, reject_opening=True)
     if chosen:

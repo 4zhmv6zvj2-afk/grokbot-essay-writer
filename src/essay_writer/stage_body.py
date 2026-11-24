@@ -142,7 +142,7 @@ def _prepare_stage_text(
     text: str,
     *,
     minting: bool,
-) -> tuple[str, bool, str | None, dict[str, Any], dict[str, Any] | None, object | None]:
+) -> tuple[Any, bool, str | None, dict[str, Any], dict[str, Any] | None, object | None]:
     """Seed the draft, then run the shared citation report before the gates.
 
     The returned opening is the one brief read for this build. Stage 5 returns
@@ -196,8 +196,10 @@ def _prepare_stage_text(
         # short here too: no mini review is built around a gathered paper.
         text, woven = weave_short_cites(essay_id, text, SHORT_CITE_LIMIT)
         from essay_writer.cite_fit import carry_subject_gap
+        from essay_writer.model_contract import StripReport
 
-        text = carry_subject_gap(text, bool(cite_report.get("subject_gap")))
+        carried: Any = carry_subject_gap(text, bool(cite_report.get("subject_gap")))
+        text = carried.text if isinstance(carried, StripReport) and stage != "5" else carried
         if woven:
             short_report = {
                 **short_report,
@@ -474,8 +476,14 @@ def _build_stage_body(
 
         if not minting:
             from essay_writer.brief_contract import stage_contract_refusal
+            from essay_writer.model_contract import ContractRefusal, parse_stage_draft, prose_of
 
-            blocked_contract = stage_contract_refusal(essay_id, stage, text)
+            shown = prose_of(text)
+            if shown.strip():
+                parsed_draft = parse_stage_draft(shown)
+                if isinstance(parsed_draft, ContractRefusal):
+                    return refuse("draft", parsed_draft.reason)
+            blocked_contract = stage_contract_refusal(essay_id, stage, shown)
             if blocked_contract:
                 blocked_contract["stage"] = stage
                 blocked_contract["confirmPhase"] = confirmPhase

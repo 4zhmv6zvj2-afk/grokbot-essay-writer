@@ -21,6 +21,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from essay_writer.model_contract import StripReport, prose_of
 from essay_writer.paths import work_dir
 from essay_writer.records import read_json, write_json
 from essay_writer.sources import family_token
@@ -290,43 +291,25 @@ def _label(token: str, text: str) -> str:
     return f"{shown} ({year})"
 
 
-class StripReport(str):
-    """Cleaned sentence plus the spans this strip removed.
+def carry_subject_gap(text: str | StripReport, gap: bool = False) -> str | StripReport:
+    """Keep a subject gap on the draft the first-draft check will read.
 
-    ``subject_gap`` is true when a removed narrative cite was the subject
-    or the name, so the sentence no longer reads.
+    The report is an object, not a string. A stored look and a join use
+    ``prose_of``. The flag is put back after a plain-string rewrite.
     """
 
-    removed: tuple[str, ...]
-    subject_gap: bool
-
-    def __new__(
-        cls,
-        text: str,
-        removed: tuple[str, ...] = (),
-        subject_gap: bool = False,
-    ) -> StripReport:
-        obj = str.__new__(cls, text)
-        obj.removed = removed
-        obj.subject_gap = subject_gap
-        return obj
-
-
-def carry_subject_gap(text: str, gap: bool = False) -> str:
-    """Keep a subject gap on text after a plain-string rewrite.
-
-    A ``StripReport`` does not survive JSON, ``str.strip``, or a join. The
-    flag has to be put back on the string the first-draft check will read.
-    """
-
+    if isinstance(text, StripReport):
+        flagged = bool(gap) or text.subject_gap
+        if not flagged:
+            return text.text
+        if text.subject_gap:
+            return text
+        return StripReport(text.text, text.removed, True)
     if not isinstance(text, str):
         return ""
-    flagged = bool(gap) or bool(getattr(text, "subject_gap", False))
-    if not flagged:
+    if not gap:
         return text
-    if isinstance(text, StripReport) and text.subject_gap:
-        return text
-    return StripReport(str(text), tuple(getattr(text, "removed", ())), True)
+    return StripReport(text, (), True)
 
 
 def _subject_gap_of(*values: object) -> bool:
@@ -352,14 +335,24 @@ def _subject_hole(text: str, start: int, end: int) -> bool:
     return False
 
 
-def strip_token(text: str, token: str) -> str:
+def strip_token(text: str | StripReport, token: str) -> str | StripReport:
     """Remove one author-year cite. The student's sentence stays.
 
     The result reports every span removed on ``removed``. A narrative cite
     that was the subject or the name sets ``subject_gap``.
     """
 
-    if not isinstance(text, str) or not text or "," not in token:
+    if isinstance(text, StripReport):
+        raw = text.text
+        prior = text.removed
+        gap = text.subject_gap
+    elif not isinstance(text, str):
+        return text
+    else:
+        raw = text
+        prior = ()
+        gap = False
+    if not raw or "," not in token:
         return text
     name, year = [part.strip() for part in token.split(",", 1)]
     if not name or not year:
@@ -369,8 +362,6 @@ def strip_token(text: str, token: str) -> str:
     et_al = r"(?:\s+et\s+al\.?)?"
     page = r"(?:\s*,\s*(?:pp?\.\s*)?\d+(?:\s*[-–—]\s*\d+)?)?"
     piece_re = rf"{name_re}{et_al}\s*,\s*{year_re}{page}"
-    prior = tuple(getattr(text, "removed", ()))
-    gap = bool(getattr(text, "subject_gap", False))
     removed: list[str] = []
 
     def repl_paren(match: re.Match[str]) -> str:
@@ -385,7 +376,7 @@ def strip_token(text: str, token: str) -> str:
             return ""
         return "(" + "; ".join(kept) + ")"
 
-    cleaned = re.sub(r"\(([^)]*\d{4}[^)]*)\)", repl_paren, text)
+    cleaned = re.sub(r"\(([^)]*\d{4}[^)]*)\)", repl_paren, raw)
     narrative = rf"\b{name_re}{et_al}\s*\(\s*{year_re}{page}\s*\)"
 
     def repl_narrative(match: re.Match[str]) -> str:
@@ -419,7 +410,7 @@ def _gate_text(
     sources: list[dict[str, Any]],
     rejected: set[str],
     withheld: set[str],
-) -> tuple[str, list[dict[str, str]], set[str]]:
+) -> tuple[str | StripReport, list[dict[str, str]], set[str]]:
 
     prior_tokens = set(citation_tokens(prior))
     held: list[dict[str, str]] = []
@@ -449,7 +440,7 @@ def _gate_text(
         # not keep a paper that was never gathered.
         withheld.add(token)
         held.append({"token": token, "reason": "claim-fit", "label": _label(token, text)})
-    cleaned = text
+    cleaned: str | StripReport = text
     for item in held:
         cleaned = strip_token(cleaned, item["token"])
     for token in withheld:
@@ -503,8 +494,8 @@ def apply_body_cites(
     )
     if not cites and not intent:
         record = load_record(essay_id)
-        cleaned = incoming
-        gated_edited = edited_text
+        cleaned: str | StripReport = incoming
+        gated_edited: str | StripReport | None = edited_text
         for token in record.get("withheld") or []:
             cleaned = strip_token(cleaned, token)
             if isinstance(gated_edited, str):
@@ -512,8 +503,8 @@ def apply_body_cites(
         if cleaned != incoming or gated_edited != edited_text:
             kept_edited = gated_edited if edited_text is not None else edited
             return {
-                "text": cleaned,
-                "edited": kept_edited,
+                "text": prose_of(cleaned),
+                "edited": prose_of(kept_edited) if edited_text is not None else edited,
                 "ask": None,
                 "held": [],
                 "applied": True,
@@ -570,8 +561,8 @@ def apply_body_cites(
         _write_record(essay_id, stored)
     kept_edited = gated_edited if edited_text is not None else edited
     return {
-        "text": cleaned,
-        "edited": kept_edited,
+        "text": prose_of(cleaned),
+        "edited": prose_of(kept_edited) if edited_text is not None else edited,
         "ask": _ask_sentence(labels),
         "gap": gap_ask(held),
         "held": held,
@@ -589,15 +580,15 @@ def cited_pairs(text: str) -> list[str]:
 
 def strip_withheld(text: str, withheld: set[str], rejected: set[str]) -> str:
     """Remove every cite this essay withholds or whose author the student rejected."""
-    cleaned = text
+    cleaned: str | StripReport = text
     for token in sorted(withheld):
         cleaned = strip_token(cleaned, token)
     if not rejected:
-        return cleaned
-    for token in cited_pairs(cleaned):
+        return prose_of(cleaned)
+    for token in cited_pairs(prose_of(cleaned)):
         if _surname(token) in rejected:
             cleaned = strip_token(cleaned, token)
-    return cleaned
+    return prose_of(cleaned)
 
 
 def withhold_body_cites(

@@ -625,7 +625,7 @@ def _bare_verb_line(text: str) -> bool:
     return any(_opening_is_bare_verb(line) for line in text.splitlines())
 
 
-def first_draft_unreadable(text: str) -> dict[str, Any] | None:
+def first_draft_unreadable(text: Any) -> dict[str, Any] | None:
     """Refuse a first draft a citation removal left unreadable.
 
     A doubled comma, a full stop glued to a comma, a sentence or line that
@@ -637,24 +637,34 @@ def first_draft_unreadable(text: str) -> dict[str, Any] | None:
     later plain-string rewrite, and this check reads it. The verb list is
     not the only gate. A readable sentence is left alone.
     """
-    if not isinstance(text, str) or not text.strip():
+    from essay_writer.model_contract import StripReport
+
+    if isinstance(text, StripReport):
+        gap = text.subject_gap
+        body = text.text
+    elif isinstance(text, str):
+        gap = False
+        body = text
+    else:
         return None
-    if getattr(text, "subject_gap", False):
+    if not body.strip():
+        return None
+    if gap:
         return refuse("draft", UNREADABLE_DRAFT, readable=False)
     if (
-        ",," in text
-        or _glued_period_comma(text)
-        or _lowercase_sentence(text)
-        or _bare_verb_line(text)
-        or _PREP_BARE.search(text) is not None
-        or _PREP_MODAL.search(text) is not None
-        or _BARE_AFTER.search(text) is not None
+        ",," in body
+        or _glued_period_comma(body)
+        or _lowercase_sentence(body)
+        or _bare_verb_line(body)
+        or _PREP_BARE.search(body) is not None
+        or _PREP_MODAL.search(body) is not None
+        or _BARE_AFTER.search(body) is not None
     ):
         return refuse("draft", UNREADABLE_DRAFT, readable=False)
     return None
 
 
-def finish_first_draft(essay_id: str, text: str) -> dict[str, Any]:
+def finish_first_draft(essay_id: str, text: Any) -> dict[str, Any]:
     """Write a short first draft into the brief's word band, or refuse to finish it.
 
     A draft already at or above the minimum is left as written. When gathered
@@ -666,35 +676,38 @@ def finish_first_draft(essay_id: str, text: str) -> dict[str, Any]:
     """
     from essay_writer.cite_fit import carry_subject_gap
     from essay_writer.essay_cites import fit_essay_cites
+    from essay_writer.model_contract import StripReport, prose_of
     from essay_writer.rewrite_baseline import band_edges
 
-    gap = bool(getattr(text, "subject_gap", False))
-    if isinstance(text, str) and text.strip():
+    gap = isinstance(text, StripReport) and text.subject_gap
+    if isinstance(text, (str, StripReport)) and prose_of(text).strip():
         text = fit_essay_cites(essay_id, text)
     text = carry_subject_gap(text, gap)
     broken = first_draft_unreadable(text)
+    prose = prose_of(text)
     if broken is not None:
-        return {"ready": False, "text": text, "block": broken}
+        return {"ready": False, "text": prose, "block": broken}
     low, high = band_edges(document_word_band(essay_id))
     if low is None or high is None:
-        return {"ready": True, "text": text}
-    counted = draft_word_count(essay_id, text)
+        return {"ready": True, "text": prose}
+    counted = draft_word_count(essay_id, prose)
     if counted is not None and counted >= low:
-        return {"ready": True, "text": text}
+        return {"ready": True, "text": prose}
     written = carry_subject_gap(
-        _write_up_to_band(essay_id, text),
-        bool(getattr(text, "subject_gap", False)),
+        _write_up_to_band(essay_id, prose),
+        isinstance(text, StripReport) and text.subject_gap,
     )
-    after = draft_word_count(essay_id, written)
+    written_prose = prose_of(written)
+    after = draft_word_count(essay_id, written_prose)
     if after is not None and high is not None and low <= after <= high:
         broken = first_draft_unreadable(written)
         if broken is not None:
-            return {"ready": False, "text": text, "block": broken}
-        return {"ready": True, "text": written}
-    blocked = first_draft_below_minimum(essay_id, written)
+            return {"ready": False, "text": prose, "block": broken}
+        return {"ready": True, "text": written_prose}
+    blocked = first_draft_below_minimum(essay_id, written_prose)
     if blocked is None:
-        return {"ready": True, "text": written}
-    return {"ready": False, "text": text, "block": blocked}
+        return {"ready": True, "text": written_prose}
+    return {"ready": False, "text": prose, "block": blocked}
 
 
 def _with_citation(line: str, citation: str) -> str:
