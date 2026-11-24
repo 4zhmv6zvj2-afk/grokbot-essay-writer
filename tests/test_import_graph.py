@@ -40,7 +40,6 @@ CYCLE_BREAKERS: frozenset[tuple[str, str]] = frozenset(
         ("debug_log", "health"),
         ("debug_log", "ml_events"),
         ("diary", "assignment_gate"),
-        ("durable", "known_paths"),
         ("invent", "validate"),
         ("known_paths", "confirm"),
         ("pdf_read", "downloads"),

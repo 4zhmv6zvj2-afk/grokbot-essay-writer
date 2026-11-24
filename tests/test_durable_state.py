@@ -165,6 +165,19 @@ def test_a_crash_between_the_note_and_the_pointer_loads_one_pair(workspace, monk
     assert not (folder / "tracking" / ".stage.commit").exists()
 
 
+def test_host_config_inside_the_install_is_written(tmp_path, monkeypatch):
+    from essay_writer.first_run_host import _write_json
+
+    install = tmp_path / "install"
+    (install / "src" / "essay_writer").mkdir(parents=True)
+    (install / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+    monkeypatch.setattr("essay_writer.known_paths.repo_root", lambda: install)
+    path = install / ".cursor" / "mcp.json"
+    _write_json(path, {"mcpServers": {}})
+    assert path.read_text(encoding="utf-8").startswith("{")
+    assert "mcpServers" in path.read_text(encoding="utf-8")
+
+
 def test_a_failed_mac_copy_keeps_the_previous_deliverable(tmp_path, monkeypatch):
     from essay_writer.first_run_mac import copy_deliverable_to_mac
 

@@ -36,11 +36,13 @@ def _fsync_dir(directory: Path) -> None:
 
 
 def replace_bytes(path: Path, data: bytes) -> None:
-    """Publish ``data`` as ``path``. The previous file stays until replace."""
-    from essay_writer.known_paths import refuse_repo_write
+    """Publish ``data`` as ``path``. The previous file stays until replace.
 
+    This does not decide whether the path is a student save. Doors that save
+    student work call ``refuse_repo_write`` themselves. Host config inside
+    the install is not a student save.
+    """
     target = Path(path)
-    refuse_repo_write(target)
     if not target.parent.is_dir():
         raise FileNotFoundError(target.parent)
     descriptor, name = tempfile.mkstemp(
