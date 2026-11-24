@@ -311,6 +311,27 @@ class StripReport(str):
         return obj
 
 
+def carry_subject_gap(text: str, gap: bool = False) -> str:
+    """Keep a subject gap on text after a plain-string rewrite.
+
+    A ``StripReport`` does not survive JSON, ``str.strip``, or a join. The
+    flag has to be put back on the string the first-draft check will read.
+    """
+
+    if not isinstance(text, str):
+        return ""
+    flagged = bool(gap) or bool(getattr(text, "subject_gap", False))
+    if not flagged:
+        return text
+    if isinstance(text, StripReport) and text.subject_gap:
+        return text
+    return StripReport(str(text), tuple(getattr(text, "removed", ())), True)
+
+
+def _subject_gap_of(*values: object) -> bool:
+    return any(bool(getattr(value, "subject_gap", False)) for value in values)
+
+
 _PREP_BEFORE_NAME = frozenset({"by", "from", "of", "with", "for"})
 
 
@@ -436,7 +457,14 @@ def _gate_text(
 
 
 def _passthrough(text: str, edited: str | None) -> dict[str, Any]:
-    return {"text": text, "edited": edited, "ask": None, "held": [], "applied": False}
+    return {
+        "text": text,
+        "edited": edited,
+        "ask": None,
+        "held": [],
+        "applied": False,
+        "subject_gap": _subject_gap_of(text, edited),
+    }
 
 
 def apply_body_cites(
@@ -481,12 +509,14 @@ def apply_body_cites(
             if isinstance(gated_edited, str):
                 gated_edited = strip_token(gated_edited, token)
         if cleaned != incoming or gated_edited != edited_text:
+            kept_edited = gated_edited if edited_text is not None else edited
             return {
                 "text": cleaned,
-                "edited": gated_edited if edited_text is not None else edited,
+                "edited": kept_edited,
                 "ask": None,
                 "held": [],
                 "applied": True,
+                "subject_gap": _subject_gap_of(cleaned, kept_edited),
             }
         return _passthrough(incoming, edited)
 
@@ -537,13 +567,15 @@ def apply_body_cites(
     }
     if stored["ok"] or stored["rejected"] or stored["withheld"]:
         _write_record(essay_id, stored)
+    kept_edited = gated_edited if edited_text is not None else edited
     return {
         "text": cleaned,
-        "edited": gated_edited if edited_text is not None else edited,
+        "edited": kept_edited,
         "ask": _ask_sentence(labels),
         "gap": gap_ask(held),
         "held": held,
         "applied": True,
+        "subject_gap": _subject_gap_of(cleaned, kept_edited),
     }
 
 

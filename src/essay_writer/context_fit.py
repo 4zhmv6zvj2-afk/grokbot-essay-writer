@@ -57,16 +57,26 @@ def trim_model_line(markdown: str) -> tuple[str, int]:
     return text, dropped
 
 
-def student_review_text(markdown: str) -> str:
-    """Source-review text a student opens.
+def _marker_only(line: str) -> bool:
+    """True when the line is the structural marker and nothing else."""
+    return line.strip().casefold().rstrip(":") == "critical note"
 
-    Only the model-metadata line is removed. A quoted model name stays.
-    A line that is only "Critical note:" stays. That line is the marker.
+
+def student_review_text(markdown: str) -> str:
+    """Review text a student opens.
+
+    The model-metadata line is removed, and so is a line that is only the
+    structural marker. A quoted model name stays. The stored markdown that
+    ``has_critical_note`` reads is a different copy and keeps that marker.
     """
     if not isinstance(markdown, str) or not markdown:
         return markdown
     cleaned, _dropped = trim_model_line(markdown)
-    return cleaned
+    kept = [line for line in cleaned.splitlines() if not _marker_only(line)]
+    text = "\n".join(kept)
+    if cleaned.endswith("\n") and text and not text.endswith("\n"):
+        text += "\n"
+    return text
 
 
 def _pending() -> dict[str, object]:

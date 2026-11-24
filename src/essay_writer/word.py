@@ -29,7 +29,6 @@ from essay_writer.diary import (
     cover_field_rows,
     cover_lines_from_field_rows,
     layout_for,
-    stored_cover_title,
 )
 from essay_writer.draft_from_review import CRITICAL_REVIEW
 from essay_writer.known_paths import guard_write_door, refuse_repo_write
@@ -462,7 +461,12 @@ def _word_document_title(
     report: dict[str, Any],
     path: Path,
 ) -> str:
-    """Title for a student Word file. Never the opening paragraph."""
+    """Title for a student Word file. Never the opening paragraph.
+
+    Order: the short title already stored on the first-draft Word file, then
+    the assessment id, then the file name without .docx. A pack or report
+    title is a cover line, not this property.
+    """
     raw_stored, file_opening = _title_and_opening(
         work_dir(essay_id) / "output" / f"{essay_id}.docx"
     )
@@ -483,7 +487,6 @@ def _word_document_title(
         stem = path.stem
     return document_title(
         stored,
-        stored_cover_title(pack, report),
         str(essay_id),
         stem,
         opening=opening,

@@ -195,6 +195,9 @@ def _prepare_stage_text(
         # The student's outline is the structure, so each woven cite stays
         # short here too: no mini review is built around a gathered paper.
         text, woven = weave_short_cites(essay_id, text, SHORT_CITE_LIMIT)
+        from essay_writer.cite_fit import carry_subject_gap
+
+        text = carry_subject_gap(text, bool(cite_report.get("subject_gap")))
         if woven:
             short_report = {
                 **short_report,
@@ -487,10 +490,12 @@ def _build_stage_body(
                 for name in (read_assignment(essay_id).get("named_entries") or [])
                 if isinstance(name, str) and name.strip()
             ]
+            block = finished_draft.get("block")
+            unreadable = isinstance(block, dict) and block.get("readable") is False
             # The named-parts check already passed. That note stays. A brief
             # with no named parts is still refused when it is short of the band.
-            if not named:
-                block = finished_draft.get("block")
+            # A draft a citation removal left unreadable is refused either way.
+            if unreadable or not named:
                 if not isinstance(block, dict):
                     block = refuse(
                         "word-band",

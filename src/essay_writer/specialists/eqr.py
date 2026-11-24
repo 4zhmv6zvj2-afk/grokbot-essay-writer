@@ -389,10 +389,9 @@ _HOUSE_HEADING = re.compile(r"(?i)\bnorth[-\s]star(?:\s+judgement)?\b")
 def student_findings_text(findings: str) -> str:
     """Wording for a findings Word file a student would open.
 
-    The section heading is Overall judgement. Only the model-metadata line
-    is removed, through the same review scrub the source note uses. A quoted
-    model name stays. A line that is only "Critical note:" stays. A house
-    heading is renamed.
+    The section heading is Overall judgement. The model-metadata line and a
+    line that is only the structural marker are removed. A quoted model name
+    stays. The stored note keeps the marker. A house heading is renamed.
     """
     from essay_writer.context_fit import student_review_text
 

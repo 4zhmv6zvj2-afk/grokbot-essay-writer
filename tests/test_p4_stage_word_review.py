@@ -17,7 +17,7 @@ from essay_writer.review import eqr_record, eqr_verdict, essay_review
 from essay_writer.roll_forward import has_critical_note
 from essay_writer.specialists.eqr import student_findings_text
 from essay_writer.specialists.writer import (
-    _with_assignment,
+    UNREADABLE_DRAFT,
     finish_first_draft,
     first_draft_unreadable,
 )
@@ -106,6 +106,9 @@ def test_a_name_only_markdown_is_not_a_critical_note(workspace):
         encoding="utf-8",
     )
     assert has_critical_note(seq, paper) is True
+    stored = note.read_text(encoding="utf-8")
+    assert "Critical note:" in stored
+    assert "Critical note:" not in student_review_text(stored)
     assert workspace is not None
 
 
@@ -133,6 +136,39 @@ def test_a_stripped_name_reports_the_gap_and_a_can_do_phrase_stays(workspace):
     assert first_draft_unreadable("A can-do attitude keeps the work moving.") is None
 
 
+def test_stage_5_refuses_a_draft_that_loses_its_subject(workspace):
+    """Stage 5 strips a narrative cite that was the subject and does not store the draft."""
+    from test_citation_list import _plant, _source, _walk, _word_path
+
+    from essay_writer.stage_note import _note_look
+    from essay_writer.stage_track import essay_stage
+
+    seq = open_sequence()
+    _plant(
+        seq,
+        [
+            _source(
+                seq,
+                "smith",
+                "Smith, J.",
+                "2020",
+                title="Chokepoints and crude",
+                doi="10.1000/strait",
+            )
+        ],
+    )
+    _walk(seq)
+    draft = "Earlier work by Ada (2020) found the same pattern."
+    assert first_draft_unreadable(draft) is None
+    held = essay_stage(seq, "5", "draft", draft)
+    assert held["ok"] is False, held
+    assert held["stored"] is False
+    assert held["reason"] == UNREADABLE_DRAFT
+    assert _note_look(seq, "5") in (None, "")
+    assert not _word_path(seq).is_file()
+    assert workspace is not None
+
+
 def test_a_short_draft_does_not_store_the_question_or_filler(workspace):
     """A draft that cannot reach the band stays the student's text."""
     del workspace
@@ -144,7 +180,6 @@ def test_a_short_draft_does_not_store_the_question_or_filler(workspace):
         encoding="utf-8",
     )
     short = "Water moves downhill."
-    assert _with_assignment(seq, short) == short
     finished = finish_first_draft(seq, short)
     assert finished["ready"] is False
     assert finished["text"].strip() == short
@@ -153,7 +188,7 @@ def test_a_short_draft_does_not_store_the_question_or_filler(workspace):
 
 
 def test_comments_drop_only_the_model_line(workspace, tmp_path: Path):
-    """A quoted model name stays. The metadata line and only that line is removed."""
+    """A quoted model name stays. The metadata line and the bare marker leave the Word file."""
     seq = open_sequence()
     findings = (
         f"{MODEL_LINE}\n"
@@ -164,9 +199,11 @@ def test_comments_drop_only_the_model_line(workspace, tmp_path: Path):
     )
     reviewed = student_review_text(findings)
     scrubbed = student_findings_text(findings)
+    assert "Critical note:" in findings
     assert MODEL_LINE not in reviewed
     assert MODEL_LINE not in scrubbed
-    assert "Critical note:" in scrubbed
+    assert "Critical note:" not in reviewed
+    assert "Critical note:" not in scrubbed
     assert "grok-4.7" in scrubbed
     assert "Overall judgement" in scrubbed
     state = load_state(seq)
@@ -183,7 +220,7 @@ def test_comments_drop_only_the_model_line(workspace, tmp_path: Path):
     _write_comments(seq, path)
     text = "\n".join(paragraph.text for paragraph in Document(str(path)).paragraphs)
     assert MODEL_LINE not in text
-    assert "Critical note:" in text
+    assert "Critical note:" not in text
     assert "grok-4.7" in text
     assert workspace is not None
 
@@ -223,6 +260,8 @@ def test_the_cover_drops_the_opening_once_and_the_title_stays_short(workspace):
     draft.unlink()
     same = {"sections": [{"heading": "Introduction", "body": seq}]}
     assert _word_document_title(seq, same, same, target) == "harbour-final"
+    packed = {"title": "Pack title", "sections": [{"heading": "Introduction", "body": OPENING}]}
+    assert _word_document_title(seq, packed, packed, target) == seq
     assert workspace is not None
 
 
