@@ -27,9 +27,11 @@ import os
 import re
 import socket
 import ssl
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from typing import Any
 
 HTTP_SCHEMES = frozenset({"http", "https"})
@@ -37,6 +39,15 @@ DEFAULT_PORTS = {"http": 80, "https": 443}
 MAX_REDIRECTS = 3
 MAX_URL_LENGTH = 4096
 DEFAULT_TIMEOUT = 20.0
+READ_ATTEMPTS = 3
+_RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+TIMEOUT_COPY = "The look-up timed out. Try this look-up again."
+RATE_COPY = "The look-up is busy. Try this look-up again."
+SERVER_COPY = "The look-up service failed. Try this look-up again."
+DNS_COPY = "The host did not resolve. Check the address and try again."
+OFFLINE_COPY = "The look-up did not answer. Try this look-up again."
+REDIRECT_COPY = "The address redirected too many times. Use a direct link."
+TOO_LARGE_COPY = "The file is larger than the cap. Use a smaller file."
 TRUSTED_EGRESS_ENV = "ESSAY_WRITER_TRUSTED_EGRESS"
 _FAKE_IP_NETWORK = ipaddress.IPv4Network("198.18.0.0/15")
 _READ_CHUNK = 64 * 1024
@@ -46,6 +57,11 @@ _SENSITIVE_HEADERS = frozenset({"authorization", "proxy-authorization", "x-api-k
 class Refused(urllib.error.URLError):
     """A fetch this module refuses. Subclasses URLError so callers catch it."""
 
+    def __str__(self) -> str:
+        if isinstance(self.reason, str):
+            return self.reason
+        return super().__str__()
+
 
 class BlockedURL(Refused):
     """The URL or one of its redirect hops is not a public http(s) address."""
@@ -53,6 +69,26 @@ class BlockedURL(Refused):
 
 class TooLarge(Refused):
     """The response is larger than the caller's byte cap. No truncated body."""
+
+
+class GaveUp(Refused):
+    """A read failed after its bounded attempts. The body was not returned."""
+
+
+class Clock:
+    """Monotonic time. A test clock records sleep and does not wait on the wall."""
+
+    def now(self) -> float:
+        return time.monotonic()
+
+    def sleep(self, seconds: float) -> None:
+        if seconds > 0:
+            time.sleep(seconds)
+
+
+_CLOCK = Clock()
+_RESOLVE_CLOCK: Clock | None = None
+Transport = Callable[[urllib.request.Request, float], Any]
 
 
 class Response:
@@ -156,12 +192,72 @@ def _public_address(
     return True
 
 
+def _note_read(code: str, *, disposition: str) -> None:
+    from essay_writer.incident import note
+
+    severity = "info" if disposition == "retry" else "warn"
+    note(code, severity=severity, disposition=disposition, tool="read", step="fetch")
+
+
+def _pause(clock: Clock, attempt: int) -> None:
+    """Bounded backoff. The jitter comes from the clock, so a fake clock stays put."""
+    base = 0.05 * (2**attempt)
+    jitter = clock.now() % 0.01
+    clock.sleep(base + jitter)
+
+
+def _retryable(exc: BaseException) -> bool:
+    """True for a timeout, a DNS error, or a dropped connection. A refusal is not."""
+    if isinstance(exc, Refused):
+        return False
+    if isinstance(exc, (TimeoutError, socket.timeout, socket.gaierror)):
+        return True
+    if isinstance(exc, urllib.error.URLError):
+        reason = exc.reason
+        if isinstance(reason, BaseException):
+            return _retryable(reason)
+        return True
+    return isinstance(exc, OSError)
+
+
+def _failure_copy(exc: BaseException) -> str:
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return TIMEOUT_COPY
+    if isinstance(exc, socket.gaierror):
+        return DNS_COPY
+    if isinstance(exc, urllib.error.URLError) and isinstance(exc.reason, BaseException):
+        return _failure_copy(exc.reason)
+    return OFFLINE_COPY
+
+
+def _status_copy(status: int) -> str:
+    if status == 429:
+        return RATE_COPY
+    return SERVER_COPY
+
+
 def _resolve_addresses(host: str, port: int) -> list[str]:
     """Every address the host resolves to. A host that does not resolve is refused."""
-    try:
-        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-    except (OSError, UnicodeError):
-        raise BlockedURL("the host did not resolve") from None
+    clock = _RESOLVE_CLOCK
+    timer = clock or _CLOCK
+    attempts = READ_ATTEMPTS if clock is not None else 1
+    infos: list[Any] | None = None
+    for attempt in range(attempts):
+        try:
+            infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+            break
+        except (OSError, UnicodeError):
+            if clock is not None and attempt + 1 < attempts:
+                _note_read("read-retry", disposition="retry")
+                _pause(timer, attempt)
+                continue
+            if clock is not None:
+                _note_read("read-dns", disposition="fallback")
+            raise BlockedURL(DNS_COPY) from None
+    if not infos:
+        if clock is not None:
+            _note_read("read-dns", disposition="fallback")
+        raise BlockedURL(DNS_COPY)
     found: list[str] = []
     for info in infos:
         sockaddr = info[4]
@@ -172,7 +268,9 @@ def _resolve_addresses(host: str, port: int) -> list[str]:
             continue
         found.append(raw.split("%", 1)[0])
     if not found:
-        raise BlockedURL("the host did not resolve")
+        if clock is not None:
+            _note_read("read-dns", disposition="fallback")
+        raise BlockedURL(DNS_COPY)
     return found
 
 
@@ -241,7 +339,7 @@ class _GuardedRedirectHandler(urllib.request.HTTPRedirectHandler):
         if not isinstance(followed, int) or followed < 0:
             followed = 0
         if followed >= MAX_REDIRECTS:
-            raise BlockedURL("too many redirects")
+            raise BlockedURL(REDIRECT_COPY)
         base = urllib.parse.urlsplit(req.full_url)
         try:
             target = urllib.parse.urlsplit(urllib.parse.urljoin(req.full_url, newurl))
@@ -345,15 +443,18 @@ def _open_pinned_socket(connection: http.client.HTTPConnection) -> None:
     error: OSError | None = None
     for target in _pin_targets(connection):
         try:
+            connect_timeout = getattr(connection, "_connect_timeout", connection.timeout)
             sock = _tcp_connect(
                 (target, port),
-                connection.timeout,
+                connect_timeout,
                 getattr(connection, "source_address", None),
             )
         except OSError as exc:
             error = exc
             continue
         _set_tcp_nodelay(sock)
+        read_timeout = getattr(connection, "_read_timeout", connection.timeout)
+        sock.settimeout(read_timeout)
         connection.sock = sock
         return
     raise error if error is not None else OSError("the host did not connect")
@@ -363,6 +464,8 @@ class _PinnedHTTPConnection(http.client.HTTPConnection):
     """HTTP connection pinned to the addresses stored on the request."""
 
     _safe_url_addresses: tuple[str, ...] = ()
+    _connect_timeout: float | None = None
+    _read_timeout: float | None = None
 
     def connect(self) -> None:
         _open_pinned_socket(self)
@@ -372,6 +475,8 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
     """HTTPS connection pinned to the validated address. SNI stays the hostname."""
 
     _safe_url_addresses: tuple[str, ...] = ()
+    _connect_timeout: float | None = None
+    _read_timeout: float | None = None
 
     def connect(self) -> None:
         _open_pinned_socket(self)
@@ -393,6 +498,8 @@ def _bind_pin(
     addresses = getattr(request, "_safe_url_addresses", ())
     if isinstance(addresses, tuple):
         connection._safe_url_addresses = addresses
+    connection._connect_timeout = getattr(request, "_connect_timeout", connection.timeout)
+    connection._read_timeout = getattr(request, "_read_timeout", connection.timeout)
 
 
 class _PinningHTTPHandler(urllib.request.HTTPHandler):
@@ -463,7 +570,7 @@ def _declared_too_large(headers: Any, max_bytes: int) -> bool:
 def _read_capped(raw: Any, headers: Any, max_bytes: int) -> bytes:
     """Read the whole body. Raise TooLarge rather than return a short read."""
     if _declared_too_large(headers, max_bytes):
-        raise TooLarge("the response declares more bytes than the cap")
+        raise TooLarge(TOO_LARGE_COPY)
     chunks: list[bytes] = []
     total = 0
     while True:
@@ -472,7 +579,7 @@ def _read_capped(raw: Any, headers: Any, max_bytes: int) -> bytes:
             break
         total += len(chunk)
         if total > max_bytes:
-            raise TooLarge("the response is larger than the cap")
+            raise TooLarge(TOO_LARGE_COPY)
         chunks.append(chunk)
     return b"".join(chunks)
 
@@ -502,29 +609,96 @@ def open_url(
     timeout: float = DEFAULT_TIMEOUT,
     max_bytes: int,
     headers: dict[str, str] | None = None,
+    transport: Transport | None = None,
+    clock: Clock | None = None,
+    connect_timeout: float | None = None,
+    read_timeout: float | None = None,
+    method: str = "GET",
 ) -> Response:
-    """GET a public http(s) address. The body is read whole or TooLarge is raised.
+    """Read a public http(s) address. The body is whole or TooLarge is raised.
 
-    An HTTP error status is returned as a Response, so callers keep their own
-    status handling. Network failures and refusals raise Refused subclasses.
+    Connect and read each have a timeout. The default uses ``timeout`` for both.
+    A GET or HEAD retries a timeout, a dropped connection, a 429, or a 5xx
+    up to READ_ATTEMPTS. Any other method tries once. A retry waits on
+    ``clock``. An HTTP status that is not retried is returned as a Response.
     """
     if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or max_bytes <= 0:
         raise ValueError("max_bytes must be a positive integer")
-    clean, addresses = _checked_url(url)
+    verb = method.upper()
+    idempotent = verb in {"GET", "HEAD"}
+    attempts = READ_ATTEMPTS if idempotent else 1
+    timer = clock or _CLOCK
+    opener = transport or _open
+    connect = timeout if connect_timeout is None else connect_timeout
+    read = timeout if read_timeout is None else read_timeout
+    global _RESOLVE_CLOCK
+    previous_clock = _RESOLVE_CLOCK
+    _RESOLVE_CLOCK = timer
+    try:
+        clean, addresses = _checked_url(url)
+    finally:
+        _RESOLVE_CLOCK = previous_clock
     request = urllib.request.Request(  # noqa: S310 - the scheme and host are validated above
         clean,
         headers=dict(headers or {}),
-        method="GET",
+        method=verb,
     )
     request._safe_url_addresses = addresses  # type: ignore[attr-defined]
-    try:
-        raw = _open(request, timeout=timeout)
-    except urllib.error.HTTPError as exc:
-        return Response(int(exc.code or 0), exc.headers, _read_error_body(exc, max_bytes))
-    try:
-        status = int(getattr(raw, "status", 200) or 200)
-        response_headers = getattr(raw, "headers", None)
-        body = _read_capped(raw, response_headers, max_bytes)
-    finally:
-        _close(raw)
-    return Response(status, response_headers, body)
+    request._connect_timeout = connect  # type: ignore[attr-defined]
+    request._read_timeout = read  # type: ignore[attr-defined]
+    last_status = 0
+    for attempt in range(attempts):
+        raw: Any = None
+        try:
+            try:
+                raw = opener(request, connect)
+            except urllib.error.HTTPError as exc:
+                status = int(exc.code or 0)
+                if status in _RETRY_STATUSES and attempt + 1 < attempts:
+                    _close(exc)
+                    _note_read("read-retry", disposition="retry")
+                    _pause(timer, attempt)
+                    continue
+                if status in _RETRY_STATUSES:
+                    _close(exc)
+                    _note_read("read-fallback", disposition="fallback")
+                    raise GaveUp(_status_copy(status)) from None
+                return Response(status, exc.headers, _read_error_body(exc, max_bytes))
+            status = int(getattr(raw, "status", 200) or 200)
+            last_status = status
+            if status in _RETRY_STATUSES and attempt + 1 < attempts:
+                _close(raw)
+                raw = None
+                _note_read("read-retry", disposition="retry")
+                _pause(timer, attempt)
+                continue
+            if status in _RETRY_STATUSES:
+                _close(raw)
+                raw = None
+                _note_read("read-fallback", disposition="fallback")
+                raise GaveUp(_status_copy(status)) from None
+            response_headers = getattr(raw, "headers", None)
+            body = _read_capped(raw, response_headers, max_bytes)
+            return Response(status, response_headers, body)
+        except GaveUp:
+            raise
+        except Refused as exc:
+            if isinstance(exc, TooLarge):
+                _note_read("read-too-large", disposition="fallback")
+            elif isinstance(exc, BlockedURL) and str(exc) == REDIRECT_COPY:
+                _note_read("read-redirect", disposition="fallback")
+            raise
+        except (TimeoutError, urllib.error.URLError, OSError) as exc:
+            if attempt + 1 < attempts and _retryable(exc):
+                _note_read("read-retry", disposition="retry")
+                _pause(timer, attempt)
+                continue
+            if _retryable(exc):
+                _note_read("read-fallback", disposition="fallback")
+                raise GaveUp(_failure_copy(exc)) from exc
+            raise
+        finally:
+            if raw is not None:
+                _close(raw)
+    _note_read("read-fallback", disposition="fallback")
+    raise GaveUp(_status_copy(last_status) if last_status else OFFLINE_COPY)

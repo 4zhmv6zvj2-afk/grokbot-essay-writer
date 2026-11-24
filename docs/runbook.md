@@ -17,6 +17,12 @@ These writes stay outside that replace. Each one is a stream, a download, or a t
 
 Secret files are still written in place and flushed. They are not sequence state.
 
+## A look-up that does not answer
+
+A read has a connect timeout and a read timeout. The default is 20 seconds for both. A GET or HEAD retries a timeout, a DNS failure, a dropped connection, HTTP 429, or HTTP 500, 502, 503, or 504. It tries three times. The wait doubles from a twentieth of a second and adds a small jitter from the clock. A POST, and any other write, tries once. A retry and the fallback after the last try are recorded in incident.jsonl. The student is not stopped. The message names the next step, such as trying the look-up again or using a direct link or a smaller file.
+
+A response over the byte cap is not returned in part. A redirect stops after three hops. A page cursor that repeats stops the gather. The page cap stops a cursor that keeps changing. None of these write a partial sequence file. The bytes already on disk stay until a later successful save.
+
 ## A sequence saved by an earlier 0.9 release
 
 `state.json` and `tracking/stage.json` have the same keys from 0.9.14 through 0.9.19. A file from one of those releases loads, the tracking note is readable, and the next stage confirm advances it. The synthetic copies live in `tests/fixtures/state/`. A stage 6 snapshot with a saved stage 5 look can also write the first-draft Word file.

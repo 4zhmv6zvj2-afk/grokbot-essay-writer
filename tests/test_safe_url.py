@@ -145,7 +145,8 @@ def test_a_host_that_does_not_resolve_is_refused(monkeypatch):
         safe_url.validate_url("https://nowhere.invalid/paper.pdf")
 
 
-def test_declared_content_length_over_the_cap_raises_before_reading(monkeypatch):
+def test_declared_content_length_over_the_cap_raises_before_reading(monkeypatch, workspace):
+    assert workspace.is_dir()
     _public_dns(monkeypatch)
 
     class NotRead(FakeRaw):
@@ -159,7 +160,8 @@ def test_declared_content_length_over_the_cap_raises_before_reading(monkeypatch)
     assert raw.closed is True
 
 
-def test_streamed_body_over_the_cap_raises_too_large_and_returns_no_body(monkeypatch):
+def test_streamed_body_over_the_cap_raises_too_large_and_returns_no_body(monkeypatch, workspace):
+    assert workspace.is_dir()
     _public_dns(monkeypatch)
     raw = FakeRaw(b"x" * 4096)
     _fake_open(monkeypatch, raw)
@@ -365,6 +367,9 @@ class _ScriptedSocket:
     def setsockopt(self, *args: object, **kwargs: object) -> None:
         return None
 
+    def settimeout(self, value: float) -> None:
+        self.timeout = value
+
     def sendall(self, data: bytes, *args: object, **kwargs: object) -> None:
         self.sent.extend(data)
 
@@ -468,7 +473,8 @@ def test_downloads_keep_an_http_error_status_like_before(monkeypatch):
     assert downloads.fetch_url("https://api.example.org/paper.pdf") == (404, "text/html", b"gone")
 
 
-def test_downloads_map_an_oversize_paper_to_an_empty_download(monkeypatch):
+def test_downloads_map_an_oversize_paper_to_an_empty_download(monkeypatch, workspace):
+    assert workspace.is_dir()
     _public_dns(monkeypatch)
     monkeypatch.setattr(downloads, "MAX_PAPER_BYTES", 8)
     _fake_open(monkeypatch, FakeRaw(b"z" * 64))
@@ -482,7 +488,8 @@ def test_dig_maps_a_blocked_url_to_a_refusal():
     assert "non-public" in caught.value.detail
 
 
-def test_dig_maps_an_oversize_lookup_to_a_refusal(monkeypatch):
+def test_dig_maps_an_oversize_lookup_to_a_refusal(monkeypatch, workspace):
+    assert workspace.is_dir()
     _public_dns(monkeypatch)
     monkeypatch.setattr(dig, "MAX_API_BYTES", 8)
     _fake_open(monkeypatch, FakeRaw(b'{"results": []}'))
@@ -511,7 +518,8 @@ def test_a_refused_lookup_keeps_its_status_and_detail(monkeypatch):
     }
 
 
-def test_resolvers_map_a_blocked_or_oversize_lookup_to_none(monkeypatch):
+def test_resolvers_map_a_blocked_or_oversize_lookup_to_none(monkeypatch, workspace):
+    assert workspace.is_dir()
     assert resolvers._lookup_json("http://10.0.0.1/") is None
     _public_dns(monkeypatch)
     monkeypatch.setattr(resolvers, "MAX_LOOKUP_BYTES", 8)
