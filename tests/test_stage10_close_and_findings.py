@@ -23,6 +23,7 @@ from test_word_references_4a import (
     _plant_stage10_pack,
 )
 
+from essay_writer import __version__
 from essay_writer.build_office import stage_launch
 from essay_writer.citation_list import list_written, load_citation_list, short_in_text
 from essay_writer.cursor_office import cursor_stage_launch
@@ -433,4 +434,6 @@ def test_public_wording_is_shared(workspace):
     rules = stage_launch("eqr")["settings"]["rules"]
     assert "Overall judgement" in rules
     assert _leaked(rules) == []
+    version = REPO.joinpath("pyproject.toml").read_text(encoding="utf-8")
+    assert f'version = "{__version__}"' in version
     assert workspace is not None
