@@ -118,6 +118,84 @@ def test_confirm_gate_overclaims_are_gone() -> None:
     assert "must pass before any file is changed" not in security
 
 
+def test_the_package_module_list_matches_the_tree() -> None:
+    """Every product module is named under Package modules.
+
+    `__init__.py` is the package marker. `__main__.py` is the `python -m`
+    entry. Those two are the allowlist: the list omits them on purpose, and
+    the section names them so the omission stays visible. `specialists/` is a
+    package, not a top-level module file. A module missing from the list
+    fails. A name in the list that is not a file fails.
+    """
+    section = _read("ARCHITECTURE.md").split("## Package modules", 1)[1].split("\n## ", 1)[0]
+    bullets = set(re.findall(r"^- `([a-z0-9_]+\.py)`$", section, re.MULTILINE))
+    allow = {"__init__.py", "__main__.py"}
+    assert allow <= set(re.findall(r"`([a-z0-9_]+\.py)`", section))
+    files = {path.name for path in (ROOT / "src" / "essay_writer").glob("*.py")}
+    assert bullets == files - allow
+
+
+def test_glossary_paths_exist_and_the_student_words_stay() -> None:
+    """Private-table paths are real. Shared student words stay in both tables.
+
+    Student-only words are not module names, so they are not required in the
+    private table: Basics pass, final look, lock, central theme, EQR, MCP,
+    4a and 4b, references confirm, Counted words. Shared words name a private
+    term the student also hears: shelf, dig, pack, front office, mid-office.
+    Dropping a shared word from either table fails. A renamed path fails.
+    """
+    glossary = _read("docs/GLOSSARY.md")
+    private, student = glossary.split("## Student-facing terms", 1)
+    for raw in re.findall(r"`([^`]+)`", private):
+        if not (
+            raw.startswith("src/")
+            or raw.startswith("docs/")
+            or raw.startswith("tests/")
+            or raw == "FIRST-RUN.txt"
+        ):
+            continue
+        if "*" in raw:
+            assert any(ROOT.glob(raw)), raw
+            continue
+        path = ROOT / raw.rstrip("/")
+        if raw.endswith("/"):
+            assert path.is_dir(), raw
+        else:
+            assert path.is_file(), raw
+    shared = ("shelf", "dig", "pack", "front office", "mid-office")
+    student_only = (
+        "Basics pass",
+        "final look",
+        "lock",
+        "central theme",
+        "EQR",
+        "MCP",
+        "4a and 4b",
+        "references confirm",
+        "Counted words",
+    )
+    for word in shared:
+        assert re.search(rf"\b{re.escape(word)}\b", private), word
+        assert re.search(rf"\b{re.escape(word)}\b", student), word
+    for word in student_only:
+        assert word in student, word
+
+
+def test_the_mark_column_is_the_rule_and_the_one_ask_is_best_effort() -> None:
+    """Parsing the smaller questions is code. The shell asking once is the host."""
+    text = _read("docs/model-contract.md")
+    assert "The Mark column applies to the hard rule" in text
+    assert "a row marked safe unvalidated can still carry a code-enforced" in text
+    enforcement = text.split("## Enforcement", 1)[1].split("## Payloads", 1)[0]
+    ask = [line for line in enforcement.splitlines() if line.startswith("| The shell asks once.")]
+    assert len(ask) == 1
+    assert "intentionally best-effort" in ask[0]
+    assert "code-enforced" not in ask[0]
+    limit = [line for line in enforcement.splitlines() if "at most three smaller questions" in line]
+    assert len(limit) == 1
+    assert "code-enforced" in limit[0]
+
+
 def test_the_docs_cover_a_checksum_file_that_omits_the_zip() -> None:
     """AC3. Both docs explain a present checksum file that does not list the zip."""
     for name in ("README.md", "SECURITY.md"):

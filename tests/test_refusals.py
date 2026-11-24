@@ -71,6 +71,68 @@ def test_every_refusal_code_is_in_the_table() -> None:
     assert missing == []
 
 
+_RECORDERS = frozenset({"refuse", "note", "_note_read", "_note_state", "_note_pointer"})
+
+
+def _call_name(func: ast.AST) -> str:
+    if isinstance(func, ast.Name):
+        return func.id
+    return getattr(func, "attr", "")
+
+
+def _recorded_calls() -> list[tuple[str, str, str]]:
+    found = []
+    for path in SRC.rglob("*.py"):
+        if "_vendor" in path.parts:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not node.args:
+                continue
+            name = _call_name(node.func)
+            if name not in _RECORDERS:
+                continue
+            code = node.args[0]
+            if isinstance(code, ast.Constant) and isinstance(code.value, str):
+                found.append((code.value, path.name, name))
+    return found
+
+
+def _table_rows() -> list[tuple[str, str, str, str, str]]:
+    rows = []
+    for line in DOC.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("| ") or line.startswith("| code") or line.startswith("| ---"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        code, copy, disposition, nxt, where = cells
+        rows.append((code, copy, disposition, nxt, where))
+    return rows
+
+
+def test_the_table_codes_are_the_calls_and_the_where_column_is_a_file() -> None:
+    """The test owns the codes. The where column names a file, not a line.
+
+    `_RECORDERS` is the allowlist of writers: `refuse`, `note`, and the three
+    note helpers that pass a stable code through. A new helper that is the
+    only writer of a code belongs in that set. Dropping a code from the table,
+    adding a code those calls do not write, or putting a line number back in
+    the where column fails this test. A where-file that does not exist fails it.
+    """
+    rows = _table_rows()
+    recorded = _recorded_calls()
+    for _code, _copy, _disposition, _nxt, where in rows:
+        assert ":" not in where, where
+        if "/" in where:
+            assert (ROOT / where).is_file() or (SRC / where).is_file(), where
+            continue
+        hits = [path for path in SRC.rglob(where) if "_vendor" not in path.parts]
+        assert len(hits) == 1, where
+    assert {row[0] for row in rows} == {code for code, _file, _name in recorded}
+    table_pairs = {(row[0], Path(row[4]).name) for row in rows}
+    refuse_pairs = {(code, file) for code, file, name in recorded if name == "refuse"}
+    assert refuse_pairs <= table_pairs
+
+
 def test_a_literal_refusal_names_a_next_step() -> None:
     bare = []
     for path, node in _refuse_calls():

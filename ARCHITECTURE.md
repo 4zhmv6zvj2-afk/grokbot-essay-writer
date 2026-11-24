@@ -62,6 +62,119 @@ validation, and Word output.
 - `docs/` — operator and writing helpers.
 - `src/essay_writer/_vendor/` — vendored bootstrap core, pinned by `VENDOR.json`.
 
+## Package modules
+
+Every product module under `src/essay_writer/` is named here.
+`__init__.py` is the package marker and `__main__.py` is the `python -m` entry.
+They are not product modules. `specialists/` is a package of helpers, already named in Layout.
+
+- `assignment_gate.py`
+- `assignment_handoff.py`
+- `brief_checks.py`
+- `brief_contract.py`
+- `build_office.py`
+- `build_status.py`
+- `canon.py`
+- `citation_list.py`
+- `cite_fit.py`
+- `cite_open.py`
+- `clarify.py`
+- `confirm.py`
+- `context_fit.py`
+- `cursor_office.py`
+- `databases.py`
+- `debug_log.py`
+- `diary.py`
+- `dig.py`
+- `doors.py`
+- `download_shortlist.py`
+- `downloads.py`
+- `draft_from_review.py`
+- `durable.py`
+- `encourage.py`
+- `essay_cites.py`
+- `first_run.py`
+- `first_run_cli.py`
+- `first_run_common.py`
+- `first_run_host.py`
+- `first_run_install.py`
+- `first_run_mac.py`
+- `fo_chat_locks.py`
+- `free_alt.py`
+- `gates.py`
+- `gathered_set.py`
+- `handbook.py`
+- `harvard_4a.py`
+- `harvard_ref_check.py`
+- `health.py`
+- `incident.py`
+- `intake.py`
+- `invent.py`
+- `known_paths.py`
+- `late_chain.py`
+- `lookup_fields.py`
+- `mark_fit.py`
+- `mid_spawn.py`
+- `ml_events.py`
+- `model_contract.py`
+- `originals.py`
+- `outline_primary.py`
+- `pack_backup.py`
+- `paths.py`
+- `pdf_read.py`
+- `pdf_year.py`
+- `programme.py`
+- `projects.py`
+- `prompt_content.py`
+- `prompt_loader.py`
+- `python_bootstrap.py`
+- `quarantine.py`
+- `records.py`
+- `research.py`
+- `research_packs.py`
+- `resolvers.py`
+- `review.py`
+- `review_block.py`
+- `revise.py`
+- `rewrite_baseline.py`
+- `roll_forward.py`
+- `safe_url.py`
+- `seats.py`
+- `server.py`
+- `setup.py`
+- `shelf.py`
+- `shells.py`
+- `short_cites.py`
+- `source_floor.py`
+- `source_ids.py`
+- `source_match.py`
+- `sources.py`
+- `spine.py`
+- `stage7.py`
+- `stage_body.py`
+- `stage_confirm.py`
+- `stage_context.py`
+- `stage_hold.py`
+- `stage_landing.py`
+- `stage_llm.py`
+- `stage_next.py`
+- `stage_note.py`
+- `stage_replies.py`
+- `stage_state.py`
+- `stage_track.py`
+- `state.py`
+- `student_progress.py`
+- `student_turns.py`
+- `student_voice.py`
+- `textutil.py`
+- `update.py`
+- `user_place.py`
+- `validate.py`
+- `vision.py`
+- `word.py`
+- `word_references.py`
+- `writing_basics.py`
+
 ## Sources
 
 `sources.py` is the single home for a stored work. It imports nothing from the rest of the package. `SourceRecord` is the record. `mint_source_id` keeps an id already on the record, then a valid supplied id, then a minted id. `same_source` matches an id, then a locator, then a canonical DOI, then a normalized title, year, and author. A title by itself is not a match, and two different DOIs stay two works. `source_ids.py` reads the id already written for a file and does not mint a second one. `source_floor.py` counts distinct works with that identity. The citation list, the Harvard check, and the gather call these helpers. An opened PDF still uses a separate filename-token check. That check is not the identity.
