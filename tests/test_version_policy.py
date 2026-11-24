@@ -102,6 +102,14 @@ def test_pull_requests_run_macos_only_for_a_sensitive_path() -> None:
     assert "needs: changes" in artifacts
     assert "needs.changes.outputs.artifacts == 'true'" in artifacts
     assert "needs.changes.result != 'success'" in artifacts
+    test = _job(workflow, "test")
+    assert "needs: changes" in test
+    assert "docs_only=false" in changes
+    assert "README.md" in changes
+    assert "HISTORY.md" in changes
+    assert "tests/test_docs_truth.py" in test
+    assert "needs.changes.outputs.docs_only != 'true'" in test
+    assert "needs.changes.outputs.docs_only == 'true'" in test
 
 
 def test_artifact_job_builds_on_the_3_12_line() -> None:

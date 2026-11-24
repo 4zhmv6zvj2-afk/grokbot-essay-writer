@@ -4,6 +4,7 @@
 
 - A pull request runs the macOS suite only when the diff touches a macOS-sensitive path. Main still runs it every time.
 - A pull request builds the shipped artifacts when the diff adds or deletes a file, or touches the packaging files, the docs, or the prompts. Main and a release still build them every time.
+- A pull request that only changes documentation runs the docs checks and the docs-truth tests. It skips the full suite, the coverage run, the macOS suite, and the shipped-artifacts job. Main does not.
 
 ## 0.9.20 — 2026-11-25
 
