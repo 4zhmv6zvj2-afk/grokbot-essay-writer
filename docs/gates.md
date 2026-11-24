@@ -22,6 +22,8 @@ On `main`, and on a manual run, CI runs the Python 3.12–3.15 matrix, the macOS
 
 A pull request runs the shipped-artifacts job when the diff adds or deletes a file, or touches `pyproject.toml`, `MANIFEST.in`, `tools/normalize_sdist.py`, `tools/reproducible_build.py`, `docs/`, or `src/essay_writer/prompts/`. A rename counts as a path change. Any other pull request skips that job. `main`, a manual run, and the release workflow still build the artifacts. A failed path decision runs the job. The decision is the same Changed paths job as the macOS filter.
 
+A pull request whose every changed path is documentation takes a faster lane. Documentation is `docs/`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `SECURITY.md`, or `HISTORY.md`. That lane still runs docs generation, the prompt snapshot check, ruff, and format, and on Python 3.12 it runs `tests/test_docs_truth.py` instead of the full suite and the coverage run. It skips the macOS suite and the shipped-artifacts job, including when the only change is under `docs/`. The four Linux jobs keep their names, so the required checks still report. A diff that also touches code, prompts, tests, or workflows does not take the lane. `main` and the release workflow do not take it either. A failed path decision runs the full suite.
+
 Exit 1 means a step failed. Exit 2 means the environment cannot run the gate.
 
 ## Optional push hook
