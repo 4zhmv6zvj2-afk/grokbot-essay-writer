@@ -799,9 +799,11 @@ def _copy_word_bytes(source: Path, dest: Path) -> None:
     """Copy one built Word file byte-for-byte. This does not build the document again."""
     import os
 
+    from essay_writer.word import docx_temp
+
     refuse_repo_write(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    pending = dest.with_name(f".{dest.name}.writing")
+    pending = docx_temp(dest)
     pending.write_bytes(source.read_bytes())
     os.replace(pending, dest)
 
@@ -1258,6 +1260,7 @@ def _write_stage10_sequence(
 
     from essay_writer.word import (
         EmptyFooter,
+        docx_temp,
         empty_footer_refusal,
     )
 
@@ -1268,7 +1271,7 @@ def _write_stage10_sequence(
     refs_count = prepared["refs_count"]
     sources_count = prepared["sources_count"]
     cover = prepared["cover"]
-    pending = source.with_name(f".{source.name}.writing")
+    pending = docx_temp(source)
     try:
         build_finished_word(essay_id, pack, report, pending)
     except EmptyFooter:
@@ -1542,9 +1545,10 @@ def _write_comments(essay_id: str, path: Path) -> None:
     from essay_writer.specialists.eqr import eqr_record, eqr_verdict, student_findings_text
     from essay_writer.word import (
         WORD_TITLE_LIMIT,
-        _font,
+        _paragraph,
         _style_document,
         document_title,
+        save_docx,
     )
 
     document = Document()
@@ -1569,11 +1573,8 @@ def _write_comments(essay_id: str, path: Path) -> None:
     for paragraph_text in (review, notes):
         if not paragraph_text.strip():
             continue
-        paragraph = document.add_paragraph()
-        run = paragraph.add_run(paragraph_text)
-        _font(run, 12)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    document.save(str(path))
+        _paragraph(document, paragraph_text, clean=False)
+    save_docx(path, document)
 
 
 def stage6_fields(essay_id: str, *, master: str | None, named_folder: str | None) -> dict[str, Any]:

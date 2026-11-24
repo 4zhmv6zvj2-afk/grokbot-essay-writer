@@ -372,7 +372,7 @@ def _stage7_draft_body(
     if answers is not None or edited is not None or web_check is not None:
         edited_note = note_edits(essay_id, answers=answers, edited=edited, web_check=web_check)
         if edited_note.get("ok") is False:
-            from essay_writer.stage_next import write_note_refusal_next
+            from essay_writer.stage_next import write_stage_next
 
             blocked = refuse(
                 "stage",
@@ -380,7 +380,9 @@ def _stage7_draft_body(
                 stage=stage,
                 current=pointer["current"],
             )
-            write_note_refusal_next(blocked, edited_note.get("next"))
+            chosen = edited_note.get("next")
+            if isinstance(chosen, str):
+                write_stage_next(blocked, chosen)
             return blocked, answers, edited, web_check
         answers = edited_note.get("answers", answers)
         edited = edited_note.get("edited", edited)
@@ -458,9 +460,10 @@ def _build_stage_body(
             blocked["stage"] = stage
             blocked["current"] = pointer.get("current")
             blocked["advanced"] = False
-            from essay_writer.stage_next import write_refusal_reason_next
+            from essay_writer.stage_next import write_stage_next
 
-            return write_refusal_reason_next(blocked)
+            reason = blocked.get("reason")
+            return write_stage_next(blocked, reason if isinstance(reason, str) else "")
     text, basics_seeded, edited, short_report, cite_report, opening = _prepare_stage_text(
         args,
         text,
@@ -504,9 +507,10 @@ def _build_stage_body(
                 block["stage"] = stage
                 block["current"] = pointer.get("current")
                 block["advanced"] = False
-                from essay_writer.stage_next import write_refusal_reason_next
+                from essay_writer.stage_next import write_stage_next
 
-                return write_refusal_reason_next(block)
+                reason = block.get("reason")
+                return write_stage_next(block, reason if isinstance(reason, str) else "")
     prepared_lines = opening.lines if isinstance(opening, BasicsOpening) else None
     from essay_writer.spine import stage_uses_confirm_card
 

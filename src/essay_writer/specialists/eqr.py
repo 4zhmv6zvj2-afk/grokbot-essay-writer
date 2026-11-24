@@ -410,13 +410,13 @@ def _save_findings_docx(path, findings: str) -> None:
     from essay_writer.word import (
         WORD_TITLE_LIMIT,
         _add_heading,
-        _font,
+        _paragraph,
         _style_document,
         document_title,
+        save_docx,
     )
 
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
     document = Document()
     _style_document(document)
     _add_heading(document, "Findings", level=1)
@@ -434,10 +434,8 @@ def _save_findings_docx(path, findings: str) -> None:
         if line.strip() in {NORTH_STAR, CLAIM_CHECKS, "Overall judgement"}:
             _add_heading(document, line.strip(), level=2)
             continue
-        paragraph = document.add_paragraph()
-        run = paragraph.add_run(line.strip())
-        _font(run, 12)
-    document.save(str(path))
+        _paragraph(document, line.strip(), clean=False)
+    save_docx(path, document)
 
 
 def write_findings_note(essay_id: str, findings: str, *, documents=None) -> dict[str, Any]:

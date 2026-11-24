@@ -285,6 +285,20 @@ def _heading_parts(text: str) -> tuple[int, str]:
     return min(len(match.group(1)), 3), match.group(2).strip()
 
 
+def docx_temp(path: Path) -> Path:
+    """The one temporary name for a Word file that is still being written."""
+    return Path(path).with_suffix(".docx.tmp")
+
+
+def save_docx(path: Path, document) -> None:
+    """Write a Word file to that temporary name, then replace the destination."""
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = docx_temp(destination)
+    document.save(str(temporary))
+    os.replace(temporary, destination)
+
+
 def _paragraph(
     document: DocumentType,
     text: str,
@@ -293,9 +307,10 @@ def _paragraph(
     justify: bool = False,
     size: int = 12,
     bold: bool = False,
+    clean: bool = True,
 ):
-    cleaned = prose_for_surface(text, "word")
-    if not cleaned:
+    cleaned = prose_for_surface(text, "word") if clean else text
+    if not isinstance(cleaned, str) or not cleaned.strip():
         return None
     if center:
         alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -311,9 +326,25 @@ def _paragraph(
     return paragraph
 
 
-def _add_heading(document: DocumentType, text: str, *, level: int = 1, size: int = 14):
+def _hanging_paragraph(document: DocumentType):
+    paragraph = document.add_paragraph()
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    paragraph.paragraph_format.line_spacing = 1.5
+    paragraph.paragraph_format.left_indent = Inches(0.5)
+    paragraph.paragraph_format.first_line_indent = Inches(-0.5)
+    return paragraph
+
+
+def _add_heading(
+    document: DocumentType,
+    text: str,
+    *,
+    level: int = 1,
+    size: int = 14,
+    clean: bool = True,
+):
     level, title = _heading_parts(text) if level == 1 else (level, text.strip())
-    heading = document.add_heading(for_word(title), level=level)
+    heading = document.add_heading(for_word(title) if clean else title, level=level)
     heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
     heading.paragraph_format.line_spacing = 1.5
     for run in heading.runs:
@@ -338,6 +369,7 @@ def _write_body(
 
 
 WORD_TITLE_LIMIT = 255
+WORD_TITLE_SPARE = "Essay"
 
 
 def _flat_title(value: object) -> str:
@@ -423,7 +455,7 @@ def document_title(
             return chosen
     spare = _flat_title(fallback)
     if not spare or len(spare) > WORD_TITLE_LIMIT or (banned and spare == banned):
-        spare = "Essay"
+        spare = WORD_TITLE_SPARE
     return spare[:WORD_TITLE_LIMIT]
 
 
@@ -508,16 +540,8 @@ def write_critical_review_docx(path: Path, prose: str) -> None:
         for line in prose.splitlines():
             if not line.strip():
                 continue
-            paragraph = document.add_paragraph()
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            paragraph.paragraph_format.line_spacing = 1.5
-            run = paragraph.add_run(line.rstrip())
-            _font(run, 12)
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".docx.tmp")
-    document.save(str(temporary))
-    os.replace(temporary, path)
+            _paragraph(document, line.rstrip(), justify=True, clean=False)
+    save_docx(path, document)
 
 
 def write_docx(
@@ -574,14 +598,6 @@ def write_docx(
         printed_sources,
     )
 
-    def _reference_paragraph():
-        paragraph = document.add_paragraph()
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        paragraph.paragraph_format.line_spacing = 1.5
-        paragraph.paragraph_format.left_indent = Inches(0.5)
-        paragraph.paragraph_format.first_line_indent = Inches(-0.5)
-        return paragraph
-
     if markdown_lines:
         from essay_writer.word_references import styled_reference_runs
 
@@ -589,7 +605,7 @@ def write_docx(
             cleaned = strip_word_labels(line)
             if not cleaned.strip():
                 continue
-            paragraph = _reference_paragraph()
+            paragraph = _hanging_paragraph(document)
             for text, italic in styled_reference_runs(cleaned, printed_sources):
                 piece = strip_word_labels(text)
                 if not piece:
@@ -603,14 +619,11 @@ def write_docx(
             parts = reference_parts(source)
             if not "".join(text for text, _italic in parts).strip():
                 continue
-            paragraph = _reference_paragraph()
+            paragraph = _hanging_paragraph(document)
             for text, italic in parts:
                 run = paragraph.add_run(strip_word_labels(text))
                 _font(run, 12, italic=italic)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".docx.tmp")
-    document.save(str(temporary))
-    os.replace(temporary, path)
+    save_docx(path, document)
     from essay_writer.late_chain import log_word_docx_written
 
     log_word_docx_written(essay_id, pack, report, lines, path, product_log=product_log)
@@ -700,21 +713,10 @@ def write_first_draft_word(essay_id: str) -> dict[str, object]:
         match = _HASH_HEADING.match(cleaned)
         if match:
             level = min(len(match.group(1)), 3)
-            heading = document.add_heading(match.group(2).strip(), level=level)
-            heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            heading.paragraph_format.line_spacing = 1.5
-            for run in heading.runs:
-                _font(run, 14, bold=True)
+            _add_heading(document, match.group(2).strip(), level=level, clean=False)
             continue
-        paragraph = document.add_paragraph()
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        paragraph.paragraph_format.line_spacing = 1.5
-        run = paragraph.add_run(cleaned)
-        _font(run, 12)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_suffix(".docx.tmp")
-    document.save(str(temporary))
-    os.replace(temporary, target)
+        _paragraph(document, cleaned, clean=False)
+    save_docx(target, document)
     counted = draft_word_count(essay_id, text)
     if counted is None:
         counted = count_words(text, exclude_citations=False)

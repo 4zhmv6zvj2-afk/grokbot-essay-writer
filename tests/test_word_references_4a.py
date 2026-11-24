@@ -324,44 +324,14 @@ SAVED_ABBREVIATION_TITLE = "Smith, J. (2020) U.S. maritime policy. Bristol: Harb
 SAVED_JOURNAL_LINE = "Smith, J. (2020) 'Chokepoints and crude', Maritime Policy, 12(3), pp. 4-9."
 
 
-def _saved_runs(line: str) -> list[tuple[str, bool]]:
-    from essay_writer.word_references import styled_reference_runs
-
-    return styled_reference_runs(line, [])
-
-
-def test_ac5_saved_title_italic_span_stops_at_the_title_end(workspace, tmp_path):
-    """AC5. A title ending in ? or holding an initial keeps its whole span.
-
-    The publisher stays outside the italic run, and the article title in a
-    saved journal line stays outside it too.
-    """
-    question = _saved_runs(SAVED_QUESTION_TITLE)
-    italic = "".join(text for text, marked in question if marked)
-    plain = "".join(text for text, marked in question if not marked)
-    assert italic == "Is the strait safe?"
-    assert "Harbour Press" in plain
-    assert "Harbour Press" not in italic
-
-    initial = _saved_runs(SAVED_ABBREVIATION_TITLE)
-    italic = "".join(text for text, marked in initial if marked)
-    plain = "".join(text for text, marked in initial if not marked)
-    assert italic == "U.S. maritime policy"
-    assert "Harbour Press" in plain
-    assert "Harbour Press" not in italic
-
-    journal = _saved_runs(SAVED_JOURNAL_LINE)
-    italic = "".join(text for text, marked in journal if marked)
-    assert italic == "Maritime Policy"
-    assert "Chokepoints and crude" not in italic
-
+def _written_marks(folder: Path, line: str) -> tuple[str, str]:
+    """Italic and plain runs, title, and cover read back from the written file."""
     from essay_writer.word import write_docx
 
-    lines = [SAVED_QUESTION_TITLE, SAVED_JOURNAL_LINE]
-    target = tmp_path / "saved-references.docx"
+    target = folder / "written-reference.docx"
     write_docx(
         ESSAY,
-        {"assessment": "Individual report", "references_markdown": "\n".join(lines)},
+        {"assessment": "Individual report", "references_markdown": line},
         {
             "title": "Saved reference lines",
             "word_count": {"counted": 12},
@@ -369,20 +339,44 @@ def test_ac5_saved_title_italic_span_stops_at_the_title_end(workspace, tmp_path)
             "figures": [],
             "tables": [],
             "sources": [],
+            "cover": [ESSAY, "Title: Saved reference lines"],
         },
         target,
     )
-    paragraphs = [
-        paragraph for paragraph in Document(str(target)).paragraphs if paragraph.text.strip()
-    ]
-    printed = {paragraph.text.strip(): paragraph for paragraph in paragraphs}
-    assert SAVED_QUESTION_TITLE in printed
-    italic_runs = [run.text for run in printed[SAVED_QUESTION_TITLE].runs if run.italic]
-    assert "Is the strait safe?" in italic_runs
-    assert "Harbour Press" not in "".join(italic_runs)
-    journal_italic = [run.text for run in printed[SAVED_JOURNAL_LINE].runs if run.italic]
-    assert "Maritime Policy" in journal_italic
-    assert "Chokepoints and crude" not in "".join(journal_italic)
+    document = Document(str(target))
+    assert document.core_properties.title
+    assert len(str(document.core_properties.title)) <= 255
+    texts = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
+    assert ESSAY in texts
+    assert "Title: Saved reference lines" in texts
+    assert "References" in texts
+    assert line in texts
+    paragraph = next(item for item in document.paragraphs if item.text.strip() == line)
+    italic = "".join(run.text for run in paragraph.runs if run.italic)
+    plain = "".join(run.text for run in paragraph.runs if not run.italic)
+    return italic, plain
+
+
+def test_ac5_saved_title_italic_span_stops_at_the_title_end(workspace, tmp_path):
+    """AC5. A title ending in ? or holding an initial keeps its whole span.
+
+    The publisher stays outside the italic run, and the article title in a
+    saved journal line stays outside it too.     The marks are read from the file.
+    """
+    del workspace
+    italic, plain = _written_marks(tmp_path, SAVED_QUESTION_TITLE)
+    assert italic == "Is the strait safe?"
+    assert "Harbour Press" in plain
+    assert "Harbour Press" not in italic
+
+    italic, plain = _written_marks(tmp_path, SAVED_ABBREVIATION_TITLE)
+    assert italic == "U.S. maritime policy"
+    assert "Harbour Press" in plain
+    assert "Harbour Press" not in italic
+
+    italic, _plain = _written_marks(tmp_path, SAVED_JOURNAL_LINE)
+    assert italic == "Maritime Policy"
+    assert "Chokepoints and crude" not in italic
 
 
 SAVED_CHAPTER_LINE = (
@@ -393,9 +387,7 @@ SAVED_CHAPTER_LINE = (
 
 def test_ac6_saved_chapter_italic_span_is_the_book_title_only(workspace):
     """AC6. A chapter line italicises the book title, not the editor or publisher."""
-    runs = _saved_runs(SAVED_CHAPTER_LINE)
-    italic = "".join(text for text, marked in runs if marked)
-    plain = "".join(text for text, marked in runs if not marked)
+    italic, plain = _written_marks(workspace, SAVED_CHAPTER_LINE)
     assert italic == "Book Title"
     assert "in Jones, K. (ed.)" in plain
     assert "5th edn." in plain
@@ -515,14 +507,14 @@ SAVED_ABBREVIATION_JOURNAL = (
 
 def test_ac12_a_saved_journal_title_keeps_its_whole_span(workspace):
     """AC12. A dot inside an abbreviation does not end the journal title."""
-    runs = _saved_runs(SAVED_ABBREVIATION_JOURNAL)
-    italic = "".join(text for text, marked in runs if marked)
-    plain = "".join(text for text, marked in runs if not marked)
+    italic, plain = _written_marks(workspace, SAVED_ABBREVIATION_JOURNAL)
     assert italic == "Journal of A.I. Research"
     assert plain.startswith("Smith, J. (2021) 'Article title', ")
     assert plain.endswith(". Available at: doi:10.1/example")
-    short = _saved_runs("Smith, J. (2021) 'Article title', Practice. Available at: doi:10.1/x")
-    assert "".join(text for text, marked in short if marked) == "Practice"
+    short, _plain = _written_marks(
+        workspace, "Smith, J. (2021) 'Article title', Practice. Available at: doi:10.1/x"
+    )
+    assert short == "Practice"
 
 
 def test_ac13_a_stub_fills_only_from_the_same_author(workspace):

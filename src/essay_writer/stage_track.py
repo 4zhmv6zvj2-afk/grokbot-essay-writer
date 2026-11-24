@@ -231,7 +231,8 @@ def _turn_redirect(
     for message in messages:
         reply = redirect_for(message)
         if reply is not None:
-            from essay_writer.stage_next import write_turn_redirect_next
+            from essay_writer.stage_next import write_stage_next
+            from essay_writer.student_voice import say
 
             refused = refuse(
                 "turn",
@@ -239,7 +240,7 @@ def _turn_redirect(
                 stage=stage,
                 confirmPhase=confirm_phase,
             )
-            return write_turn_redirect_next(refused, reply)
+            return write_stage_next(refused, say(reply if isinstance(reply, str) else ""))
     return None
 
 
@@ -441,9 +442,9 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         if isinstance(outcome, dict):
             return outcome
         if not look_is_confirmable(essay_id, stage, genre, text):
-            from essay_writer.stage_next import write_answer_stage_next
+            from essay_writer.stage_next import answer_next, write_stage_next
 
-            return write_answer_stage_next(
+            return write_stage_next(
                 {
                     "ok": True,
                     "essay_id": essay_id,
@@ -453,8 +454,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
                     "advanced": False,
                     "wrote": False,
                 },
-                outcome[0],
-                outcome[1],
+                answer_next(outcome[0], outcome[1]),
             )
     resolved = replace(
         args,

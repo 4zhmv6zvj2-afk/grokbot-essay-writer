@@ -178,9 +178,10 @@ def _confirm_blocked(
             stage=current,
             title=stage_title(current, genre),
         )
-    from essay_writer.stage_next import write_missing_confirm_next
+    from essay_writer.specialists.grok_bot import missing_confirm_next
+    from essay_writer.stage_next import write_stage_next
 
-    return write_missing_confirm_next(blocked, current, stage_title(current, genre))
+    return write_stage_next(blocked, missing_confirm_next(current, stage_title(current, genre)))
 
 
 def _opening_look(essay_id: str) -> str:
@@ -775,9 +776,12 @@ def _stage_refusal(
             from essay_writer.late_chain import MISSING_FINAL_WORD, _missing_stored_final_word
 
             if _missing_stored_final_word(essay_id):
-                from essay_writer.stage_next import write_reason_next
+                from essay_writer.stage_next import write_stage_next
+                from essay_writer.student_voice import say
 
-                return write_reason_next(refuse("word", MISSING_FINAL_WORD))
+                stopped = refuse("word", MISSING_FINAL_WORD)
+                reason = stopped.get("reason")
+                return write_stage_next(stopped, say(reason if isinstance(reason, str) else ""))
         return refuse("stage", "The last stage is already saved. This tool does not submit.")
     window = _revisit_window(cast(dict[str, Any], pointer))
     if window and stage in {"2", "3"}:

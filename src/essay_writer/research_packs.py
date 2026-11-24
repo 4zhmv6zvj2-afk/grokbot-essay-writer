@@ -97,10 +97,9 @@ def _unique_zip_name(stem: str, suffix: str, taken: set[str]) -> str:
 
 
 def _save_docx(path: Path, document) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".docx.tmp")
-    document.save(str(temporary))
-    os.replace(temporary, path)
+    from essay_writer.word import save_docx
+
+    save_docx(path, document)
 
 
 def write_annotation_docx(
@@ -112,9 +111,9 @@ def write_annotation_docx(
     """Annotated bibliography. Exact citation line, then the full sentences."""
     from docx import Document
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.shared import Inches, Pt
+    from docx.shared import Pt
 
-    from essay_writer.word import _font, _style_document, document_title
+    from essay_writer.word import _font, _hanging_paragraph, _style_document, document_title
 
     document = Document()
     _style_document(document)
@@ -134,11 +133,7 @@ def write_annotation_docx(
         note = paragraph.add_run(strip_word_labels(empty_note))
         _font(note, 12)
     for entry in entries:
-        citation = document.add_paragraph()
-        citation.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        citation.paragraph_format.line_spacing = 1.5
-        citation.paragraph_format.left_indent = Inches(0.5)
-        citation.paragraph_format.first_line_indent = Inches(-0.5)
+        citation = _hanging_paragraph(document)
         for text, italic in entry["parts"]:
             piece = citation.add_run(prose_for_surface(text, "annotation"))
             _font(piece, 12, italic=italic)

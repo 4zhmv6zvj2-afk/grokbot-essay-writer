@@ -30,8 +30,10 @@ validation, and Word output.
     "what happens next" sentence.
   - `stage_next.py` — the one writer for that sentence on an `essay.stage`
     reply, including the upload line, the stage 7 ask, the mid-run wait, and
-    Confirm wording stripped while a mid-run is going. Dig, shelf, setup,
-    intake, review, and projects still write their own next sentence.
+    Confirm wording stripped while a mid-run is going. A reply that only
+    repeats a sentence already chosen calls `write_stage_next` directly.
+    Dig, shelf, setup, intake, review, and projects still write their own
+    next sentence.
   - `stage_confirm.py` — the confirm path and the shared stage-7 skip probe.
     The body builder may import this module for the skip probe. This module
     never imports the body builder or the orchestrator.
@@ -53,6 +55,8 @@ validation, and Word output.
   - `essay_cites.py` — how many distinct relevant works the essay cites.
   - `download_shortlist.py` — the download set that fits the saved plan, after works that do not fit the question are dropped.
   - `word.py`, `word_references.py` — Word output and Harvard reference lines.
+    Paragraphs, runs, the title limit, and the `.docx.tmp` replace live in
+    `word.py`. `projects.py` uses that same title limit.
   - `specialists/` — writer, reviewer, researcher, and front-office helpers.
 - `tests/` — behaviour tests and synthetic fixtures.
 - `docs/` — operator and writing helpers.
