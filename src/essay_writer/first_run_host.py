@@ -164,7 +164,13 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    replace_text(path, json.dumps(payload, indent=2) + "\n", mkdir=True)
+    """Host attach JSON. This is the install, not a student save."""
+    replace_text(
+        path,
+        json.dumps(payload, indent=2) + "\n",
+        mkdir=True,
+        host_config=True,
+    )
 
 
 def grok_config_home() -> str:
@@ -424,7 +430,7 @@ def _merge_build_toml(path: Path, reviewer: bool) -> None:
     body = _strip_toml_tables(existing, headers)
     addition = render_build_config(reviewer).rstrip("\n")
     text = f"{body}\n\n{addition}\n" if body else addition + "\n"
-    replace_text(path, text, mkdir=True)
+    replace_text(path, text, mkdir=True, host_config=True)
 
 
 def resolve_build_config(

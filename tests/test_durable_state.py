@@ -165,6 +165,34 @@ def test_a_crash_between_the_note_and_the_pointer_loads_one_pair(workspace, monk
     assert not (folder / "tracking" / ".stage.commit").exists()
 
 
+def test_a_new_file_is_mode_644(tmp_path):
+    path = tmp_path / "state.json"
+    replace_bytes(path, b'{"kept": 1}\n')
+    assert path.stat().st_mode & 0o777 == 0o644
+
+
+def test_a_replace_keeps_the_previous_mode(tmp_path):
+    path = tmp_path / "state.json"
+    path.write_bytes(OLD)
+    path.chmod(0o640)
+    replace_bytes(path, NEW)
+    assert path.read_bytes() == NEW
+    assert path.stat().st_mode & 0o777 == 0o640
+
+
+def test_replace_bytes_refuses_a_checkout_path(tmp_path, monkeypatch):
+    from essay_writer.known_paths import RepoSaveRefused
+
+    install = tmp_path / "install"
+    (install / "src" / "essay_writer").mkdir(parents=True)
+    (install / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+    monkeypatch.setattr("essay_writer.known_paths.repo_root", lambda: install)
+    target = install / "src" / "essay_writer" / "probe.json"
+    with pytest.raises(RepoSaveRefused):
+        replace_bytes(target, b"{}\n")
+    assert not target.exists()
+
+
 def test_host_config_inside_the_install_is_written(tmp_path, monkeypatch):
     from essay_writer.first_run_host import _write_json
 
