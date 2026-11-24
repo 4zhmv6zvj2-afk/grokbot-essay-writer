@@ -72,6 +72,12 @@ def refuse(code: str, reason: str, **extra: Any) -> dict[str, Any]:
         "stored": False,
     }
     body.update(extra)
+    try:
+        from essay_writer.incident import note
+
+        note(code, severity="error", disposition="refuse")
+    except Exception:
+        return speak(body)
     return speak(body)
 
 

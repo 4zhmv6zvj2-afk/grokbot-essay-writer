@@ -533,9 +533,18 @@ def essay_debug_wipe(speech: str | None = None) -> dict[str, Any]:
             "That request does not clear the run log.",
             next="Ask again with delete the logs, or clear debug log.",
         )
+    from essay_writer.incident import incident_path, rotated_path, wipe_incident_files
+
     removed = wipe_operator_log_files()
-    cleared = any(removed.values())
-    next_line = "Cleared the run logs." if cleared else "The run logs were already empty."
+    cleared_incident = wipe_incident_files()
+    cleared = any(removed.values()) or cleared_incident
+    left = incident_path().is_file() or rotated_path().is_file()
+    if left:
+        next_line = "The incident record is still there. Ask me to clear the logs again."
+    elif cleared:
+        next_line = "Cleared the run logs."
+    else:
+        next_line = "The run logs were already empty."
     return speak(
         {
             "ok": True,
@@ -543,7 +552,44 @@ def essay_debug_wipe(speech: str | None = None) -> dict[str, Any]:
             "cleared": cleared,
             "cleared_debug": removed[LOG_FILENAME],
             "cleared_ml_events": removed[ML_EVENTS_FILENAME],
+            "cleared_incident": cleared_incident,
             "next": next_line,
+        }
+    )
+
+
+def support_bundle() -> dict[str, Any]:
+    """Write support.zip in the app folder. A failure does not raise."""
+    from essay_writer.incident import (
+        BUNDLE_NAME,
+        incident_path,
+        locked_incident_files,
+        pack_support_zip,
+    )
+
+    try:
+        # Debug logs stay out of the zip. They can hold the essay and paths,
+        # and redaction does not remove either.
+        redacted = [(name, redact_bytes(payload)) for name, payload in locked_incident_files()]
+        entries = pack_support_zip(incident_path().parent / BUNDLE_NAME, redacted, [])
+    except Exception:
+        return speak(
+            {
+                "ok": False,
+                "wrote": False,
+                "refused": "support-bundle",
+                "reason": "The support bundle could not be written.",
+                "next": "Run essay-writer --support-bundle again.",
+            }
+        )
+    return speak(
+        {
+            "ok": True,
+            "wrote": True,
+            "name": BUNDLE_NAME,
+            "entries": entries,
+            "complete": True,
+            "next": "Wrote the support bundle.",
         }
     )
 
@@ -1318,12 +1364,16 @@ def traced(tool: str, handler: Callable[..., object]) -> Callable[..., object]:
     @functools.wraps(handler)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         arguments = _bound(handler, args, kwargs)
-        try:
-            result = handler(*args, **kwargs)
-        except Exception as exc:
-            note_call(tool, arguments, error=exc)
-            raise
-        note_call(tool, arguments, result=result)
-        return result
+        from essay_writer.incident import call_frame, note_exception
+
+        with call_frame(tool, arguments):
+            try:
+                result = handler(*args, **kwargs)
+            except Exception as exc:
+                note_call(tool, arguments, error=exc)
+                note_exception(exc)
+                raise
+            note_call(tool, arguments, result=result)
+            return result
 
     return wrapper

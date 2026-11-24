@@ -10,7 +10,7 @@ Student installs leave it off. A shell turns it on by setting `ESSAY_WRITER_DEBU
 
 The file is `debug.log` in the essay app folder the server already uses. That folder is `ESSAY_WRITER_ROOT` when it is set, otherwise the app folder stored at setup, otherwise the folder that contains this package. When `ESSAY_WRITER_ROOT` is set, the setup record is not consulted, so use `ESSAY_WRITER_DEBUG`. The log is not given its own separate path.
 
-When the operator asks to delete the logs or clear the debug log, `essay.debug.wipe` clears that prose log and the structured ML JSONL in the app folder together. There is no settings toggle and no chat button.
+When the operator asks to delete the logs or clear the debug log, `essay.debug.wipe` clears that prose log, the structured ML JSONL, and the incident record in the app folder together. There is no settings toggle and no chat button.
 
 Each line is one tool call: the time, the tool, draft or confirm, the module or sequence, whether it was refused, and whether anything was written. A Consensus key, an Unpaywall email, and a token are not written.
 
@@ -24,7 +24,17 @@ The file is `ml-events.jsonl` in the same essay app folder as `debug.log`. That 
 
 Each line is one JSON object. The kinds are stage, confirm, digest, paths, shell, and outcome. A line names the tool, the stage, whether a confirm card was present, a digest hash, a file path with its time and checksum, which shell started or finished, and whether the call wrote or was refused. The student's chat, the stage note, and the launch prompt are not copied into the line.
 
-`essay.debug.wipe` is the only clear. Delete the logs, or clear the debug log, removes both files. There is no second wipe door.
+`essay.debug.wipe` is the only clear. Delete the logs, or clear the debug log, removes both files and the incident record. There is no second wipe door.
+
+## Incident record
+
+This file is always on. A student install writes it when the debug log is off. The file is `incident.jsonl` in the app folder, mode 0600. The rotated copy is `incident.jsonl.1`, also mode 0600. At 256 KB or 200 lines, whichever comes first, the live file is renamed to `incident.jsonl.1` and a new file starts. One process lock covers that rename plus the append, and the same lock covers the wipe, so two callers in that process cannot rotate the same file twice or drop a line. Two processes can still pass each other.
+
+The app folder is `ESSAY_WRITER_ROOT` when it is set, otherwise the folder stored at setup. When neither is set, the folder that contains this package is used. That package-directory fallback is a dev-only degradation. A student install has a setup app folder or `ESSAY_WRITER_ROOT`. In this checkout, `incident.jsonl`, `incident.jsonl.1`, and `support.zip` are gitignored.
+
+Each line is one JSON object. It has the UTC time, the build commit, a prompt hash, the sequence id, the tool, the stage, a stable code, a disposition (`retry`, `fallback`, or `refuse`), and a severity (`error`, `warn`, or `info`). An exception line adds the exception class and the code `unhandled`. The message is empty unless it is exactly `Windows is not supported.` The line does not contain essay text, a prompt, chat, a file body, a path, or a secret value. `debug.log` and `ml-events.jsonl` stay the opt-in stream. Incident lines are not copied into them.
+
+`essay-writer --support-bundle` writes `support.zip` in the app folder. The zip contains the incident lines, `health.json` (version, build commit, prompt hash, and door names), `files.json` (sequence ids and SHA-256 values of state files, not the file contents), and `manifest.json` (counts, including soft incidents by code). `debug.log` and `ml-events.jsonl` are not members. Those files can contain the essay and paths, and redaction does not remove them. A logging failure does not stop the student.
 
 ## Environment overrides (operators and tests)
 

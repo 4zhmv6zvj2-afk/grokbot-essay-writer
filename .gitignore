@@ -77,6 +77,12 @@ debug.log
 ml-events.jsonl
 debug.zip
 
+# Always-on incident record and support bundle. Written in the app folder.
+# The package directory is that folder only when no setup folder is set.
+incident.jsonl
+incident.jsonl.1
+support.zip
+
 # Local-only setup prompt. The public tree ships FIRST-RUN.txt only.
 FRIEND-PROMPT.txt
 src/essay_writer/FRIEND-PROMPT.txt
