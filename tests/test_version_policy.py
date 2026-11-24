@@ -61,6 +61,40 @@ def test_macos_job_runs_the_3_15_line() -> None:
     assert "check-latest: true" in job
 
 
+def test_pull_requests_run_macos_only_for_a_sensitive_path() -> None:
+    workflow = CI.read_text(encoding="utf-8")
+    changes = _job(workflow, "changes")
+    macos = _job(workflow, "test-macos")
+    artifacts = _job(workflow, "artifacts")
+    assert "runs-on: ubuntu-24.04" in changes
+    assert "github.event_name" in changes
+    assert "macos=true" in changes
+    # The path decision and the job guard name the same sensitive files.
+    for path in (
+        "src/essay_writer/first_run_mac.py",
+        "src/essay_writer/intake.py",
+        "src/essay_writer/word.py",
+        "src/essay_writer/paths.py",
+        "src/essay_writer/setup.py",
+        "src/essay_writer/server.py",
+        "pyproject.toml",
+        "MANIFEST.in",
+        "requirements*.txt",
+        ".github/workflows/*",
+        "tests/test_*mac*.py",
+        "tests/test_*first_run*.py",
+        "tests/test_*word*.py",
+        "tests/test_*path*.py",
+    ):
+        assert path in changes, path
+    assert "needs: changes" in macos
+    assert "github.event_name != 'pull_request'" in macos
+    assert "needs.changes.outputs.macos == 'true'" in macos
+    assert "needs.changes.result != 'success'" in macos
+    # The artifacts job is not path-filtered by this change.
+    assert "\n    if:" not in artifacts
+
+
 def test_artifact_job_builds_on_the_3_12_line() -> None:
     job = _job(CI.read_text(encoding="utf-8"), "artifacts")
     assert 'python-version: "3.12"' in job

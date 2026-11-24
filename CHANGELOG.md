@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A pull request runs the macOS suite only when the diff touches a macOS-sensitive path. Main still runs it every time.
+
 ## 0.9.20 — 2026-11-25
 
 - Contract pins fell from 727 to 545. The three heaviest files were the operator log, the stage launch, and the finished Word file. CI prints the 25 slowest tests. The quarantine list is empty.
