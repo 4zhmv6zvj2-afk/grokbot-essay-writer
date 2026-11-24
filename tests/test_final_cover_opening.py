@@ -105,7 +105,7 @@ def _clear_saved_pack(seq: str) -> None:
     save_state(seq, state)
 
 
-def _write_live_draft(seq: str, paragraphs: list[str], *, title: str) -> Path:
+def _write_synthetic_draft(seq: str, paragraphs: list[str], *, title: str) -> Path:
     """First-draft file: essay paragraphs, a short document title, no cover line."""
     path = work_dir(seq) / "output" / f"{seq}.docx"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -120,8 +120,8 @@ def _write_live_draft(seq: str, paragraphs: list[str], *, title: str) -> Path:
     return path
 
 
-def _live_fixture(*, title: str) -> tuple[str, list[str], Path]:
-    """The live leftover: a long opening and the short title ENVS5003HK-1."""
+def _synthetic_fixture(*, title: str) -> tuple[str, list[str], Path]:
+    """A long synthetic opening and the short title MOD4401ZZ-1."""
     seq = open_sequence(MODULE)
     _brief()
     remember_registration(seq, NUMBER)
@@ -134,11 +134,11 @@ def _live_fixture(*, title: str) -> tuple[str, list[str], Path]:
     assert delivered.get("wrote") is not False, delivered
     assert list_written(seq) is True
     paragraphs = _essay_paragraphs(seq)
-    assert paragraphs[0].startswith("When is it fair to close a fishery")
+    assert paragraphs[0] == OPENING
     assert len(paragraphs[0]) > LIMIT
     _park_stage10(seq)
     _clear_saved_pack(seq)
-    path = _write_live_draft(seq, paragraphs, title=title)
+    path = _write_synthetic_draft(seq, paragraphs, title=title)
     assert _title_of(path) == title
     return seq, paragraphs, path
 
@@ -176,7 +176,7 @@ def _assert_opening_once(path: Path, draft: list[str], *, short: str) -> list[st
 def test_stage10_close_writes_the_opening_once_after_the_cover(workspace, monkeypatch, tmp_path):
     """AC-cover-1: When the citation check already passes, Stage 10 writes a new final Word file whose name is not the first-draft name, stores the step, and can close. The essay opening paragraph appears only once in that file, as the first paragraph of the essay body after any short cover. It must not also appear above the cover line."""
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
-    seq, paragraphs, draft_path = _live_fixture(title=STORED_TITLE)
+    seq, paragraphs, draft_path = _synthetic_fixture(title=STORED_TITLE)
     assert seq == STORED_TITLE
     draft = essay_stage(seq, "10", "draft", "The final file is ready.")
     assert draft["ok"] is True, draft
@@ -211,10 +211,12 @@ def test_stage10_close_writes_the_opening_once_after_the_cover(workspace, monkey
     assert workspace is not None
 
 
-def test_the_live_opening_is_not_repeated_above_the_short_cover(workspace, monkeypatch, tmp_path):
-    """AC-cover-2: A fixture that repeats the live leftover — a first-draft opening longer than 255 characters beginning “When is it fair to close a fishery…”, and a short document title ENVS5003HK-1 — must write a final file that does not place that opening once above a short cover line and again as the first essay paragraph."""
+def test_the_long_synthetic_opening_is_not_repeated_above_the_short_cover(
+    workspace, monkeypatch, tmp_path
+):
+    """AC-cover-2: A synthetic first-draft opening longer than 255 characters, and the short document title MOD4401ZZ-1, must write a final file that does not place that opening once above a short cover line and again as the first essay paragraph."""
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
-    seq, paragraphs, _draft_path = _live_fixture(title=STORED_TITLE)
+    seq, paragraphs, _draft_path = _synthetic_fixture(title=STORED_TITLE)
     assert seq == STORED_TITLE
     assert len(OPENING) == 620
     written = write_stage10(seq)
@@ -222,14 +224,14 @@ def test_the_live_opening_is_not_repeated_above_the_short_cover(workspace, monke
     assert written.get("pack_path") == "pack_from_docx"
     final = _final_file(seq)
     _assert_opening_once(final, paragraphs, short=STORED_TITLE)
-    write_proof("final-cover-live.docx", final.read_bytes())
+    write_proof("final-cover-synthetic.docx", final.read_bytes())
     assert workspace is not None
 
 
 def test_the_essay_after_the_cover_matches_the_first_draft(workspace, monkeypatch, tmp_path):
     """AC-cover-3: After any short cover line (and at most one blank paragraph after it), the essay paragraphs in the final Word file match the first-draft essay exactly once. A References section may follow with the citation-list lines. This cut does not change the essay wording to remove the leftover."""
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
-    seq, paragraphs, _draft_path = _live_fixture(title=STORED_TITLE)
+    seq, paragraphs, _draft_path = _synthetic_fixture(title=STORED_TITLE)
     references = _reference_lines(seq)
     written = write_stage10(seq)
     assert written["ok"] is True, written
@@ -253,9 +255,9 @@ def test_the_essay_after_the_cover_matches_the_first_draft(workspace, monkeypatc
 
 
 def test_the_final_document_title_stays_the_short_title(workspace, monkeypatch, tmp_path):
-    """AC-cover-4: The final Word file’s document title remains the short title already on the first-draft Word file (for the live essay, ENVS5003HK-1). If no short title is stored, it is the assessment id or the file name without .docx. It is never the opening paragraph, and it is at most 255 characters."""
+    """AC-cover-4: The final Word file’s document title remains the short title already on the first-draft Word file (for this synthetic fixture, MOD4401ZZ-1). If no short title is stored, it is the assessment id or the file name without .docx. It is never the opening paragraph, and it is at most 255 characters."""
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
-    seq, _paragraphs, _draft_path = _live_fixture(title=STORED_TITLE)
+    seq, _paragraphs, _draft_path = _synthetic_fixture(title=STORED_TITLE)
     written = write_stage10(seq)
     assert written["ok"] is True, written
     final = _final_file(seq)
@@ -263,10 +265,10 @@ def test_the_final_document_title_stays_the_short_title(workspace, monkeypatch, 
     assert title == STORED_TITLE
     assert len(title) <= LIMIT
     assert title != OPENING
-    assert not title.startswith("When is it fair to close a fishery")
+    assert not title.startswith(OPENING[:48])
     write_proof("final-cover-title.txt", title + "\n")
 
-    other, _other_paragraphs, _other_draft = _live_fixture(title="")
+    other, _other_paragraphs, _other_draft = _synthetic_fixture(title="")
     assert _title_of(work_dir(other) / "output" / f"{other}.docx") == ""
     again = write_stage10(other)
     assert again["ok"] is True, again
@@ -388,9 +390,9 @@ def test_sibling_word_files_do_not_repeat_the_opening(workspace, tmp_path):
 
 def test_an_off_list_cite_and_a_missing_line_are_still_refused(workspace):
     """AC-cover-6: A citation in the text that is not on the list, such as (Nobody, 1999), and a genuinely missing reference line, are still refused. The step is not stored, no final Word file is written from that refusal, and a good first-draft Word file is not overwritten."""
-    seq, paragraphs, first = _live_fixture(title=STORED_TITLE)
+    seq, paragraphs, first = _synthetic_fixture(title=STORED_TITLE)
     extra = paragraphs + ["An unlisted paper is not added (Nobody, 1999)."]
-    _write_live_draft(seq, extra, title=STORED_TITLE)
+    _write_synthetic_draft(seq, extra, title=STORED_TITLE)
     before = first.read_bytes()
     refused = write_stage10(seq)
     assert refused["ok"] is False, refused
@@ -404,7 +406,7 @@ def test_an_off_list_cite_and_a_missing_line_are_still_refused(workspace):
     assert pointer["closed"] is False
     write_proof("final-cover-unlisted-refusal.txt", str(refused.get("reason") or "") + "\n")
 
-    other, _other_paragraphs, other_first = _live_fixture(title=STORED_TITLE)
+    other, _other_paragraphs, other_first = _synthetic_fixture(title=STORED_TITLE)
     path = work_dir(other) / "citation-list.json"
     saved = json.loads(path.read_text(encoding="utf-8"))
     target = next(entry for entry in saved["entries"] if entry.get("year") == "2026")
@@ -415,7 +417,7 @@ def test_an_off_list_cite_and_a_missing_line_are_still_refused(workspace):
     assert missing["ok"] is False, missing
     assert missing["refused"] == "references-cites"
     assert missing.get("stored") is not True
-    assert "keith, 2026" in str(missing.get("reason") or "").casefold()
+    assert "quinn, 2026" in str(missing.get("reason") or "").casefold()
     assert other_first.read_bytes() == other_before
     assert not list((work_dir(other) / "output").rglob("*-final.docx"))
     assert first.read_bytes() == before
@@ -449,7 +451,7 @@ def test_findings_heading_stays_overall_judgement(workspace, tmp_path):
 def test_the_final_write_does_not_prepend_the_opening(workspace, monkeypatch, tmp_path):
     """AC-span-1: After the last-step citation check passes, the final Word write may add a short cover and a References section, but must not prepend a copy of the opening paragraph above that cover."""
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
-    seq, paragraphs, _draft_path = _live_fixture(title=STORED_TITLE)
+    seq, paragraphs, _draft_path = _synthetic_fixture(title=STORED_TITLE)
     state = load_state(seq)
     state["saved_pack"] = {
         "essay_id": seq,
@@ -491,7 +493,7 @@ def test_public_wording_covers_cursor_and_grok_build(workspace):
     assert ("@pytest.mark." + "parametrize") not in source
     seated = {
         "test_stage10_close_writes_the_opening_once_after_the_cover": "AC-cover-1",
-        "test_the_live_opening_is_not_repeated_above_the_short_cover": "AC-cover-2",
+        "test_the_long_synthetic_opening_is_not_repeated_above_the_short_cover": "AC-cover-2",
         "test_the_essay_after_the_cover_matches_the_first_draft": "AC-cover-3",
         "test_the_final_document_title_stays_the_short_title": "AC-cover-4",
         "test_sibling_word_files_do_not_repeat_the_opening": "AC-cover-5",

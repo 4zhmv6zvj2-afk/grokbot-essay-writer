@@ -85,8 +85,9 @@ jobs:
           python tools/update_prompt_snapshot.py --check
       - name: Ruff
         run: |
-          python -m ruff check src tests tools
-          python -m ruff format --check --force-exclude src tests tools
+          python -m py_compile .cursor/skills/verify-essay-writer/scripts/verify-essay-writer
+          python -m ruff check src tests tools .cursor/skills/verify-essay-writer/scripts/verify-essay-writer
+          python -m ruff format --check --force-exclude src tests tools .cursor/skills/verify-essay-writer/scripts/verify-essay-writer
       - name: Mypy
         run: python -m mypy src
       # Coverage is measured once, on the lowest supported interpreter and one

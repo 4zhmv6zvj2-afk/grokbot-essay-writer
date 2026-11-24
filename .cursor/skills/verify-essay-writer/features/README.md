@@ -18,7 +18,7 @@ The surface is the writer MCP server. The command is `essay-writer` with no argu
 - Call the doors with `confirmPhase` `draft`, then `confirm`, and send `cardDigest` from the draft when the draft returns one.
 - Treat module ids as the codes the product already documents, such as `MOD1004AA`. A sequence id looks like `MOD1004AA-1`.
 - Leave catalog keys and emails in the environment. Do not pass them as door arguments and do not print them.
-- Keep proof files in `/opt/cursor/artifacts/verify-essay-writer/`. Cleanup removes the student folder and leaves that directory.
+- Keep proof files in `/tmp/essay-verify-evidence/`. Cleanup removes the run directory this script created and leaves that evidence directory.
 
 ## Proof and skip reporting
 

@@ -37,21 +37,21 @@ NO_CITATIONS = "The opened Word file has no citations. Nothing was recorded."
 EMPTY_REFERENCES = (
     "The References section has no entries. Add reference lines before this step can close."
 )
-QUOTE = "The opened file records a measured change in fishing mortality for this stock."
+QUOTE = "The opened file records a measured change in night passages for this lane."
 DRAFT = (
-    "Closure advice for North Sea cod was not taken, and the stock stayed outside safe limits "
-    "(Froese and Quaas, 2012). Effort limits had cut fishing mortality by the middle of the decade "
-    "(Horwood, O'Brien and Darby, 2006). Large trawler effort inside the Plaice Box fell sharply "
-    "(Beare and others, 2013). A lower catch can resemble a zero catch over the medium term "
-    "(Trijoulet and others, 2021). Herring collapsed and later recovered "
-    "(Dickey-Collas and others, 2010). A paper outside the gathered set is not used (Nobody, 1999)."
+    "Closure advice for Glasswater night traffic was not taken, and the lane stayed outside the marked limit "
+    "(Alden and Marlow, 2012). Passage limits had cut night traffic by the middle of the decade "
+    "(Pell, O'Keefe and Marlow, 2006). Large barge effort inside the Lantern Lane fell sharply "
+    "(Keel and others, 2013). A lower passage can resemble a closed lane over the medium term "
+    "(Lumen and others, 2021). The lantern lane closed and later reopened "
+    "(Pell-Marlow and others, 2010). A paper outside the gathered set is not used (Nobody, 1999)."
 )
 KEPT = (
-    "(Froese and Quaas, 2012)",
-    "(Horwood, O'Brien and Darby, 2006)",
-    "(Beare et al., 2013)",
-    "(Trijoulet et al., 2021)",
-    f"(Dickey{HYPHEN}Collas and Nash, 2010)",
+    "(Alden and Marlow, 2012)",
+    "(Pell, O'Keefe and Marlow, 2006)",
+    "(Keel et al., 2013)",
+    "(Lumen et al., 2021)",
+    f"(Pell{HYPHEN}Marlow and Quinn, 2010)",
 )
 
 
@@ -61,17 +61,17 @@ def _docx_text(path: Path) -> str:
 
 def _authors() -> dict[str, tuple[str, str]]:
     return {
-        "froese": ("Froese, R. and Quaas, M.", "2012"),
-        "horwood": ("Joe Horwood and Ciaran O'Brien and Clive Darby", "2006"),
-        "beare": (
-            "Douglas Beare and Tobias Mildenberger and Florian Berg and Alex Kokkalis",
+        "alden": ("Alden, R. and Marlow, M.", "2012"),
+        "pell": ("Nia Pell and Ciaran O'Keefe and Clive Marlow", "2006"),
+        "keel": (
+            "Douglas Keel and Tobias Binder and Florian Ash and Alex Quinn",
             "2013",
         ),
-        "trijoulet": (
-            "Vanessa Trijoulet and Florian Berg and Alexandros Kokkalis and Tobias Mildenberger",
+        "lumen": (
+            "Vanessa Lumen and Florian Ash and Alexandros Quinn and Tobias Binder",
             "2021",
         ),
-        "dickey": (f"Mark Dickey{HYPHEN}Collas and Richard Nash", "2010"),
+        "pellmarlow": (f"Mark Pell{HYPHEN}Marlow and Richard Quinn", "2010"),
     }
 
 
@@ -158,31 +158,31 @@ def _citation_gate(seq: str, body: str, sources: list[dict[str, str]]) -> dict:
 def test_gathered_citations_remain_in_the_stored_draft(workspace):
     """AC-cite-keep-1: Stage 5 keeps gathered in-text citations in the stored draft."""
     seq, look, saved = _save_draft()
-    assert "(Froese and Quaas, 2012)" in look
-    assert "(Horwood, O'Brien and Darby, 2006)" in look
-    assert "closure advice for north sea cod" in look.casefold()
+    assert "(Alden and Marlow, 2012)" in look
+    assert "(Pell, O'Keefe and Marlow, 2006)" in look
+    assert "closure advice for glasswater night traffic" in look.casefold()
     withheld = set(load_record(seq)["withheld"])
-    assert "froese and quaas, 2012" not in withheld
-    assert "horwood, o'brien and darby, 2006" not in withheld
+    assert "alden and marlow, 2012" not in withheld
+    assert "pell, o'keefe and marlow, 2006" not in withheld
     held = {item["token"] for item in saved.get("cite_held") or []}
-    assert "froese and quaas, 2012" not in held
-    assert "horwood, o'brien and darby, 2006" not in held
+    assert "alden and marlow, 2012" not in held
+    assert "pell, o'keefe and marlow, 2006" not in held
     write_proof("cite-keep-stored-draft.txt", look + "\n")
     assert workspace is not None
 
 
 def test_multi_author_and_lists_remain_after_the_save(workspace):
     """AC-cite-keep-2: Multi-author and lists, including and others, remain after the save."""
-    froese_forms = in_text_forms("Froese, R. and Quaas, M.", "2012")
-    display_forms = in_text_forms("Rainer Froese and Martin Quaas", "2012")
-    beare_forms = in_text_forms(
-        "Douglas Beare and Tobias Mildenberger and Florian Berg and Alex Kokkalis",
+    alden_forms = in_text_forms("Alden, R. and Marlow, M.", "2012")
+    display_forms = in_text_forms("Rainer Alden and Martin Marlow", "2012")
+    keel_forms = in_text_forms(
+        "Douglas Keel and Tobias Binder and Florian Ash and Alex Quinn",
         "2013",
     )
-    assert token_allowed("froese and quaas, 2012", froese_forms)
-    assert token_allowed("froese and quaas, 2012", display_forms)
-    assert token_allowed("beare and others, 2013", beare_forms)
-    assert token_allowed("beare et al., 2013", beare_forms)
+    assert token_allowed("alden and marlow, 2012", alden_forms)
+    assert token_allowed("alden and marlow, 2012", display_forms)
+    assert token_allowed("keel and others, 2013", keel_forms)
+    assert token_allowed("keel et al., 2013", keel_forms)
     assert token_allowed("smith and jones, 2020", {"smith, 2020", "jones, 2020"})
     assert token_allowed("smith and jones, 2020", in_text_forms("Smith, J.", "2020")) is False
 
@@ -191,11 +191,11 @@ def test_multi_author_and_lists_remain_after_the_save(workspace):
         assert citation in look
     withheld = set(load_record(seq)["withheld"])
     for token in (
-        "froese and quaas, 2012",
-        "horwood, o'brien and darby, 2006",
-        "beare and others, 2013",
-        "trijoulet and others, 2021",
-        "dickey-collas and others, 2010",
+        "alden and marlow, 2012",
+        "pell, o'keefe and marlow, 2006",
+        "keel and others, 2013",
+        "lumen and others, 2021",
+        "pell-marlow and others, 2010",
     ):
         assert token not in withheld
     write_proof("cite-keep-multi-author-draft.txt", look + "\n")
@@ -248,10 +248,10 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
     """AC-cite-keep-5: An ungathered citation is refused, a missing reference line is refused, and a hyphen still matches."""
     seq, look, saved = _save_draft()
     assert "Nobody" not in look
-    assert f"(Dickey{HYPHEN}Collas and Nash, 2010)" in look
-    assert "(Dickey-Collas and others, 2010)" not in look
+    assert f"(Pell{HYPHEN}Marlow and Quinn, 2010)" in look
+    assert "(Pell-Marlow and others, 2010)" not in look
     assert HYPHEN in look
-    assert HYPHEN in _authors()["dickey"][0]
+    assert HYPHEN in _authors()["pellmarlow"][0]
     held = {item["token"]: item["reason"] for item in saved["cite_held"]}
     assert held["nobody, 1999"] == "claim-fit"
     assert "nobody, 1999" in load_record(seq)["withheld"]
@@ -263,10 +263,9 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
     assert "nobody, 1999" in missing["reason"]
     kept = _citation_gate(seq, DRAFT.replace(" (Nobody, 1999)", ""), rows)
     assert kept["passed"] is True, kept
-    hyphen_name = f"Dickey{HYPHEN}Collas"
+    hyphen_name = f"Pell{HYPHEN}Marlow"
     reference = (
-        f"{hyphen_name}, M. and Nash, R. (2010) 'Herring recovery', "
-        "Fisheries Journal, 1(1), pp. 1-9."
+        f"{hyphen_name}, M. and Quinn, R. (2010) 'Lane recovery', Harbour Journal, 1(1), pp. 1-9."
     )
     assert (
         stage10_reference_block(
@@ -275,7 +274,7 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
             [
                 {
                     "heading": "Findings",
-                    "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010).",
+                    "body": "The lantern lane closed and later reopened (Pell-Marlow and others, 2010).",
                 }
             ],
         )
@@ -287,7 +286,7 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
         [
             {
                 "heading": "Findings",
-                "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010).",
+                "body": "The lantern lane closed and later reopened (Pell-Marlow and others, 2010).",
             }
         ],
     )
@@ -345,8 +344,8 @@ def test_student_files_stay_plain_and_lookup_fields_stay(workspace):
     assert "Critical note" not in str(stored.get("next") or "")
     _assert_plain(text, str(stored.get("next") or ""), str(stored.get("findings") or ""))
     first = text.splitlines()[0]
-    assert first.startswith("Closure advice for North Sea cod")
-    assert "(Froese and Quaas, 2012)" in first
+    assert first.startswith("Closure advice for Glasswater night traffic")
+    assert "(Alden and Marlow, 2012)" in first
     write_proof("cite-keep-word-first-line.txt", first + "\n")
 
     pdf_rows = _save_lookup_pdfs(

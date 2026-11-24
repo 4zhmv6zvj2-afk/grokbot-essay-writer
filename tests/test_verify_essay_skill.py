@@ -13,8 +13,12 @@ import importlib.util
 import json
 import os
 import re
-import tempfile
+import shutil
+import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 import essay_writer
 
@@ -284,13 +288,18 @@ def test_cleanup_leaves_the_named_evidence():
         "scripts/verify-essay-writer cleanup",
     ):
         assert command in skill
-    assert "does not delete `/opt/cursor/artifacts/verify-essay-writer/`." in skill
-    with tempfile.TemporaryDirectory(prefix="essay-verify-ac-") as root:
-        base = Path(root)
-        evidence = base / "evidence"
-        run = base / "run"
+    assert "does not delete `/tmp/essay-verify-evidence/`." in skill
+    run = Path("/tmp") / f"essay-verify-ac-{os.getpid()}"
+    evidence = Path("/tmp") / f"essay-verify-evidence-ac-{os.getpid()}"
+    if run.exists():
+        shutil.rmtree(run)
+    if evidence.exists():
+        shutil.rmtree(evidence)
+    token = "ac-marker"
+    try:
         evidence.mkdir()
         (run / "student").mkdir(parents=True)
+        (run / ".essay-verify-created").write_text(token + "\n", encoding="utf-8")
         (run / "student" / "marker.txt").write_text("run", encoding="utf-8")
         (evidence / "keep.txt").write_text("keep", encoding="utf-8")
         for name in ("launch.json", "doctor.json", "research-gather.json"):
@@ -302,6 +311,7 @@ def test_cleanup_leaves_the_named_evidence():
                     "kb1": str(run / "KB1"),
                     "run_dir": str(run),
                     "deps": str(run / "deps"),
+                    "marker": token,
                 }
             ),
             encoding="utf-8",
@@ -323,6 +333,11 @@ def test_cleanup_leaves_the_named_evidence():
         note = (evidence / "cleanup.txt").read_text(encoding="utf-8")
         assert "Evidence files still present:" in note
         assert "keep.txt" in note
+    finally:
+        if run.exists():
+            shutil.rmtree(run)
+        if evidence.exists():
+            shutil.rmtree(evidence)
 
 
 def test_package_version_matches_the_skill():
@@ -333,8 +348,9 @@ def test_package_version_matches_the_skill():
     skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     helper = HELPER.read_text(encoding="utf-8")
     assert version in skill
-    assert f'!= "{version}"' in helper
-    assert f"Expected {version}." in helper
+    assert version not in helper
+    assert "package_version()" in helper
+    assert "Expected {expected}." in helper
 
 
 def test_feature_map_names_the_three_journeys():
@@ -349,3 +365,372 @@ def test_feature_map_names_the_three_journeys():
         assert "## How to get to it (user POV)" in text
         assert "## Driving it with verify-essay-writer" in text
         assert "## Gotchas" in text
+
+
+def _outside(tmp_path: Path) -> dict[str, str]:
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    return {
+        "ESSAY_WRITER_EVIDENCE": str(evidence),
+        "ESSAY_WRITER_ROOT": str(tmp_path / "student"),
+        "ESSAY_WRITER_VERIFY_KB1": str(tmp_path / "KB1"),
+        "ESSAY_WRITER_VERIFY_DEPS": str(tmp_path / "deps"),
+        "ESSAY_WRITER_VERIFY_RUN": str(tmp_path / "essay-verify-run"),
+    }
+
+
+def _proof(evidence: Path, run: Path, token: str, pid: int | None = None) -> None:
+    evidence.mkdir(parents=True, exist_ok=True)
+    for name in ("launch.json", "doctor.json", "research-gather.json", "keep.txt"):
+        (evidence / name).write_text("keep\n", encoding="utf-8")
+    body: dict[str, object] = {
+        "student_root": str(run / "student"),
+        "kb1": str(run / "KB1"),
+        "run_dir": str(run),
+        "deps": str(run / "deps"),
+        "marker": token,
+    }
+    if pid is not None:
+        body["server_pid"] = pid
+    (evidence / "run-state.json").write_text(json.dumps(body), encoding="utf-8")
+
+
+def test_cleanup_refuses_a_shared_parent(tmp_path: Path):
+    """A run dir that is the parent of the student folder is not deleted."""
+    docs = tmp_path / "Documents"
+    student = docs / "student"
+    student.mkdir(parents=True)
+    (docs / "KB1").mkdir()
+    (docs / "keep-me.txt").write_text("stay", encoding="utf-8")
+    (docs / ".essay-verify-created").write_text("parent-token\n", encoding="utf-8")
+    evidence = tmp_path / "evidence"
+    _proof(evidence, docs, "parent-token")
+    harness = _load_harness(
+        {
+            "ESSAY_WRITER_EVIDENCE": str(evidence),
+            "ESSAY_WRITER_ROOT": str(student),
+            "ESSAY_WRITER_VERIFY_KB1": str(docs / "KB1"),
+            "ESSAY_WRITER_VERIFY_DEPS": str(docs / "deps"),
+            "ESSAY_WRITER_VERIFY_RUN": str(tmp_path / "essay-verify-run"),
+        }
+    )
+    harness.launch_paths()
+    assert harness.RUN_DIR.resolve() != docs.resolve()
+    with pytest.raises(SystemExit):
+        harness.cmd_cleanup()
+    assert (docs / "keep-me.txt").read_text(encoding="utf-8") == "stay"
+    assert student.is_dir()
+
+
+def test_a_preexisting_directory_is_left_in_place(tmp_path: Path):
+    """Launch does not claim a directory this script did not create."""
+    run = tmp_path / "already"
+    run.mkdir()
+    (run / "keep.txt").write_text("stay", encoding="utf-8")
+    harness = _load_harness(_outside(tmp_path))
+    with pytest.raises(SystemExit):
+        harness.claim_run_dir(run)
+    assert (run / "keep.txt").read_text(encoding="utf-8") == "stay"
+    assert list(run.iterdir()) == [run / "keep.txt"]
+
+
+def test_cleanup_refuses_a_missing_marker():
+    """A verify-shaped directory without the launch marker stays in place."""
+    run = Path("/tmp") / f"essay-verify-missing-{os.getpid()}"
+    evidence = Path("/tmp") / f"essay-verify-evidence-missing-{os.getpid()}"
+    if run.exists():
+        shutil.rmtree(run)
+    if evidence.exists():
+        shutil.rmtree(evidence)
+    try:
+        (run / "student").mkdir(parents=True)
+        (run / "keep.txt").write_text("stay", encoding="utf-8")
+        _proof(evidence, run, "absent-token")
+        harness = _load_harness(
+            {
+                "ESSAY_WRITER_EVIDENCE": str(evidence),
+                "ESSAY_WRITER_VERIFY_RUN": str(run),
+                "ESSAY_WRITER_ROOT": str(run / "student"),
+                "ESSAY_WRITER_VERIFY_KB1": str(run / "KB1"),
+                "ESSAY_WRITER_VERIFY_DEPS": str(run / "deps"),
+            }
+        )
+        with pytest.raises(SystemExit):
+            harness.cmd_cleanup()
+        assert (run / "keep.txt").read_text(encoding="utf-8") == "stay"
+    finally:
+        if run.exists():
+            shutil.rmtree(run)
+        if evidence.exists():
+            shutil.rmtree(evidence)
+
+
+def test_cleanup_removes_only_the_explicit_run_dir(tmp_path: Path):
+    """--run-dir removes that directory and leaves its parent."""
+    parent = tmp_path / "Documents"
+    run = parent / "student-run"
+    evidence = tmp_path / "evidence"
+    token = "explicit-marker"
+    parent.mkdir()
+    (parent / "keep.txt").write_text("stay", encoding="utf-8")
+    (run / "student").mkdir(parents=True)
+    (run / ".essay-verify-created").write_text(token + "\n", encoding="utf-8")
+    _proof(evidence, run, token)
+    harness = _load_harness(
+        {
+            "ESSAY_WRITER_EVIDENCE": str(evidence),
+            "ESSAY_WRITER_VERIFY_RUN": str(run),
+            "ESSAY_WRITER_ROOT": str(run / "student"),
+            "ESSAY_WRITER_VERIFY_KB1": str(run / "KB1"),
+            "ESSAY_WRITER_VERIFY_DEPS": str(run / "deps"),
+        }
+    )
+    with pytest.raises(SystemExit):
+        harness.cmd_cleanup()
+    assert (parent / "keep.txt").read_text(encoding="utf-8") == "stay"
+    assert run.is_dir()
+    harness.EXPLICIT_RUN_DIR = run.resolve()
+    harness.cmd_cleanup()
+    assert not run.exists()
+    assert (parent / "keep.txt").read_text(encoding="utf-8") == "stay"
+    assert (evidence / "keep.txt").read_text(encoding="utf-8") == "keep\n"
+
+
+def test_cleanup_stops_the_stored_server_and_leaves_another_process():
+    """The stored pid is stopped when its command is essay_writer. Another process stays."""
+    run = Path("/tmp") / f"essay-verify-pid-{os.getpid()}"
+    evidence = Path("/tmp") / f"essay-verify-evidence-pid-{os.getpid()}"
+    target = None
+    decoy = None
+    try:
+        if run.exists():
+            shutil.rmtree(run)
+        if evidence.exists():
+            shutil.rmtree(evidence)
+        token = "pid-marker"
+        (run / "student").mkdir(parents=True)
+        (run / ".essay-verify-created").write_text(token + "\n", encoding="utf-8")
+        target = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)", "-m", "essay_writer"],
+            start_new_session=True,
+        )
+        decoy = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            start_new_session=True,
+        )
+        _proof(evidence, run, token, pid=target.pid)
+        harness = _load_harness(
+            {
+                "ESSAY_WRITER_EVIDENCE": str(evidence),
+                "ESSAY_WRITER_VERIFY_RUN": str(run),
+                "ESSAY_WRITER_ROOT": str(run / "student"),
+                "ESSAY_WRITER_VERIFY_KB1": str(run / "KB1"),
+                "ESSAY_WRITER_VERIFY_DEPS": str(run / "deps"),
+            }
+        )
+        assert "essay_writer" not in harness.process_command(decoy.pid)
+        assert harness.current_server_pid() == target.pid
+        assert "/proc" not in HELPER.read_text(encoding="utf-8")
+        harness.cmd_cleanup()
+        assert target.wait(timeout=5) is not None or target.poll() is not None
+        assert decoy.poll() is None
+        assert not run.exists()
+    finally:
+        for proc in (target, decoy):
+            if proc is not None and proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=5)
+        if run.exists():
+            shutil.rmtree(run)
+        if evidence.exists():
+            shutil.rmtree(evidence)
+
+
+def test_a_missing_deps_dir_inside_the_checkout_is_refused(tmp_path: Path):
+    """The dependency check runs before the folder exists."""
+    missing = REPO / "deps-not-created"
+    assert not missing.exists()
+    env = _outside(tmp_path)
+    env["ESSAY_WRITER_VERIFY_DEPS"] = str(missing)
+    harness = _load_harness(env)
+    with pytest.raises(SystemExit):
+        harness.launch_paths()
+    assert not missing.exists()
+
+
+def test_evidence_defaults_to_tmp_and_the_override_is_kept(tmp_path: Path, monkeypatch):
+    """The evidence root is a tmp path unless ESSAY_WRITER_EVIDENCE names another."""
+    monkeypatch.delenv("ESSAY_WRITER_EVIDENCE", raising=False)
+    harness = _load_harness()
+    assert harness.EVIDENCE == harness.tmp_root() / "essay-verify-evidence"
+    chosen = tmp_path / "proof"
+    over = _load_harness({"ESSAY_WRITER_EVIDENCE": str(chosen)})
+    assert over.EVIDENCE == chosen
+
+
+def test_deps_install_uses_the_hashed_runtime_file():
+    """Runtime packages come from the hash-pinned requirements file."""
+    harness = _load_harness()
+    cmd = harness.deps_install_command()
+    assert "--require-hashes" in cmd
+    assert str(REPO / "requirements-runtime.txt") in cmd
+    helper = HELPER.read_text(encoding="utf-8")
+    assert "mcp==" not in helper
+    assert "DEPS.exists() or True" not in helper
+
+
+def test_doctor_requires_alive_and_the_four_doors(tmp_path: Path, monkeypatch):
+    """A mounted essay.dig is not enough. Alive and the other three doors are required."""
+    student = tmp_path / "student"
+    (student / "Essay-writer").mkdir(parents=True)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    harness = _load_harness(
+        {
+            "ESSAY_WRITER_EVIDENCE": str(evidence),
+            "ESSAY_WRITER_ROOT": str(student),
+            "ESSAY_WRITER_VERIFY_KB1": str(tmp_path / "KB1"),
+            "ESSAY_WRITER_VERIFY_DEPS": str(tmp_path / "deps"),
+            "ESSAY_WRITER_VERIFY_RUN": str(tmp_path / "essay-verify-run"),
+        }
+    )
+    harness.launch_paths()
+
+    def report(**overrides: object) -> dict[str, object]:
+        body: dict[str, object] = {
+            "ok": True,
+            "alive": True,
+            "version": harness.package_version(),
+            "app_path": str(harness.STUDENT),
+            "has_dig": True,
+            "has_health": True,
+            "has_research_full": True,
+            "has_render_word": True,
+            "door_count": 4,
+            "consensus_enabled": False,
+            "openalex_key_present": False,
+            "unpaywall_email_present": False,
+        }
+        body.update(overrides)
+        return body
+
+    def answer(body: dict[str, object]):
+        def run(coro):
+            coro.close()
+            return body
+
+        return run
+
+    monkeypatch.setattr(harness.asyncio, "run", answer(report(has_render_word=False)))
+    with pytest.raises(SystemExit):
+        harness.cmd_doctor()
+    assert not (evidence / "doctor.json").exists()
+    monkeypatch.setattr(harness.asyncio, "run", answer(report(alive=False, has_render_word=True)))
+    with pytest.raises(SystemExit):
+        harness.cmd_doctor()
+    monkeypatch.setattr(harness.asyncio, "run", answer(report()))
+    harness.cmd_doctor()
+    assert (evidence / "doctor.json").is_file()
+
+
+def test_saved_sources_keep_the_product_id(tmp_path: Path):
+    """A minted DOI id stays, and a stored id is not replaced by a later DOI or by src-n."""
+    student = tmp_path / "student"
+    uploads = student / "uploads"
+    uploads.mkdir(parents=True)
+    (uploads / "one.txt").write_text("ports move coastal trade\n", encoding="utf-8")
+    (uploads / "two.txt").write_text("ports stay in coastal trade\n", encoding="utf-8")
+    previous = os.environ.get("ESSAY_WRITER_ROOT")
+    os.environ["ESSAY_WRITER_ROOT"] = str(student)
+    try:
+        from essay_writer.paths import work_dir
+
+        root = work_dir("MOD1004AA-1")
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "citation-list.json").write_text(
+            json.dumps(
+                {"entries": [{"locator": "uploads/two.txt", "source_id": "doi:10.1000/kept"}]}
+            ),
+            encoding="utf-8",
+        )
+    finally:
+        if previous is None:
+            os.environ.pop("ESSAY_WRITER_ROOT", None)
+        else:
+            os.environ["ESSAY_WRITER_ROOT"] = previous
+    harness = _load_harness(
+        {
+            "ESSAY_WRITER_ROOT": str(student),
+            "ESSAY_WRITER_EVIDENCE": str(tmp_path / "evidence"),
+            "ESSAY_WRITER_VERIFY_KB1": str(tmp_path / "KB1"),
+            "ESSAY_WRITER_VERIFY_DEPS": str(tmp_path / "deps"),
+            "ESSAY_WRITER_VERIFY_RUN": str(tmp_path / "essay-verify-run"),
+        }
+    )
+    fresh = harness.saved_sources(
+        {
+            "abstract_files": [
+                {
+                    "locator": "uploads/one.txt",
+                    "author": "Ada Lane",
+                    "year": "2020",
+                    "title": "Ports and trade",
+                    "doi": "10.1000/one",
+                }
+            ]
+        },
+        "MOD1004AA-1",
+    )
+    kept = harness.saved_sources(
+        {
+            "pdf_files": [
+                {
+                    "locator": "uploads/two.txt",
+                    "author": "Bea Quay",
+                    "year": "2021",
+                    "title": "A later title",
+                    "doi": "10.9999/other",
+                }
+            ]
+        },
+        "MOD1004AA-1",
+    )
+    assert fresh[0]["id"] == "doi:10.1000/one"
+    assert kept[0]["id"] == "doi:10.1000/kept"
+    tied = harness.tied_sources(fresh + kept)
+    assert [item["id"] for item in tied] == ["doi:10.1000/one", "doi:10.1000/kept"]
+
+
+def test_skill_docs_match_the_script():
+    """The skill names the same doors, install, and evidence path as the script."""
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    for door in ("essay.dig", "essay.health", "essay.research.full", "essay.pack.render_word"):
+        assert door in text
+    assert "/tmp/essay-verify-evidence" in text
+    assert "requirements-runtime.txt" in text
+    assert "--require-hashes" in text
+    assert "--run-dir" in text
+    for path in SKILL.rglob("*.md"):
+        assert "/opt/cursor/artifacts" not in path.read_text(encoding="utf-8")
+    helper = HELPER.read_text(encoding="utf-8")
+    assert "mcp==" not in helper
+    assert "/proc" not in helper
+    assert 'f"src-' not in helper
+
+
+def test_ci_compiles_the_verify_script():
+    """The extensionless helper is compiled, and the gates lint that path."""
+    script = ".cursor/skills/verify-essay-writer/scripts/verify-essay-writer"
+    completed = subprocess.run(
+        [sys.executable, "-m", "py_compile", str(HELPER)],
+        cwd=REPO,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+    ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    gates = (REPO / "tools" / "run_gates.py").read_text(encoding="utf-8")
+    assert f"py_compile {script}" in ci
+    assert script in gates
+    assert "py_compile" in gates

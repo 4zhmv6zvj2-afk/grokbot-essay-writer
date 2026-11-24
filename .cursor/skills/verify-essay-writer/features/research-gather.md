@@ -33,7 +33,7 @@ Preconditions:
 - **Count.** Read `dig-card.json`. Count distinct hits that have a title, an author, and a year. The card's `gather.floor` is 16, `gather.words` is 2000, and `gather.floor_from` is `word_rate`.
 - **Citation list.** When `gather.blocked` is not true and dig saved an abstract or a PDF, call `essay.research.full` with the locators whose text uses a word from the question, `origin` `upload`, and each clarify field `{"leave_open": true}`. Draft, then confirm with `cardDigest`. The list file is `Essay-writer/MOD1004AA/sequences/1/citation-list.json`.
 - **Floor.** If the distinct count is under 16 and `gather.further_page` is true, `citation-list.json` is not written and the sequence Word file `<sequence-id>.docx` is absent. `download-list.docx` is the gather's leftover list, not that draft. A written citation list or essay draft in that state fails the run.
-- **Proof.** `research-gather.json` in `/opt/cursor/artifacts/verify-essay-writer/` names the distinct count, the floor, the catalog flags, and the citation-list result.
+- **Proof.** `research-gather.json` in `/tmp/essay-verify-evidence/` names the distinct count, the floor, the catalog flags, and the citation-list result.
 
 ## Gotchas
 

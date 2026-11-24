@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Captured live-test text is replaced with a synthetic essay of the same shape. A tree scan fails if that module code or that fishery opening returns.
+- Cleanup deletes a run directory only when this script created it. The directory must carry the marker written at launch, and it must be `/tmp/essay-verify-*` or the directory passed with `--run-dir`. A shared parent, a pre-existing directory, and a missing marker stay in place.
+- Cleanup stops the server process id stored at launch when that process is still `essay_writer`. It does not read `/proc`.
+- The verify script installs from `requirements-runtime.txt` with `--require-hashes`. Evidence defaults to `/tmp/essay-verify-evidence`, and `ESSAY_WRITER_EVIDENCE` still overrides that path. The dependency folder is checked even when it does not exist yet.
+- Doctor fails unless `essay.health` is alive and the doors `essay.dig`, `essay.health`, `essay.research.full`, and `essay.pack.render_word` are mounted. The expected version is the installed package version.
+- Research sources keep the id the product stored or minted. The verify script does not rewrite them to `src-n`.
+- CI compiles the verify script and Ruff checks it.
 - A stage 6 pass is recorded after the first-draft Word file is written from the saved draft. A failed write returns that error and leaves the pass unrecorded. A later reading of the pass requires the same saved draft text.
 - A review counts when the markdown already has the structural marker and names the paper. A file that only names the paper does not count. A missing review is the citation line only, and a supplied note is saved as supplied. Neither gains the marker, and a student Word file does not gain it.
 - Stripping a citation reports each span it removed. A sentence that loses its subject or its name at that span is not a finished first draft, including when stage 5 strips that cite. The draft is refused, not stored, and no Word file is written. A readable phrase such as a can-do attitude still passes.

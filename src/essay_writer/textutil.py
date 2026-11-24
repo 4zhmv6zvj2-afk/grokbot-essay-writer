@@ -988,8 +988,8 @@ def _without_etal_label(text: str) -> str:
 def _coauthor_groups(author: str) -> list[list[str]]:
     """Each co-author as words. A comma before initials is not a new author.
 
-    "Froese, R. and Quaas, M." is two people. "Rainer Froese and Martin Quaas"
-    is the same two people. "Horwood, J., O'Brien, C. and Darby, C." is three.
+    "Alden, R. and Marlow, M." is two people. "Rainer Alden and Martin Marlow"
+    is the same two people. "Pell, J., O'Keefe, C. and Marlow, C." is three.
     """
     cleaned = _without_etal_label(fold_name(author))
     chunks = [
@@ -1027,8 +1027,8 @@ def in_text_forms(author: str, year: str) -> set[str]:
     """Author-year labels a gathered source may match in the text.
 
     The whole stored author is one label. Each co-author's family name is
-    another, so "Froese and Quaas, 2012" matches "Rainer Froese and Martin
-    Quaas" and "Froese, R. and Quaas, M.". A lead author with et al. or
+    another, so "Alden and Marlow, 2012" matches "Rainer Alden and Martin
+    Marlow" and "Alden, R. and Marlow, M.". A lead author with et al. or
     and others matches that family name and year.
     """
     author = norm_space(fold_name(author))
