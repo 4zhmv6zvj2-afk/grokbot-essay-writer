@@ -43,7 +43,9 @@ artifact run passes. The release workflow repeats the sdist checks before
 signing. Releases 0.9.15 through 0.9.18 shipped the wheel, the sdist, and
 `SHA256SUMS`. Those releases were not signed. A separate reproduce workflow
 rebuilds a published release from its tag with the pinned toolchain and
-compares the SHA-256 set.
+compares the SHA-256 set. A pull request skips the macOS suite when the diff
+does not touch a macOS-sensitive path. The paths and the main-branch rule are
+in `docs/gates.md`.
 
 ## Layout
 
