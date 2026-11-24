@@ -39,6 +39,7 @@ STAMP_MAX_AGE = timedelta(minutes=60)
 TAIL_LINES = 40
 FAST_STEPS = ("docs", "snapshot", "ruff", "format", "mypy", "pytest")
 FULL_STEPS = FAST_STEPS + ("coverage312", "sdist")
+VERIFY_SCRIPT = ".cursor/skills/verify-essay-writer/scripts/verify-essay-writer"
 SDIST_REQUIRED = (
     "tests/conftest.py",
     "tests/helpers.py",
@@ -209,11 +210,39 @@ def _run_step(name: str, root: Path) -> tuple[int, str]:
         return _run_coverage(root)
     if name == "sdist":
         return _run_sdist(root)
+    if name == "ruff":
+        code, text = command(
+            [sys.executable, "-m", "py_compile", VERIFY_SCRIPT],
+            cwd=root,
+            env=_child_env(),
+        )
+        if code != 0:
+            return code, text
+        return command(
+            [sys.executable, "-m", "ruff", "check", "src", "tests", "tools", VERIFY_SCRIPT],
+            cwd=root,
+            env=_child_env(),
+        )
+    if name == "format":
+        return command(
+            [
+                sys.executable,
+                "-m",
+                "ruff",
+                "format",
+                "--check",
+                "--force-exclude",
+                "src",
+                "tests",
+                "tools",
+                VERIFY_SCRIPT,
+            ],
+            cwd=root,
+            env=_child_env(),
+        )
     flags: dict[str, list[str]] = {
         "docs": ["tools/generate_docs.py", "--check"],
         "snapshot": ["tools/update_prompt_snapshot.py", "--check"],
-        "ruff": ["-m", "ruff", "check", "src", "tests", "tools"],
-        "format": ["-m", "ruff", "format", "--check", "--force-exclude", "src", "tests", "tools"],
         "mypy": ["-m", "mypy", "src"],
         "pytest": ["-m", "pytest", "-q"],
     }

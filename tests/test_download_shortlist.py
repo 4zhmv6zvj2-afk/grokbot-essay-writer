@@ -42,7 +42,7 @@ from essay_writer.stage_state import _note_path
 from essay_writer.student_voice import student_surface_hits
 
 REPO = Path(__file__).resolve().parents[1]
-QUESTION = "When is it fair to close a fishery so a fish stock can recover?"
+QUESTION = "How should a coastal community judge a fishery closure so a fish stock can recover?"
 PLAN = "Coastal community bears the cost. Measured recovery is the test of the closure."
 PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
 HTML = b"<html><body>Abstract only.</body></html>"

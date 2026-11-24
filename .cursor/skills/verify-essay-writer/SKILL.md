@@ -15,7 +15,7 @@ Keep one run on its own student folder. Set `ESSAY_WRITER_ROOT` to that folder. 
 
 Do not print `CONSENSUS_API_KEY`, `OPENALEX_API_KEY`, or `ESSAY_WRITER_UNPAYWALL_EMAIL`. The helper forwards those values into the server process when they are already set. It does not put them on a door argument.
 
-The package version this skill was written against is 0.9.18. Doctor fails when `essay.health` reports a different version.
+The script reads the installed package version. Doctor fails when `essay.health` reports a different version.
 
 ## Launch
 
@@ -28,12 +28,12 @@ From an empty student folder, launch creates the door tree and stops the server 
 What that does:
 
 1. Creates `/tmp/essay-verify-student/student` and `/tmp/essay-verify-student/KB1` when `ESSAY_WRITER_ROOT` and `ESSAY_WRITER_VERIFY_KB1` are unset. Both stay outside the checkout.
-2. Installs `mcp==2.3.0` and `python-docx==1.2.0` under `/tmp/essay-verify-student/deps` when those imports are missing. The checkout is imported from `src` on `PYTHONPATH`.
+2. Installs the hash-pinned packages in `requirements-runtime.txt` with `pip install --require-hashes` under `/tmp/essay-verify-student/deps` when `essay_writer` or `mcp` cannot be imported. The checkout is imported from `src` on `PYTHONPATH`.
 3. Starts `python -m essay_writer` on stdio with `ESSAY_WRITER_ROOT` set to the student folder.
 4. Calls `essay.setup` with `confirmPhase` `draft`, then `confirm`. `app_path` is the student folder. `kb1_path` is the KB1 folder. `acknowledge_skipped_searches` is true so a missing stored email or key does not block the folders. Values already in the environment are not sent as arguments.
-5. Checks that `Essay-writer/`, `uploads/`, and `unassigned/` exist, then calls `essay.health`. Ready means `alive` is true, `version` is `0.9.18`, and `app_path` is the student folder.
+5. Checks that `Essay-writer/`, `uploads/`, and `unassigned/` exist, then calls `essay.health`. Ready means `alive` is true, `version` is the installed package version, and `app_path` is the student folder.
 
-Override the folders with `ESSAY_WRITER_ROOT`, `ESSAY_WRITER_VERIFY_KB1`, `ESSAY_WRITER_VERIFY_DEPS`, and `ESSAY_WRITER_VERIFY_RUN`. Evidence defaults to `/opt/cursor/artifacts/verify-essay-writer` (`ESSAY_WRITER_EVIDENCE`).
+Override the folders with `ESSAY_WRITER_ROOT`, `ESSAY_WRITER_VERIFY_KB1`, `ESSAY_WRITER_VERIFY_DEPS`, and `ESSAY_WRITER_VERIFY_RUN`. Pass `--run-dir` when the run directory is not under `/tmp/essay-verify-*`. Evidence defaults to `/tmp/essay-verify-evidence` (`ESSAY_WRITER_EVIDENCE`).
 
 ## Doctor
 
@@ -46,7 +46,7 @@ Run this before a drive, and again whenever a door looks wrong.
 Doctor starts a new server on the same `ESSAY_WRITER_ROOT` and calls `essay.health`. It passes only when all of these hold.
 
 - `ok` and `alive` are true.
-- `version` is `0.9.18`.
+- `version` is the installed package version.
 - `app_path` is this run's student folder.
 - The mounted doors include `essay.dig`, `essay.health`, `essay.research.full`, and `essay.pack.render_word`.
 - Consensus, OpenAlex, and Unpaywall are reported as present or absent. The values are not included.
@@ -75,7 +75,7 @@ The first-draft Word file and the stage 10 Word file are mapped and not driven b
 
 ## Evidence
 
-The helper writes proof under `/opt/cursor/artifacts/verify-essay-writer/`.
+The helper writes proof under `/tmp/essay-verify-evidence/`.
 
 - `launch.json` records the student folder, the version, and the mounted door names.
 - `doctor.json` records the health check.
@@ -92,7 +92,7 @@ The files name titles, authors, and years returned by the catalogs. They do not 
 .cursor/skills/verify-essay-writer/scripts/verify-essay-writer cleanup
 ```
 
-Cleanup reads `run-state.json`. It sends TERM only to a process whose command line is this run's `essay_writer` server and whose command line contains this student folder. It then deletes the run directory under `/tmp/essay-verify-student` (the student folder, KB1, and the dependency install). It does not delete `/opt/cursor/artifacts/verify-essay-writer/`.
+Cleanup reads `run-state.json`. It sends TERM to the server process id stored at launch when that process command still contains `essay_writer`. It does not read `/proc`. It deletes the run directory only when that directory carries the marker written at launch, and only when the directory is `/tmp/essay-verify-*` or the directory passed again with `--run-dir`. A shared parent, a directory this script did not create, and a missing marker stay in place. It does not delete `/tmp/essay-verify-evidence/`.
 
 Run cleanup after a failed drive as well, so a broken attempt does not leave a server or a student folder behind. Start the next launch from an empty student folder.
 

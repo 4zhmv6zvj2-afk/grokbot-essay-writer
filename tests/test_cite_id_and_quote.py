@@ -122,7 +122,7 @@ def test_the_three_parts_share_one_source_id(workspace):
     """AC-cite-id-1: The opened file, the note, and the list entry share one source id."""
     seq, _rows = _ready()
     listed = student_list_text(seq)
-    for ident in ("smith", "froese"):
+    for ident in ("smith", "alden"):
         assert f"{ident}:source" in listed
         assert f"{ident}:note" in listed
         assert f"{ident}:list" in listed

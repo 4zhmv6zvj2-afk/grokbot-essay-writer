@@ -57,7 +57,10 @@ from essay_writer.word_references import token_is_covered
 
 REPO = Path(__file__).resolve().parents[1]
 NOTE = "The opened file states the limit, and the year is the one stored on the list."
-QUESTION = "Question: When is it fair to close a fishery so a fish stock can recover?\n"
+QUESTION = (
+    "Question: How should a coastal community judge a fishery closure "
+    "so a fish stock can recover?\n"
+)
 PLAN = (
     "The plan follows the recovery of the stock, the evidence for a closure, "
     "and who bears that closure."
@@ -391,7 +394,7 @@ def test_a_work_is_cited_only_when_it_bears_on_the_question_and_plan(workspace):
     useful = [_row(number) for number in range(1, 4)]
     stray = _row(9, title="Quantum entanglement in superconductors")
     _library(seq, useful + [stray])
-    question = "When is it fair to close a fishery so a fish stock can recover?"
+    question = "How should a coastal community judge a fishery closure so a fish stock can recover?"
     assert work_is_relevant(useful[0], question, PLAN) is True
     assert work_is_relevant(stray, question, PLAN) is False
     draft = "The fishery closure supports stock recovery."

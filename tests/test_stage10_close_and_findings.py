@@ -104,14 +104,14 @@ def _source(ident: str, author: str, year: str, title: str) -> dict[str, str]:
 def _rows() -> list[dict[str, str]]:
     return [
         _source(
-            "dickey",
-            _long_authors(f"Mark Dickey{HYPHEN}Collas"),
+            "pell",
+            _long_authors(f"Mark Pell{HYPHEN}Marlow"),
             "2010",
-            "Herring recovery",
+            "Lane recovery",
         ),
-        _source("beare", _long_authors("Doug Beare", 300), "2013", "Plaice box"),
-        _source("keith", _long_authors("David Keith", 330), "2026", "Recovery potential"),
-        _source("froese", "Rainer Froese and Martin Quaas", "2012", "Cod advice"),
+        _source("keel", _long_authors("Doug Keel", 300), "2013", "Lantern lane"),
+        _source("quinn", _long_authors("David Quinn", 330), "2026", "Watch potential"),
+        _source("alden", "Rainer Alden and Martin Marlow", "2012", "Lane advice"),
     ]
 
 
@@ -190,10 +190,10 @@ def test_stage10_stores_the_close_and_writes_the_final_file(workspace, monkeypat
     assert final.name != f"{seq}.docx"
     assert "first-draft" not in final.name
     text = _docx_text(final)
-    assert "(Dickey-Collas et al., 2010)" in text or f"(Dickey{HYPHEN}Collas et al., 2010)" in text
-    assert "(Beare et al., 2013)" in text
-    assert "(Keith et al., 2026)" in text
-    assert "(Froese and Quaas, 2012)" in text
+    assert "(Pell-Marlow et al., 2010)" in text or f"(Pell{HYPHEN}Marlow et al., 2010)" in text
+    assert "(Keel et al., 2013)" in text
+    assert "(Quinn et al., 2026)" in text
+    assert "(Alden and Marlow, 2012)" in text
     write_proof(
         "stage10-close-response.txt",
         json.dumps(
@@ -229,11 +229,11 @@ def test_long_harvard_lines_stay_covered(workspace):
     assert cite_reference_gaps(lines, [{"heading": "Body", "body": body}]) == []
     seq = open_sequence(MODULE)
     _listed(seq)
-    assert token_is_covered("dickey-collas et al., 2010", [], seq) is True
-    assert token_is_covered(f"dickey{HYPHEN}collas et al., 2010", [], seq) is True
-    assert token_is_covered("beare et al., 2013", [], seq) is True
-    assert token_is_covered("keith et al., 2026", [], seq) is True
-    assert token_is_covered("froese and quaas, 2012", [], seq) is True
+    assert token_is_covered("pell-marlow et al., 2010", [], seq) is True
+    assert token_is_covered(f"pell{HYPHEN}marlow et al., 2010", [], seq) is True
+    assert token_is_covered("keel et al., 2013", [], seq) is True
+    assert token_is_covered("quinn et al., 2026", [], seq) is True
+    assert token_is_covered("alden and marlow, 2012", [], seq) is True
     assert "{0,200}" not in inspect.getsource(_line_covers_cite)
     assert "{0,200}" not in inspect.getsource(_author_year_present)
     assert workspace is not None
@@ -263,11 +263,11 @@ def test_an_unlisted_citation_does_not_write_the_final_file(workspace):
 def test_a_missing_reference_line_is_refused_and_a_hyphen_still_writes(workspace):
     """AC-close-4: A missing reference line is refused. A hyphen-only name still writes the final file."""
     seq = open_sequence(MODULE)
-    author = f"Dickey{HYPHEN}Collas, M."
+    author = f"Pell{HYPHEN}Marlow, M."
     ship_4b(
         seq,
-        [_source("dickey", author, "2010", "Herring recovery")],
-        {"dickey": NOTE},
+        [_source("pell", author, "2010", "Lane recovery")],
+        {"pell": NOTE},
     )
     cite = short_in_text(author, "2010").replace(HYPHEN, "-")
     assert HYPHEN not in cite

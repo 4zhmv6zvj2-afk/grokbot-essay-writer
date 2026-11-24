@@ -15,7 +15,9 @@ import importlib
 import json
 import os
 import re
+import secrets
 import shutil
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -23,15 +25,29 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parents[4]
 SRC = REPO / "src"
-EVIDENCE = Path(
-    os.environ.get("ESSAY_WRITER_EVIDENCE", "/opt/cursor/artifacts/verify-essay-writer")
-)
+
+
+def tmp_root() -> Path:
+    return Path("/tmp")  # noqa: S108
+
+
 RUN_ID = os.environ.get("ESSAY_WRITER_VERIFY_ID", "student")
-RUN_DIR = Path(os.environ.get("ESSAY_WRITER_VERIFY_RUN", f"/tmp/essay-verify-{RUN_ID}"))
+EVIDENCE = Path(os.environ.get("ESSAY_WRITER_EVIDENCE", str(tmp_root() / "essay-verify-evidence")))
+RUN_DIR = Path(
+    os.environ.get("ESSAY_WRITER_VERIFY_RUN", str(tmp_root() / f"essay-verify-{RUN_ID}"))
+)
 STUDENT = Path(os.environ.get("ESSAY_WRITER_ROOT", str(RUN_DIR / "student")))
 KB1 = Path(os.environ.get("ESSAY_WRITER_VERIFY_KB1", str(RUN_DIR / "KB1")))
 DEPS = Path(os.environ.get("ESSAY_WRITER_VERIFY_DEPS", str(RUN_DIR / "deps")))
 STATE_NAME = "run-state.json"
+MARKER_NAME = ".essay-verify-created"
+EXPLICIT_RUN_DIR: Path | None = None
+DOOR_FLAGS = (
+    ("essay.dig", "has_dig"),
+    ("essay.health", "has_health"),
+    ("essay.research.full", "has_research_full"),
+    ("essay.pack.render_word", "has_render_word"),
+)
 MODULE = "MOD1004AA"
 QUESTION = "How do ports shape coastal trade?"
 BRIEF = f"Question: {QUESTION}\nThe assignment is 2000 words.\n"
@@ -139,6 +155,146 @@ def fail(line: str, code: int = 1) -> None:
     raise SystemExit(code)
 
 
+def package_version() -> str:
+    src = str(SRC)
+    if src not in sys.path:
+        sys.path.insert(0, src)
+    import essay_writer
+
+    return essay_writer.__version__
+
+
+def deps_install_command() -> list[str]:
+    return [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--require-hashes",
+        "--target",
+        str(DEPS),
+        "-r",
+        str(REPO / "requirements-runtime.txt"),
+    ]
+
+
+def claim_run_dir(run_dir: Path) -> str:
+    """Create the run directory and its marker, or reuse the marker already there.
+
+    A directory that already exists without the marker was not created by this
+    script. Leave it untouched.
+    """
+    resolved = run_dir.expanduser().resolve()
+    marker = resolved / MARKER_NAME
+    if resolved.exists():
+        if not resolved.is_dir():
+            fail(f"Run directory is not a directory: {resolved}")
+        if not marker.is_file():
+            fail("Run directory already exists and this script did not create it: " + str(resolved))
+        token = marker.read_text(encoding="utf-8").strip()
+        if not token:
+            fail("Run directory marker is empty.")
+        return token
+    resolved.mkdir(parents=True, exist_ok=False)
+    token = secrets.token_hex(16)
+    marker.write_text(token + "\n", encoding="utf-8")
+    return token
+
+
+def deletion_allowed(path: Path, *, explicit: Path | None) -> str | None:
+    """None when this script may remove path. Otherwise a short refusal."""
+    resolved = path.expanduser().resolve()
+    tmp = tmp_root().resolve()
+    if resolved in {Path("/").resolve(), tmp, Path.home().resolve()}:
+        return "parent"
+    evidence = evidence_dir().resolve()
+    if resolved == evidence or evidence in resolved.parents or resolved in evidence.parents:
+        return "evidence"
+    if explicit is not None:
+        if resolved != explicit.expanduser().resolve():
+            return "not the run dir"
+    elif resolved.parent != tmp or not resolved.name.startswith("essay-verify-"):
+        return "not a verify run dir"
+    marker = resolved / MARKER_NAME
+    if not marker.is_file():
+        return "missing marker"
+    token = load_state().get("marker")
+    if not isinstance(token, str) or marker.read_text(encoding="utf-8").strip() != token:
+        return "marker"
+    return None
+
+
+def doctor_gaps(report: dict[str, Any]) -> list[str]:
+    gaps: list[str] = []
+    if report.get("alive") is not True:
+        gaps.append("alive")
+    for door, flag in DOOR_FLAGS:
+        if report.get(flag) is not True:
+            gaps.append(door)
+    return gaps
+
+
+def product_source_id(row: dict[str, Any], essay_id: str) -> str:
+    """The id already stored for this file, else a safe supplied id, else the minted id."""
+    src = str(SRC)
+    if src not in sys.path:
+        sys.path.insert(0, src)
+    if essay_id:
+        os.environ["ESSAY_WRITER_ROOT"] = str(STUDENT)
+    from essay_writer.source_ids import saved_source_id, stable_source_id, valid_source_id
+
+    locator = row.get("locator") if isinstance(row.get("locator"), str) else ""
+    stored = saved_source_id(essay_id, locator) if essay_id and locator else ""
+    if stored:
+        return stored
+    supplied = valid_source_id(row.get("id")) or valid_source_id(row.get("source_id"))
+    if supplied:
+        return supplied
+    return stable_source_id(row)
+
+
+def _ps(args: list[str]) -> str:
+    """Process list with the full command. Session leaders stay included.
+
+    ``ps -ax`` on Linux hides session leaders, and a narrow column cuts a long
+    command before ``essay_writer``. ``-e`` and ``-ww`` keep both.
+    """
+    completed = subprocess.run(
+        ["ps", "-ww", *args],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return ""
+    return completed.stdout
+
+
+def process_command(pid: int) -> str:
+    return _ps(["-p", str(pid), "-o", "args="]).strip()
+
+
+def current_server_pid() -> int | None:
+    me = str(os.getpid())
+    listing = _ps(["-e", "-o", "pid=,ppid=,args="])
+    for line in listing.splitlines():
+        parts = line.strip().split(None, 2)
+        if len(parts) != 3:
+            continue
+        pid_s, ppid_s, command = parts
+        if ppid_s == me and "-m" in command.split() and "essay_writer" in command.split():
+            return int(pid_s)
+    return None
+
+
+def terminate_server(pid: int) -> None:
+    if not isinstance(pid, int) or pid <= 0:
+        return
+    if "essay_writer" not in process_command(pid):
+        return
+    os.kill(pid, signal.SIGTERM)
+
+
 def ensure_outside_checkout(path: Path, label: str) -> Path:
     resolved = path.expanduser().resolve()
     repo = repo_root().resolve()
@@ -164,27 +320,20 @@ def ensure_deps() -> None:
         if entry not in sys.path:
             sys.path.insert(0, entry)
     try:
-        import essay_writer  # noqa: F401
         import mcp  # noqa: F401
+
+        import essay_writer  # noqa: F401
     except ImportError:
         DEPS.mkdir(parents=True, exist_ok=True)
-        cmd = [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--target",
-            str(DEPS),
-            "mcp==2.3.0",
-            "python-docx==1.2.0",
-        ]
+        cmd = deps_install_command()
         completed = subprocess.run(cmd, check=False, capture_output=True, text=True)
         if completed.returncode != 0:
             detail = redact((completed.stderr or completed.stdout or "pip failed")[-500:])
             fail(f"Runtime install failed. {detail}")
         importlib.invalidate_caches()
-        import essay_writer  # noqa: F401
         import mcp  # noqa: F401
+
+        import essay_writer  # noqa: F401
 
 
 def server_env() -> dict[str, str]:
@@ -264,6 +413,9 @@ async def with_server(action: Any) -> Any:
     )
     try:
         async with stdio.stdio_client(params, errlog=log_handle) as (read, write):
+            pid = current_server_pid()
+            if isinstance(pid, int):
+                save_state({"server_pid": pid})
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 return await action(session)
@@ -299,8 +451,7 @@ def launch_paths() -> None:
         fail("Evidence must stay outside the code checkout.")
     if STUDENT == evidence or evidence in STUDENT.parents or STUDENT in evidence.parents:
         fail("The student folder and the evidence folder must be different.")
-    RUN_DIR = STUDENT.parent if STUDENT.parent == KB1.parent else RUN_DIR
-    DEPS = ensure_outside_checkout(DEPS, "Dependency folder") if DEPS.exists() or True else DEPS
+    DEPS = ensure_outside_checkout(DEPS, "Dependency folder")
     if DEPS.resolve() == REPO.resolve() or REPO.resolve() in DEPS.resolve().parents:
         fail("Install runtime dependencies outside the code checkout.")
 
@@ -337,10 +488,12 @@ async def do_launch(session: Any) -> dict[str, Any]:
 
 def cmd_launch() -> None:
     launch_paths()
+    token = claim_run_dir(RUN_DIR)
     evidence_dir().mkdir(parents=True, exist_ok=True)
     body = asyncio.run(with_server(do_launch))
-    if body.get("version") != "0.9.18":
-        fail(f"Launch health version is {body.get('version')}. Expected 0.9.18.")
+    expected = package_version()
+    if body.get("version") != expected:
+        fail(f"Launch health version is {body.get('version')}. Expected {expected}.")
     if body.get("app_path") != str(STUDENT):
         fail("essay.health is not using the empty student folder.")
     write_json("launch.json", body)
@@ -351,6 +504,7 @@ def cmd_launch() -> None:
             "deps": str(DEPS),
             "run_dir": str(RUN_DIR),
             "evidence": str(evidence_dir()),
+            "marker": token,
         }
     )
     say(f"Launch ready at {STUDENT}. Version {body.get('version')}.")
@@ -404,14 +558,16 @@ def cmd_doctor() -> None:
     if not (STUDENT / "Essay-writer").is_dir():
         fail("The student folder has no Essay-writer directory. Run launch first.")
     report = asyncio.run(with_server(do_doctor))
-    if report.get("alive") is not True or report.get("ok") is not True:
-        fail("essay.health is not alive.")
-    if report.get("version") != "0.9.18":
-        fail(f"Doctor version is {report.get('version')}. Expected 0.9.18.")
+    if report.get("ok") is not True:
+        fail("essay.health is not ok.")
+    gaps = doctor_gaps(report)
+    if gaps:
+        fail("Doctor is missing " + ", ".join(gaps) + ".")
+    expected = package_version()
+    if report.get("version") != expected:
+        fail(f"Doctor version is {report.get('version')}. Expected {expected}.")
     if report.get("app_path") != str(STUDENT):
         fail("Doctor is not attached to this run's student folder.")
-    if report.get("has_dig") is not True:
-        fail("essay.dig is not mounted.")
     write_json("doctor.json", report)
     say(
         "Doctor passed. "
@@ -493,32 +649,33 @@ def tied_sources(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         if ask_word_in_text(text, QUESTION):
             kept.append(source)
-    for index, source in enumerate(kept, start=1):
-        source["id"] = f"src-{index}"
     return kept
 
 
-def saved_sources(confirm: dict[str, Any]) -> list[dict[str, Any]]:
+def saved_sources(confirm: dict[str, Any], essay_id: str = "") -> list[dict[str, Any]]:
     sources: list[dict[str, Any]] = []
     for key in ("abstract_files", "pdf_files"):
         rows = confirm.get(key)
         if not isinstance(rows, list):
             continue
-        for index, row in enumerate(rows, start=1):
+        for row in rows:
             if not isinstance(row, dict):
                 continue
             locator = row.get("locator")
             if not isinstance(locator, str) or not locator.strip():
                 continue
             source: dict[str, Any] = {
-                "id": f"src-{len(sources) + 1}",
                 "origin": "upload",
                 "locator": locator.strip(),
             }
-            for field in ("author", "year", "title", "doi"):
+            for field in ("author", "year", "title", "doi", "id", "source_id"):
                 value = row.get(field)
                 if isinstance(value, str) and value.strip():
                     source[field] = value.strip()
+            ident = product_source_id(source, essay_id)
+            if ident:
+                source["id"] = ident
+            source.pop("source_id", None)
             sources.append(source)
     return sources
 
@@ -601,7 +758,7 @@ async def do_drive(session: Any) -> dict[str, Any]:
         fail("dig-card.json is not an object.")
     works = distinct_records(card)
     view = gather_view(card)
-    sources = tied_sources(saved_sources(saved))
+    sources = tied_sources(saved_sources(saved, sequence_id))
     research: dict[str, Any] | None = None
     if view.get("blocked") is not True and sources:
         clarify = {
@@ -728,33 +885,19 @@ def cmd_drive() -> None:
     )
 
 
-def cmdline_matches(pid: int) -> bool:
-    comm = Path(f"/proc/{pid}/cmdline")
-    if not comm.exists():
-        return False
-    raw = comm.read_bytes().replace(b"\x00", b" ").decode("utf-8", errors="replace")
-    return "essay_writer" in raw and str(STUDENT) in raw
-
-
 def cmd_cleanup() -> None:
     apply_saved_paths()
     state = load_state()
     pid = state.get("server_pid")
-    if isinstance(pid, int) and pid > 0 and cmdline_matches(pid):
-        os.kill(pid, 15)
+    if isinstance(pid, int):
+        terminate_server(pid)
     run_dir = Path(state.get("run_dir") or RUN_DIR)
-    student = Path(state.get("student_root") or STUDENT)
-    if run_dir.exists() and run_dir.resolve() != evidence_dir().resolve():
-        if (
-            run_dir.resolve() != repo_root().resolve()
-            and repo_root().resolve() not in run_dir.resolve().parents
-        ):
-            shutil.rmtree(run_dir)
-    elif student.exists() and repo_root().resolve() not in student.resolve().parents:
-        shutil.rmtree(student)
-        kb1 = Path(state.get("kb1") or KB1)
-        if kb1.exists() and kb1.resolve() != student.resolve():
-            shutil.rmtree(kb1)
+    reason = deletion_allowed(run_dir, explicit=EXPLICIT_RUN_DIR)
+    if reason is not None:
+        fail(f"Cleanup refused ({reason}). This script did not create {run_dir}.")
+    resolved = run_dir.expanduser().resolve()
+    if resolved.exists():
+        shutil.rmtree(resolved)
     names = (
         sorted(path.name for path in evidence_dir().iterdir()) if evidence_dir().is_dir() else []
     )
@@ -840,13 +983,18 @@ def cmd_scan(paths: list[str]) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    global EXPLICIT_RUN_DIR, RUN_DIR
     parser = argparse.ArgumentParser(description="Verify Essay Writer on the student path.")
     parser.add_argument(
         "command",
         choices=("launch", "doctor", "drive-research-gather", "cleanup", "scan-public"),
     )
     parser.add_argument("paths", nargs="*")
+    parser.add_argument("--run-dir", default=None)
     args = parser.parse_args(argv)
+    if args.run_dir:
+        EXPLICIT_RUN_DIR = Path(args.run_dir).expanduser().resolve()
+        RUN_DIR = EXPLICIT_RUN_DIR
     if args.command == "launch":
         cmd_launch()
     elif args.command == "doctor":

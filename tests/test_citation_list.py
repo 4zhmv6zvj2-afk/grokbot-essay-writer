@@ -56,9 +56,9 @@ EMPTY_REFERENCES = (
     "The References section has no entries. Add reference lines before this step can close."
 )
 DRAFT = (
-    "Closure advice for North Sea cod was not taken, and the stock stayed outside safe limits "
-    "(Smith, 2020). Effort limits had cut fishing mortality by the middle of the decade "
-    "(Froese and Quaas, 2012). A paper outside the gathered set is not used (Nobody, 1999)."
+    "Closure advice for Glasswater night traffic was not taken, and the lane stayed outside the marked limit "
+    "(Smith, 2020). Passage limits had cut night traffic by the middle of the decade "
+    "(Alden and Marlow, 2012). A paper outside the gathered set is not used (Nobody, 1999)."
 )
 
 
@@ -114,10 +114,10 @@ def _ready(seq: str | None = None) -> tuple[str, list[dict[str, str]]]:
         ),
         _source(
             seq,
-            "froese",
-            "Froese, R. and Quaas, M.",
+            "alden",
+            "Alden, R. and Marlow, M.",
             "2012",
-            title="Rebuilding fisheries",
+            title="Rebuilding the lantern lane",
             doi="10.1000/rebuild",
         ),
     ]
@@ -163,8 +163,8 @@ def test_student_research_notes_show_the_same_list(workspace):
     review = next(_reviews(seq).glob("*.docx"))
     text = _docx_text(review)
     lines = [line for line in text.splitlines() if line.strip()]
-    assert lines[0].startswith("Froese") or lines[0].startswith("Smith")
-    assert any(line.startswith("Froese") or line.startswith("Smith") for line in lines)
+    assert lines[0].startswith("Alden") or lines[0].startswith("Smith")
+    assert any(line.startswith("Alden") or line.startswith("Smith") for line in lines)
     assert "Citation list" in text
     assert listed in text
     for row in rows:
@@ -182,7 +182,7 @@ def test_first_draft_uses_the_list_citation(workspace):
     assert saved["ok"] is True, saved
     look = _note_look(seq, "5") or ""
     assert "(Smith, 2020)" in look
-    assert "(Froese and Quaas, 2012)" in look
+    assert "(Alden and Marlow, 2012)" in look
     assert "(Nobody, 1999)" not in look
     assert writer_clears_left() == 0
     refused = essay_review(seq, "6", "PASS", "confirm", seat="writer")
@@ -194,7 +194,7 @@ def test_first_draft_uses_the_list_citation(workspace):
     assert stored["stored"] is True, stored
     text = _docx_text(_word_path(seq))
     assert "(Smith, 2020)" in text
-    assert "(Froese and Quaas, 2012)" in text
+    assert "(Alden and Marlow, 2012)" in text
     assert "Nobody" not in text
     write_proof("citation-list-stored-draft.txt", look + "\n")
     write_proof("citation-list-word-extract.txt", text + "\n")
@@ -287,14 +287,12 @@ def test_first_write_waits_for_the_list_and_does_not_invent(workspace):
 def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     """AC-cite-lib-7: Look-up fields stay, a hyphen still matches, and the old refusals stay."""
     seq = open_sequence()
-    hyphen_author = f"Dickey{HYPHEN}Collas, M."
+    hyphen_author = f"Pell{HYPHEN}Marlow, M."
     rows = [
         _source(
             seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"
         ),
-        _source(
-            seq, "dickey", hyphen_author, "2010", title="Herring recovery", doi="10.1000/herring"
-        ),
+        _source(seq, "pell", hyphen_author, "2010", title="Lane recovery", doi="10.1000/lantern"),
     ]
     _plant(seq, rows)
     _walk(seq)
@@ -312,20 +310,20 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     refused = essay_review(seq, "6", "PASS", "confirm", seat="writer")
     assert refused["reason"] == PERSON_BLOCK
     assert not _word_path(seq).is_file()
-    dickey = _entry(seq, "dickey")
-    assert dickey["author"] == hyphen_author
-    assert HYPHEN in dickey["author"]
-    assert dickey["year"] == "2010"
-    assert dickey["title"] == "Herring recovery"
-    assert dickey["doi"] == "10.1000/herring"
+    pell = _entry(seq, "pell")
+    assert pell["author"] == hyphen_author
+    assert HYPHEN in pell["author"]
+    assert pell["year"] == "2010"
+    assert pell["title"] == "Lane recovery"
+    assert pell["doi"] == "10.1000/lantern"
     body = (
-        "Herring collapsed and later recovered (Dickey-Collas, 2010). "
+        "The lantern lane closed and later reopened (Pell-Marlow, 2010). "
         "The stock stayed outside safe limits (Smith, 2020)."
     )
     saved = essay_stage(seq, "5", "draft", body)
     assert saved["ok"] is True, saved
     look = _note_look(seq, "5") or ""
-    assert "(Dickey-Collas, 2010)" in look
+    assert "(Pell-Marlow, 2010)" in look
     assert HYPHEN not in look
 
     pdf_rows = _save_lookup_pdfs(
@@ -370,9 +368,7 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     assert lovelace["doi"] == "10.1000/kept-pdf"
     assert listed["stage"] == "4b"
 
-    reference = (
-        f"Dickey{HYPHEN}Collas, M. (2010) 'Herring recovery', Fisheries Journal, 1(1), pp. 1-9."
-    )
+    reference = f"Pell{HYPHEN}Marlow, M. (2010) 'Lane recovery', Harbour Journal, 1(1), pp. 1-9."
     assert (
         stage10_reference_block(
             [],
@@ -380,7 +376,7 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
             [
                 {
                     "heading": "Findings",
-                    "body": "Herring collapsed and later recovered (Dickey-Collas, 2010).",
+                    "body": "The lantern lane closed and later reopened (Pell-Marlow, 2010).",
                 }
             ],
         )
@@ -392,7 +388,7 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
         [
             {
                 "heading": "Findings",
-                "body": "Herring collapsed and later recovered (Dickey-Collas, 2010).",
+                "body": "The lantern lane closed and later reopened (Pell-Marlow, 2010).",
             }
         ],
     )
@@ -649,7 +645,7 @@ def test_a_disagreement_is_named_and_not_silently_resolved(workspace):
     assert sources[0]["year"] == "2020"
     held = apply_body_cites(seq, "5", DRAFT)
     assert "(Smith, 2020)" not in held["text"]
-    assert "(Froese and Quaas, 2012)" in held["text"]
+    assert "(Alden and Marlow, 2012)" in held["text"]
     blocked = essay_stage(seq, "5", "draft", DRAFT)
     assert blocked["ok"] is False, blocked
     assert blocked.get("stored") is not True
@@ -763,12 +759,12 @@ def test_each_entry_stores_the_short_form_and_the_full_line(workspace, monkeypat
     """AC-cite-lib-13: Each entry stores the short citation and the full Harvard line."""
     seq, rows = _ready()
     smith = _entry(seq, "smith")
-    froese = _entry(seq, "froese")
+    alden = _entry(seq, "alden")
     assert smith["in_text"] == "(Smith, 2020)"
     assert smith["in_text"] == short_in_text("Smith, J.", "2020")
     assert smith["reference"] == harvard_4a_line(rows[0])
-    assert froese["in_text"] == "(Froese and Quaas, 2012)"
-    assert froese["reference"] == harvard_4a_line(rows[1])
+    assert alden["in_text"] == "(Alden and Marlow, 2012)"
+    assert alden["reference"] == harvard_4a_line(rows[1])
     assert smith["author"] == "Smith, J."
     assert smith["year"] == "2020"
     assert smith["title"] == "Chokepoints and crude"
@@ -776,13 +772,13 @@ def test_each_entry_stores_the_short_form_and_the_full_line(workspace, monkeypat
     extract = student_list_text(seq)
     assert "(Smith, 2020)" in extract
     assert smith["reference"] in extract
-    assert "(Froese and Quaas, 2012)" in extract
-    assert froese["reference"] in extract
+    assert "(Alden and Marlow, 2012)" in extract
+    assert alden["reference"] in extract
     write_proof("citation-list-forms.txt", extract + "\n")
     saved = essay_stage(seq, "5", "draft", DRAFT)
     assert saved["ok"] is True, saved
     assert "(Smith, 2020)" in (_note_look(seq, "5") or "")
-    assert "(Froese and Quaas, 2012)" in (_note_look(seq, "5") or "")
+    assert "(Alden and Marlow, 2012)" in (_note_look(seq, "5") or "")
 
     def _rebuilt(_source: dict) -> str:
         return "A different reference line."
@@ -795,7 +791,7 @@ def test_each_entry_stores_the_short_form_and_the_full_line(workspace, monkeypat
         seq,
     )
     assert smith["reference"] in lines
-    assert froese["reference"] in lines
+    assert alden["reference"] in lines
     assert "A different reference line." not in lines
     assert _entry(seq, "smith")["in_text"] == "(Smith, 2020)"
     assert _entry(seq, "smith")["reference"] == smith["reference"]

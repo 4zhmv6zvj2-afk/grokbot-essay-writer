@@ -56,24 +56,24 @@ from essay_writer.word import write_critical_review_docx, write_docx, write_firs
 from essay_writer.word_references import cite_reference_gaps
 
 REPO = Path(__file__).resolve().parents[1]
-MODULE = "ENVS5003HK"
-STORED_TITLE = "ENVS5003HK-1"
+MODULE = "MOD4401ZZ"
+STORED_TITLE = "MOD4401ZZ-1"
 OPENING = (
-    "When is it fair to close a fishery so that a fish stock can recover? This essay answers "
-    "that question for one named case, the North Sea. The closure it treats in detail is the "
-    "Plaice Box, a nursery area closed to large trawlers in the North Sea flatfish fishery. "
-    "Fairness is used here as a judgement about purpose, evidence, and who bears the cost. "
-    "It is not a slogan, and it is not filled in where a gathered file is silent. The brief "
-    "allows the North Sea, Chesapeake Bay, or the Mekong Delta. The gathered files that can "
-    "be read are about the North Sea, so Chesapeake Bay and the Mekong Delta are not used as "
-    "the case."
+    "When should a harbour close a lantern lane so that night traffic can recover? This essay "
+    "answers that question for one named case, the Glasswater Harbour. The closure it treats "
+    "in detail is the Lantern Lane, a marked channel closed to large night barges in the "
+    "Glasswater light traffic. Fairness is used here as a judgement about purpose, evidence, "
+    "and who bears the cost. It is not a slogan, and it is not filled in where a gathered "
+    "file is silent. The brief allows the Glasswater Harbour, the Paper Bay, or the Ink "
+    "Delta. The gathered files that can be read are about the Glasswater Harbour, and no "
+    "further named bays."
 )
 LIMIT = 255
 BRIEF = """
 Assignment title: Individual reflective diary
 
 Module title: Practice module
-Module code: ENVS5003HK
+Module code: MOD4401ZZ
 
 Aim: Understand the practice by reflecting on your own decisions.
 
@@ -108,8 +108,8 @@ def _source(ident: str, author: str, year: str, title: str) -> dict[str, str]:
 
 def _rows() -> list[dict[str, str]]:
     return [
-        _source("beare", "Doug Beare", "2013", "Plaice box"),
-        _source("keith", "David Keith", "2026", "Recovery potential"),
+        _source("keel", "Doug Keel", "2013", "Lantern lane"),
+        _source("quinn", "David Quinn", "2026", "Watch potential"),
     ]
 
 
@@ -204,7 +204,7 @@ def _assert_short_title(path: Path, *, banned: str) -> str:
     title = _title_of(path)
     assert len(title) <= LIMIT, title
     assert title != banned
-    assert not title.startswith("When is it fair to close a fishery")
+    assert not title.startswith(OPENING[:48])
     return title
 
 
@@ -250,8 +250,10 @@ def test_stage10_close_writes_the_final_when_the_opening_is_long(workspace, monk
     assert workspace is not None
 
 
-def test_the_live_opening_does_not_raise_the_title_limit(workspace, monkeypatch, tmp_path):
-    """AC-title-2: A fixture that repeats the live fail — a first paragraph longer than 255 characters, as in the 620-character opening paragraph beginning “When is it fair to close a fishery…” — must write the final Word file and must not raise a 255-character title-limit error."""
+def test_the_long_synthetic_opening_does_not_raise_the_title_limit(
+    workspace, monkeypatch, tmp_path
+):
+    """AC-title-2: A synthetic first paragraph longer than 255 characters must write the final Word file and must not raise a 255-character title-limit error."""
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
     seq = open_sequence(MODULE)
     body = _listed(seq)
@@ -263,23 +265,23 @@ def test_the_live_opening_does_not_raise_the_title_limit(workspace, monkeypatch,
     final = _final_file(seq)
     assert final.is_file()
     assert OPENING in _docx_text(final)
-    write_proof("word-title-live-final.docx", final.read_bytes())
+    write_proof("word-title-long-opening-final.docx", final.read_bytes())
     assert workspace is not None
 
 
 def test_the_final_document_title_is_the_short_title_already_stored(
     workspace, monkeypatch, tmp_path
 ):
-    """AC-title-3: The final Word file’s document title is the short title already on the first-draft Word file (for the live essay, ENVS5003HK-1). If no short title is stored, it is the assessment id or the file name without .docx. It is never the opening paragraph, and it is at most 255 characters."""
+    """AC-title-3: The final Word file’s document title is the short title already on the first-draft Word file (for this synthetic fixture, MOD4401ZZ-1). If no short title is stored, it is the assessment id or the file name without .docx. It is never the opening paragraph, and it is at most 255 characters."""
     monkeypatch.setenv("ESSAY_WRITER_MAC_DIR", str(tmp_path / "Documents"))
     seq = open_sequence(MODULE)
     body = _listed(seq)
     _plant(seq, body, title=OPENING)
-    _draft_file(seq, "Plaice Box", [OPENING])
+    _draft_file(seq, "Lantern Lane", [OPENING])
     written = write_stage10(seq)
     assert written["ok"] is True, written
     final = _final_file(seq)
-    assert _assert_short_title(final, banned=OPENING) == "Plaice Box"
+    assert _assert_short_title(final, banned=OPENING) == "Lantern Lane"
     write_proof("word-title-property.txt", _title_of(final) + "\n")
 
     other = open_sequence(MODULE)
@@ -458,7 +460,7 @@ def test_an_off_list_cite_and_a_missing_line_are_still_refused(workspace):
     assert missing["ok"] is False, missing
     assert missing["refused"] == "references-cites"
     assert missing.get("stored") is not True
-    assert "keith, 2026" in str(missing.get("reason") or "").casefold()
+    assert "quinn, 2026" in str(missing.get("reason") or "").casefold()
     assert other_first.read_bytes() == other_before
     assert not list((work_dir(other) / "output").rglob("*-final.docx"))
     assert first.read_bytes() == before
@@ -530,7 +532,7 @@ def test_public_wording_covers_cursor_and_grok_build(workspace):
     assert ("@pytest.mark." + "parametrize") not in source
     seated = {
         "test_stage10_close_writes_the_final_when_the_opening_is_long": "AC-title-1",
-        "test_the_live_opening_does_not_raise_the_title_limit": "AC-title-2",
+        "test_the_long_synthetic_opening_does_not_raise_the_title_limit": "AC-title-2",
         "test_the_final_document_title_is_the_short_title_already_stored": "AC-title-3",
         "test_the_final_keeps_the_draft_wording": "AC-title-4",
         "test_sibling_word_writes_survive_a_long_opening": "AC-title-5",

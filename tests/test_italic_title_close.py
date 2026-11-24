@@ -51,25 +51,26 @@ from essay_writer.student_voice import student_surface_hits
 from essay_writer.textutil import count_words
 from essay_writer.word_references import reference_runs_for_stored, styled_reference_runs
 
-MODULE = "ENVS5003HK"
-QUESTION = "How does a fishery closure let a herring stock recover?"
-PLAN = "The plan follows a fishery closure that lets a herring stock recover."
+MODULE = "MOD4401ZZ"
+QUESTION = "How does a lantern-lane closure let night traffic recover?"
+PLAN = "The plan follows a lantern-lane closure that lets night traffic recover."
 BRIEF = f"Genre: report\nQuestion: {QUESTION}\n"
 BRIEF_2000 = f"Genre: report\nQuestion: {QUESTION}\nWord count: 2000 words\n"
 NOTE = "The opened file states the limit, and the year is the one stored on the list."
 LONG_AUTHORS = (
-    "Dickey-Collas, M., Nash, R.D.M., Brunel, T., van Damme, C.J.G., Marshall, C.T., "
-    "Payne, M.R., Corten, A., Geffen, A.J., Peck, M.A., Hatfield, E.M.C., Hintzen, N.T., "
-    "Enberg, K., Kell, L.T., Simmonds, E.J., Berg, C.W., Ulrich, C., "
-    "Moller, H., Nielsen, J.R., and Sparholt, H."
+    "Pell, M., Quinn, R.D., Ash, T., Binder, C.J., Marsh, L.T., "
+    "Lumen, V.R., Keel, D., Alden, N., Marlow, P., Hopper, G., "
+    "North, A.B., South, B.C., East, C.D., West, E.F., Lane, G.H., "
+    "Buoy, I.J., Tide, K.L., Crane, M.N., Quay, O.P., Vale, P.Q., "
+    "Wick, R.S., Yard, T.U., and Zest, V.W."
 )
-JOURNAL_TITLE = "Lessons learned from stock collapse and recovery of North Sea herring: a review"
-REVIEW_TITLE = "Fishery closure and herring stock recover. A review"
+JOURNAL_TITLE = "Notes on a lantern lane after a night closure: a review"
+REVIEW_TITLE = "Lantern lane and night traffic recover. A review"
 PLAN_TITLE = (
-    "Council Regulation (EC) No 1098/2007 of 18 September 2007 establishing a "
-    "multiannual plan for the cod stocks in the Baltic Sea and the fisheries "
-    "exploiting those stocks, amending Regulation (EEC) No 2847/93 and repealing "
-    "Regulation (EC) No 779/97"
+    "Harbour Notice 4401 of 18 September 2007 establishing a "
+    "multiyear plan for the lantern lanes in Glasswater Harbour and the barges "
+    "using those lanes, amending Notice 2847 and repealing "
+    "Notice 779"
 )
 LOOK = f"This report answers the assignment. {QUESTION}"
 TOP_TABLE = """
@@ -81,7 +82,7 @@ TOP_TABLE = """
 | Format | loose layout | tidy layout | exact margins |
 | Citations | missing harvard | some harvard | exact citation lines |
 """
-COPIED = "The opened file states the limit for this herring closure."
+COPIED = "The opened file states the limit for this lantern closure."
 
 
 def _brief(text: str = BRIEF) -> None:
@@ -98,47 +99,47 @@ def _plan(seq: str) -> None:
 
 def _journal() -> dict[str, str]:
     return {
-        "id": "herring-review-2010",
+        "id": "lantern-review-2010",
         "author": LONG_AUTHORS,
         "year": "2010",
         "title": JOURNAL_TITLE,
-        "container": "ICES Journal of Marine Science",
+        "container": "Harbour Journal of Night Traffic",
         "volume": "67",
         "issue": "9",
         "pages": "1875-1886",
-        "doi": "10.1093/icesjms/fsq033",
+        "doi": "10.1000/lantern-review-2010",
     }
 
 
 def _review_source() -> dict[str, str]:
     return {
-        "id": "herring-review-title",
+        "id": "lantern-review-title",
         "author": "Ada North",
         "year": "2011",
         "title": REVIEW_TITLE,
-        "doi": "10.1000/herring-review-title",
+        "doi": "10.1000/lantern-review-title",
     }
 
 
 def _plan_source() -> dict[str, str]:
     return {
-        "id": "baltic-cod-plan-2009",
+        "id": "harbour-notice-4401",
         "author": "European Council",
         "year": "2009",
         "title": PLAN_TITLE,
         "place": "Brussels",
         "publisher": "European Council",
-        "doi": "10.1000/baltic-cod-plan-2009",
+        "doi": "10.1000/harbour-notice-4401",
     }
 
 
 def _filler(index: int) -> dict[str, str]:
-    ident = f"herring-note-{index:02d}"
+    ident = f"lantern-note-{index:02d}"
     return {
         "id": ident,
         "author": f"Family{index}, A.",
         "year": str(2000 + index),
-        "title": f"Fishery closure and herring stock recover note {index}",
+        "title": f"Lantern lane and night traffic recover note {index}",
         "doi": f"10.1000/{ident}",
     }
 
@@ -175,7 +176,7 @@ def _essay(rows: list[dict[str, str]], *, words: int | None = None) -> str:
     body = opening + " " + _cite_sentence(rows)
     if words is None:
         return body
-    sentence = "A fishery closure can let a herring stock recover when the evidence is specific and the cost is named."
+    sentence = "A lantern-lane closure can let night traffic recover when the evidence is specific and the cost is named."
     while count_words(body, exclude_citations=False) < words:
         body = f"{body} {sentence}"
     return body
@@ -298,15 +299,15 @@ def test_review_titles_stay_italic_for_a_long_list_a_review_and_a_plan(workspace
     _ship(seq, rows)
     listed = load_citation_list(seq)["entries"]
     by_id = {str(entry.get("source_id")): entry for entry in listed}
-    journal = by_id["herring-review-2010"]
-    review = by_id["herring-review-title"]
-    plan = by_id["baltic-cod-plan-2009"]
-    assert journal.get("container") == "ICES Journal of Marine Science"
+    journal = by_id["lantern-review-2010"]
+    review = by_id["lantern-review-title"]
+    plan = by_id["harbour-notice-4401"]
+    assert journal.get("container") == "Harbour Journal of Night Traffic"
     assert len(LONG_AUTHORS) > 270
     journal_runs = reference_runs_for_stored(journal)
     review_runs = reference_runs_for_stored(review)
     plan_runs = reference_runs_for_stored(plan)
-    assert "ICES Journal of Marine Science" in _italic_of(journal_runs)
+    assert "Harbour Journal of Night Traffic" in _italic_of(journal_runs)
     assert JOURNAL_TITLE.casefold() not in _italic_of(journal_runs).casefold()
     assert REVIEW_TITLE.casefold() in _italic_of(review_runs).casefold()
     assert PLAN_TITLE.casefold() in _italic_of(plan_runs).casefold()
@@ -366,7 +367,7 @@ def test_a_fair_review_then_writes_the_final_word_file(workspace, monkeypatch, t
     assert final.name.endswith("-final.docx")
     assert "10" in (load_pointer(seq).get("saved") or [])
     italic = _italic_runs(final)
-    assert "ICES Journal of Marine Science" in italic
+    assert "Harbour Journal of Night Traffic" in italic
     assert REVIEW_TITLE.casefold() in italic.casefold()
     assert "A review" in italic
     assert PLAN_TITLE.casefold() in italic.casefold()
@@ -396,7 +397,7 @@ def test_an_off_list_cite_still_refuses_and_keeps_the_first_draft(workspace):
     other = _open()
     remember_registration(other, NUMBER)
     _park_stage10(other)
-    lone = "North, A. (2011) Fishery closure and herring stock recover. A review."
+    lone = f"North, A. (2011) {REVIEW_TITLE}."
     state = load_state(other)
     state["saved_pack"] = {
         "essay_id": other,
@@ -439,14 +440,14 @@ def test_two_works_that_share_a_short_cite_stay_on_their_own_ids(workspace):
         "id": "simons-2014-coast",
         "author": "Simons, J.",
         "year": "2014",
-        "title": "Fishery closure and herring stock recover on the coast",
+        "title": "Lantern lane and night traffic recover on the coast",
         "doi": "10.1000/simons-2014-coast",
     }
     second = {
         "id": "simons-2014-inland",
         "author": "Simons, J.",
         "year": "2014",
-        "title": "Fishery closure and herring stock recover inland",
+        "title": "Lantern lane and night traffic recover inland",
         "doi": "10.1000/simons-2014-inland",
     }
     _ship(seq, [first, second])
@@ -698,14 +699,14 @@ def test_each_review_gate_allows_a_second_review(workspace):
     copied = _open()
     from helpers import write_upload
 
-    write_upload(workspace, MODULE, "herring.md", COPIED + "\n")
+    write_upload(workspace, MODULE, "lantern.md", COPIED + "\n")
     state = load_state(copied)
     state["research"] = {
         "summary": {
             "sources": [
                 {
-                    "id": "gathered-herring",
-                    "locator": f"uploads/{MODULE}/herring.md",
+                    "id": "gathered-lantern",
+                    "locator": f"uploads/{MODULE}/lantern.md",
                     "author": "Ada North",
                     "year": "2011",
                 }
