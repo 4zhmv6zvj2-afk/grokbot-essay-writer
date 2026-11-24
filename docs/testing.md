@@ -53,6 +53,7 @@ compares the SHA-256 set.
 | `tests/helpers.py` | Shared builders (call a tool, read a result). |
 | `tests/pty_support.py` | Terminal-backed tests; skipped when no pty is available. |
 | `tests/fixtures/` | Synthetic assignments, answer keys, and logs. No student work. |
+| `tests/conversations/` | Golden conversations. A fake shell calls the real doors with hand-authored payloads. A prompt change that alters a student reply updates the matching path. |
 | `tests/snapshots/prompts.json` | Frozen composed prompt text. Do not hand-edit; regenerate with `tools/update_prompt_snapshot.py`. |
 
 ## Contract pins

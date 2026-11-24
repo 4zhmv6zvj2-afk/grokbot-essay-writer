@@ -106,7 +106,10 @@ The helper is `.cursor/skills/verify-essay-writer/scripts/verify-essay-writer`. 
 .cursor/skills/verify-essay-writer/scripts/verify-essay-writer drive-research-gather
 .cursor/skills/verify-essay-writer/scripts/verify-essay-writer cleanup
 .cursor/skills/verify-essay-writer/scripts/verify-essay-writer scan-public .cursor/skills/verify-essay-writer
+.cursor/skills/verify-essay-writer/scripts/verify-essay-writer conversations
 ```
+
+`conversations` runs the five synthetic paths in `tests/conversations/` through the real doors. It does not call a catalog and it does not install packages. The live gather command above is unchanged.
 
 `scan-public` hashes the same deny-list entries the tests already store and reports `NO HITS` or the opaque id of a hit. It does not print the phrase.
 
