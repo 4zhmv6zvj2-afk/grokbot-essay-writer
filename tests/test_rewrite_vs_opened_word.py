@@ -7,8 +7,6 @@ hard gates stay in place. No opened file leaves those gates as they were.
 Cursor and Grok Build call the same function. Build covered.
 """
 
-import inspect
-
 from docx import Document
 from helpers import open_sequence, source, write_upload
 
@@ -17,14 +15,13 @@ from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.cursor_office import rewrite_vs_opened_word as cursor_gate
 from essay_writer.diary import section_plan_for
-from essay_writer.gates import essay_gates, evaluate_gates
+from essay_writer.gates import essay_gates
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.review import essay_review
 from essay_writer.rewrite_baseline import BUILD_COVERED_LINE, rewrite_vs_opened_word
-from essay_writer.specialists.eqr import _missed_word_band
 from essay_writer.specialists.grok_bot import confirm_gate
 from essay_writer.specialists.writer import document_word_band
-from essay_writer.validate import _word_gate, essay_pack_validate
+from essay_writer.validate import essay_pack_validate
 
 STUDY = "MOD1008AA"
 STATED = "MOD1004AA"
@@ -325,13 +322,6 @@ def test_ac3_invent_forbid_and_confirm_hard_gates_stay(workspace):
 def test_ac4_build_covered_cursor_and_grok_build(workspace):
     """AC4. Cursor and Grok Build call one rewrite gate. Build covered."""
     assert BUILD_COVERED_LINE == "Build covered"
-    assert "rewrite_vs_opened_word as _gate" in inspect.getsource(cursor_gate)
-    assert "rewrite_vs_opened_word as _gate" in inspect.getsource(build_gate)
-    assert "Build covered" in inspect.getsource(cursor_gate)
-    assert "Build covered" in inspect.getsource(build_gate)
-    assert "rewrite_vs_opened_word" in inspect.getsource(evaluate_gates)
-    assert "rewrite_vs_opened_word" in inspect.getsource(_word_gate)
-    assert "rewrite_vs_opened_word" in inspect.getsource(_missed_word_band)
     seq = open_sequence(STUDY)
     _docx(seq, [_words(2500)])
     shared = rewrite_vs_opened_word(seq, _words(2500), INVENTED, counter="words")
@@ -350,5 +340,7 @@ def test_ac4_build_covered_cursor_and_grok_build(workspace):
 def test_ac5_ready_line_build_covered():
     """AC5. The Ready line for this slice is Build covered."""
     assert BUILD_COVERED_LINE == "Build covered"
-    assert "Build covered" in inspect.getsource(cursor_gate)
-    assert "Build covered" in inspect.getsource(build_gate)
+    cursor_rules = cursor_stage_launch("8")["settings"]["rules"]
+    build_rules = stage_launch("8")["settings"]["rules"]
+    assert cursor_rules == build_rules
+    assert "Do not tighten prose below what the opened Word file already says" in cursor_rules

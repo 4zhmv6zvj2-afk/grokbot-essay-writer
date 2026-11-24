@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 import shutil
 from pathlib import Path
@@ -11,7 +10,7 @@ from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, picked, 
 
 from essay_writer import build_office, cursor_office
 from essay_writer.build_office import _STAGE_DELIVERABLES
-from essay_writer.debug_log import essay_debug_wipe, wipe_operator_log_files
+from essay_writer.debug_log import essay_debug_wipe
 from essay_writer.doors import DOORS
 from essay_writer.draft_from_review import stored_critical_reviews
 from essay_writer.first_run import main as first_run_main
@@ -25,9 +24,6 @@ from essay_writer.paths import work_dir
 from essay_writer.research import essay_research_summary
 from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office
-from essay_writer.stage_hold import _commit_with_next_card, _snapshot_stage_save
-from essay_writer.stage_landing import _store_stage
-from essay_writer.stage_replies import _save_confirm
 from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.validate import essay_pack_validate
@@ -299,8 +295,6 @@ def test_ac5_wipe_and_copy_to_mac_leave_backups_additive(workspace, tmp_path, mo
     assert wiped["ok"] is True
     assert not log.exists()
     assert (snap / "pack.json").read_bytes() == pack_bytes
-    assert "backup" not in inspect.getsource(wipe_operator_log_files).casefold()
-    assert "snapshot_after" not in inspect.getsource(wipe_operator_log_files)
 
     mac = tmp_path / "mac"
     mac.mkdir()
@@ -320,10 +314,6 @@ def test_ac5_wipe_and_copy_to_mac_leave_backups_additive(workspace, tmp_path, mo
         "papers.zip",
         "critical-reviews.zip",
     )
-    handoff = inspect.getsource(build_office.build_deliverable_handoff)
-    assert "snapshot_after_stage_save" not in handoff
-    assert "essay_pack_restore" not in handoff
-    assert "backups" not in handoff
 
 
 def test_ac6_build_covered_one_restore_door():
@@ -335,18 +325,5 @@ def test_ac6_build_covered_one_restore_door():
     assert front_office()["handlers"]["essay.pack.restore"] is essay_pack_restore
     door = next(item for item in DOORS if item["tool"] == "essay.pack.restore")
     assert door["confirm"] == "draft-then-confirm"
-    cursor_src = Path(cursor_office.__file__).read_text(encoding="utf-8")
-    build_src = Path(build_office.__file__).read_text(encoding="utf-8")
-    assert "def snapshot_after_stage_save" not in cursor_src
-    assert "def snapshot_after_pack_validate" not in cursor_src
-    assert "def snapshot_after_stage_save" not in build_src
-    assert "def snapshot_after_pack_validate" not in build_src
-    assert "def essay_pack_restore" not in cursor_src
-    assert "def essay_pack_restore" not in build_src
-    assert "_snapshot_stage_save" in inspect.getsource(_store_stage)
-    assert "_snapshot_stage_save" in inspect.getsource(_commit_with_next_card)
-    assert "_snapshot_stage_save" in inspect.getsource(_save_confirm)
-    assert "snapshot_after_stage_save" in inspect.getsource(_snapshot_stage_save)
-    assert "snapshot_after_pack_validate" in inspect.getsource(essay_pack_validate)
     assert snapshot_after_stage_save.__module__ == "essay_writer.pack_backup"
     assert snapshot_after_pack_validate.__module__ == "essay_writer.pack_backup"

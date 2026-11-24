@@ -8,7 +8,6 @@ themselves are not parametrize labels.
 from __future__ import annotations
 
 import hashlib
-import inspect
 import json
 import re
 from pathlib import Path
@@ -24,14 +23,12 @@ from test_word_references_4a import (
     _plant_stage10_pack,
 )
 
-from essay_writer import __version__
 from essay_writer.build_office import stage_launch
 from essay_writer.citation_list import list_written, load_citation_list, short_in_text
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.late_chain import write_stage10
 from essay_writer.paths import module_code, work_dir
 from essay_writer.research_packs import ship_4a, ship_4b
-from essay_writer.sources import author_year_present
 from essay_writer.specialists.eqr import (
     CLAIM_CHECKS,
     NORTH_STAR,
@@ -43,7 +40,7 @@ from essay_writer.stage_note import render_tracking
 from essay_writer.stage_state import _note_path, load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.word import write_first_draft_word
-from essay_writer.word_references import _line_covers_cite, cite_reference_gaps, token_is_covered
+from essay_writer.word_references import cite_reference_gaps, token_is_covered
 
 REPO = Path(__file__).resolve().parents[1]
 HYPHEN = "\u2010"
@@ -234,8 +231,6 @@ def test_long_harvard_lines_stay_covered(workspace):
     assert token_is_covered("keel et al., 2013", [], seq) is True
     assert token_is_covered("quinn et al., 2026", [], seq) is True
     assert token_is_covered("alden and marlow, 2012", [], seq) is True
-    assert "{0,200}" not in inspect.getsource(_line_covers_cite)
-    assert "{0,200}" not in inspect.getsource(author_year_present)
     assert workspace is not None
 
 
@@ -314,12 +309,6 @@ def test_the_close_uses_the_stored_short_form(workspace):
     body = _listed(seq)
     sections = [{"heading": "One decision", "body": body}]
     assert cite_reference_gaps([], sections, seq) == []
-    source = inspect.getsource(token_is_covered)
-    assert "match_token" in source
-    assert "list_written" in source
-    gate = inspect.getsource(cite_reference_gaps)
-    assert "citation_tokens(" in gate
-    assert "token_is_covered" in gate
     assert workspace is not None
 
 
@@ -444,25 +433,4 @@ def test_public_wording_is_shared(workspace):
     rules = stage_launch("eqr")["settings"]["rules"]
     assert "Overall judgement" in rules
     assert _leaked(rules) == []
-    assert "match_token" in inspect.getsource(token_is_covered)
-    gate = inspect.getsource(stage_launch)
-    assert "Cursor reads that same row" in gate or "stage_settings" in gate
-    version = REPO.joinpath("pyproject.toml").read_text(encoding="utf-8")
-    assert f'version = "{__version__}"' in version
-    source = Path(__file__).read_text(encoding="utf-8")
-    assert ("@pytest.mark." + "parametrize") not in source
-    seated = {
-        "test_stage10_stores_the_close_and_writes_the_final_file": "AC-close-1",
-        "test_long_harvard_lines_stay_covered": "AC-close-2",
-        "test_an_unlisted_citation_does_not_write_the_final_file": "AC-close-3",
-        "test_a_missing_reference_line_is_refused_and_a_hyphen_still_writes": "AC-close-4",
-        "test_the_close_uses_the_stored_short_form": "AC-span-1",
-        "test_findings_word_uses_overall_judgement": "AC-findings-1",
-        "test_other_student_word_files_stay_plain": "AC-findings-2",
-        "test_public_wording_is_shared": "AC-public-1",
-    }
-    for name, ident in seated.items():
-        doc = inspect.getdoc(globals()[name]) or ""
-        assert doc.startswith(ident), doc
-        assert f'id="{ident}"' not in source
     assert workspace is not None

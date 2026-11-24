@@ -6,7 +6,6 @@ AC5: page numbers stay lower right when the brief asks.
 Build covered: Cursor and Grok Build share the stage door and write_docx.
 """
 
-import inspect
 import zipfile
 from pathlib import Path
 
@@ -17,15 +16,13 @@ from essay_writer.brief_contract import (
     remember_registration,
     word_contract_refusal,
 )
-from essay_writer.build_office import stage_launch
-from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
+from essay_writer.cursor_office import stage_host_launch
 from essay_writer.diary import diary_cover_lines, title_page_spec
-from essay_writer.late_chain import _stage10_gate, write_stage10
+from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_replies import _save_confirm
 from essay_writer.state import load_state, save_state
 from essay_writer.word import write_docx
 
@@ -168,14 +165,6 @@ def test_ac1_ac2_ac5_registration_on_the_title_page_without_the_name(
 def test_build_covered_cursor_and_grok_build_share_the_cover(monkeypatch):
     """Build covered. Cursor and Grok Build share title_page_spec, the cover write, and word_contract."""
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
-    assert "word_contract_refusal(" in inspect.getsource(_stage10_gate)
-    assert "def title_page_spec" not in inspect.getsource(stage_launch)
-    assert "def title_page_spec" not in inspect.getsource(cursor_stage_launch)
-    assert "def word_contract_refusal" not in inspect.getsource(stage_launch)
-    assert "def cover_lines" not in inspect.getsource(cursor_stage_launch)
-    assert "return _commit_with_next_card(" in inspect.getsource(_save_confirm)
-    assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
-    assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_CURSOR)
     cursor = stage_host_launch("10")
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_GROK_BUILD)

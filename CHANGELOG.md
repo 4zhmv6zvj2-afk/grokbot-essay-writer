@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Contract pins fell from 727 to 545. The three heaviest files were the operator log, the stage launch, and the finished Word file. CI prints the 25 slowest tests. The quarantine list is empty.
 - The refusal table names files, and the test owns the codes. The shell's one ask is a prompt and host contract. Parsing the smaller questions stays code.
 - The runbook says how to check a release in five minutes, what to ask a student for, and how a bad immutable release is superseded by a new patch. The old assets stay.
 - A student install records one metadata line for a refusal, an unhandled exception, and a fallback, even when debug is off. The line stores a stable code and, for an exception, the class. It does not store essay text. `incident.jsonl` is mode 0600 and rotates to `incident.jsonl.1`. `essay.debug.wipe` removes both. `essay-writer --support-bundle` writes `support.zip`.
