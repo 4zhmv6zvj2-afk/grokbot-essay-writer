@@ -28,7 +28,7 @@ Each line is one JSON object. The kinds are stage, confirm, digest, paths, shell
 
 ## Incident record
 
-This file is always on. A student install writes it when the debug log is off. The file is `incident.jsonl` in the app folder, mode 0600. The rotated copy is `incident.jsonl.1`, also mode 0600. At 256 KB or 200 lines, whichever comes first, the live file is renamed to `incident.jsonl.1` and a new file starts. One process lock covers that rename plus the append, and the same lock covers the wipe, so two callers cannot rotate the same file twice or drop a line.
+This file is always on. A student install writes it when the debug log is off. The file is `incident.jsonl` in the app folder, mode 0600. The rotated copy is `incident.jsonl.1`, also mode 0600. At 256 KB or 200 lines, whichever comes first, the live file is renamed to `incident.jsonl.1` and a new file starts. One process lock covers that rename plus the append, and the same lock covers the wipe, so two callers in that process cannot rotate the same file twice or drop a line. Two processes can still pass each other.
 
 The app folder is `ESSAY_WRITER_ROOT` when it is set, otherwise the folder stored at setup. When neither is set, the folder that contains this package is used. That package-directory fallback is a dev-only degradation. A student install has a setup app folder or `ESSAY_WRITER_ROOT`. In this checkout, `incident.jsonl`, `incident.jsonl.1`, and `support.zip` are gitignored.
 

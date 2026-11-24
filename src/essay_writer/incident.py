@@ -33,12 +33,13 @@ UNHANDLED = "unhandled"
 
 _SEVERITY = frozenset({"warn", "info", "error"})
 _DISPOSITION = frozenset({"retry", "fallback", "refuse"})
-_CODE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+_CODE = re.compile(r"^[a-z][a-z0-9_]*(?:-[a-z0-9_]+)*$")
 _TOKEN = re.compile(r"^[a-z0-9._-]+$")
 _STEP = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,31}$")
 _STAGE = re.compile(r"^[0-9]{1,2}[a-z]?$")
 _CLASS = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _LOCK = threading.Lock()
+_CACHE_LOCK = threading.Lock()
 _CACHE: dict[str, str] = {}
 _FRAME: contextvars.ContextVar[_Frame | None] = contextvars.ContextVar(
     "essay_writer_incident_frame",
@@ -206,7 +207,11 @@ def _commit(line: str, code: str, tool: str, *, dedupe_file: bool) -> bool:
                 os.chmod(rotated, MODE)
             except OSError:
                 pass
-        _append_bytes(path, line.encode("utf-8"))
+            existing = b""
+        payload = line.encode("utf-8")
+        if existing and not existing.endswith(b"\n"):
+            payload = b"\n" + payload
+        _append_bytes(path, payload)
         return True
 
 
@@ -367,12 +372,15 @@ def _write_zip(dest: Path, members: list[tuple[str, bytes]]) -> None:
 
 
 def _build() -> str:
-    if "build" not in _CACHE:
-        try:
-            _CACHE["build"] = _read_build()
-        except Exception:
-            _CACHE["build"] = ""
-    return _CACHE["build"]
+    if "build" in _CACHE:
+        return _CACHE["build"]
+    with _CACHE_LOCK:
+        if "build" not in _CACHE:
+            try:
+                _CACHE["build"] = _read_build()
+            except Exception:
+                _CACHE["build"] = ""
+        return _CACHE["build"]
 
 
 def _read_build() -> str:
@@ -383,12 +391,15 @@ def _read_build() -> str:
 
 
 def _prompt() -> str:
-    if "prompt" not in _CACHE:
-        try:
-            _CACHE["prompt"] = _prompt_digest()
-        except Exception:
-            _CACHE["prompt"] = ""
-    return _CACHE["prompt"]
+    if "prompt" in _CACHE:
+        return _CACHE["prompt"]
+    with _CACHE_LOCK:
+        if "prompt" not in _CACHE:
+            try:
+                _CACHE["prompt"] = _prompt_digest()
+            except Exception:
+                _CACHE["prompt"] = ""
+        return _CACHE["prompt"]
 
 
 def _prompt_digest() -> str:

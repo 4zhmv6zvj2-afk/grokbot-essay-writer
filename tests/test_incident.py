@@ -301,7 +301,9 @@ def test_two_door_calls_each_record_the_same_code(workspace, monkeypatch) -> Non
     monkeypatch.setitem(HANDLERS, "essay.health", blocked)
     front_office_call("essay.health", {})
     front_office_call("essay.health", {})
-    assert [row["code"] for row in _rows()].count("stage") == 2
+    rows = [row for row in _rows() if row["code"] == "stage"]
+    assert len(rows) == 2
+    assert rows[0]["tool"] == "essay.health"
 
 
 def test_a_debug_log_stays_out_of_the_bundle(workspace, monkeypatch) -> None:
@@ -355,12 +357,79 @@ def test_the_build_and_the_prompt_hash_are_read_once(workspace, monkeypatch) -> 
         incident._CACHE.clear()
 
 
+def test_a_torn_line_does_not_swallow_the_next(workspace) -> None:
+    path = incident_path()
+    path.write_bytes(b'{"code":"torn-line"')
+    note("fresh-line", severity="info", disposition="fallback", tool="word", step="title")
+    parsed = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            parsed.append(json.loads(line)["code"])
+        except json.JSONDecodeError:
+            parsed.append("UNPARSABLE")
+    assert parsed[-1] == "fresh-line"
+
+
+def test_an_underscore_refusal_code_is_kept(workspace) -> None:
+    refuse("host_voice", "That extra field is not stored evidence. Leave it off this save.")
+    assert _rows()[-1]["code"] == "host_voice"
+
+
+def test_a_hand_built_refusal_is_recorded_on_the_door(workspace) -> None:
+    from essay_writer.specialists.grok_bot import front_office_call
+
+    reply = front_office_call("essay.gates", {"essay_id": 17})
+    assert reply.get("refused") == "essay-id"
+    row = _rows()[-1]
+    assert row["code"] == "essay-id"
+    assert row["tool"] == "essay.gates"
+
+
+def test_concurrent_notes_read_the_prompt_once(workspace, monkeypatch) -> None:
+    from essay_writer import incident
+
+    incident._CACHE.clear()
+    calls = {"n": 0}
+
+    def digest() -> str:
+        calls["n"] += 1
+        return "abc123def456"
+
+    monkeypatch.setattr(incident, "_prompt_digest", digest)
+    threads = [
+        threading.Thread(
+            target=note,
+            args=(f"row-{index}",),
+            kwargs={"severity": "info", "disposition": "fallback", "tool": "word", "step": "title"},
+        )
+        for index in range(8)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert calls["n"] == 1
+
+
+def test_a_stuck_record_is_not_called_empty(workspace, monkeypatch) -> None:
+    note("word-title-spare", severity="info", disposition="fallback", tool="word", step="title")
+
+    def boom(self, missing_ok: bool = False) -> None:
+        raise OSError("busy")
+
+    monkeypatch.setattr(Path, "unlink", boom)
+    wiped = essay_debug_wipe("delete the logs")
+    assert "already empty" not in wiped["next"]
+    assert incident_path().is_file()
+
+
 def test_the_operator_doc_names_the_mode_and_the_dev_fallback() -> None:
     text = (ROOT / "docs" / "operator-log.md").read_text(encoding="utf-8")
     assert "mode 0600" in text
     assert "dev-only degradation" in text
     assert "incident.jsonl" in text
     assert "are not members" in text
+    assert "Two processes can still pass each other." in text
     ignored = (ROOT / ".gitignore").read_text(encoding="utf-8")
     assert "incident.jsonl" in ignored
     assert "incident.jsonl.1" in ignored

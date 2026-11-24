@@ -533,12 +533,18 @@ def essay_debug_wipe(speech: str | None = None) -> dict[str, Any]:
             "That request does not clear the run log.",
             next="Ask again with delete the logs, or clear debug log.",
         )
-    from essay_writer.incident import wipe_incident_files
+    from essay_writer.incident import incident_path, rotated_path, wipe_incident_files
 
     removed = wipe_operator_log_files()
     cleared_incident = wipe_incident_files()
     cleared = any(removed.values()) or cleared_incident
-    next_line = "Cleared the run logs." if cleared else "The run logs were already empty."
+    left = incident_path().is_file() or rotated_path().is_file()
+    if left:
+        next_line = "The incident record is still there. Ask me to clear the logs again."
+    elif cleared:
+        next_line = "Cleared the run logs."
+    else:
+        next_line = "The run logs were already empty."
     return speak(
         {
             "ok": True,

@@ -753,7 +753,7 @@ def front_office_stage9(essay_id: str) -> dict[str, object]:
 def front_office_call(name: str, arguments: dict[str, object]) -> dict[str, object]:
     """Say one writer-door reply. The function is HANDLERS[name]."""
     from essay_writer.debug_log import note_call
-    from essay_writer.incident import call_frame, note_exception
+    from essay_writer.incident import call_frame, note, note_exception
     from essay_writer.server import HANDLERS
 
     handler = HANDLERS[name]
@@ -768,6 +768,8 @@ def front_office_call(name: str, arguments: dict[str, object]) -> dict[str, obje
                 raise
             result = refused
         note_call(name, arguments, result=result)
+        if isinstance(result, dict) and isinstance(result.get("refused"), str):
+            note(result["refused"], severity="error", disposition="refuse")
     if isinstance(result, dict):
         spoken = speak(result)
         from essay_writer.build_status import reply_status, take_idle
