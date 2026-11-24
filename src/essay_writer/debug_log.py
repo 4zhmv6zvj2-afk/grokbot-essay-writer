@@ -533,8 +533,11 @@ def essay_debug_wipe(speech: str | None = None) -> dict[str, Any]:
             "That request does not clear the run log.",
             next="Ask again with delete the logs, or clear debug log.",
         )
+    from essay_writer.incident import wipe_incident_files
+
     removed = wipe_operator_log_files()
-    cleared = any(removed.values())
+    cleared_incident = wipe_incident_files()
+    cleared = any(removed.values()) or cleared_incident
     next_line = "Cleared the run logs." if cleared else "The run logs were already empty."
     return speak(
         {
@@ -543,9 +546,62 @@ def essay_debug_wipe(speech: str | None = None) -> dict[str, Any]:
             "cleared": cleared,
             "cleared_debug": removed[LOG_FILENAME],
             "cleared_ml_events": removed[ML_EVENTS_FILENAME],
+            "cleared_incident": cleared_incident,
             "next": next_line,
         }
     )
+
+
+def support_bundle() -> dict[str, Any]:
+    """Write support.zip in the app folder. A failure does not raise."""
+    from essay_writer.incident import (
+        BUNDLE_NAME,
+        incident_path,
+        locked_incident_files,
+        pack_support_zip,
+    )
+
+    try:
+        redacted = [(name, redact_bytes(payload)) for name, payload in locked_incident_files()]
+        extra = _support_debug_members() if debug_enabled() else []
+        entries = pack_support_zip(incident_path().parent / BUNDLE_NAME, redacted, extra)
+    except Exception:
+        return speak(
+            {
+                "ok": False,
+                "wrote": False,
+                "refused": "support-bundle",
+                "reason": "The support bundle could not be written.",
+                "next": "Run essay-writer --support-bundle again.",
+            }
+        )
+    return speak(
+        {
+            "ok": True,
+            "wrote": True,
+            "name": BUNDLE_NAME,
+            "entries": entries,
+            "complete": True,
+            "next": "Wrote the support bundle.",
+        }
+    )
+
+
+def _support_debug_members() -> list[tuple[str, bytes]]:
+    members: list[tuple[str, bytes]] = []
+    seen: set[str] = set()
+    for path in operator_log_paths():
+        if not path.is_file():
+            continue
+        name = path.name
+        if name in seen:
+            continue
+        seen.add(name)
+        try:
+            members.append((name, redact_bytes(path.read_bytes())))
+        except OSError:
+            continue
+    return members
 
 
 def _flag_on(raw: str | None) -> bool:
@@ -1318,12 +1374,16 @@ def traced(tool: str, handler: Callable[..., object]) -> Callable[..., object]:
     @functools.wraps(handler)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         arguments = _bound(handler, args, kwargs)
-        try:
-            result = handler(*args, **kwargs)
-        except Exception as exc:
-            note_call(tool, arguments, error=exc)
-            raise
-        note_call(tool, arguments, result=result)
-        return result
+        from essay_writer.incident import call_frame, note_exception
+
+        with call_frame(tool, arguments):
+            try:
+                result = handler(*args, **kwargs)
+            except Exception as exc:
+                note_call(tool, arguments, error=exc)
+                note_exception(exc)
+                raise
+            note_call(tool, arguments, result=result)
+            return result
 
     return wrapper

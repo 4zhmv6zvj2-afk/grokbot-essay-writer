@@ -24,6 +24,7 @@ ALLOWED = {
     "durable.py": "the replace helper writes its temp with os.write, then renames",
     "paths.py": "a secret file is created at 0600 in place",
     "setup.py": "a secret file is created at 0600 in place",
+    "incident.py": "append-only incident metadata, created at 0600",
 }
 
 _NEEDLES = (

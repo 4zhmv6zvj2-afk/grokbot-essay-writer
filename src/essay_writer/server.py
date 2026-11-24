@@ -13,7 +13,7 @@ from mcp.server.mcpserver import MCPServer
 
 from essay_writer import __version__
 from essay_writer import setup as essay_setup_mod
-from essay_writer.debug_log import essay_debug_export, essay_debug_wipe, traced
+from essay_writer.debug_log import essay_debug_export, essay_debug_wipe, support_bundle, traced
 from essay_writer.doors import DOORS
 from essay_writer.free_alt import essay_download_leftovers
 from essay_writer.gates import essay_gates
@@ -327,6 +327,13 @@ def main(argv: list[str] | None = None) -> None:
         if payload.get("ok") is not True:
             raise SystemExit(1)
         return
+    if args == ["--support-bundle"]:
+        payload = support_bundle()
+        json.dump(payload, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        if payload.get("ok") is not True:
+            raise SystemExit(1)
+        return
     if args == ["--reviewer"]:
         build_review_server().run(transport="stdio")
         return
@@ -372,7 +379,7 @@ def main(argv: list[str] | None = None) -> None:
     if args:
         raise SystemExit(
             "usage: essay-writer [--health | --check-update | --update [--force] | "
-            "--debug-export | --reviewer | --stage-launch STAGE | "
+            "--debug-export | --support-bundle | --reviewer | --stage-launch STAGE | "
             "--cursor-stage-launch STAGE | "
             "--read-photo PATH | --install-upload ZIP [--upload-sha256 SHA256] [--no-reviewer] "
             "[--install-cursor] [--cursor-sha256 SHA256] | "

@@ -80,7 +80,8 @@ def test_shipped_snapshots_load_read_and_advance(workspace) -> None:
         saved = _advance(seq, stage, look)
         assert saved.get("stored") is True, saved
         assert load_pointer(seq)["current"] == following
-        assert _codes() == []
+        # Opening the sequence mints the stage 1 card, and that mint refuses an empty look.
+        assert _codes() == ["guidance-only"]
 
 
 def test_the_current_snapshot_writes_word_and_advances(workspace) -> None:
@@ -99,7 +100,8 @@ def test_the_current_snapshot_writes_word_and_advances(workspace) -> None:
     saved = _advance(seq, "6", "The draft is saved in Word.")
     assert saved.get("stored") is True, saved
     assert load_pointer(seq)["current"] == "7"
-    assert _codes() == []
+    # Opening the sequence mints the stage 1 card, and that mint refuses an empty look.
+    assert _codes() == ["guidance-only"]
 
 
 def test_an_unknown_pointer_field_survives_a_save(workspace) -> None:

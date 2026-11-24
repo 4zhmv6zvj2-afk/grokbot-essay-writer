@@ -99,13 +99,13 @@ def test_a_fallback_is_recorded_with_debug_off(workspace, monkeypatch) -> None:
     assert title == WORD_TITLE_SPARE
     lines = incident_path().read_text(encoding="utf-8").splitlines()
     recorded = [json.loads(line) for line in lines]
-    assert {
-        "code": "word-title-spare",
-        "disposition": "fallback",
-        "severity": "info",
-        "stage": "title",
-        "tool": "word",
-    } in recorded
+    match = [row for row in recorded if row.get("code") == "word-title-spare"]
+    assert match
+    assert match[0]["disposition"] == "fallback"
+    assert match[0]["severity"] == "info"
+    assert match[0]["stage"] == "title"
+    assert match[0]["tool"] == "word"
+    assert match[0]["message"] == ""
     assert "essay" not in incident_path().read_text(encoding="utf-8").casefold()
 
 
