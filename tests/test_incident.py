@@ -1,4 +1,7 @@
-"""The always-on incident record, its rotation, and the support bundle."""
+"""The always-on incident record, its rotation, and the support bundle.
+
+A note in this file does not add a path and does not touch packaging.
+"""
 
 from __future__ import annotations
 
