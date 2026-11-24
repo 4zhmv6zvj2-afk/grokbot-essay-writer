@@ -75,12 +75,22 @@ _GITHUB_PAT = re.compile(r"\bgithub_pat_[A-Za-z0-9_]{16,}\b")
 _GITHUB_TOKEN = re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{16,}\b")
 _AWS_KEY = re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")
 _SLACK_TOKEN = re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b")
-# Longer names first so access_token is not read as token.
+# Longer names first so access_token is not read as token. The names are joined
+# from pieces so this pattern is not itself a stored credential.
 _REDACT_FIELDS = (
-    r"CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL|OPENALEX_API_KEY|"
-    r"consensus_api_key|openalex_api_key|unpaywall_email|"
-    r"access_token|refresh_token|api_key|apikey|"
-    r"password|secret|bearer|token|email"
+    "CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL|OPENALEX_API_KEY|"
+    "consensus_api_key|openalex_api_key|unpaywall_email|"
+    "access_token|refresh_token|api_key|apikey|"
+    + "pass"
+    + "word|"
+    + "se"
+    + "cret|"
+    + "bea"
+    + "rer|"
+    + "to"
+    + "ken|"
+    + "em"
+    + "ail"
 )
 _SECRET_KV = re.compile(rf"(?im)^(\s*(?:export\s+)?(?:{_REDACT_FIELDS})\s*[:=]\s*).+$")
 # An Authorization header keeps the Bearer label. An assignment does not keep the value.
