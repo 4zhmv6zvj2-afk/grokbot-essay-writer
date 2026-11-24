@@ -66,8 +66,10 @@ def _work_id(work: dict[str, Any]) -> str:
     if ident:
         return ident
     title = _title(work).casefold()
-    url = work.get("url") if isinstance(work.get("url"), str) else ""
-    doi = work.get("doi") if isinstance(work.get("doi"), str) else ""
+    url_value = work.get("url")
+    url = url_value if isinstance(url_value, str) else ""
+    doi_value = work.get("doi")
+    doi = doi_value if isinstance(doi_value, str) else ""
     return "row:" + title + "|" + doi.casefold().strip() + "|" + url.strip()
 
 
@@ -78,18 +80,50 @@ def _question_text(essay_id: str) -> str:
 
 
 def _plan_text(essay_id: str) -> str:
-    from essay_writer.stage_note import _note_look
+    """The saved stage 3 plan. A draft note is not a saved plan."""
+    from essay_writer.stage_state import _note_path
 
-    look = _note_look(essay_id, "3")
-    return look.strip() if isinstance(look, str) else ""
+    try:
+        path = _note_path(essay_id, "3")
+    except KeyError:
+        return ""
+    if not path.is_file():
+        return ""
+    text = path.read_text(encoding="utf-8")
+    marker = "## Final look\n\n"
+    if "Status: final" not in text or marker not in text:
+        return ""
+    return text.rsplit(marker, 1)[1].removesuffix("\n").strip()
 
 
-def _cap(rows: list[dict[str, Any]], maximum: int | None) -> list[dict[str, Any]]:
+def _argument_overlap(work: dict[str, Any], question: str, plan: str) -> int:
+    title = _title(work)
+    if not title or not plan.strip():
+        return 0
+    argument = _stems(plan) - _stems(question)
+    if not argument:
+        argument = _stems(plan)
+    return len(_stems(title) & argument)
+
+
+def _cap(
+    rows: list[dict[str, Any]],
+    maximum: int | None,
+    question: str,
+    plan: str,
+) -> list[dict[str, Any]]:
+    """Keep the works that fit the plan best, up to the cap.
+
+    A tie keeps the earlier gathered work. The work id is not the order.
+    """
     if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < 1:
         return list(rows)
-    order = sorted({_work_id(row) for row in rows})
-    keep = set(order[:maximum])
-    return [row for row in rows if _work_id(row) in keep]
+    ranked = sorted(
+        range(len(rows)),
+        key=lambda index: (-_argument_overlap(rows[index], question, plan), index),
+    )
+    chosen = set(ranked[:maximum])
+    return [row for index, row in enumerate(rows) if index in chosen]
 
 
 def missing_step(question: str, plan: str) -> str | None:
@@ -165,7 +199,7 @@ def choose_downloads(essay_id: str, works: list[dict[str, Any]]) -> dict[str, An
         "question_kept": kept,
         "question_dropped": dropped,
         "plan_kept": plan_kept,
-        "shortlist": _cap(plan_kept, maximum),
+        "shortlist": _cap(plan_kept, maximum, question, plan),
         "minimum": minimum,
         "maximum": maximum,
         "return_to": None,
@@ -195,7 +229,7 @@ def download_hold(essay_id: str, works: list[dict[str, Any]]) -> dict[str, Any] 
 
 
 def _same(row: dict[str, Any], other: dict[str, Any]) -> bool:
-    from essay_writer.research_packs import same_source
+    from essay_writer.source_match import same_source
 
     ident = stable_source_id(row)
     if ident and ident == stable_source_id(other):

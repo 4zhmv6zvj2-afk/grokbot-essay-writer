@@ -27,6 +27,7 @@ from essay_writer.known_paths import (
 )
 from essay_writer.paths import relative, uploads_dir, work_dir
 from essay_writer.pdf_year import apply_citation_year
+from essay_writer.source_match import _slug, same_source
 from essay_writer.stage_llm import HOUSE_MODEL
 from essay_writer.state import load_state
 from essay_writer.student_voice import (
@@ -195,12 +196,6 @@ def _write_zip(path: Path, members: list[tuple[str, bytes]]) -> None:
     os.replace(temporary, path)
 
 
-def _slug(value: object) -> str:
-    if not isinstance(value, str):
-        return ""
-    return re.sub(r"[^a-z0-9]+", "", value.casefold())
-
-
 def _pdf_matches_row(pdf: Path, row: dict[str, Any]) -> bool:
     stem = _slug(pdf.stem)
     if len(stem) < 6:
@@ -234,36 +229,6 @@ def _matches_failure(source: dict[str, Any], row: dict[str, Any]) -> bool:
         url = _slug(row.get("url"))
         title = _slug(row.get("title"))
         if len(stem) >= 6 and (stem == url or stem == title or (url and stem in url)):
-            return True
-    return False
-
-
-def _equal_token(left: object, right: object) -> bool:
-    if not isinstance(left, str) or not isinstance(right, str):
-        return False
-    a = left.strip()
-    b = right.strip()
-    if len(a) < 6 or len(b) < 6:
-        return False
-    if a.casefold() == b.casefold():
-        return True
-    sa = _slug(a)
-    sb = _slug(b)
-    return len(sa) >= 6 and sa == sb
-
-
-def same_source(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    """True when two rows name the same gathered source. Short tokens do not match."""
-    for key in ("doi", "url", "title", "id"):
-        if _equal_token(left.get(key), right.get(key)):
-            return True
-    for record, other in ((left, right), (right, left)):
-        doi = record.get("doi")
-        url = other.get("url")
-        if not isinstance(doi, str) or not isinstance(url, str):
-            continue
-        token = _slug(doi)
-        if len(token) >= 6 and token in _slug(url):
             return True
     return False
 
@@ -653,10 +618,21 @@ def ship_4b(
         student_list_text,
     )
     from essay_writer.known_paths import research_file
-    from essay_writer.source_floor import draft_block, exhaustion_sentence
+    from essay_writer.source_floor import (
+        NO_PAPERS,
+        draft_block,
+        exhaustion_sentence,
+        record_empty_gather,
+        saved_research_works,
+    )
     from essay_writer.word import write_critical_review_docx
 
     blocked = draft_block(essay_id)
+    if not blocked:
+        incoming = [item for item in sources if isinstance(item, dict) and item.get("id")]
+        if not incoming and not saved_research_works(essay_id):
+            record_empty_gather(essay_id)
+            blocked = NO_PAPERS
     if blocked:
         return {
             "stage": "4b",

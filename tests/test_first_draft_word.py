@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 
 from docx import Document
-from helpers import open_sequence, plant_gathered_source
+from helpers import open_sequence, plant_gathered_source, write_proof
 from test_first_draft_save import (
     BLANK_PDF,
     BLANK_TITLE,
@@ -53,7 +53,6 @@ from essay_writer.word import (
 )
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 QUESTION = "Whose interests count when a river allocates water?"
 OPENER = f"This essay answers {QUESTION[0].casefold()}{QUESTION[1:]}"
 if not OPENER.endswith("."):
@@ -129,17 +128,15 @@ def _lines(path: Path) -> list[str]:
 
 
 def _keep_proof(path: Path, saved: str, counted: int) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    (ARTIFACTS / "first-draft-word.docx").write_bytes(path.read_bytes())
-    (ARTIFACTS / "first-draft-word-check.txt").write_text(
+    write_proof("first-draft-word.docx", path.read_bytes())
+    write_proof(
+        "first-draft-word-check.txt",
         (
             f"file: {path.name}\n"
             f"counted_words: {counted}\n"
             f"saved_words: {count_words(saved, exclude_citations=False)}\n"
             "matches_saved_draft: true\n"
         ),
-        encoding="utf-8",
     )
 
 

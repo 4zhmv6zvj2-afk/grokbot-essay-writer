@@ -10,7 +10,7 @@ import inspect
 from pathlib import Path
 
 from docx import Document
-from helpers import open_sequence, picked
+from helpers import open_sequence, picked, write_proof
 from test_student_plain_close import _assert_plain, _close_pack, _final_file
 from test_word_references_4a import JONES_LINE, MODULE, QIN_LINE, _plant_stage10_pack
 
@@ -32,7 +32,6 @@ from essay_writer.word_references import stage10_reference_block
 from essay_writer.writing_basics import STAGE_ORDER
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 HYPHEN = "\u2010"
 NO_CITATIONS = "The opened Word file has no citations. Nothing was recorded."
 EMPTY_REFERENCES = (
@@ -54,16 +53,6 @@ KEPT = (
     "(Trijoulet et al., 2021)",
     f"(Dickey{HYPHEN}Collas and Nash, 2010)",
 )
-
-
-def _proof(name: str, payload: str | bytes) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    target = ARTIFACTS / name
-    if isinstance(payload, bytes):
-        target.write_bytes(payload)
-        return
-    target.write_text(payload, encoding="utf-8")
 
 
 def _docx_text(path: Path) -> str:
@@ -178,7 +167,7 @@ def test_gathered_citations_remain_in_the_stored_draft(workspace):
     held = {item["token"] for item in saved.get("cite_held") or []}
     assert "froese and quaas, 2012" not in held
     assert "horwood, o'brien and darby, 2006" not in held
-    _proof("cite-keep-stored-draft.txt", look + "\n")
+    write_proof("cite-keep-stored-draft.txt", look + "\n")
     assert workspace is not None
 
 
@@ -209,7 +198,7 @@ def test_multi_author_and_lists_remain_after_the_save(workspace):
         "dickey-collas and others, 2010",
     ):
         assert token not in withheld
-    _proof("cite-keep-multi-author-draft.txt", look + "\n")
+    write_proof("cite-keep-multi-author-draft.txt", look + "\n")
     assert workspace is not None
 
 
@@ -222,9 +211,11 @@ def test_reviewer_pass_writes_the_first_draft_word_with_citations(workspace):
         assert citation in look
         assert citation in text
     assert "Nobody" not in text
-    assert stored.get("next") == "The first-draft Word file is saved from the draft that was reviewed."
-    _proof("cite-keep-word-extract.txt", text + "\n")
-    _proof("cite-keep-first-draft.docx", _word_path(seq).read_bytes())
+    assert (
+        stored.get("next") == "The first-draft Word file is saved from the draft that was reviewed."
+    )
+    write_proof("cite-keep-word-extract.txt", text + "\n")
+    write_proof("cite-keep-first-draft.docx", _word_path(seq).read_bytes())
     assert workspace is not None
 
 
@@ -249,7 +240,7 @@ def test_stage9_does_not_refuse_a_file_that_kept_its_citations(workspace):
         f"reason: {review.get('reason')}\n"
         f"citations: {', '.join(citation_tokens(opened))}\n"
     )
-    _proof("cite-keep-review.txt", payload)
+    write_proof("cite-keep-review.txt", payload)
     assert workspace is not None
 
 
@@ -264,10 +255,10 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
     held = {item["token"]: item["reason"] for item in saved["cite_held"]}
     assert held["nobody, 1999"] == "claim-fit"
     assert "nobody, 1999" in load_record(seq)["withheld"]
-    rows = [
-        _source(seq, ident, author, year) for ident, (author, year) in _authors().items()
-    ]
-    missing = _citation_gate(seq, "A paper outside the gathered set is not used (Nobody, 1999).", rows)
+    rows = [_source(seq, ident, author, year) for ident, (author, year) in _authors().items()]
+    missing = _citation_gate(
+        seq, "A paper outside the gathered set is not used (Nobody, 1999).", rows
+    )
     assert missing["passed"] is False
     assert "nobody, 1999" in missing["reason"]
     kept = _citation_gate(seq, DRAFT.replace(" (Nobody, 1999)", ""), rows)
@@ -277,15 +268,28 @@ def test_ungathered_hyphen_and_missing_references_still_hold(workspace):
         f"{hyphen_name}, M. and Nash, R. (2010) 'Herring recovery', "
         "Fisheries Journal, 1(1), pp. 1-9."
     )
-    assert stage10_reference_block(
-        [],
-        {"references_markdown": reference},
-        [{"heading": "Findings", "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010)."}],
-    ) is None
+    assert (
+        stage10_reference_block(
+            [],
+            {"references_markdown": reference},
+            [
+                {
+                    "heading": "Findings",
+                    "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010).",
+                }
+            ],
+        )
+        is None
+    )
     empty = stage10_reference_block(
         [],
         {},
-        [{"heading": "Findings", "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010)."}],
+        [
+            {
+                "heading": "Findings",
+                "body": "Herring collapsed and later recovered (Dickey-Collas and others, 2010).",
+            }
+        ],
     )
     assert empty is not None
     assert empty["reason"] == EMPTY_REFERENCES
@@ -343,7 +347,7 @@ def test_student_files_stay_plain_and_lookup_fields_stay(workspace):
     first = text.splitlines()[0]
     assert first.startswith("Closure advice for North Sea cod")
     assert "(Froese and Quaas, 2012)" in first
-    _proof("cite-keep-word-first-line.txt", first + "\n")
+    write_proof("cite-keep-word-first-line.txt", first + "\n")
 
     pdf_rows = _save_lookup_pdfs(
         {
@@ -388,7 +392,9 @@ def test_student_files_stay_plain_and_lookup_fields_stay(workspace):
     assert abstract["year"] == "2018"
     assert abstract["title"] == "A saved abstract title"
     assert abstract["doi"] == "10.1000/kept-abs"
-    saved_text = (uploads_dir(seq) / Path(str(abstract["locator"])).name).read_text(encoding="utf-8")
+    saved_text = (uploads_dir(seq) / Path(str(abstract["locator"])).name).read_text(
+        encoding="utf-8"
+    )
     assert "Grace Hopper" in saved_text
     assert workspace is not None
 

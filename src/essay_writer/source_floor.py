@@ -26,20 +26,26 @@ ASK_QUESTION = "Name the essay question. An empty question is not searched."
 PLAN_PAGE = "This plan does not return another page."
 QUESTION_GAP = "This question returned no records."
 CROSSREF_NOTE = "Crossref was not used as a question search."
-FURTHER = (
-    "The source floor is not met, and more official records were still available."
-)
+FURTHER = "The source floor is not met, and more official records were still available."
 GAP_ONLY = (
     "A returned record is missing a name or a year, so it is not counted. "
     "No sourced essay will be written."
 )
 DID_NOT_RUN = "{name} did not run."
+PAGE_BUDGET = "OpenAlex page budget"
 
 _SOURCE_WORD = re.compile(r"(?i)\b(?:sources?|references?|citations?)\b")
 _CLASS_NAME = re.compile(r"(?i)\bspecialist industry sources?\b")
-_SECTION_BUDGET = re.compile(r"(?i)\bsection budgets?\b|\b(?:each|per|every)\s+(?:section|entry|part)\b")
+_SECTION_BUDGET = re.compile(
+    r"(?i)\bsection budgets?\b|\b(?:each|per|every)\s+(?:section|entry|part)\b"
+)
 _RANGE_COUNT = re.compile(
-    r"(?i)\b(\d[\d,]*)\s*(?:–|-|—|to)\s*(\d[\d,]*)\s+"
+    r"(?i)\b(?:between\s+)?(\d[\d,]*)\s*(?:–|-|—|to|and)\s*(\d[\d,]*)\s+"
+    r"(?:(?:academic|scholarly|peer-reviewed|relevant|credible)\s+)*"
+    r"(?:sources?|references?|citations?)\b"
+)
+_UP_TO = re.compile(
+    r"(?i)\bup\s+to\s+(\d[\d,]*)\s+"
     r"(?:(?:academic|scholarly|peer-reviewed|relevant|credible)\s+)*"
     r"(?:sources?|references?|citations?)\b"
 )
@@ -52,9 +58,7 @@ _BARE_COUNT = re.compile(
     r"(?:sources?|references?|citations?)\b"
 )
 _WORD_COUNT = re.compile(r"(?i)\b(\d[\d,]*)\s+words?\b")
-_WORD_RANGE = re.compile(
-    r"(?i)\b(\d[\d,]*)\s*(?:–|-|—|to)\s*(\d[\d,]*)\s+words?\b"
-)
+_WORD_RANGE = re.compile(r"(?i)\b(\d[\d,]*)\s*(?:–|-|—|to)\s*(\d[\d,]*)\s+words?\b")
 _PERCENT = re.compile(r"(\d[\d,]*)\s*%")
 _PART_SUBJECT = re.compile(
     r"(?i)^\s*(?:(?:the|a|an|your|its|this|that)\s+)?"
@@ -97,23 +101,13 @@ def confirmed_question(essay_id: str) -> str:
     return ""
 
 
-def ask_planning_model(question: str, reply: Any = None) -> Any:
-    """One-shot ask. The shell supplies the smaller questions on this call.
+def accept_smaller_questions(question: str, reply: Any = None) -> list[str]:
+    """Smaller questions the shell passed, then the confirmed question.
 
-    Both shells pass them as smallerQuestions on the gather. A missing reply
-    is a failed call. This does not invent a question, and it does not ask again.
-    """
-    if not isinstance(question, str) or not question.strip():
-        return None
-    return reply
-
-
-def accept_split(question: str, reply: Any) -> list[str]:
-    """Smaller questions the model returned, then the confirmed question.
-
-    Blanks, duplicates, and strings the model did not return are left out.
-    At most three smaller questions are kept. A failed reply leaves only
-    the confirmed question.
+    The shell asks once before the gather and passes at most three smaller
+    questions. This reads that reply. It does not ask again. Blanks,
+    duplicates, and search operators are left out. A missing or unusable
+    reply leaves only the confirmed question.
     """
     confirmed = " ".join(question.split())
     if not confirmed:
@@ -142,7 +136,7 @@ def assignment_floor(essay_id: str) -> dict[str, Any]:
 
     scheme = mark_scheme_text(essay_id)
     brief = module_brief_text(essay_id)
-    stated = _stated_counts(scheme) 
+    stated = _stated_counts(scheme)
     stated = _merge_counts(stated, _stated_counts(brief))
     scheme_band = word_band_from_brief_text(scheme)
     band_text = scheme if scheme_band else brief
@@ -154,38 +148,103 @@ def assignment_floor(essay_id: str) -> dict[str, Any]:
     return _floor_record(stated, words, clash, totals)
 
 
-def rate_for_words(words: int) -> int:
-    """ceil(words / 1000 * 8). 1,000 stays 8. 1,001 and 1,100 become 9."""
-    if words <= 0:
-        return 8
+def rate_for_words(words: int | None = None) -> int:
+    """ceil(words / 1000 * 8). A missing length uses the 1,000-word rate."""
+    if isinstance(words, bool) or not isinstance(words, int) or words <= 0:
+        words = 1000
     return (words * 8 + 999) // 1000
 
 
-def work_key(record: dict[str, Any]) -> str | None:
-    """One work. The same DOI is one work. Otherwise the title and year."""
-    title = title_text(record)
-    year = year_text(record)
-    author = author_text(record)
-    if not title or not year or not author:
+def cap_for_words(words: int | None) -> int | None:
+    """max(1, words * 12 // 1000). None when no whole-piece length was stated."""
+    if isinstance(words, bool) or not isinstance(words, int) or words <= 0:
         return None
+    return max(1, (words * 12) // 1000)
+
+
+def _fold_piece(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
+
+
+def _identity_keys(record: dict[str, Any]) -> list[str]:
+    keys: list[str] = []
+    for field in ("source_id", "id"):
+        value = record.get(field)
+        if isinstance(value, str) and value.strip():
+            keys.append("id:" + value.strip())
+            break
     doi = doi_key(record.get("doi"))
     if doi:
-        return "doi:" + doi
-    folded = re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip()
-    return f"ty:{folded}|{year}"
+        keys.append("doi:" + doi)
+    title = _fold_piece(title_text(record))
+    year = year_text(record)
+    author = _fold_piece(author_text(record))
+    if title and year and author:
+        keys.append(f"tya:{title}|{year}|{author}")
+    return keys
+
+
+def work_key(record: dict[str, Any]) -> str | None:
+    """None when author, title, or year is missing. Otherwise one identity token."""
+    if not title_text(record) or not year_text(record) or not author_text(record):
+        return None
+    keys = _identity_keys(record)
+    return keys[0] if keys else None
 
 
 def distinct_works(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Countable works, first occurrence kept. Incomplete records are left out."""
+    """Countable works, first occurrence kept.
+
+    The same source id is one work. The same DOI is one work. A DOI record
+    and a no-DOI record with the same normalized title, year, and author are
+    one work. Two works that share a title and a year and name different
+    authors stay two. Two different DOIs stay two.
+    """
+    countable = [record for record in records if isinstance(record, dict) and work_key(record)]
+    parent = list(range(len(countable)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        root_left = find(left)
+        root_right = find(right)
+        if root_left != root_right:
+            parent[root_right] = root_left
+
+    by_key: dict[str, int] = {}
+    for index, record in enumerate(countable):
+        for key in _identity_keys(record):
+            if key.startswith("tya:"):
+                continue
+            previous = by_key.get(key)
+            if previous is None:
+                by_key[key] = index
+            else:
+                union(index, previous)
+    grouped: dict[str, list[int]] = {}
+    for index, record in enumerate(countable):
+        for key in _identity_keys(record):
+            if key.startswith("tya:"):
+                grouped.setdefault(key, []).append(index)
+    for indexes in grouped.values():
+        with_doi = [index for index in indexes if doi_key(countable[index].get("doi"))]
+        without_doi = [index for index in indexes if index not in with_doi]
+        for index in without_doi[1:]:
+            union(without_doi[0], index)
+        distinct_dois = {doi_key(countable[index].get("doi")) for index in with_doi}
+        if len(distinct_dois) == 1 and without_doi:
+            union(with_doi[0], without_doi[0])
     kept: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for record in records:
-        if not isinstance(record, dict):
+    seen: set[int] = set()
+    for index, record in enumerate(countable):
+        root = find(index)
+        if root in seen:
             continue
-        key = work_key(record)
-        if key is None or key in seen:
-            continue
-        seen.add(key)
+        seen.add(root)
         kept.append(record)
     return kept
 
@@ -250,15 +309,38 @@ def saved_upload_records(essay_id: str) -> list[dict[str, Any]]:
     return found
 
 
+def page_cap_note(found: int, floor: int, uploads: int, cursor: str | None) -> str:
+    """Found count, floor, page-budget name, and either a saved cursor or a stop."""
+    source_word = "source" if found == 1 else "sources"
+    file_word = "file" if uploads == 1 else "files"
+    base = (
+        f"Found {found} official {source_word}. Uploaded {file_word}: {uploads}. "
+        f"This assignment's floor is {floor}. "
+        f"The {PAGE_BUDGET} stopped this gather."
+    )
+    if cursor:
+        return base + " The OpenAlex cursor is saved for a later gather."
+    return base + " No more official pages are available."
+
+
 def decide_gather(
     questions: list[dict[str, Any]],
     floor: dict[str, Any],
     countable: int,
     further_page: bool,
+    uploads: int = 0,
+    *,
+    page_capped: bool = False,
+    page_cursor: str | None = None,
 ) -> dict[str, Any]:
     """What the gather may do with the works already in hand."""
-    needed = int(floor.get("floor") or 8)
+    raw_floor = floor.get("floor")
+    if isinstance(raw_floor, int) and not isinstance(raw_floor, bool):
+        needed = raw_floor
+    else:
+        needed = rate_for_words(None)
     found = max(0, int(countable))
+    upload_count = max(0, int(uploads))
     refused = _discovery_refused(questions)
     openalex_called = any(_called(item.get("openalex")) for item in questions)
     consensus_called = any(_called(item.get("consensus")) for item in questions)
@@ -294,11 +376,25 @@ def decide_gather(
         extra = _quiet_notes(floor)
         if extra:
             note = note + " " + extra
+    if page_capped and not refused:
+        note = page_cap_note(found, needed, upload_count, page_cursor)
+        if page_cursor:
+            blocked = True
+            kind = "page_cap"
+        elif found == 0:
+            blocked = True
+            kind = "empty"
+        else:
+            blocked = False
+            kind = "exhausted"
+    elif "Official sources:" not in note:
+        note = f"{note} Official sources: {found}. Uploaded files: {upload_count}.".strip()
     body = {
         "floor": needed,
         "floor_from": floor.get("floor_from") or "word_rate",
         "words": floor.get("words"),
         "count": found,
+        "uploads": upload_count,
         "further_page": bool(further_page) and not met,
         "met": met,
         "exhausted": kind == "exhausted",
@@ -314,18 +410,22 @@ def decide_gather(
         "openalex_called": openalex_called,
         "consensus_called": consensus_called,
     }
+    if page_cursor:
+        body["openalex_cursor"] = page_cursor
     return body
 
 
 def draft_block(essay_id: str) -> str | None:
     """Why a sourced list or a sourced draft must wait. None when it may proceed."""
     gather = load_gather(essay_id)
-    if not isinstance(gather, dict) or gather.get("blocked") is not True:
-        return None
-    note = gather.get("note")
-    if isinstance(note, str) and note.strip():
-        return note.strip()
-    return UNFINISHED
+    if isinstance(gather, dict) and gather.get("blocked") is True:
+        note = gather.get("note")
+        if isinstance(note, str) and note.strip():
+            return note.strip()
+        return UNFINISHED
+    if empty_saved_gather(essay_id):
+        return NO_PAPERS
+    return None
 
 
 def gate_block(essay_id: str) -> str | None:
@@ -368,8 +468,10 @@ def question_lines(questions: list[dict[str, Any]]) -> list[str]:
         text = item.get("question")
         if not isinstance(text, str) or not text.strip():
             continue
-        openalex = item.get("openalex") if isinstance(item.get("openalex"), dict) else {}
-        consensus = item.get("consensus") if isinstance(item.get("consensus"), dict) else {}
+        openalex_value = item.get("openalex")
+        openalex = openalex_value if isinstance(openalex_value, dict) else {}
+        consensus_value = item.get("consensus")
+        consensus = consensus_value if isinstance(consensus_value, dict) else {}
         hits = list(openalex.get("hits") or []) + list(consensus.get("hits") or [])
         gaps = [hit for hit in hits if isinstance(hit, dict) and is_gap(hit)]
         if not hits:
@@ -377,7 +479,9 @@ def question_lines(questions: list[dict[str, Any]]) -> list[str]:
         elif gaps and not any(isinstance(hit, dict) and work_key(hit) for hit in hits):
             lines.append(f"- {text.strip()}: a returned record is missing a name or a year.")
         else:
-            lines.append(f"- {text.strip()}: {len(distinct_works([h for h in hits if isinstance(h, dict)]))} sources.")
+            lines.append(
+                f"- {text.strip()}: {len(distinct_works([h for h in hits if isinstance(h, dict)]))} sources."
+            )
         pagination = consensus.get("pagination")
         if isinstance(pagination, str) and pagination.strip():
             lines.append(f"- {pagination.strip()}")
@@ -468,7 +572,7 @@ def _floor_record(
         }
     notes.insert(0, NO_LENGTH)
     return {
-        "floor": 8,
+        "floor": rate_for_words(None),
         "floor_from": "no_length",
         "words": None,
         "stated_counts": [],
@@ -514,6 +618,20 @@ def _merge_counts(first: dict[str, Any], second: dict[str, Any]) -> dict[str, An
     return {"counts": counts, "writing_limit": limit}
 
 
+def _source_count(sentence: str, pattern: re.Pattern[str]) -> int | None:
+    """The first source count in ``pattern``. A word count in the same sentence is skipped."""
+    for match in pattern.finditer(sentence):
+        token = match.group(1)
+        if re.match(r"(?i)\s+words?\b", sentence[match.end() :]):
+            continue
+        if _number_is_word_or_percent(sentence, token):
+            continue
+        number = _number(token)
+        if number > 0:
+            return number
+    return None
+
+
 def _sentence_count(sentence: str) -> dict[str, Any] | None:
     if not _SOURCE_WORD.search(sentence):
         return None
@@ -521,12 +639,26 @@ def _sentence_count(sentence: str) -> dict[str, Any] | None:
         return None
     if _CLASS_NAME.search(sentence) and not re.search(r"\d", sentence):
         return None
-    if _wordish(sentence) and not _BARE_COUNT.search(sentence) and not _AT_LEAST.search(sentence):
+    source_at_least = _source_count(sentence, _AT_LEAST)
+    source_exactly = _source_count(sentence, _EXACTLY)
+    ranged = _RANGE_COUNT.search(sentence) is not None
+    capped = _UP_TO.search(sentence) is not None or _MAXIMUM.search(sentence) is not None
+    if (
+        _wordish(sentence)
+        and not _BARE_COUNT.search(sentence)
+        and source_at_least is None
+        and source_exactly is None
+        and not ranged
+        and not capped
+    ):
         return None
     writing_limit = None
     maximum = _MAXIMUM.search(sentence)
     if maximum and not _number_is_word_or_percent(sentence, maximum.group(1)):
         writing_limit = _number(maximum.group(1))
+    up_to = _UP_TO.search(sentence)
+    if up_to and not _number_is_word_or_percent(sentence, up_to.group(1)):
+        writing_limit = _number(up_to.group(1))
     floor = None
     span = _RANGE_COUNT.search(sentence)
     if span and not _number_is_word_or_percent(sentence, span.group(1)):
@@ -534,11 +666,9 @@ def _sentence_count(sentence: str) -> dict[str, Any] | None:
         high = _number(span.group(2))
         if low > 0 and high > low:
             floor = low
-    elif _AT_LEAST.search(sentence) or _EXACTLY.search(sentence):
-        match = _AT_LEAST.search(sentence) or _EXACTLY.search(sentence)
-        if match and not _number_is_word_or_percent(sentence, match.group(1)):
-            floor = _number(match.group(1))
-    elif maximum is None:
+    elif source_at_least is not None or source_exactly is not None:
+        floor = source_at_least if source_at_least is not None else source_exactly
+    elif up_to is None and maximum is None:
         bare = _BARE_COUNT.search(sentence)
         if bare and not _number_is_word_or_percent(sentence, bare.group(1)):
             floor = _number(bare.group(1))
@@ -675,7 +805,11 @@ def _refusal_sentence(questions: list[dict[str, Any]]) -> str:
             if not isinstance(detail, str) or not detail.strip():
                 detail = "no reason given"
             status = refused.get("status")
-            code = f"HTTP {status}: " if isinstance(status, int) and not isinstance(status, bool) and status else ""
+            code = (
+                f"HTTP {status}: "
+                if isinstance(status, int) and not isinstance(status, bool) and status
+                else ""
+            )
             lines.append(f"{name} refused the look-up. {code}{detail.strip()[:200]}")
     return " ".join(lines)
 
@@ -686,7 +820,11 @@ def _empty_sentence(
     consensus_called: bool,
 ) -> str:
     parts: list[str] = []
-    called = [name for name, flag in (("OpenAlex", openalex_called), ("Consensus", consensus_called)) if flag]
+    called = [
+        name
+        for name, flag in (("OpenAlex", openalex_called), ("Consensus", consensus_called))
+        if flag
+    ]
     if len(called) == 1:
         parts.append(f"{called[0]} was called.")
     elif len(called) == 2:
@@ -731,3 +869,59 @@ def _upload_header(text: str) -> dict[str, str] | None:
             return None
         return {"author": author, "year": match.group("year"), "title": title}
     return None
+
+
+def _citation_path(essay_id: str):
+    from essay_writer.paths import work_dir
+
+    return work_dir(essay_id) / "citation-list.json"
+
+
+def _read_json(path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def saved_research_works(essay_id: str) -> bool:
+    """True when a gathered source, a source record, or a citation entry exists."""
+    from essay_writer.paths import work_dir
+    from essay_writer.state import load_state
+
+    state = load_state(essay_id)
+    research = state.get("research") if isinstance(state, dict) else None
+    if isinstance(research, dict):
+        for depth in ("summary", "full"):
+            record = research.get(depth)
+            sources = record.get("sources") if isinstance(record, dict) else None
+            if isinstance(sources, list) and any(isinstance(item, dict) for item in sources):
+                return True
+    folder = work_dir(essay_id) / "output" / "source-records"
+    if folder.is_dir() and any(path.is_file() for path in folder.glob("*.record.json")):
+        return True
+    data = _read_json(_citation_path(essay_id))
+    entries = data.get("entries") if isinstance(data, dict) else None
+    return isinstance(entries, list) and any(isinstance(item, dict) for item in entries)
+
+
+def empty_saved_gather(essay_id: str) -> bool:
+    """True when the citation list is on disk and no work was saved."""
+    if _read_json(_citation_path(essay_id)) is None:
+        return False
+    return not saved_research_works(essay_id)
+
+
+def record_empty_gather(essay_id: str) -> None:
+    """Remember an empty gather without writing a sourced citation list."""
+    path = _citation_path(essay_id)
+    if path.is_file():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"written": False, "entries": []}) + "\n",
+        encoding="utf-8",
+    )

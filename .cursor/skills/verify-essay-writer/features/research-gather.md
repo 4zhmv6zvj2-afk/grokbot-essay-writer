@@ -43,4 +43,4 @@ Preconditions:
 - Confirm does not call OpenAlex, Consensus, or Unpaywall again. Count the stored card.
 - A hit missing an author or a year is not a distinct work. Do not fill the missing field in.
 - `essay.research.full` may refuse a file that is not tied to the assignment ask. Record that refusal. Do not invent a source to replace it.
-- Do not set `ESSAY_WRITER_FLOOR_STRICT` or `PYTEST_CURRENT_TEST`. Those switches belong to the test suite. A student run stores the question on the brief and searches that question.
+- There is no floor switch. A run without a confirmed question asks for the question and does not search. A run with a confirmed question on the brief searches that question.

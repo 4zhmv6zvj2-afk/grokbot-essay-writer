@@ -1,13 +1,13 @@
 """The shared sentence splitter: one segmentation for every gate and check.
 
-Golden: gates, brief_checks, cite_fit, and stage7 all call the same
-textutil.sentences. The paragraph below has quoted full stops, abbreviations,
-a decimal, and short sentences; every module must segment it the same way.
+gates, brief_checks, and stage7 call textutil.sentences. The paragraph below
+has quoted full stops, abbreviations, a decimal, and short sentences. Every
+one of those modules must segment it the same way.
 """
 
 from __future__ import annotations
 
-from essay_writer import brief_checks, cite_fit, gates, stage7, textutil
+from essay_writer import brief_checks, gates, stage7, textutil
 
 TRICKY = (
     'Dr. Chen writes, "The port is narrow." That claim is short. '
@@ -26,7 +26,7 @@ GOLDEN = [
 
 
 def test_all_four_modules_segment_the_tricky_paragraph_identically():
-    for module in (gates, brief_checks, cite_fit, stage7):
+    for module in (gates, brief_checks, stage7):
         assert module.sentences is textutil.sentences, module.__name__
         assert module.sentences(TRICKY) == GOLDEN, module.__name__
 

@@ -14,7 +14,13 @@ import re
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from helpers import card_digest_for, confirm_download_words, open_sequence
+from helpers import (
+    card_digest_for,
+    confirm_download_words,
+    open_sequence,
+    store_confirmed_question,
+    write_proof,
+)
 
 import essay_writer.shells as shells
 from essay_writer.cite_open import apply_opened_citation
@@ -26,7 +32,6 @@ from essay_writer.specialists import researcher
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE = REPO / "tests" / "fixtures" / "lookup-official-fields-v1.json"
-ARTIFACTS = Path("/opt/cursor/artifacts")
 CONSENSUS_URL = "https://consensus.app/papers/lane-count"
 LANDING_NOT_USED = "https://oa.example/landing-not-used"
 UNPAYWALL_LANDING = "https://oa.example/unpaywall-oa-full-landing"
@@ -186,6 +191,7 @@ def _confirm(
     seq = open_sequence()
     if words:
         confirm_download_words(seq, words)
+    store_confirmed_question(seq, "corridor capacity")
     draft = essay_dig(seq, "corridor capacity", "draft")
     assert draft["ok"] is True, draft
     saved = essay_dig(
@@ -209,12 +215,6 @@ def _by_title(rows: list[dict]) -> dict[str, dict]:
 
 def _card(seq: str) -> dict:
     return json.loads((work_dir(seq) / "dig-card.json").read_text(encoding="utf-8"))
-
-
-def _write_artifact(name: str, text: str) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    (ARTIFACTS / name).write_text(text, encoding="utf-8")
 
 
 def _grams(text: str) -> set[str]:
@@ -281,7 +281,7 @@ def test_openalex_sends_per_page_and_does_not_send_mailto(monkeypatch):
     assert "per_page=" in seen["url"]
     assert "mailto" not in seen["url"]
     assert "per-page" not in seen["url"]
-    _write_artifact("openalex-request.txt", url + "\n")
+    write_proof("openalex-request.txt", url + "\n")
 
 
 def test_openalex_urls_stay_on_the_saved_abstract(workspace, monkeypatch):
@@ -317,7 +317,7 @@ def test_openalex_urls_stay_on_the_saved_abstract(workspace, monkeypatch):
     text = (workspace / kept["locator"]).read_text(encoding="utf-8")
     assert INDEX_SENTENCE in text
     assert DECOY_ABSTRACT not in text
-    _write_artifact("official-abstract-kept.json", json.dumps(kept, indent=2) + "\n")
+    write_proof("official-abstract-kept.json", json.dumps(kept, indent=2) + "\n")
 
 
 def test_unpaywall_title_and_year_stay_and_z_authors_do_not(workspace, monkeypatch):
@@ -415,7 +415,7 @@ def test_downloads_use_only_official_openalex_and_unpaywall_urls(workspace, monk
     assert OPENALEX_PDF not in failed
     assert OPENALEX_OA in failed
     assert all(item.get("bucket") != "paper" for item in saved["downloads"]["failures"])
-    _write_artifact("official-download-urls.txt", "\n".join(fetched) + "\n")
+    write_proof("official-download-urls.txt", "\n".join(fetched) + "\n")
     assert seq
 
 
@@ -459,8 +459,8 @@ def test_a_failed_pdf_keeps_the_fields_already_on_the_source(workspace, monkeypa
 def test_a_pdf_body_does_not_invent_or_replace_an_author(workspace, monkeypatch):
     """AC-src-7. The tool does not invent an author from PDF body text.
 
-    A missing author stays blank. A look-up author is not replaced by a name
-    taken only from the PDF.
+    A missing author stays blank. A claimed name that differs from the
+    look-up author refuses the source.
     """
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "off")
     seq = open_sequence()
@@ -502,13 +502,9 @@ def test_a_pdf_body_does_not_invent_or_replace_an_author(workspace, monkeypatch)
         },
         0,
     )
-    assert kept_issues == []
-    assert kept is not None
-    assert kept["author"] == "Ada Lovelace"
-    assert kept["field_sources"]["author"] == "lookup"
-    assert "Fosso Wamba" not in kept["author"]
-    cited = apply_opened_citation(kept, seq)
-    assert cited["author"] == "Ada Lovelace"
+    assert kept is None
+    assert kept_issues[0]["code"] == "invent-forbid"
+    assert "Wamba, S.F." in kept_issues[0]["reason"]
 
 
 def test_first_run_does_not_present_mailto_as_openalex_practice():

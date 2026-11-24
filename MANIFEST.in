@@ -29,6 +29,7 @@ include first_run.py
 include .env.example
 include .gitignore
 include .cursor/mcp.json
+recursive-include .cursor/skills *
 include .grok/config.toml
 include placeholders/mcp.config.json
 include Essay-writer/README.md

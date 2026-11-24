@@ -75,6 +75,25 @@ def test_manifest_includes_every_previously_missing_file() -> None:
     assert not missing, f"MANIFEST.in does not ship: {missing}"
 
 
+# The verify skill is tracked and the sdist suite reads it. A checkout-only
+# skill fails that suite. Keep the list literal.
+SKILL_FILES = (
+    ".cursor/skills/verify-essay-writer/SKILL.md",
+    ".cursor/skills/verify-essay-writer/features/README.md",
+    ".cursor/skills/verify-essay-writer/features/first-draft-word.md",
+    ".cursor/skills/verify-essay-writer/features/research-gather.md",
+    ".cursor/skills/verify-essay-writer/features/stage-10-word.md",
+    ".cursor/skills/verify-essay-writer/scripts/verify-essay-writer",
+)
+
+
+def test_manifest_ships_the_verify_skill() -> None:
+    missing = [
+        path for path in SKILL_FILES if not (ROOT / path).is_file() or not _manifest_ships(path)
+    ]
+    assert not missing, f"MANIFEST.in does not ship: {missing}"
+
+
 def test_readme_history_link_target_is_shipped() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert re.search(r"\[[^\]]*\]\(HISTORY\.md\)", readme), "README.md no longer links HISTORY.md"

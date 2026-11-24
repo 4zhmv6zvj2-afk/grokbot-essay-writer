@@ -18,7 +18,7 @@ import os
 import shutil
 from pathlib import Path
 
-from helpers import ESSAY, open_sequence, picked
+from helpers import ESSAY, open_sequence, picked, store_confirmed_question
 
 from essay_writer.build_status import finish_mid_process
 from essay_writer.cursor_office import start_stage_mid
@@ -130,6 +130,7 @@ def test_ac3_second_dig_confirm_is_a_noop(workspace, monkeypatch):
     monkeypatch.setattr("essay_writer.downloads.fetch_url", fake_fetch)
     seq = open_sequence()
     query = "corridor chokepoints"
+    store_confirmed_question(seq, query)
     draft = essay_dig(seq, query, "draft")
     assert draft["ok"] is True, draft
     assert draft["wrote"] is False

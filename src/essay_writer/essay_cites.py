@@ -58,28 +58,25 @@ _SENTENCE = re.compile(r"(?<=[.!?])\s+")
 
 
 def essay_cite_bounds(essay_id: str) -> dict[str, Any]:
-    """Minimum and maximum distinct works for the essay, not the citation list."""
-    from essay_writer.source_floor import assignment_floor
+    """Minimum and maximum distinct works for the essay, not the citation list.
+
+    A stated count is the minimum. When it is above the rate cap, it is also
+    the maximum. The rate is not added to the stated number.
+    """
+    from essay_writer.source_floor import assignment_floor, cap_for_words
 
     floor = assignment_floor(essay_id)
-    minimum = int(floor.get("floor") or 0)
+    raw_floor = floor.get("floor")
+    minimum = raw_floor if isinstance(raw_floor, int) and not isinstance(raw_floor, bool) else 0
     words = floor.get("words")
-    stated = floor.get("floor_from") == "stated"
-    maximum: int | None
-    if isinstance(words, int) and not isinstance(words, bool) and words > 0:
-        maximum = (words * 12) // 1000
-        if maximum < 1:
-            maximum = 1
-    else:
-        maximum = None
-    if stated and maximum is not None and minimum > maximum:
-        maximum = minimum
-    if not stated and maximum is not None and minimum > maximum:
+    counted = words if isinstance(words, int) and not isinstance(words, bool) else None
+    maximum = cap_for_words(counted)
+    if maximum is not None and minimum > maximum:
         maximum = minimum
     return {
         "minimum": minimum,
         "maximum": maximum,
-        "words": words if isinstance(words, int) else None,
+        "words": counted,
         "from": floor.get("floor_from") or "",
     }
 

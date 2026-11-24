@@ -17,6 +17,7 @@ from helpers import (
     TOPIC,
     open_sequence,
     source,
+    store_confirmed_question,
     write_upload,
 )
 
@@ -165,6 +166,7 @@ def test_dig_card_digest_is_returned_and_a_confirm_without_it_is_refused(workspa
     """essay-copy-b2. The save names cardDigest. The words card digest are not in next."""
     _stub_empty_lookups(monkeypatch)
     seq = open_sequence()
+    store_confirmed_question(seq, "corridor")
     draft = essay_dig(seq, "corridor", "draft")
     assert draft["ok"] is True, draft
     assert draft["cardDigest"] == card_digest({"essay_id": seq, "query": "corridor"}, draft["card"])
@@ -183,6 +185,7 @@ def test_dig_card_digest_is_returned_and_a_confirm_without_it_is_refused(workspa
 def test_dig_legit_card_digest_confirms_and_a_local_shown_edit_is_refused(workspace, monkeypatch):
     _stub_empty_lookups(monkeypatch)
     seq = open_sequence()
+    store_confirmed_question(seq, "corridor")
     draft = essay_dig(seq, "corridor", "draft")
     record = _read_draft(seq, DIG_TOOL_DIR, draft["digest"])
 
@@ -215,6 +218,7 @@ def test_dig_legit_card_digest_confirms_and_a_local_shown_edit_is_refused(worksp
 def test_dig_old_draft_without_a_card_digest_cannot_be_confirmed(workspace, monkeypatch):
     _stub_empty_lookups(monkeypatch)
     seq = open_sequence()
+    store_confirmed_question(seq, "corridor")
     draft = essay_dig(seq, "corridor", "draft")
     record = _read_draft(seq, DIG_TOOL_DIR, draft["digest"])
     del record["cardDigest"]

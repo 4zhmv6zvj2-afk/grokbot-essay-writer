@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path
 
 from docx import Document
-from helpers import ESSAY, open_sequence
+from helpers import ESSAY, open_sequence, write_proof
 from test_first_draft_save import _plant_brief, _walk
 from test_first_draft_word import _lines, _save_intact
 from test_word_references_4a import (
@@ -50,7 +50,6 @@ from essay_writer.student_voice import student_surface_hits
 from essay_writer.word_references import stage10_reference_block
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 HYPHEN = "\u2010"
 PLAIN_NAME = "Bauer-Gottwein"
 MARK_NAME = f"Bauer{HYPHEN}Gottwein"
@@ -125,16 +124,6 @@ def _zip_docx(archive: Path, name: str) -> str:
     return "\n".join(paragraph.text for paragraph in Document(io.BytesIO(payload)).paragraphs)
 
 
-def _write_artifact(name: str, payload: str | bytes) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    target = ARTIFACTS / name
-    if isinstance(payload, bytes):
-        target.write_bytes(payload)
-        return
-    target.write_text(payload, encoding="utf-8")
-
-
 def _source() -> dict[str, str]:
     return {
         "id": "src-1",
@@ -181,8 +170,8 @@ def test_source_review_word_and_note_stay_plain(workspace):
     assert student_review_text(note) == note
     _assert_plain(note, word, zipped)
     assert has_critical_note(seq, source) is True
-    _write_artifact("source-review-first-line.txt", word.splitlines()[0] + "\n")
-    _write_artifact("source-review.docx", word_path.read_bytes())
+    write_proof("source-review-first-line.txt", word.splitlines()[0] + "\n")
+    write_proof("source-review.docx", word_path.read_bytes())
     assert workspace is not None
 
 
@@ -255,7 +244,7 @@ def test_a_draft_missing_an_author_name_is_not_finished(workspace):
     word = work_dir(seq) / "output" / f"{seq}.docx"
     assert not word.is_file()
     _assert_plain(str(held.get("reason") or ""), str(held.get("next") or ""))
-    _write_artifact(
+    write_proof(
         "draft-refused.txt",
         f"stored: false\nword_file_written: false\nreason: {held['reason']}\n",
     )
@@ -356,8 +345,8 @@ def test_close_matches_one_author_across_hyphen_spellings(workspace):
     assert MARK_NAME in text
     assert path.stat().st_size > 0
     _assert_plain(text)
-    _write_artifact("final-hyphen.docx", path.read_bytes())
-    _write_artifact("final-hyphen-first-lines.txt", "\n".join(text.splitlines()[:8]) + "\n")
+    write_proof("final-hyphen.docx", path.read_bytes())
+    write_proof("final-hyphen-first-lines.txt", "\n".join(text.splitlines()[:8]) + "\n")
     assert workspace is not None
 
 

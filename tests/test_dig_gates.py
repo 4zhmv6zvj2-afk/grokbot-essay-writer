@@ -6,7 +6,16 @@ import logging
 from pathlib import Path
 
 import pytest
-from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
+from helpers import (
+    ESSAY,
+    TOPIC,
+    card_digest_for,
+    open_sequence,
+    pack,
+    source,
+    store_confirmed_question,
+    write_upload,
+)
 
 from essay_writer import build_office
 from essay_writer.dig import (
@@ -102,6 +111,7 @@ def _lookup(monkeypatch, calls):
 
 def test_dig_card_is_local_and_does_not_invent(workspace, monkeypatch):
     seq = open_sequence()
+    store_confirmed_question(seq, "chokepoints")
     calls = {"consensus": 0}
     _lookup(monkeypatch, calls)
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "1")
@@ -139,6 +149,7 @@ def test_openalex_abstract_is_saved_when_there_is_no_pdf(workspace, monkeypatch)
     from essay_writer.dig import _save_openalex_abstracts
 
     seq = open_sequence()
+    store_confirmed_question(seq, "chokepoints")
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
 
     def fake(url, headers=None):
@@ -183,6 +194,7 @@ def test_openalex_abstract_is_saved_when_there_is_no_pdf(workspace, monkeypatch)
 
 def test_consensus_free_tier_is_recorded_without_echoing_the_key(workspace, monkeypatch):
     seq = open_sequence()
+    store_confirmed_question(seq, "ports")
     monkeypatch.setenv("ESSAY_WRITER_RESOLVERS", "live")
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "1")
     monkeypatch.setenv("CONSENSUS_API_KEY", "free-key")
@@ -202,6 +214,7 @@ def test_consensus_free_tier_is_recorded_without_echoing_the_key(workspace, monk
 
 def test_key_present_turns_consensus_on_for_dig(workspace, monkeypatch):
     seq = open_sequence()
+    store_confirmed_question(seq, "chokepoints")
     calls = {"consensus": 0}
     _lookup(monkeypatch, calls)
     monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
@@ -250,6 +263,7 @@ def test_key_present_turns_consensus_on_for_dig(workspace, monkeypatch):
 
 def test_missing_key_leaves_consensus_off_for_dig(workspace, monkeypatch):
     seq = open_sequence()
+    store_confirmed_question(seq, "ports")
     calls = {"consensus": 0}
     _lookup(monkeypatch, calls)
     monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
@@ -393,6 +407,7 @@ def test_the_dig_card_and_reply_name_a_refusal():
 
 def test_confirm_without_draft_writes_nothing_when_consensus_is_on(workspace, monkeypatch):
     seq = open_sequence()
+    store_confirmed_question(seq, "chokepoints")
     calls = {"consensus": 0}
     _lookup(monkeypatch, calls)
     monkeypatch.delenv("ESSAY_WRITER_CONSENSUS", raising=False)
@@ -489,6 +504,7 @@ def test_consensus_rule_is_shared_by_settings_briefings_and_both_shells():
 
 def test_consensus_kill_switch_skips_the_call_and_reminds(workspace, monkeypatch):
     seq = open_sequence()
+    store_confirmed_question(seq, "ports")
     calls = {"consensus": 0}
     _lookup(monkeypatch, calls)
     monkeypatch.setenv("ESSAY_WRITER_CONSENSUS", "0")

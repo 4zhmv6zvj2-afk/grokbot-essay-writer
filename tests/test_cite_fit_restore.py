@@ -141,7 +141,9 @@ def test_ac1_failed_swap_leaves_a_gap_and_snapshot_restore_does_not_put_it_back(
             "essay_id": seq,
             "stage": "6",
             "confirmPhase": "draft",
-            "look": _cited("Beldad", "2019").replace("(Beldad, 2019)", "(Beldad, 2019; Nobody, 1999)"),
+            "look": _cited("Beldad", "2019").replace(
+                "(Beldad, 2019)", "(Beldad, 2019; Nobody, 1999)"
+            ),
             "answers": "swap Beldad for Nobody",
         },
     )

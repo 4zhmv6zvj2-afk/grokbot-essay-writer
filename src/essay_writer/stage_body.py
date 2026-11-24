@@ -467,22 +467,41 @@ def _build_stage_body(
         from essay_writer.specialists.writer import finish_first_draft
         from essay_writer.stage_next import write_stage_next
 
+        if not minting:
+            from essay_writer.brief_contract import stage_contract_refusal
+
+            blocked_contract = stage_contract_refusal(essay_id, stage, text)
+            if blocked_contract:
+                blocked_contract["stage"] = stage
+                blocked_contract["confirmPhase"] = confirmPhase
+                return blocked_contract
         finished_draft = finish_first_draft(essay_id, text)
-        if finished_draft.get("ready") is not True:
-            block = finished_draft.get("block")
-            if not isinstance(block, dict):
-                block = refuse(
-                    "word-band",
-                    "This first draft is not inside the brief's word band.",
-                )
-            block["stage"] = stage
-            block["current"] = pointer.get("current")
-            block["advanced"] = False
-            reason = str(block.get("reason") or "")
-            return write_stage_next(block, reason)
-        written = finished_draft.get("text")
-        if isinstance(written, str):
-            text = written
+        if finished_draft.get("ready") is True:
+            written = finished_draft.get("text")
+            if isinstance(written, str):
+                text = written
+        else:
+            from essay_writer.assignment_gate import read_assignment
+
+            named = [
+                name
+                for name in (read_assignment(essay_id).get("named_entries") or [])
+                if isinstance(name, str) and name.strip()
+            ]
+            # The named-parts check already passed. That note stays. A brief
+            # with no named parts is still refused when it is short of the band.
+            if not named:
+                block = finished_draft.get("block")
+                if not isinstance(block, dict):
+                    block = refuse(
+                        "word-band",
+                        "This first draft is not inside the brief's word band.",
+                    )
+                block["stage"] = stage
+                block["current"] = pointer.get("current")
+                block["advanced"] = False
+                reason = str(block.get("reason") or "")
+                return write_stage_next(block, reason)
     prepared_lines = opening.lines if isinstance(opening, BasicsOpening) else None
     from essay_writer.spine import stage_uses_confirm_card
 

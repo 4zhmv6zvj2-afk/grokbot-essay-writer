@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from helpers import open_sequence
+from helpers import open_sequence, store_confirmed_question
 
 from essay_writer.cursor_office import stage_host_launch
 from essay_writer.dig import consensus_api_key, essay_dig
@@ -164,6 +164,7 @@ def test_ew_hunt_s1_ac1(case_id, tmp_path, monkeypatch):
     monkeypatch.setattr("essay_writer.dig._get_json", fake_get)
     monkeypatch.setattr("essay_writer.resolvers._lookup_json", fake_lookup)
     seq = open_sequence()
+    store_confirmed_question(seq, "chokepoints")
     draft = essay_dig(seq, "chokepoints", "draft")
     assert draft["ok"] is True, draft
     assert draft["consensus"]["key_present"] is True

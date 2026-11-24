@@ -150,12 +150,59 @@ def _source_texts(essay_id: str, pack: dict[str, Any]) -> list[str]:
     return texts
 
 
+def _lookup_record(essay_id: str, locator: str, path: str) -> dict[str, Any] | None:
+    """Stored research row for this locator. A missing row adds no author or year."""
+    try:
+        from essay_writer.state import load_state
+
+        state = load_state(essay_id)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(state, dict):
+        return None
+    research = state.get("research")
+    if not isinstance(research, dict):
+        return None
+    allowed: dict[str, dict[str, Any]] = {}
+    for depth in ("summary", "full"):
+        block = research.get(depth)
+        if not isinstance(block, dict):
+            continue
+        for item in block.get("sources") or []:
+            found = item.get("locator") if isinstance(item, dict) else None
+            if isinstance(item, dict) and isinstance(found, str) and found:
+                allowed[found] = item
+    for key in (locator, path):
+        record = allowed.get(key)
+        if isinstance(record, dict):
+            return record
+    return None
+
+
+def _cited_author_year(
+    source: dict[str, Any], record: dict[str, Any] | None
+) -> tuple[str, str] | None:
+    author = source.get("author")
+    year = source.get("year")
+    if not isinstance(author, str) or not author.strip():
+        author = record.get("author") if isinstance(record, dict) else None
+    if not isinstance(year, str) or not year.strip():
+        year = record.get("year") if isinstance(record, dict) else None
+    if isinstance(author, str) and author.strip() and isinstance(year, str) and year.strip():
+        return author.strip(), year.strip()
+    return None
+
+
 def _source_texts_with_cite(essay_id: str, pack: dict[str, Any]) -> list[tuple[str, str | None]]:
     """Each gathered source text with the in-text citation its author-year gives.
 
-    A source is cited only by the short form stored for its source id. When the
-    citation list has not been written, no citation is added. Nothing is invented.
+    A citation-list entry stays authoritative. When the list has no entry for
+    this source, the short form comes from the source's stored author and year,
+    or from the stored look-up record when the source omits them. A source
+    with no stored author or year has no citation, and the stretch does not
+    append a sentence from it. Nothing is invented.
     """
+    from essay_writer.citation_list import short_in_text, stored_in_text
     from essay_writer.invent import read_gathered_text
 
     out: list[tuple[str, str | None]] = []
@@ -180,9 +227,11 @@ def _source_texts_with_cite(essay_id: str, pack: dict[str, Any]) -> list[tuple[s
             continue
         if not isinstance(text, str) or not text.strip():
             continue
-        from essay_writer.citation_list import list_written, stored_in_text
-
-        citation = stored_in_text(essay_id, source) if list_written(essay_id) else None
+        citation = stored_in_text(essay_id, source)
+        if not citation:
+            pair = _cited_author_year(source, _lookup_record(essay_id, locator, str(path)))
+            if pair is not None:
+                citation = short_in_text(pair[0], pair[1]) or None
         out.append((text, citation))
     return out
 

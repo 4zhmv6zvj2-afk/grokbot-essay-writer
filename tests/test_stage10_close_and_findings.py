@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 
 from docx import Document
-from helpers import open_sequence, picked
+from helpers import open_sequence, picked, write_proof
 from test_word_references_4a import (
     MODULE,
     NUMBER,
@@ -46,25 +46,13 @@ from essay_writer.word import write_first_draft_word
 from essay_writer.word_references import _line_covers_cite, cite_reference_gaps, token_is_covered
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 HYPHEN = "\u2010"
 NOTE = "The opened file states the limit, and the year is the one stored on the list."
-# Opaque ids. A hit reports the id, not the phrase.
 _DENY = {
     "h-1": "c0b7e932ecce97879ac9e9a94cc8d2af82adccf03fdf1bfa8a854f4dc7abf6ba",
     "h-2": "b59e69febb78bfb221db05c452f1e98d4f14a50edde0c7ec8754dda5a7575a9e",
     "h-3": "f73d3f95d9fedff94a4a4b54b65bb5b2794170c702e6b3ab3fd35783050faed8",
 }
-
-
-def _proof(name: str, payload: str | bytes) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    target = ARTIFACTS / name
-    if isinstance(payload, bytes):
-        target.write_bytes(payload)
-        return
-    target.write_text(payload, encoding="utf-8")
 
 
 def _docx_text(path: Path) -> str:
@@ -206,7 +194,7 @@ def test_stage10_stores_the_close_and_writes_the_final_file(workspace, monkeypat
     assert "(Beare et al., 2013)" in text
     assert "(Keith et al., 2026)" in text
     assert "(Froese and Quaas, 2012)" in text
-    _proof(
+    write_proof(
         "stage10-close-response.txt",
         json.dumps(
             {
@@ -219,8 +207,8 @@ def test_stage10_stores_the_close_and_writes_the_final_file(workspace, monkeypat
         )
         + "\n",
     )
-    _proof("stage10-final.docx", final.read_bytes())
-    _proof("stage10-year-distances.txt", json.dumps(distances, indent=2) + "\n")
+    write_proof("stage10-final.docx", final.read_bytes())
+    write_proof("stage10-year-distances.txt", json.dumps(distances, indent=2) + "\n")
     assert workspace is not None
 
 
@@ -268,7 +256,7 @@ def test_an_unlisted_citation_does_not_write_the_final_file(workspace):
     pointer = load_pointer(seq)
     assert pointer["current"] == "10"
     assert pointer["closed"] is False
-    _proof("stage10-unlisted-refusal.txt", str(refused.get("reason") or "") + "\n")
+    write_proof("stage10-unlisted-refusal.txt", str(refused.get("reason") or "") + "\n")
     assert workspace is not None
 
 
@@ -316,7 +304,7 @@ def test_a_missing_reference_line_is_refused_and_a_hyphen_still_writes(workspace
     assert not list((work_dir(other) / "output").rglob("*-final.docx"))
     assert final.read_bytes() == before
     assert working.read_bytes() == working_before
-    _proof("stage10-missing-line-refusal.txt", str(refused.get("reason") or "") + "\n")
+    write_proof("stage10-missing-line-refusal.txt", str(refused.get("reason") or "") + "\n")
     assert workspace is not None
 
 
@@ -376,8 +364,8 @@ def test_findings_word_uses_overall_judgement(workspace, tmp_path):
     opened = _docx_text(path)
     assert opened.splitlines()[1].strip() == "Overall judgement"
     assert _leaked(opened) == []
-    _proof("findings-first-lines.txt", "\n".join(opened.splitlines()[:6]) + "\n")
-    _proof("findings.docx", path.read_bytes())
+    write_proof("findings-first-lines.txt", "\n".join(opened.splitlines()[:6]) + "\n")
+    write_proof("findings.docx", path.read_bytes())
     assert workspace is not None
 
 
@@ -443,7 +431,7 @@ def test_other_student_word_files_stay_plain(workspace, monkeypatch, tmp_path):
     final_text = _docx_text(final)
     assert _leaked(final_text) == []
     scanned.append(final.name)
-    _proof("student-word-scan.txt", "\n".join(scanned) + "\n")
+    write_proof("student-word-scan.txt", "\n".join(scanned) + "\n")
     assert workspace is not None
 
 
