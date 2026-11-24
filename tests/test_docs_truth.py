@@ -95,6 +95,21 @@ def test_student_readme_tour_names_the_run_and_the_real_word_places() -> None:
         assert (ROOT / name).is_file(), name
 
 
+def test_the_runbook_is_linked_and_names_the_commands() -> None:
+    """The five-minute check, the support bundle, and the hotfix are copy-paste commands."""
+    runbook = _read("docs/runbook.md")
+    assert f"uv run python tools/check_release_version.py --tag v{__version__}" in runbook
+    assert "uv run essay-writer --health" in runbook
+    assert "essay-writer --support-bundle" in runbook
+    assert "essay-writer --debug-export" in runbook
+    assert "superseded" in runbook
+    assert "Do not replace" in runbook
+    assert "Do not move or delete the tag." in runbook
+    assert "docs/runbook.md" in _read("README.md")
+    assert "docs/runbook.md" in _read("CONTRIBUTING.md")
+    assert (ROOT / "docs/runbook.md").is_file()
+
+
 def test_confirm_gate_overclaims_are_gone() -> None:
     readme = _read("README.md")
     assert "Nothing is saved until the Confirm" not in readme

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The runbook says how to check a release in five minutes, what to ask a student for, and how a bad immutable release is superseded by a new patch. The old assets stay.
 - A student install records one metadata line for a refusal, an unhandled exception, and a fallback, even when debug is off. The line stores a stable code and, for an exception, the class. It does not store essay text. `incident.jsonl` is mode 0600 and rotates to `incident.jsonl.1`. `essay.debug.wipe` removes both. `essay-writer --support-bundle` writes `support.zip`.
 - A debug export replaces the value of every secret name, including a password, a token, and an API key. The name stays. The value is not in the zip.
 - A look-up that times out, is rate limited, or gets a server error is tried up to three times. A write is tried once. A failed read names the next step and does not leave a partial file.

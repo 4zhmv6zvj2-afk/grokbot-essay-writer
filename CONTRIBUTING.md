@@ -62,6 +62,8 @@ contract pins, and the snapshot.
 - [docs/GLOSSARY.md](docs/GLOSSARY.md) — the private vocabulary (doors, seats,
   spine, shelf, dig, canon, mid-office).
 - [HISTORY.md](HISTORY.md) — why the public history starts with an import.
+- [docs/runbook.md](docs/runbook.md) — the five-minute release check, a student
+  report, and what to do with a bad immutable release.
 
 `uv.lock` is the developer lockfile. `requirements-ci.txt` is the hash-pinned CI
 environment, `requirements-build.txt` pins the build tooling, and

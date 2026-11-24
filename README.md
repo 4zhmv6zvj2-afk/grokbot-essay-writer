@@ -300,7 +300,9 @@ spine, shelf, dig, canon, mid-office). The
 page is the same vocabulary in plain English. [docs/testing.md](docs/testing.md)
 covers how the suite is organised and how the prompt snapshot is regenerated.
 [docs/operator-log.md](docs/operator-log.md) documents the operator debug log,
-the event stream, and the internal environment overrides; and
+the event stream, and the internal environment overrides.
+[docs/runbook.md](docs/runbook.md) is the five-minute release check, the student
+support bundle, and the immutable-release hotfix.
 [docs/writing-type-checklist.md](docs/writing-type-checklist.md) lists what a
 new writing type must map before it can be saved.
 
