@@ -83,7 +83,11 @@ def phase_refusal(phase: object) -> dict[str, Any] | None:
             "confirm",
             "This step has not been shown yet. Ask me to show it, then save.",
         )
-    return refuse("confirm", "That step was not shown in a form this chat can save.")
+    return refuse(
+        "confirm",
+        "That step was not shown in a form this chat can save.",
+        next="Ask me to show this step again, then save.",
+    )
 
 
 def _draft_path(essay_id: str, tool: str, payload_digest: str, root: Path | None = None):

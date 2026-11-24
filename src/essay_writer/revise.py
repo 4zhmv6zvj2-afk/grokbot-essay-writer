@@ -49,7 +49,9 @@ def essay_revise(
         return blocked
     if not isinstance(message, str) or not message.strip():
         return refuse(
-            "revise", "message says what to change. The door does not invent the revision."
+            "revise",
+            "message says what to change. The door does not invent the revision.",
+            next="Say what to change.",
         )
     state = load_state(essay_id)
     has_research = any((state.get("research") or {}).get(depth) for depth in ("summary", "full"))

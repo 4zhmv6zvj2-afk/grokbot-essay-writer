@@ -1387,9 +1387,19 @@ def essay_dig(
         from essay_writer.model_contract import ContractRefusal, parse_smaller_questions
 
         parsed_smaller = parse_smaller_questions(smallerQuestions, question)
-        reply = (
-            None if isinstance(parsed_smaller, ContractRefusal) else list(parsed_smaller.questions)
-        )
+        if isinstance(parsed_smaller, ContractRefusal):
+            from essay_writer.incident import note
+
+            note(
+                "smaller-questions",
+                severity="info",
+                disposition="fallback",
+                tool="dig",
+                step="gather",
+            )
+            reply = None
+        else:
+            reply = list(parsed_smaller.questions)
         card = _build_floor_card(question, essay_id, reply)
         card["query"] = query
         body = _dig_reply(essay_id, query, confirmPhase, card)

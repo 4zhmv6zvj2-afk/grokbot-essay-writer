@@ -77,9 +77,13 @@ def essay_shelf_put(
     if blocked:
         return blocked
     if not isinstance(pack, dict):
-        return refuse("pack", "pack must be an object")
+        return refuse("pack", "pack must be an object", next="Send the pack as an object.")
     if pack_id is not None and _clean_id(pack_id) is None:
-        return refuse("shelf", "pack_id has characters the local shelf will not store")
+        return refuse(
+            "shelf",
+            "pack_id has characters the local shelf will not store",
+            next="Use a pack id this shelf can store.",
+        )
     if (
         isinstance(topic, str)
         and topic.strip()
@@ -173,15 +177,25 @@ def essay_shelf_get(
         return blocked
     cleaned = _clean_id(pack_id)
     if cleaned is None:
-        return refuse("shelf", "pack_id is not a local shelf id")
+        return refuse(
+            "shelf", "pack_id is not a local shelf id", next="Choose a pack id from this shelf."
+        )
     path = _shelf_file(essay_id, cleaned)
     if not path.is_file():
-        return refuse("shelf", "no shelf pack for this essay id")
+        return refuse(
+            "shelf", "no shelf pack for this essay id", next="Choose a pack that is on this shelf."
+        )
     record = read_json(path)
     if record is None:
-        return refuse("shelf", "no shelf pack for this essay id")
+        return refuse(
+            "shelf", "no shelf pack for this essay id", next="Choose a pack that is on this shelf."
+        )
     if record.get("essay_id") != essay_id:
-        return refuse("cross-essay", "that shelf record is not this essay")
+        return refuse(
+            "cross-essay",
+            "that shelf record is not this essay",
+            next="Choose a pack saved for this essay.",
+        )
     payload = {"essay_id": essay_id, "pack_id": cleaned}
     fingerprint = {"sha256": file_sha256(path)}
     body: dict[str, object] = {

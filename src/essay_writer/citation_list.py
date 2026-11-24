@@ -903,6 +903,7 @@ def attach_note(essay_id: str, source_id: str, prose: str) -> dict[str, Any]:
             "citation-list",
             "That source is not on the citation list. Nothing was written.",
             wrote=False,
+            next="Add that source to the citation list, then try this step again.",
         )
     note = _text(target.get("note"))
     if not note:
@@ -912,6 +913,7 @@ def attach_note(essay_id: str, source_id: str, prose: str) -> dict[str, Any]:
             "citation-list",
             "That list entry has no research note to point at. Nothing was written.",
             wrote=False,
+            next="Add a research note for that source, then try again.",
         )
     path = _resolve_note(note)
     replace_text(path, prose if prose.endswith("\n") else prose + "\n", mkdir=True)

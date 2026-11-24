@@ -9,6 +9,28 @@ from essay_writer.paths import CLOUD_WORKSPACE
 from essay_writer.setup import essay_setup
 
 
+def test_a_setup_record_in_the_checkout_is_a_refusal(tmp_path, monkeypatch):
+    checkout = tmp_path / "checkout"
+    (checkout / "src" / "essay_writer").mkdir(parents=True)
+    (checkout / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
+    monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", tmp_path / "missing")
+    monkeypatch.setattr("essay_writer.known_paths.repo_root", lambda: checkout)
+    app = checkout / "Essay-writer"
+    kb1 = tmp_path / "KB1"
+    kwargs = {
+        "app_path": str(app),
+        "kb1_path": str(kb1),
+        "acknowledge_skipped_searches": True,
+    }
+    draft = essay_setup(confirmPhase="draft", **kwargs)
+    assert draft["ok"] is True, draft
+    refused = essay_setup(confirmPhase="confirm", **kwargs)
+    assert refused["ok"] is False
+    assert refused["refused"] == "setup"
+    assert "folder" in refused["reason"].casefold()
+
+
 def test_setup_draft_writes_nothing_and_confirm_builds_the_door_tree(tmp_path, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_ROOT", str(tmp_path / "ledger"))
     cloud = tmp_path / "cloud"

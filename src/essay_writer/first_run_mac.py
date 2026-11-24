@@ -147,8 +147,13 @@ def _take_upgrade_reread_card(root: Path) -> str | None:
             return None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        replace_text(path, json.dumps({"shown": True}, indent=2) + "\n")
-    except OSError:
+        # Install state, not a student save. A checkout-shaped install keeps the dotfile.
+        replace_text(
+            path,
+            json.dumps({"shown": True}, indent=2) + "\n",
+            host_config=True,
+        )
+    except (OSError, RepoSaveRefused):
         return UPGRADE_REREAD_SPEECH
     return UPGRADE_REREAD_SPEECH
 

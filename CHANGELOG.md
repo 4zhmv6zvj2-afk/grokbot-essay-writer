@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A new saved file is published as 0644. A file that already exists keeps its mode. A path inside the code checkout is refused, except the host attach files and the upgrade re-read marker the installer writes. A fallback writes one metadata line to incident.jsonl. A damaged incident line or stage pointer does not stop the student. A refused checkout path does not leave a new directory. A mid-run status write and a setup record inside the checkout return a reply instead of a tool error. An encourage answer that cannot be saved asks the same question again. A refusal names the next step.
 - A saved file is replaced as a whole. A crash before the rename leaves the previous file. Sequence state is written before its pointer, and the next load finishes a stage pair whose pointer did not land.
 
 ## 0.9.19 — 2026-11-24

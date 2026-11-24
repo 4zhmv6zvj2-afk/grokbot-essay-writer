@@ -510,7 +510,8 @@ def _build_stage_body(
                 if not isinstance(block, dict):
                     block = refuse(
                         "word-band",
-                        "This first draft is not inside the brief's word band.",
+                        "This first draft is not inside the brief's word band. "
+                        "Change the draft so it fits the brief, then save again.",
                     )
                 block["stage"] = stage
                 block["current"] = pointer.get("current")

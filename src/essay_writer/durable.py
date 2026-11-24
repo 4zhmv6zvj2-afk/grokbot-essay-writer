@@ -8,8 +8,13 @@ outside this function.
 from __future__ import annotations
 
 import os
+import stat
 import tempfile
 from pathlib import Path
+
+# A new file is readable by the student. mkstemp creates the temp as 0600,
+# and that mode is replaced before the rename. An existing file keeps its mode.
+NEW_FILE_MODE = 0o644
 
 
 def _write_all(fd: int, data: bytes) -> None:
@@ -35,16 +40,34 @@ def _fsync_dir(directory: Path) -> None:
         os.close(fd)
 
 
-def replace_bytes(path: Path, data: bytes) -> None:
+def _publish_mode(target: Path) -> int:
+    """The mode the published file keeps. A new file is 0644."""
+    if target.is_symlink():
+        return NEW_FILE_MODE
+    try:
+        if target.is_file():
+            return stat.S_IMODE(target.stat().st_mode)
+    except OSError:
+        return NEW_FILE_MODE
+    return NEW_FILE_MODE
+
+
+def replace_bytes(path: Path, data: bytes, *, host_config: bool = False) -> None:
     """Publish ``data`` as ``path``. The previous file stays until replace.
 
-    This does not decide whether the path is a student save. Doors that save
-    student work call ``refuse_repo_write`` themselves. Host config inside
-    the install is not a student save.
+    A path inside the code checkout is refused. ``host_config`` is the
+    exception for Cursor and Grok attach files written into the install.
+    The published mode is the previous file's mode, or 0644 when the file
+    is new. Secret files do not use this function.
     """
     target = Path(path)
+    if not host_config:
+        from essay_writer.known_paths import refuse_repo_write
+
+        refuse_repo_write(target)
     if not target.parent.is_dir():
         raise FileNotFoundError(target.parent)
+    mode = _publish_mode(target)
     descriptor, name = tempfile.mkstemp(
         prefix=f".{target.name}.",
         suffix=".tmp",
@@ -55,6 +78,7 @@ def replace_bytes(path: Path, data: bytes) -> None:
     try:
         _write_all(descriptor, data)
         os.fsync(descriptor)
+        os.fchmod(descriptor, mode)
         fd = descriptor
         descriptor = -1
         os.close(fd)
@@ -69,9 +93,19 @@ def replace_bytes(path: Path, data: bytes) -> None:
         raise
 
 
-def replace_text(path: Path, text: str, *, mkdir: bool = False) -> None:
+def replace_text(
+    path: Path,
+    text: str,
+    *,
+    mkdir: bool = False,
+    host_config: bool = False,
+) -> None:
     """Publish UTF-8 text. ``mkdir`` creates the parent when the store is new."""
     target = Path(path)
+    if not host_config:
+        from essay_writer.known_paths import refuse_repo_write
+
+        refuse_repo_write(target)
     if mkdir:
         target.parent.mkdir(parents=True, exist_ok=True)
-    replace_bytes(target, text.encode("utf-8"))
+    replace_bytes(target, text.encode("utf-8"), host_config=host_config)

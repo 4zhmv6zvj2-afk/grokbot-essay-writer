@@ -335,6 +335,7 @@ def essay_projects(view: str, module: str | None = None) -> dict[str, Any]:
         return refuse(
             "projects",
             "view must be continue, roll-forward, archive, delete, or unarchive.",
+            next="Send view as continue, roll-forward, archive, delete, or unarchive.",
         )
     if view == "continue":
         rows = [_continue_row(module) for module in modules_on_disk() if not is_archived(module)]
@@ -553,6 +554,7 @@ def _coerce_local_paths(local_paths: object) -> tuple[list[str], dict[str, Any] 
                 return [], refuse(
                     "delete",
                     "Each path must be a Word file or a zip on your computer. Nothing was removed.",
+                    next="Name a Word file or a zip on this computer.",
                 )
             paths.append(item.strip())
         return paths, None
@@ -595,6 +597,7 @@ def _local_pin(raw: str) -> dict[str, Any]:
             "delete",
             "That path is not a named file on this computer. Nothing was removed.",
             path=str(expanded),
+            next="Name a file on this computer.",
         )
     if _linked(expanded):
         return refuse(
@@ -620,6 +623,7 @@ def _local_pin(raw: str) -> dict[str, Any]:
             "delete",
             "That file is in this essay workspace. It is not a copy on your computer. Nothing was removed.",
             path=str(expanded),
+            next="Name a copy on this computer, outside the essay folder.",
         )
     if expanded.is_dir():
         return refuse(
@@ -1083,6 +1087,7 @@ def essay_project_delete(
                 where=chosen,
                 confirmPhase=CONFIRM,
                 removed_local=removed,
+                next="Name the files again. The essay folder was left in place.",
             )
         body["removed_local"] = removed
         body["deleted_local"] = True
@@ -1412,7 +1417,9 @@ def essay_sequence_new(
         parsed = parse_sequence_id(parent)
         if parsed is None or parsed[0] != module:
             return refuse(
-                "sequence", "parent must be a sequence id of this module, such as MOD1011AA-5."
+                "sequence",
+                "parent must be a sequence id of this module, such as MOD1011AA-5.",
+                next="Name a sequence in this module, such as MOD1011AA-5.",
             )
         parent_number = parsed[1]
         parent_id = sequence_id(module, parent_number)

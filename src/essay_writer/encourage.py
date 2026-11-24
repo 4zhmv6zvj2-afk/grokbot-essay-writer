@@ -9,6 +9,7 @@ until this one is answered or skipped.
 
 from __future__ import annotations
 
+import copy
 import re
 from typing import Any
 
@@ -411,6 +412,15 @@ def attach_plan_encourage(body: dict[str, Any], essay_id: str, plan_text: str) -
     try:
         _save(essay_id, record)
     except OSError:
+        from essay_writer.incident import note
+
+        note(
+            "encourage-unwritten",
+            severity="warn",
+            disposition="fallback",
+            tool="encourage",
+            step="plan",
+        )
         return body
     ask = _current_ask(essay_id, record)
     if ask is None:
@@ -501,6 +511,7 @@ def answer_encourage(essay_id: str, choice: str | None) -> dict[str, Any]:
     kind, value = _classify(choice or "", ask["options"])
     if kind in {"silence", "unknown"}:
         return _reply(essay_id, record, silence=kind == "silence", accepted=False)
+    shown = copy.deepcopy(record)
     slot = ask["id"]
     slots = record["slots"]
     if kind == "skip":
@@ -518,12 +529,22 @@ def answer_encourage(essay_id: str, choice: str | None) -> dict[str, Any]:
     else:
         return _reply(essay_id, record, silence=False, accepted=False)
     record["slots"] = slots
-    _advance(record)
+    advanced = copy.deepcopy(record)
+    _advance(advanced)
     try:
-        _save(essay_id, record)
+        _save(essay_id, advanced)
     except OSError:
-        return _reply(essay_id, record, silence=False, accepted=False)
-    return _reply(essay_id, record, silence=False, accepted=True)
+        from essay_writer.incident import note
+
+        note(
+            "encourage-unwritten",
+            severity="warn",
+            disposition="fallback",
+            tool="encourage",
+            step="answer",
+        )
+        return _reply(essay_id, shown, silence=False, accepted=False)
+    return _reply(essay_id, advanced, silence=False, accepted=True)
 
 
 def _section_labels(options: object) -> list[str]:

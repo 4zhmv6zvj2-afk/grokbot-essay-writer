@@ -81,7 +81,11 @@ def essay_review(
     if id_error:
         return refuse("essay-id", id_error)
     if stage not in STAGES:
-        return refuse("review", "EQR stage is 6 (first Word) or 9 (final Word).")
+        return refuse(
+            "review",
+            "EQR stage is 6 (first Word) or 9 (final Word).",
+            next="Send stage 6 or stage 9.",
+        )
     from essay_writer.model_contract import ContractRefusal, parse_verdict
 
     parsed_verdict = parse_verdict(verdict)
@@ -98,11 +102,16 @@ def essay_review(
 
     opened = open_finished_word(essay_id)
     if opened.get("unreadable"):
-        return refuse("review", "The saved Word file could not be opened. Nothing was recorded.")
+        return refuse(
+            "review",
+            "The saved Word file could not be opened. Nothing was recorded.",
+            next="Ask me to open the saved Word file again.",
+        )
     if opened.get("exists") and not opened.get("opened"):
         return refuse(
             "review",
             "The finished Word file is saved and was not opened. Nothing was recorded.",
+            next="Ask me to open the finished Word file.",
         )
     saved_look = None
     if stage == "6" and not opened.get("opened"):
@@ -128,6 +137,7 @@ def essay_review(
             return refuse(
                 "review",
                 "Stage 9 checks the opened Word file. Nothing was recorded.",
+                next="Open the Word file, then ask for this check again.",
             )
         blocked_gate = opened_word_gate(
             essay_id, judged_word if isinstance(judged_word, str) else ""
@@ -144,7 +154,7 @@ def essay_review(
             if intact_saved_first_draft(essay_id) is None:
                 return refuse(
                     "review",
-                    "The saved first draft is not intact. Nothing was recorded.",
+                    "The saved draft is not intact. Ask me to show this step again.",
                 )
             judged = saved_look
         else:
@@ -153,6 +163,7 @@ def essay_review(
             return refuse(
                 "review",
                 "Stage 6 only checks whether the draft answers the assignment question. Nothing was recorded.",
+                next="Ask the question check again. Nothing was recorded.",
             )
     top_band = None
     if verdict == "PASS" and stage == "9":
@@ -176,6 +187,7 @@ def essay_review(
                 "review",
                 "The opened Word file has no citations. Nothing was recorded.",
                 top_band=top_band,
+                next="Add the citations, then ask for this check again.",
             )
     if verdict == "PASS" and opened.get("opened") is True:
         from essay_writer.harvard_ref_check import clear_reference_findings
@@ -253,12 +265,19 @@ def essay_review(
 
         saved_draft = intact_saved_first_draft(essay_id)
         if not isinstance(saved_draft, str) or not saved_draft.strip():
-            return refuse("review", "not-intact")
+            return refuse(
+                "review",
+                "The saved draft is not intact. Ask me to show this step again.",
+            )
         written = write_first_draft_word(essay_id)
         if written.get("wrote") is not True:
             reason = written.get("reason")
-            if not isinstance(reason, str) or not reason:
-                reason = "not-intact"
+            if reason == "already-saved":
+                reason = (
+                    "The first-draft Word file is already saved. Ask me to show the review again."
+                )
+            elif not isinstance(reason, str) or not reason or reason == "not-intact":
+                reason = "The saved draft is not intact. Ask me to show this step again."
             return refuse("review", reason, first_draft_word=written)
         draft_text = saved_draft
         first_draft_word = written

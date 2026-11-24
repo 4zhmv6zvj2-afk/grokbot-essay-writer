@@ -287,7 +287,15 @@ def _record_blank_pages(
         try:
             record_read_gaps(path.parent, fresh)
         except OSError:
-            return []
+            from essay_writer.incident import note
+
+            note(
+                "pdf-gap-unwritten",
+                severity="warn",
+                disposition="fallback",
+                tool="cite",
+                step="read",
+            )
     return fresh
 
 
@@ -316,7 +324,15 @@ def open_for_citation(path: Path, essay_id: str | None = None) -> OpenedPaper:
         try:
             record_read_gaps(target.parent, [gap])
         except OSError:
-            pass
+            from essay_writer.incident import note
+
+            note(
+                "pdf-gap-unwritten",
+                severity="warn",
+                disposition="fallback",
+                tool="cite",
+                step="read",
+            )
         return OpenedPaper("", (), None, None, True)
     page_texts = _page_texts(_mask_gaps(data, source_gaps))
     text = "\n".join(page for page in page_texts if page.strip())

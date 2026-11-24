@@ -782,7 +782,11 @@ def _stage_refusal(
                 stopped = refuse("word", MISSING_FINAL_WORD)
                 reason = stopped.get("reason")
                 return write_stage_next(stopped, say(reason if isinstance(reason, str) else ""))
-        return refuse("stage", "The last stage is already saved. This tool does not submit.")
+        return refuse(
+            "stage",
+            "The last stage is already saved. Ask me to show the finished step. "
+            "This tool does not submit.",
+        )
     window = _revisit_window(cast(dict[str, Any], pointer))
     if window and stage in {"2", "3"}:
         if stage == "3" and pointer.get("revisit_open") == "2":

@@ -60,7 +60,9 @@ def essay_originals(
     if error:
         return refuse("essay-id", error)
     if action not in {"list", "read"}:
-        return refuse("originals", "action must be list or read")
+        return refuse(
+            "originals", "action must be list or read", next="Send action as list or read."
+        )
     if kind not in {"upload", "brief"}:
         return refuse("originals", "kind must be upload or brief")
     if action == "list":
@@ -84,14 +86,24 @@ def essay_originals(
     except ValueError as exc:
         return refuse("cross-essay" if "escape" in str(exc) else "originals", str(exc))
     if kind == "brief" and path.name.lower() not in BRIEF_NAMES:
-        return refuse("originals", "brief read only opens brief.md, brief.txt, or brief.docx")
+        return refuse(
+            "originals",
+            "brief read only opens brief.md, brief.txt, or brief.docx",
+            next="Ask for brief.md, brief.txt, or brief.docx.",
+        )
     if not path.is_file():
-        return refuse("originals", "that file is not in this essay")
+        return refuse(
+            "originals", "that file is not in this essay", next="Name a file that is in this essay."
+        )
     try:
         from essay_writer.known_paths import research_file
 
         if research_file(essay_id, str(path)) is None:
-            return refuse("invented", "Do not invent a student folder path.")
+            return refuse(
+                "invented",
+                "Do not invent a student folder path.",
+                next="Name a folder you chose. I will not invent one.",
+            )
         text = read_gathered_text(path, essay_id)
     except ValueError as exc:
         return {

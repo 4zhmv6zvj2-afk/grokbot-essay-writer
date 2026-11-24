@@ -47,7 +47,9 @@ def test_review_without_a_word_file_does_not_invent_one(workspace):
     assert "not saved yet" in draft["findings"]
     recorded = essay_review(seq, "6", "PASS", "confirm")
     assert recorded["stored"] is not True
-    assert recorded.get("reason") == "not-intact"
+    assert (
+        recorded.get("reason") == "The saved draft is not intact. Ask me to show this step again."
+    )
     assert not (work_dir(seq) / "output" / f"{seq}.docx").exists()
 
 

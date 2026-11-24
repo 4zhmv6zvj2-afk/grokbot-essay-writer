@@ -134,6 +134,19 @@ def test_ac5_install_self_checks_essay_health(tmp_path):
     assert install_self_check()["tool"] == "essay.health"
 
 
+def test_the_upgrade_marker_is_written_inside_a_checkout(tmp_path, monkeypatch):
+    root = tmp_path / "checkout"
+    (root / "src" / "essay_writer").mkdir(parents=True)
+    (root / "pyproject.toml").write_text('[project]\nname = "essay-writer"\n', encoding="utf-8")
+    monkeypatch.setattr("essay_writer.known_paths.repo_root", lambda: root)
+    body = attach_friend_upgrade_fo_card({"ok": True}, root=root)
+    assert body["fo_card"] == UPGRADE_REREAD_SPEECH
+    marker = root / UPGRADE_REREAD_MARKER
+    assert json.loads(marker.read_text(encoding="utf-8"))["shown"] is True
+    again = attach_friend_upgrade_fo_card({"ok": True}, root=root)
+    assert "fo_card" not in again
+
+
 def test_ac6_one_shot_fo_card_without_student_install_speech(tmp_path):
     """AC6. One-shot FO card re-reads FIRST-RUN and bot.md; no student chat install steps."""
     root = tmp_path / "project"

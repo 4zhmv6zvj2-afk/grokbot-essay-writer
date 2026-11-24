@@ -117,6 +117,7 @@ def accept_card_pick(card_action: str | None):
             wrote=False,
             stored=False,
             advanced=False,
+            next="Say yes to save this step, or say not yet to leave it.",
         )
     return refuse(
         "confirm-card",
