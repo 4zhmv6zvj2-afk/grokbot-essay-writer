@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.20 — 2026-11-25
 
 - Contract pins fell from 727 to 545. The three heaviest files were the operator log, the stage launch, and the finished Word file. CI prints the 25 slowest tests. The quarantine list is empty.
 - The refusal table names files, and the test owns the codes. The shell's one ask is a prompt and host contract. Parsing the smaller questions stays code.

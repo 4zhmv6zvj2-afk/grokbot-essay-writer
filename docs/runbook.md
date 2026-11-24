@@ -38,7 +38,7 @@ A `state.json` that is not a JSON object is the existing damage refusal. The loa
 From the repository root, on the commit you are about to call the release:
 
 ```bash
-uv run python tools/check_release_version.py --tag v0.9.19
+uv run python tools/check_release_version.py --tag v0.9.20
 uv run essay-writer --health
 ```
 

@@ -260,7 +260,8 @@ def _snapshot(root: Path) -> dict[str, object]:
 def _changelog_bullets() -> list[str]:
     """The bullets under the 0.9.3 heading, up to the next release heading."""
     text = CHANGELOG.read_text(encoding="utf-8")
-    section = text.split("## 0.9.3", 1)[1].split("## 0.9.2", 1)[0]
+    section = re.split(r"^## 0\.9\.3(?!\d)", text, maxsplit=1, flags=re.M)[1]
+    section = re.split(r"^## 0\.9\.2(?!\d)", section, maxsplit=1, flags=re.M)[0]
     return [line for line in _lines(section) if line.startswith("- ")]
 
 
@@ -413,9 +414,12 @@ def test_neighbouring_names_stay_put(case_id, tmp_path):
         for bullet in bullets
     )
     released = CHANGELOG.read_text(encoding="utf-8")
-    intro_093 = released.split("## 0.9.3", 1)[1].split("## 0.9.2", 1)[0]
+    # A later patch such as 0.9.20 must not be read as 0.9.2.
+    intro_093 = re.split(r"^## 0\.9\.3(?!\d)", released, maxsplit=1, flags=re.M)[1]
+    intro_093 = re.split(r"^## 0\.9\.2(?!\d)", intro_093, maxsplit=1, flags=re.M)[0]
     assert "Brief gap lines, stored answers, cover rules" in intro_093
-    intro_092 = released.split("## 0.9.2", 1)[1].split("## 0.9.1", 1)[0]
+    intro_092 = re.split(r"^## 0\.9\.2(?!\d)", released, maxsplit=1, flags=re.M)[1]
+    intro_092 = re.split(r"^## 0\.9\.1(?!\d)", intro_092, maxsplit=1, flags=re.M)[0]
     assert "Setup defaults, damaged-record handling" in intro_092
 
 
