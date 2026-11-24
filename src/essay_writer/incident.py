@@ -14,7 +14,7 @@ import os
 import re
 import threading
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -65,9 +65,9 @@ def rotated_path() -> Path:
 
 
 @contextmanager
-def call_frame(tool: str, arguments: dict[str, Any] | None) -> Iterator[None]:
+def call_frame(tool: str, arguments: Mapping[str, Any] | None) -> Iterator[None]:
     """One door call. The same code is written once inside this frame."""
-    args = arguments if isinstance(arguments, dict) else {}
+    args = dict(arguments) if isinstance(arguments, Mapping) else {}
     frame = _Frame(tool if _TOKEN.fullmatch(tool) else "", _sequence(args), _stage_of(args))
     token = _FRAME.set(frame)
     try:

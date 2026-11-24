@@ -34,7 +34,7 @@ The app folder is `ESSAY_WRITER_ROOT` when it is set, otherwise the folder store
 
 Each line is one JSON object. It has the UTC time, the build commit, a prompt hash, the sequence id, the tool, the stage, a stable code, a disposition (`retry`, `fallback`, or `refuse`), and a severity (`error`, `warn`, or `info`). An exception line adds the exception class and the code `unhandled`. The message is empty unless it is exactly `Windows is not supported.` The line does not contain essay text, a prompt, chat, a file body, a path, or a secret value. `debug.log` and `ml-events.jsonl` stay the opt-in stream. Incident lines are not copied into them.
 
-`essay-writer --support-bundle` writes `support.zip` in the app folder. The zip contains the incident lines, `health.json` (version, build commit, prompt hash, and door names), `files.json` (sequence ids and SHA-256 values of state files, not the file contents), and `manifest.json` (counts, including soft incidents by code). Debug logs are added only when they were already on, and they pass through the same redaction as a debug export. A logging failure does not stop the student.
+`essay-writer --support-bundle` writes `support.zip` in the app folder. The zip contains the incident lines, `health.json` (version, build commit, prompt hash, and door names), `files.json` (sequence ids and SHA-256 values of state files, not the file contents), and `manifest.json` (counts, including soft incidents by code). `debug.log` and `ml-events.jsonl` are not members. Those files can contain the essay and paths, and redaction does not remove them. A logging failure does not stop the student.
 
 ## Environment overrides (operators and tests)
 

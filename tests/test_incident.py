@@ -271,6 +271,56 @@ def test_the_bundle_names_the_failure_and_hides_the_essay(workspace, monkeypatch
     assert '"build": "build-p910"' in record
 
 
+def test_a_door_exception_is_recorded_and_reraised(workspace, monkeypatch) -> None:
+    from essay_writer.server import HANDLERS
+    from essay_writer.specialists.grok_bot import front_office_call
+
+    def boom(**_kwargs: object) -> None:
+        raise RuntimeError(ESSAY)
+
+    monkeypatch.setitem(HANDLERS, "essay.health", boom)
+    with pytest.raises(RuntimeError, match="fisheries"):
+        front_office_call("essay.health", {"essay_id": "MOD1004AA-1", "stage": "3"})
+    row = _rows()[-1]
+    assert row["code"] == "unhandled"
+    assert row["exc"] == "RuntimeError"
+    assert row["tool"] == "essay.health"
+    assert row["stage"] == "3"
+    assert row["sequence"] == "MOD1004AA-1"
+    assert row["message"] == ""
+    assert ESSAY not in incident_path().read_text(encoding="utf-8")
+
+
+def test_two_door_calls_each_record_the_same_code(workspace, monkeypatch) -> None:
+    from essay_writer.server import HANDLERS
+    from essay_writer.specialists.grok_bot import front_office_call
+
+    def blocked(**_kwargs: object) -> dict:
+        return refuse("stage", "The saved state cannot be read.")
+
+    monkeypatch.setitem(HANDLERS, "essay.health", blocked)
+    front_office_call("essay.health", {})
+    front_office_call("essay.health", {})
+    assert [row["code"] for row in _rows()].count("stage") == 2
+
+
+def test_a_debug_log_stays_out_of_the_bundle(workspace, monkeypatch) -> None:
+    monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
+    planted = f"Query {ESSAY} see /private/tmp/student-work.docx.\n"
+    (workspace / "debug.log").write_text(planted, encoding="utf-8")
+    (workspace / "ml-events.jsonl").write_text(planted, encoding="utf-8")
+    exported = support_bundle()
+    assert exported["ok"] is True
+    with zipfile.ZipFile(workspace / "support.zip") as archive:
+        names = set(archive.namelist())
+        blob = b"\n".join(archive.read(name) for name in archive.namelist())
+    assert "debug.log" not in names
+    assert "ml-events.jsonl" not in names
+    text = blob.decode("utf-8")
+    assert ESSAY not in text
+    assert "/private/tmp" not in text
+
+
 def test_the_cli_writes_the_bundle(workspace, capsys) -> None:
     _plant("word-title-spare")
     main(["--support-bundle"])
@@ -310,6 +360,7 @@ def test_the_operator_doc_names_the_mode_and_the_dev_fallback() -> None:
     assert "mode 0600" in text
     assert "dev-only degradation" in text
     assert "incident.jsonl" in text
+    assert "are not members" in text
     ignored = (ROOT / ".gitignore").read_text(encoding="utf-8")
     assert "incident.jsonl" in ignored
     assert "incident.jsonl.1" in ignored

@@ -562,9 +562,10 @@ def support_bundle() -> dict[str, Any]:
     )
 
     try:
+        # Debug logs stay out of the zip. They can hold the essay and paths,
+        # and redaction does not remove either.
         redacted = [(name, redact_bytes(payload)) for name, payload in locked_incident_files()]
-        extra = _support_debug_members() if debug_enabled() else []
-        entries = pack_support_zip(incident_path().parent / BUNDLE_NAME, redacted, extra)
+        entries = pack_support_zip(incident_path().parent / BUNDLE_NAME, redacted, [])
     except Exception:
         return speak(
             {
@@ -585,23 +586,6 @@ def support_bundle() -> dict[str, Any]:
             "next": "Wrote the support bundle.",
         }
     )
-
-
-def _support_debug_members() -> list[tuple[str, bytes]]:
-    members: list[tuple[str, bytes]] = []
-    seen: set[str] = set()
-    for path in operator_log_paths():
-        if not path.is_file():
-            continue
-        name = path.name
-        if name in seen:
-            continue
-        seen.add(name)
-        try:
-            members.append((name, redact_bytes(path.read_bytes())))
-        except OSError:
-            continue
-    return members
 
 
 def _flag_on(raw: str | None) -> bool:
