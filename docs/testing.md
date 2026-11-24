@@ -57,11 +57,25 @@ compares the SHA-256 set.
 
 ## Contract pins
 
-Some tests use `inspect.getsource` to pin the exact rule strings the chat
-contract depends on. These are deliberately brittle: if a helper moves or a
-rule string changes, the pin fails and the diff is reviewed. When a helper
-moves, update the pin to the new helper and keep the behavioural assert. If a
-rule string changes intentionally, update the snapshot with
+`tools/pin_audit.py` is a read-only scan of `tests/`. It prints one line per
+pin, `file:line | kind | target`, and a count. The kind is `getsource`,
+`docstring`, `source-string`, `test-of-test`, or `filename-pin`. It always
+exits 0.
+
+```bash
+python tools/pin_audit.py
+```
+
+When a change touches a file that has a pin, replace that pin with an
+assertion on the observable artifact: the tool reply, the student text, the
+docx, the file on disk, or the saved state. Do not add a new
+`inspect.getsource` pin. The count should fall by at least a quarter in each
+release.
+
+Keep the policy ratchets even when the report lists them: the import graph,
+the ban on `PYTEST_CURRENT_TEST` under `src/`, the public-address scan,
+`test_captured_material.py`, the skill-version tests, and the prompt snapshot.
+If a rule string changes intentionally, update the snapshot with
 `tools/update_prompt_snapshot.py` and review the snapshot diff like source.
 
 Test files are named for the behaviour they cover. The `AC1`, `AC2`, … labels in
