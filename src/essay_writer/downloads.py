@@ -352,7 +352,8 @@ def _partition_download_list(
     pdfs: list[Path] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     """Cannot-open rows only. A saved PDF is not a leftover."""
-    from essay_writer.research_packs import record_is_opened, same_source
+    from essay_writer.research_packs import record_is_opened
+    from essay_writer.sources import token_overlap
 
     opened_rows = [item for item in (opened or []) if isinstance(item, dict)]
     saved = list(pdfs or [])
@@ -368,7 +369,7 @@ def _partition_download_list(
         for item in (leftovers or [])
         if isinstance(item, dict)
         and keep(item)
-        and not any(same_source(item, other) for other in blocked)
+        and not any(token_overlap(item, other) for other in blocked)
     ]
     return waiting, failed, held
 

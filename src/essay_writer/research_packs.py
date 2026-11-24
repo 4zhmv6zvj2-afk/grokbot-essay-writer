@@ -27,7 +27,7 @@ from essay_writer.known_paths import (
 )
 from essay_writer.paths import relative, uploads_dir, work_dir
 from essay_writer.pdf_year import apply_citation_year
-from essay_writer.source_match import _slug, same_source
+from essay_writer.sources import TOKEN_MIN, slug, token_overlap
 from essay_writer.stage_llm import HOUSE_MODEL
 from essay_writer.state import load_state
 from essay_writer.student_voice import (
@@ -197,12 +197,12 @@ def _write_zip(path: Path, members: list[tuple[str, bytes]]) -> None:
 
 
 def _pdf_matches_row(pdf: Path, row: dict[str, Any]) -> bool:
-    stem = _slug(pdf.stem)
-    if len(stem) < 6:
+    stem = slug(pdf.stem)
+    if len(stem) < TOKEN_MIN:
         return False
     for key in ("doi", "title", "url", "id"):
-        token = _slug(row.get(key))
-        if len(token) >= 6 and (token in stem or stem in token):
+        token = slug(row.get(key))
+        if len(token) >= TOKEN_MIN and (token in stem or stem in token):
             return True
     return False
 
@@ -219,16 +219,16 @@ def _source_has_pdf(source: dict[str, Any], saved_pdfs: list[Path]) -> bool:
 
 def _matches_failure(source: dict[str, Any], row: dict[str, Any]) -> bool:
     for key in ("doi", "title", "url"):
-        left = _slug(source.get(key))
-        right = _slug(row.get(key))
-        if len(left) >= 6 and left == right:
+        left = slug(source.get(key))
+        right = slug(row.get(key))
+        if len(left) >= TOKEN_MIN and left == right:
             return True
     locator = source.get("locator")
     if isinstance(locator, str):
-        stem = _slug(Path(locator.replace("\\", "/")).stem)
-        url = _slug(row.get("url"))
-        title = _slug(row.get("title"))
-        if len(stem) >= 6 and (stem == url or stem == title or (url and stem in url)):
+        stem = slug(Path(locator.replace("\\", "/")).stem)
+        url = slug(row.get("url"))
+        title = slug(row.get("title"))
+        if len(stem) >= TOKEN_MIN and (stem == url or stem == title or (url and stem in url)):
             return True
     return False
 
@@ -251,7 +251,7 @@ def record_is_opened(
     opened = [item for item in (papers or []) if isinstance(item, dict)]
     if _source_has_pdf(record, list(saved_pdfs) + _paper_paths(opened)):
         return True
-    return any(same_source(record, paper) for paper in opened)
+    return any(token_overlap(record, paper) for paper in opened)
 
 
 def abstract_only_ids(

@@ -6,19 +6,7 @@ import json
 from typing import Any
 
 from essay_writer.paths import work_dir
-
-_KEPT_ON_ABSTRACT = (
-    "author",
-    "year",
-    "title",
-    "doi",
-    "oa_url",
-    "pdf_url",
-    "journal",
-    "pages",
-    "volume",
-    "url",
-)
+from essay_writer.sources import ABSTRACT_FIELDS as _KEPT_ON_ABSTRACT
 
 
 def _doi_key(value: object) -> str:

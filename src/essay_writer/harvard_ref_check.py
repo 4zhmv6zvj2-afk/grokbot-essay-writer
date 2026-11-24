@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Any
 
 from essay_writer.confirm import refuse
+from essay_writer.sources import TOKEN_MIN, author_year_present, family_name, surname
 from essay_writer.state import load_state
-from essay_writer.textutil import family_name
 
 HANDBOOK_NAME = "docs/referencing-harvard.md"
 
@@ -83,10 +83,10 @@ def sources_the_file_accounts_for(
             continue
         author = _text(prepared.get("author"))
         year = _text(prepared.get("year"))
-        surname = _surname(author)
+        family = surname(author)
         label = f"{family_name(author)}, {year}".casefold() if author and year else ""
         cited = bool(label and label in tokens) or bool(
-            surname and year and _author_year_present(body_text, surname, year)
+            family and year and author_year_present(body_text, family, year)
         )
         if cited:
             accounted.append(source)
@@ -220,15 +220,12 @@ def compliance_misses(
             if paragraph is None:
                 author = _text(source.get("author"))
                 year = _text(source.get("year"))
-                surname = _surname(author)
+                family = surname(author)
                 label = (
-                    surname
-                    or _text(source.get("title"))
-                    or _text(source.get("id"))
-                    or "this source"
+                    family or _text(source.get("title")) or _text(source.get("id")) or "this source"
                 )
-                if year and surname:
-                    label = f"{surname} ({year})"
+                if year and family:
+                    label = f"{family} ({year})"
                 misses.append(
                     {
                         "code": "source-line",
@@ -317,37 +314,15 @@ def _text(value: object) -> str:
     return ""
 
 
-def _surname(author: str) -> str:
-
-    return family_name(author).split()[-1] if author else ""
-
-
-def _name_present(text: str, surname: str) -> bool:
-    if not surname:
+def _name_present(body: str, family: str) -> bool:
+    if not family:
         return False
     from essay_writer.textutil import fold_name
 
     return (
-        re.search(rf"\b{re.escape(fold_name(surname))}\b", fold_name(text), re.IGNORECASE)
+        re.search(rf"\b{re.escape(fold_name(family))}\b", fold_name(body), re.IGNORECASE)
         is not None
     )
-
-
-def _author_year_present(text: str, surname: str, year: str) -> bool:
-    """True when the year is the first bracket after that family name.
-
-    The names between the family name and the year may be long. A normal
-    hyphen and hyphen U+2010 are the same character.
-    """
-    if not surname or not year:
-        return False
-    from essay_writer.textutil import fold_name
-
-    pattern = (
-        rf"\b{re.escape(fold_name(surname))}\b[^()\n]*"
-        rf"\(\s*{re.escape(year)}[a-z]?\s*\)"
-    )
-    return re.search(pattern, fold_name(text), re.IGNORECASE) is not None
 
 
 def _dois_in(text: str) -> list[str]:
@@ -376,7 +351,7 @@ def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
             return hits[0]
         return None
 
-    if source_id and len(source_id) >= 6:
+    if source_id and len(source_id) >= TOKEN_MIN:
         hit = once(
             [
                 paragraph
@@ -419,16 +394,16 @@ def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
         )
         if hit is not None:
             return hit
-    surname = _surname(_text(source.get("author")))
+    family = surname(_text(source.get("author")))
     year = _text(source.get("year"))
-    if surname and year:
+    if family and year:
         # One line with this family name and year is that source. Two lines
         # that share the short form stay unmatched and are recorded.
         hit = once(
             [
                 paragraph
                 for paragraph in paragraphs
-                if _author_year_present(paragraph.text or "", surname, year)
+                if author_year_present(paragraph.text or "", family, year)
             ]
         )
         if hit is not None:
@@ -471,7 +446,7 @@ def _source_misses(paragraph, source: dict[str, object]) -> list[dict[str, str]]
     misses: list[dict[str, str]] = []
     author = _text(source.get("author"))
     year = _text(source.get("year"))
-    label = _surname(author) or "this source"
+    label = surname(author) or "this source"
     if year:
         label = f"{label} ({year})"
     text = paragraph.text or ""
@@ -482,8 +457,8 @@ def _source_misses(paragraph, source: dict[str, object]) -> list[dict[str, str]]
                 "detail": f"Reference for {label} should show {author}, not a surname alone.",
             }
         )
-    entry_surname = _surname(author)
-    if year and entry_surname and not _author_year_present(text, entry_surname, year):
+    entry_surname = surname(author)
+    if year and entry_surname and not author_year_present(text, entry_surname, year):
         misses.append(
             {
                 "code": "year",

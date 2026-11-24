@@ -23,6 +23,7 @@ from typing import Any
 
 from essay_writer.paths import work_dir
 from essay_writer.records import read_json, write_json
+from essay_writer.sources import family_token
 from essay_writer.state import load_state
 from essay_writer.textutil import (
     PAREN,
@@ -268,7 +269,7 @@ def _source_for(token: str, sources: list[dict[str, Any]]) -> dict[str, Any] | N
 
 
 def _surname(token: str) -> str:
-    return token.split(",", 1)[0].strip().casefold()
+    return family_token(token).casefold()
 
 
 def rejected_names(record: dict[str, Any]) -> set[str]:

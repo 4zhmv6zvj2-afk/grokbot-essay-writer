@@ -47,8 +47,9 @@ validation, and Word output.
   - `spine.py`, `stage_llm.py` — stage definitions and prompts.
   - `validate.py`, `gates.py`, `invent.py` — pack checks, citation integrity, and invent-forbid.
   - `citation_list.py` — the citation list for one sequence, written when stage 4b finishes.
-  - `source_ids.py` — one stable id for each stored work. A later DOI, author, or title keeps the id stored on first sight.
-  - `source_floor.py` — the gather floor. A stated count is that floor. A silent brief uses eight works per 1,000 words, rounded up.
+  - `sources.py` — the one source record, the one minted id, and the one same-work check.
+  - `source_ids.py` — reads the id already stored for a file. Minting stays in `sources.py`. A later DOI, author, or title keeps that stored id.
+  - `source_floor.py` — the gather floor. A stated count is that floor. A silent brief uses eight works per 1,000 words, rounded up. Distinct works use the identity in `sources.py`.
   - `essay_cites.py` — how many distinct relevant works the essay cites.
   - `download_shortlist.py` — the download set that fits the saved plan, after works that do not fit the question are dropped.
   - `word.py`, `word_references.py` — Word output and Harvard reference lines.
@@ -56,6 +57,10 @@ validation, and Word output.
 - `tests/` — behaviour tests and synthetic fixtures.
 - `docs/` — operator and writing helpers.
 - `src/essay_writer/_vendor/` — vendored bootstrap core, pinned by `VENDOR.json`.
+
+## Sources
+
+`sources.py` is the single home for a stored work. It imports nothing from the rest of the package. `SourceRecord` is the record. `mint_source_id` keeps an id already on the record, then a valid supplied id, then a minted id. `same_source` matches an id, then a locator, then a canonical DOI, then a normalized title, year, and author. A title by itself is not a match, and two different DOIs stay two works. `source_ids.py` reads the id already written for a file and does not mint a second one. `source_floor.py` counts distinct works with that identity. The citation list, the Harvard check, and the gather call these helpers. An opened PDF still uses a separate filename-token check. That check is not the identity.
 
 ## Words used here
 
