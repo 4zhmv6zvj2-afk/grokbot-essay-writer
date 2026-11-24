@@ -71,7 +71,20 @@ When a change touches a file that has a pin, replace that pin with an
 assertion on the observable artifact: the tool reply, the student text, the
 docx, the file on disk, or the saved state. Do not add a new
 `inspect.getsource` pin. The count should fall by at least a quarter in each
-release.
+release. The 0.9.19 baseline was 727 (getsource 251, docstring 7,
+source-string 384, test-of-test 57, filename-pin 28). The three heaviest
+files were `tests/test_log_ops.py`, `tests/test_stage_launch_status.py`, and
+`tests/test_finished_word.py`.
+
+## Runtime and quarantine
+
+CI runs pytest with `--durations=25`. The 25 slowest tests are printed at
+the end of each test job. A flaky test is fixed, or it is listed here with
+an issue. The suite does not retry a failure. The quarantine list is empty.
+
+A test that needs a real terminal uses the `requires_pty` fixture and skips
+when the host has no pty. CI fails that skip instead of hiding it. No test
+calls `ps`. Network tests stub the socket; they do not open one.
 
 Keep the policy ratchets even when the report lists them: the import graph,
 the ban on `PYTEST_CURRENT_TEST` under `src/`, the public-address scan,

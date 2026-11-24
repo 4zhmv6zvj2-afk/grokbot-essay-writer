@@ -8,8 +8,6 @@ the specialist look-up stays there. A successful build is remembered and reused.
 
 from __future__ import annotations
 
-import ast
-import inspect
 import json
 from pathlib import Path
 
@@ -29,12 +27,7 @@ from helpers import (
 from essay_writer import late_chain
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.late_chain import (
-    _deliver_stage10,
-    _write_stage10_sequence,
-    build_finished_word,
-    write_stage10,
-)
+from essay_writer.late_chain import build_finished_word, write_stage10
 from essay_writer.paths import essay_dir, module_code, work_dir
 from essay_writer.research import essay_research_summary
 from essay_writer.review import essay_review
@@ -42,11 +35,7 @@ from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office
 from essay_writer.specialists.eqr import read_submit_word, submit_word_path
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_hold import (
-    _commit_pointer,
-    _commit_with_next_card,
-    _render_stage10_before_close,
-)
+from essay_writer.stage_hold import _commit_pointer
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
@@ -54,11 +43,9 @@ from essay_writer.validate import essay_pack_validate
 from essay_writer.word import essay_pack_render_word, word_manifest, write_docx
 
 REPO = Path(__file__).resolve().parents[1]
-PACKAGE = REPO / "src" / "essay_writer"
 QUESTION = "How do chokepoints constrain the corridor?"
 SAVED_SENTENCE = "The saved draft names the corridor."
 WORKING_SENTENCE = "The working file names the strait."
-HOST_TOKENS = ("SHELL_CURSOR", "SHELL_GROK", "spawn_agent", "spawn_grok")
 
 
 def _brief(text: str | None = None) -> None:
@@ -97,27 +84,6 @@ def _park(seq: str) -> None:
     path.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
 
 
-def _calls(node: ast.AST, name: str) -> int:
-    found = 0
-    for child in ast.walk(node):
-        if not isinstance(child, ast.Call):
-            continue
-        func = child.func
-        if isinstance(func, ast.Name) and func.id == name:
-            found += 1
-        elif isinstance(func, ast.Attribute) and func.attr == name:
-            found += 1
-    return found
-
-
-def _function(path: Path, name: str) -> ast.FunctionDef:
-    tree = ast.parse(path.read_text(encoding="utf-8"))
-    for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name == name:
-            return node
-    raise AssertionError(name)
-
-
 def _spy_build(monkeypatch):
     seen: list[dict] = []
     real = build_finished_word
@@ -154,26 +120,6 @@ def _store(seq: str, sentence: str) -> dict:
 def test_one_build_is_checked_then_copied(case_id: str, workspace, monkeypatch, tmp_path) -> None:
     """AC-ew-word-1: one build only at stage 10 save, before saved, checks then byte-for-byte copy."""
     assert case_id == "AC-ew-word-1"
-    chain = PACKAGE / "late_chain.py"
-    builder = _function(chain, "build_finished_word")
-    sequence = _function(chain, "_write_stage10_sequence")
-    deliver = _function(chain, "_deliver_stage10")
-    assert _calls(builder, "write_docx") == 1
-    assert _calls(sequence, "build_finished_word") == 1
-    assert _calls(sequence, "write_docx") == 0
-    assert _calls(deliver, "write_docx") == 0
-    assert _calls(deliver, "build_finished_word") == 0
-    commit_source = inspect.getsource(_commit_with_next_card)
-    assert commit_source.index("_render_stage10_before_close") < commit_source.index(
-        "_commit_pointer"
-    )
-    assert inspect.getsource(_write_stage10_sequence).index("build_finished_word(") < (
-        inspect.getsource(_write_stage10_sequence).index("empty_footer_refusal(")
-    )
-    assert inspect.getsource(_write_stage10_sequence).index("writer_reference_block(") < (
-        inspect.getsource(_write_stage10_sequence).index("os.replace(")
-    )
-
     _brief()
     saved_seq = open_sequence()
     _store(saved_seq, SAVED_SENTENCE)
@@ -310,17 +256,6 @@ def test_a_failed_check_leaves_files_and_the_step_unsaved(
 def test_earlier_steps_do_not_write_the_final_name(case_id: str, workspace, monkeypatch) -> None:
     """AC-ew-word-3: earlier Word steps do not write the final-named file; references confirm remains the review submit file and is not called the final Word file; specialist look-up does not run again at finish."""
     assert case_id == "AC-ew-word-3"
-    render_source = inspect.getsource(essay_pack_render_word)
-    assert "final Word file" not in render_source
-    assert "references confirm" in render_source
-    assert "final_specialist_lookup(" in render_source
-    finish_source = (
-        inspect.getsource(build_finished_word)
-        + inspect.getsource(write_stage10)
-        + inspect.getsource(_deliver_stage10)
-        + inspect.getsource(_write_stage10_sequence)
-    )
-    assert "final_specialist_lookup" not in finish_source
     workflow = (REPO / "docs" / "workflow.md").read_text(encoding="utf-8")
     assert "At the references confirm (stage 9" in workflow
     assert "At the final Word (stage 9" not in workflow
@@ -419,16 +354,7 @@ def test_a_remembered_file_is_reused_by_both_hosts(
         is front_office()["handlers"]["essay.stage"]
         is HANDLERS["essay.stage"]
     )
-    for name in ("cursor_office.py", "build_office.py"):
-        text = (PACKAGE / name).read_text(encoding="utf-8")
-        assert "build_finished_word" not in text
-        assert "write_stage10" not in text
-    shared = inspect.getsource(build_finished_word) + inspect.getsource(write_stage10)
-    for token in HOST_TOKENS:
-        assert token not in shared
     assert cursor_stage_launch("10")["settings"]["rules"] == stage_launch("10")["settings"]["rules"]
-    assert inspect.getsource(_commit_with_next_card).count("write_stage10(") == 0
-    assert "write_stage10(" in inspect.getsource(_render_stage10_before_close)
 
     _brief()
     seq = open_sequence()

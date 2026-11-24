@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 import os
 import zipfile
@@ -11,7 +10,6 @@ from pathlib import Path
 import pytest
 from helpers import mac_handoff_sequence_dir, open_sequence
 
-from essay_writer import build_office, cursor_office
 from essay_writer.debug_log import (
     EXPORT_FILENAME,
     FERRY_FILENAME,
@@ -23,7 +21,7 @@ from essay_writer.debug_log import (
     ml_events_path,
 )
 from essay_writer.first_run import main as first_run_main
-from essay_writer.ml_events import handoff_outcome, note_cli_handoff
+from essay_writer.ml_events import handoff_outcome
 from essay_writer.server import HANDLERS
 from essay_writer.server import main as server_main
 from essay_writer.shells import cursor_shell, front_office, front_office_call
@@ -145,38 +143,16 @@ def test_ac8_build_covered_debug_export_cli_and_mcp():
     assert HANDLERS["essay.debug.export"] is essay_debug_export
     assert cursor_shell()["handlers"]["essay.debug.export"] is HANDLERS["essay.debug.export"]
     assert front_office()["handlers"]["essay.debug.export"] is HANDLERS["essay.debug.export"]
-    server_src = inspect.getsource(server_main)
-    assert "--debug-export" in server_src
-    assert "essay_debug_export" in server_src
-    assert "note_cli_handoff" in inspect.getsource(
-        first_run_main
-    ) or "_record_copy_handoff" in inspect.getsource(first_run_main)
-    assert "note_cli_handoff" in inspect.getsource(_record_source())
-    assert '"copy_only"' in inspect.getsource(handoff_outcome) or "copy_only" in inspect.getsource(
-        handoff_outcome
-    )
-    assert "rebuilt" in inspect.getsource(handoff_outcome)
-    assert "refused" in inspect.getsource(handoff_outcome)
-    assert "events_enabled()" in inspect.getsource(note_cli_handoff)
-    cursor_src = Path(cursor_office.__file__).read_text(encoding="utf-8")
-    build_src = Path(build_office.__file__).read_text(encoding="utf-8")
-    assert "def essay_debug_export" not in cursor_src
-    assert "def essay_debug_export" not in build_src
-    assert "def note_cli_handoff" not in cursor_src
-    assert "def note_cli_handoff" not in build_src
+    assert handoff_outcome({"ok": True, "copied": True, "rebuilt": True}) == "rebuilt"
+    assert handoff_outcome({"ok": True, "copied": True}) == "copy_only"
+    assert handoff_outcome({"ok": False, "copied": False}) == "refused"
 
 
 def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
     """AC9. Each Cursor and Build start row records that launch's stage settings."""
     from essay_writer.build_status import finish_mid_process, reset_status
     from essay_writer.cursor_office import start_stage_mid
-    from essay_writer.debug_log import (
-        _start_launch_fields,
-        debug_enabled,
-        debug_log_path,
-        note_mid_office,
-    )
-    from essay_writer.ml_events import _shell_event
+    from essay_writer.debug_log import debug_enabled, debug_log_path
     from essay_writer.stage_llm import stage_settings
 
     reset_status()
@@ -265,18 +241,6 @@ def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
             "rules",
         ):
             assert key not in done[0]
-
-        start_src = inspect.getsource(start_stage_mid)
-        assert start_src.count("note_mid_office(") == 1
-        assert "stage=stage" in start_src
-        assert '"Cursor"' in start_src and '"Build"' in start_src
-        assert "note_mid_office" not in Path(build_office.__file__).read_text(encoding="utf-8")
-        assert "prompt_overlay" not in inspect.getsource(_shell_event)
-        assert "prompt_overlay" not in inspect.getsource(_start_launch_fields)
-        assert "rules" not in inspect.getsource(_start_launch_fields)
-        assert "debug_enabled()" in inspect.getsource(
-            note_mid_office
-        ) or "note_call" in inspect.getsource(note_mid_office)
     finally:
         reset_status()
 
