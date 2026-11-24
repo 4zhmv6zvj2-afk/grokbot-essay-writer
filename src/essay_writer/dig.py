@@ -196,7 +196,16 @@ def _get_json(url: str, headers: dict[str, str] | None = None) -> dict[str, Any]
     except LookupRefused:
         raise
     except json.JSONDecodeError:
-        raise LookupRefused(0, "the look-up did not return JSON") from None
+        from essay_writer.incident import note
+
+        note(
+            "read-bad-json",
+            severity="warn",
+            disposition="fallback",
+            tool="read",
+            step="json",
+        )
+        raise LookupRefused(0, "The look-up did not return JSON. Try this look-up again.") from None
     except (safe_url.Refused, urllib.error.URLError, TimeoutError, OSError) as exc:
         detail = str(exc).strip() or "the look-up did not answer"
         raise LookupRefused(0, _student_lookup_detail(detail)) from None
@@ -1143,6 +1152,19 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
             cursor = slot["openalex"].get("next_cursor")
             if isinstance(cursor, str) and cursor in seen_cursors:
                 slot["openalex"].pop("next_cursor", None)
+                slot["openalex"]["page_stop"] = (
+                    "This page repeated a cursor. The gather stops on this page. "
+                    "Try the look-up again."
+                )
+                from essay_writer.incident import note
+
+                note(
+                    "page-cursor-repeat",
+                    severity="warn",
+                    disposition="fallback",
+                    tool="read",
+                    step="page",
+                )
                 cursor = None
             if isinstance(cursor, str) and not slot["openalex"].get("refused"):
                 seen_cursors.add(cursor)
@@ -1227,6 +1249,11 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
             if isinstance(row, dict):
                 unpaywall.append(row)
     openalex_body: dict[str, Any] = {"called": openalex_called, "hits": openalex_hits}
+    for slot in slots:
+        page_stop = slot["openalex"].get("page_stop")
+        if isinstance(page_stop, str) and page_stop.strip():
+            openalex_body["page_stop"] = page_stop
+            break
     if openalex_refused:
         openalex_body["refused"] = openalex_refused
         openalex_body["miss"] = "openalex"

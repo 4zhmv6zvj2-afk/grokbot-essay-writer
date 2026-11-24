@@ -267,3 +267,10 @@ Internal detail stays in the operator log.
 | pointer-unknown-field | An unknown pointer field is kept. | fallback | The file is unchanged until the next save. | stage_state.py |
 | pointer-unknown-current | A current value that is not a stage becomes stage 1 in memory. | fallback | The file is unchanged until the next save. | stage_state.py |
 | pointer-field-dropped | A saved or files value of the wrong shape is left out of the loaded pointer. | fallback | The file is unchanged until the next save. | stage_state.py |
+| read-retry | A read is tried again after a timeout, a DNS failure, a 429, or a 5xx. | retry | The next try uses the same address. | safe_url.py |
+| read-fallback | A read stopped after its tries. | fallback | Try this look-up again. | safe_url.py |
+| read-dns | The host did not resolve. | fallback | Check the address and try again. | safe_url.py |
+| read-redirect | The address redirected too many times. | fallback | Use a direct link. | safe_url.py |
+| read-too-large | The file is larger than the cap. | fallback | Use a smaller file. | safe_url.py |
+| read-bad-json | The look-up did not return JSON. | fallback | Try this look-up again. | dig.py |
+| page-cursor-repeat | This page repeated a cursor. | fallback | The gather stops on this page. Try the look-up again. | dig.py |
