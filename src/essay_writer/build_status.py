@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from essay_writer.durable import replace_text
+from essay_writer.known_paths import RepoSaveRefused
 from essay_writer.prompt_loader import text
 from essay_writer.student_voice import say
 
@@ -1229,7 +1230,7 @@ def _write_index(index: dict[str, str]) -> None:
         replace_text(path, json.dumps(index, indent=2, sort_keys=True) + "\n")
         with _lock:
             _persisted.add(path)
-    except OSError:
+    except (OSError, RepoSaveRefused):
         return
 
 
@@ -1262,7 +1263,7 @@ def _persist(essay_id: str) -> None:
     }
     try:
         replace_text(path, json.dumps(payload, indent=2) + "\n")
-    except OSError:
+    except (OSError, RepoSaveRefused):
         return
     with _lock:
         _persisted.add(path)

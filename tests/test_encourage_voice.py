@@ -110,6 +110,23 @@ def _rules(command: list[str]) -> str:
     return command[command.index("--rules") + 1]
 
 
+def test_a_failed_encourage_save_asks_the_same_question(workspace, monkeypatch):
+    from essay_writer import encourage as encourage
+
+    seq, saved = _confirm_plan(workspace)
+    assert saved["encourage"]["ask"]["id"] == "depth"
+
+    def fail(*_args, **_kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(encourage, "_save", fail)
+    reply = encourage.answer_encourage(seq, "Supply chain context")
+    stored = json.loads(encourage._record_path(seq).read_text(encoding="utf-8"))
+    assert reply["accepted"] is False
+    assert stored["shown"] == "depth"
+    assert reply["encourage"]["ask"]["id"] == "depth"
+
+
 def test_ac1_one_encourage_ask_after_plan_confirm(workspace):
     """AC1. Fixture encourage-plan-v1. One ask, sections from the locked plan, type-own, skip."""
     assert FIXTURE_ID in (REPO / "tests" / "fixtures" / "encourage-plan-v1.txt").name

@@ -180,6 +180,23 @@ def test_a_replace_keeps_the_previous_mode(tmp_path):
     assert path.stat().st_mode & 0o777 == 0o640
 
 
+def test_mid_status_in_a_checkout_returns_a_line(tmp_path, monkeypatch):
+    from essay_writer.build_status import begin_mid_build, reset_status
+    from essay_writer.paths import work_dir
+
+    install = tmp_path / "checkout"
+    (install / "src" / "essay_writer").mkdir(parents=True)
+    (install / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+    monkeypatch.setenv("ESSAY_WRITER_ROOT", str(install))
+    monkeypatch.setattr("essay_writer.known_paths.repo_root", lambda: install)
+    reset_status()
+    work_dir("MOD1004AA-1").mkdir(parents=True)
+    lines = begin_mid_build("MOD1004AA-1", "work")
+    reset_status()
+    assert lines
+    assert not (install / "mid-sessions.json").exists()
+
+
 def test_a_refused_text_write_does_not_create_the_directory(tmp_path, monkeypatch):
     from essay_writer.durable import replace_text
     from essay_writer.known_paths import RepoSaveRefused

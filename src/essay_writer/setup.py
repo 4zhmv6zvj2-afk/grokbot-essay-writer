@@ -682,6 +682,14 @@ def essay_setup(
             f"Folders were not kept because the setup record was not written: {exc}",
             wrote=False,
         )
+    except essay_known_paths.RepoSaveRefused:
+        rollback()
+        return refuse(
+            "setup",
+            "Folders were not kept because the setup record was not written. "
+            "Choose a folder outside the code checkout, then run setup again.",
+            wrote=False,
+        )
 
     if key or email or oa:
         # A later setup for one secret keeps the other stored secrets: the
