@@ -561,8 +561,11 @@ def ship_4a(essay_id: str, sources: list[dict[str, Any]], notes: dict[str, str])
 
 
 def _review_body(essay_id: str, source: dict[str, Any], supplied: str | None) -> str:
-    """The review note saved on disk. A student can open it, so it names no model."""
-    from essay_writer.context_fit import student_review_text
+    """The review note saved on disk. A student can open it, so it names no model.
+
+    A marker already in the note stays here. The Word copy strips that line.
+    """
+    from essay_writer.context_fit import trim_model_line
 
     line = harvard_4a_line(_with_pdf_year(essay_id, source))
     if supplied:
@@ -576,7 +579,8 @@ def _review_body(essay_id: str, source: dict[str, Any], supplied: str | None) ->
             text = f'{line}\n\n"{quote.strip()}"\n'
         else:
             text = f"{line}\n"
-    return student_review_text(prose_for_surface(text, "review"))
+    cleaned, _dropped = trim_model_line(prose_for_surface(text, "review"))
+    return cleaned
 
 
 def open_critical_markdown(path: Path, essay_id: str | None = None) -> str:

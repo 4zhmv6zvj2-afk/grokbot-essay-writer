@@ -13,6 +13,25 @@ from essay_writer.student_voice import student_surface_hits
 from essay_writer.word import essay_pack_render_word
 
 
+def _plant_saved_draft(seq: str, look: str) -> None:
+    import json
+
+    from essay_writer.stage_note import render_tracking
+    from essay_writer.stage_state import _note_path, load_pointer
+
+    pointer = load_pointer(seq)
+    pointer["saved"] = list(dict.fromkeys([*(pointer.get("saved") or []), "5"]))
+    saved = work_dir(seq) / "tracking" / "stage.json"
+    saved.parent.mkdir(parents=True, exist_ok=True)
+    saved.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
+    note = _note_path(seq, "5")
+    note.parent.mkdir(parents=True, exist_ok=True)
+    note.write_text(
+        render_tracking("5", status="final", look=look, essay_id=seq),
+        encoding="utf-8",
+    )
+
+
 def _open() -> str:
     essay_sequence_new(ESSAY, "draft")
     opened = essay_sequence_new(ESSAY, "confirm")
@@ -26,7 +45,9 @@ def test_review_without_a_word_file_does_not_invent_one(workspace):
     assert draft["ok"] is True
     assert draft["word_opened"] is False
     assert "not saved yet" in draft["findings"]
-    assert essay_review(seq, "6", "PASS", "confirm")["stored"] is True
+    recorded = essay_review(seq, "6", "PASS", "confirm")
+    assert recorded["stored"] is not True
+    assert recorded.get("reason") == "not-intact"
     assert not (work_dir(seq) / "output" / f"{seq}.docx").exists()
 
 
@@ -54,8 +75,10 @@ def test_review_opens_the_saved_word_and_can_write_findings(workspace, monkeypat
     essay_pack_validate(seq, pack(), "draft")
     essay_pack_validate(seq, pack(), "confirm")
     constitution = "This is a report. How do chokepoints constrain the corridor?"
+    _plant_saved_draft(seq, constitution)
     essay_review(seq, "6", "PASS", "draft", constitution=constitution)
-    essay_review(seq, "6", "PASS", "confirm", constitution=constitution)
+    recorded = essay_review(seq, "6", "PASS", "confirm", constitution=constitution)
+    assert recorded["stored"] is True, recorded
     essay_pack_render_word(seq, pack(), "draft", stage="6")
     written = essay_pack_render_word(seq, pack(), "confirm", stage="6")
     assert written["wrote"] is True, written.get("reason")

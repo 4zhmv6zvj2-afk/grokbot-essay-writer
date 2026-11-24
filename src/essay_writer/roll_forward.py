@@ -327,8 +327,15 @@ def keepers(essay_id: str) -> list[dict[str, Any]]:
     ]
 
 
+_CRITICAL_MARKER = re.compile(r"(?im)^\s*critical note\b")
+
+
 def has_critical_note(essay_id: str, paper: dict[str, Any]) -> bool:
-    """True when a review markdown already names this paper."""
+    """True when a review markdown has a Critical note marker and names this paper.
+
+    A non-empty file that only names the paper does not count. The marker is
+    the structural line. The model name on that line is not required.
+    """
 
     folder = work_dir(essay_id) / "output" / "reviews"
     if not folder.is_dir():
@@ -344,7 +351,7 @@ def has_critical_note(essay_id: str, paper: dict[str, Any]) -> bool:
             text = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        if not text.strip():
+        if not text.strip() or _CRITICAL_MARKER.search(text) is None:
             continue
         hay = text.casefold()
         name = _slug(path.stem)

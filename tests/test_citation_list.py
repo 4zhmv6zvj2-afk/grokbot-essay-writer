@@ -162,7 +162,9 @@ def test_student_research_notes_show_the_same_list(workspace):
     listed = student_list_text(seq)
     review = next(_reviews(seq).glob("*.docx"))
     text = _docx_text(review)
-    assert text.splitlines()[0].startswith("Froese") or text.splitlines()[0].startswith("Smith")
+    lines = [line for line in text.splitlines() if line.strip()]
+    assert lines[0].startswith("Froese") or lines[0].startswith("Smith")
+    assert any(line.startswith("Froese") or line.startswith("Smith") for line in lines)
     assert "Citation list" in text
     assert listed in text
     for row in rows:

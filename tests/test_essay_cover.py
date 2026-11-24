@@ -419,7 +419,7 @@ def test_a_real_stored_title_is_the_first_cover_line(case_id, workspace):
     assert headings[0] == "Introduction"
     assert "References" in headings
     document = Document(str(path))
-    assert document.core_properties.title == TITLE
+    assert document.core_properties.title == seq
     xml = zipfile.ZipFile(path).read("word/document.xml").decode("utf-8")
     assert xml.index(TITLE) < xml.index("Introduction")
 

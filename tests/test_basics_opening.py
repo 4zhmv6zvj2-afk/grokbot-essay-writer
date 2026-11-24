@@ -189,7 +189,7 @@ def test_one_reader_loads_once_per_ask(case_id: str, workspace, monkeypatch) -> 
     draft = essay_stage(seq, "1", "draft", "The corridor is the case.")
     assert draft["ok"] is True, draft
     assert owners == ["maybe_seed_basics_on_draft", "basics_pass_block"]
-    assert loads == [QUESTION_B, QUESTION_B]
+    assert loads == [QUESTION_B]
 
 
 @pytest.mark.parametrize(

@@ -220,17 +220,23 @@ def fit_essay_cites(essay_id: str, text: str) -> str:
     if not isinstance(text, str) or not text.strip():
         return text if isinstance(text, str) else ""
     from essay_writer.citation_list import list_written, usable_sources
+    from essay_writer.cite_fit import carry_subject_gap
     from essay_writer.source_floor import confirmed_question
 
+    gap = bool(getattr(text, "subject_gap", False))
+
+    def finish(value: str) -> str:
+        return carry_subject_gap(value, gap or bool(getattr(value, "subject_gap", False)))
+
     if not list_written(essay_id):
-        return text
+        return finish(text)
     sources = [row for row in (usable_sources(essay_id) or []) if isinstance(row, dict)]
     if not sources:
-        return text
+        return finish(text)
     question = confirmed_question(essay_id)
     plan = _plan(essay_id)
     if not question or not plan:
-        return text
+        return finish(text)
     bounds = essay_cite_bounds(essay_id)
     minimum = int(bounds["minimum"])
     maximum = bounds["maximum"]
@@ -265,9 +271,10 @@ def fit_essay_cites(essay_id: str, text: str) -> str:
             from essay_writer.cite_fit import strip_token
 
             text = strip_token(text, inner)
+            gap = gap or bool(getattr(text, "subject_gap", False))
     current = cited()
     if len(current) >= minimum:
-        return text
+        return finish(text)
     have = set(current)
     for source in relevant:
         if len(have) >= minimum:
@@ -285,4 +292,4 @@ def fit_essay_cites(essay_id: str, text: str) -> str:
             continue
         text = updated
         have.add(ident)
-    return text
+    return finish(text)

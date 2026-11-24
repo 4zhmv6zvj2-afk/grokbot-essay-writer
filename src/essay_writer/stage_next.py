@@ -48,6 +48,14 @@ STAGE10_UNMOUNTED = (
 )
 _KEEP_COPY = "Keep a copy. This tool does not submit."
 _CLOSED = "The last stage is already saved. This tool does not submit."
+ANSWER_NEXT = (
+    "I have stored that answer beside the brief. This stage still needs one sentence of your own."
+)
+CLEARED_NEXT = (
+    "I have cleared that answer beside the brief. This stage still needs one sentence of your own."
+)
+IGNORED_NEXT = "I have not stored that answer. This stage still needs one sentence of your own."
+_ANSWER_TAIL = "This stage still needs one sentence of your own."
 
 
 def write_stage_next(body: dict[str, Any], sentence: str) -> dict[str, Any]:
@@ -208,11 +216,72 @@ def write_revisit_stage_next(
     return write_stage_next(body, saved_next("5", stage_title("5", genre)))
 
 
-def write_replay_card_next(body: dict[str, Any], stage: str, title: str) -> dict[str, Any]:
-    """A replayed card names that card."""
-    from essay_writer.specialists.grok_bot import card_next
+def write_refusal_reason_next(body: dict[str, Any]) -> dict[str, Any]:
+    """A stopped draft says the reason already stored on the reply."""
+    reason = body.get("reason")
+    sentence = reason if isinstance(reason, str) else ""
+    return write_stage_next(body, sentence)
 
-    return write_stage_next(body, card_next(stage, title))
+
+def write_note_refusal_next(body: dict[str, Any], sentence: object) -> dict[str, Any]:
+    """A stopped edit says the next sentence the note already chose."""
+    if isinstance(sentence, str):
+        return write_stage_next(body, sentence)
+    return body
+
+
+def write_turn_redirect_next(body: dict[str, Any], reply: object) -> dict[str, Any]:
+    """A short ask uses the approved reply as the next sentence."""
+    sentence = reply if isinstance(reply, str) else ""
+    return write_stage_next(body, say(sentence))
+
+
+def write_no_card_between_next(body: dict[str, Any]) -> dict[str, Any]:
+    """A step that moves on by itself does not offer a save card."""
+    return write_stage_next(
+        body,
+        say(
+            "This step moves on when the draft is stored. "
+            "There is no Confirm card between this step and the next."
+        ),
+    )
+
+
+def answer_next(format_outcome: str | None, question_outcome: str | None) -> str:
+    """The draft line for this call. A mixed call names each field."""
+    sent = [
+        (label, outcome)
+        for label, outcome in (("format", format_outcome), ("question", question_outcome))
+        if outcome is not None
+    ]
+    kinds = {outcome for _label, outcome in sent}
+    if kinds == {"stored"}:
+        return ANSWER_NEXT
+    if kinds == {"cleared"}:
+        return CLEARED_NEXT
+    if not kinds or kinds == {"ignored"}:
+        return IGNORED_NEXT
+    stored = [label for label, outcome in sent if outcome == "stored"]
+    cleared = [label for label, outcome in sent if outcome == "cleared"]
+    ignored = [label for label, outcome in sent if outcome == "ignored"]
+    if stored and cleared:
+        lead = f"I have stored the {stored[0]} and cleared the {cleared[0]} beside the brief."
+    elif stored:
+        lead = f"I have stored the {stored[0]} beside the brief."
+    else:
+        lead = f"I have cleared the {cleared[0]} beside the brief."
+    if ignored:
+        return f"{lead} I have not stored the {ignored[0]}. {_ANSWER_TAIL}"
+    return f"{lead} {_ANSWER_TAIL}"
+
+
+def write_answer_stage_next(
+    body: dict[str, Any],
+    format_outcome: str | None,
+    question_outcome: str | None,
+) -> dict[str, Any]:
+    """Store the brief-answer sentence. The stage caller does not write it."""
+    return write_stage_next(body, answer_next(format_outcome, question_outcome))
 
 
 def write_critical_reviews_next(body: dict[str, Any]) -> dict[str, Any]:

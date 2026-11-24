@@ -29,7 +29,6 @@ from essay_writer.diary import (
     cover_field_rows,
     cover_lines_from_field_rows,
     layout_for,
-    stored_cover_title,
 )
 from essay_writer.draft_from_review import CRITICAL_REVIEW
 from essay_writer.known_paths import guard_write_door, refuse_repo_write
@@ -348,7 +347,11 @@ def _flat_title(value: object) -> str:
 
 
 def _first_essay_paragraph(sections: object) -> str:
-    """The paragraph the essay body starts with. A blank heading is skipped."""
+    """The paragraph the essay body starts with.
+
+    A short section heading is not that paragraph. A heading longer than
+    the Word title limit is the opening paragraph itself.
+    """
     if not isinstance(sections, list):
         return ""
     for section in sections:
@@ -357,7 +360,7 @@ def _first_essay_paragraph(sections: object) -> str:
         heading = _flat_title(section.get("heading"))
         if heading.casefold() == "references":
             continue
-        if heading:
+        if len(heading) > WORD_TITLE_LIMIT:
             return heading
         body = section.get("body")
         if not isinstance(body, str):
@@ -378,7 +381,14 @@ def _cover_without_opening(lines: list[str], sections: object) -> list[str]:
     opening = _first_essay_paragraph(sections)
     if not opening:
         return list(lines)
-    return [line for line in lines if _flat_title(line) != opening]
+    kept: list[str] = []
+    dropped = False
+    for line in lines:
+        if not dropped and _flat_title(line) == opening:
+            dropped = True
+            continue
+        kept.append(line)
+    return kept
 
 
 def document_title(
@@ -389,10 +399,10 @@ def document_title(
 ) -> str:
     """A Word document title of at most 255 characters.
 
-    The short title already stored on the Word file is kept. A later candidate
-    is skipped when it is the opening paragraph or longer than that limit.
-    When nothing short is stored, the fallback is the assessment id or the
-    file name without .docx.
+    The short title already stored on the Word file is kept when it is not
+    the opening paragraph and it is at most 255 characters. A later candidate
+    is skipped on the same terms. The caller passes a real stored pack or
+    report title before the assessment id. The opening is never the title.
     """
     banned = _flat_title(opening)
 
@@ -404,7 +414,7 @@ def document_title(
             return ""
         return text
 
-    chosen = usable(stored, reject_opening=False)
+    chosen = usable(stored, reject_opening=True)
     if chosen:
         return chosen
     for candidate in candidates:
@@ -441,29 +451,8 @@ def _title_and_opening(path: Path) -> tuple[str, str]:
 
 
 def _section_opening(sections: object) -> str:
-    """First essay paragraph. A long recovered heading is that paragraph."""
-    if not isinstance(sections, list):
-        return ""
-    first_body = ""
-    for section in sections:
-        if not isinstance(section, dict):
-            continue
-        heading = _flat_title(section.get("heading"))
-        if len(heading) > WORD_TITLE_LIMIT:
-            return heading
-        body = section.get("body")
-        if not isinstance(body, str):
-            continue
-        for line in body.splitlines():
-            flat = _flat_title(line)
-            if not flat:
-                continue
-            if len(flat) > WORD_TITLE_LIMIT:
-                return flat
-            if not first_body:
-                first_body = flat
-            break
-    return first_body
+    """First essay paragraph. A section heading is not that paragraph."""
+    return _first_essay_paragraph(sections)
 
 
 def _word_document_title(
@@ -472,7 +461,12 @@ def _word_document_title(
     report: dict[str, Any],
     path: Path,
 ) -> str:
-    """Title for a student Word file. Never the opening paragraph."""
+    """Title for a student Word file. Never the opening paragraph.
+
+    Order: the short title already stored on the first-draft Word file, then
+    the assessment id, then the file name without .docx. A pack or report
+    title is a cover line, not this property.
+    """
     raw_stored, file_opening = _title_and_opening(
         work_dir(essay_id) / "output" / f"{essay_id}.docx"
     )
@@ -493,7 +487,6 @@ def _word_document_title(
         stem = path.stem
     return document_title(
         stored,
-        stored_cover_title(pack, report),
         str(essay_id),
         stem,
         opening=opening,

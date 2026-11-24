@@ -35,7 +35,9 @@ GUIDANCE_NEXT = "One sentence of your own is the look. Add it in this chat, then
 
 def guidance_only_refusal() -> dict[str, Any]:
     """Spoken refusal. Nothing is written and no Confirm card is returned."""
-    return refuse("guidance-only", GUIDANCE_REASON, next=GUIDANCE_NEXT)
+    from essay_writer.stage_next import write_stage_next
+
+    return write_stage_next(refuse("guidance-only", GUIDANCE_REASON), GUIDANCE_NEXT)
 
 
 def _normalize_look(text: str) -> str:
@@ -193,6 +195,9 @@ def _prepare_stage_text(
         # The student's outline is the structure, so each woven cite stays
         # short here too: no mini review is built around a gathered paper.
         text, woven = weave_short_cites(essay_id, text, SHORT_CITE_LIMIT)
+        from essay_writer.cite_fit import carry_subject_gap
+
+        text = carry_subject_gap(text, bool(cite_report.get("subject_gap")))
         if woven:
             short_report = {
                 **short_report,
@@ -367,18 +372,16 @@ def _stage7_draft_body(
     if answers is not None or edited is not None or web_check is not None:
         edited_note = note_edits(essay_id, answers=answers, edited=edited, web_check=web_check)
         if edited_note.get("ok") is False:
-            return (
-                refuse(
-                    "stage",
-                    str(edited_note.get("reason") or "Ask, then edit from the answers."),
-                    next=edited_note.get("next"),
-                    stage=stage,
-                    current=pointer["current"],
-                ),
-                answers,
-                edited,
-                web_check,
+            from essay_writer.stage_next import write_note_refusal_next
+
+            blocked = refuse(
+                "stage",
+                str(edited_note.get("reason") or "Ask, then edit from the answers."),
+                stage=stage,
+                current=pointer["current"],
             )
+            write_note_refusal_next(blocked, edited_note.get("next"))
+            return blocked, answers, edited, web_check
         answers = edited_note.get("answers", answers)
         edited = edited_note.get("edited", edited)
         web_check = edited_note.get("webCheck", web_check)
@@ -449,15 +452,15 @@ def _build_stage_body(
 
     if stage == "5" and not minting:
         from essay_writer.citation_list import first_write_block
-        from essay_writer.stage_next import write_stage_next
 
         blocked = first_write_block(essay_id)
         if blocked is not None:
             blocked["stage"] = stage
             blocked["current"] = pointer.get("current")
             blocked["advanced"] = False
-            reason = str(blocked.get("reason") or "")
-            return write_stage_next(blocked, reason)
+            from essay_writer.stage_next import write_refusal_reason_next
+
+            return write_refusal_reason_next(blocked)
     text, basics_seeded, edited, short_report, cite_report, opening = _prepare_stage_text(
         args,
         text,
@@ -465,7 +468,6 @@ def _build_stage_body(
     )
     if stage == "5":
         from essay_writer.specialists.writer import finish_first_draft
-        from essay_writer.stage_next import write_stage_next
 
         if not minting:
             from essay_writer.brief_contract import stage_contract_refusal
@@ -488,10 +490,12 @@ def _build_stage_body(
                 for name in (read_assignment(essay_id).get("named_entries") or [])
                 if isinstance(name, str) and name.strip()
             ]
+            block = finished_draft.get("block")
+            unreadable = isinstance(block, dict) and block.get("readable") is False
             # The named-parts check already passed. That note stays. A brief
             # with no named parts is still refused when it is short of the band.
-            if not named:
-                block = finished_draft.get("block")
+            # A draft a citation removal left unreadable is refused either way.
+            if unreadable or not named:
                 if not isinstance(block, dict):
                     block = refuse(
                         "word-band",
@@ -500,8 +504,9 @@ def _build_stage_body(
                 block["stage"] = stage
                 block["current"] = pointer.get("current")
                 block["advanced"] = False
-                reason = str(block.get("reason") or "")
-                return write_stage_next(block, reason)
+                from essay_writer.stage_next import write_refusal_reason_next
+
+                return write_refusal_reason_next(block)
     prepared_lines = opening.lines if isinstance(opening, BasicsOpening) else None
     from essay_writer.spine import stage_uses_confirm_card
 

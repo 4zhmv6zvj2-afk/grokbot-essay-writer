@@ -477,26 +477,6 @@ def _research_sources(essay_id: str) -> list[dict[str, Any]]:
     return found
 
 
-def _with_assignment(essay_id: str, text: str) -> str:
-    """Keep the format and the assignment question in the draft being written."""
-    from essay_writer.assignment_gate import question_is_answered, read_assignment
-
-    record = read_assignment(essay_id)
-    if record.get("active") is not True:
-        return text
-    pieces = [text.strip()] if isinstance(text, str) and text.strip() else []
-    joined = "\n\n".join(pieces)
-    format_name = record.get("format") if isinstance(record.get("format"), str) else ""
-    question = record.get("question") if isinstance(record.get("question"), str) else ""
-    if format_name and format_name.casefold() not in joined.casefold():
-        pieces.insert(0, f"This {format_name} takes up the assignment.")
-        joined = "\n\n".join(pieces)
-    if question and not question_is_answered(joined, question):
-        sentence = question if question.endswith((".", "?", "!")) else f"{question}."
-        pieces.insert(0, sentence)
-    return "\n\n".join(piece for piece in pieces if piece).strip()
-
-
 def _sections_to_look(sections: list[Any]) -> str:
     parts: list[str] = []
     for section in sections:
@@ -518,7 +498,7 @@ def _write_up_to_band(essay_id: str, text: str) -> str:
     from essay_writer.draft_from_review import look_sections
     from essay_writer.rewrite_baseline import band_edges
 
-    prepared = _with_assignment(essay_id, text)
+    prepared = text.strip() if isinstance(text, str) else ""
     low, high = band_edges(document_word_band(essay_id))
     if low is None or high is None:
         return prepared
@@ -651,11 +631,16 @@ def first_draft_unreadable(text: str) -> dict[str, Any] | None:
     A doubled comma, a full stop glued to a comma, a sentence or line that
     starts with the verb the author name used to govern, a verb left after a
     prepositional opening, a modal left after a preposition, or a verb left
-    after a conjunction with no subject are not readable English. A readable
-    sentence is left alone.
+    after a conjunction with no subject are not readable English. A cite
+    removal that leaves a subject gap is not readable either. That gap is
+    carried on the text from the strip, through the essay-cite fit and any
+    later plain-string rewrite, and this check reads it. The verb list is
+    not the only gate. A readable sentence is left alone.
     """
     if not isinstance(text, str) or not text.strip():
         return None
+    if getattr(text, "subject_gap", False):
+        return refuse("draft", UNREADABLE_DRAFT, readable=False)
     if (
         ",," in text
         or _glued_period_comma(text)
@@ -679,11 +664,14 @@ def finish_first_draft(essay_id: str, text: str) -> dict[str, Any]:
     The essay cites relevant works up to its own count, which is not the
     length of the citation list.
     """
+    from essay_writer.cite_fit import carry_subject_gap
     from essay_writer.essay_cites import fit_essay_cites
     from essay_writer.rewrite_baseline import band_edges
 
+    gap = bool(getattr(text, "subject_gap", False))
     if isinstance(text, str) and text.strip():
         text = fit_essay_cites(essay_id, text)
+    text = carry_subject_gap(text, gap)
     broken = first_draft_unreadable(text)
     if broken is not None:
         return {"ready": False, "text": text, "block": broken}
@@ -693,7 +681,10 @@ def finish_first_draft(essay_id: str, text: str) -> dict[str, Any]:
     counted = draft_word_count(essay_id, text)
     if counted is not None and counted >= low:
         return {"ready": True, "text": text}
-    written = _write_up_to_band(essay_id, text)
+    written = carry_subject_gap(
+        _write_up_to_band(essay_id, text),
+        bool(getattr(text, "subject_gap", False)),
+    )
     after = draft_word_count(essay_id, written)
     if after is not None and high is not None and low <= after <= high:
         broken = first_draft_unreadable(written)

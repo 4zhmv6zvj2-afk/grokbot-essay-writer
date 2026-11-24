@@ -778,7 +778,7 @@ def test_harvard_check_reads_a_page_cite_for_the_list(tmp_path):
         path = tmp_path / f"page-cite-{index}.docx"
         _save(path, body, other_line, parts=None)
         misses = compliance_misses(path, [source])
-        assert [item["code"] for item in misses] == ["author-date"]
+        assert [item["code"] for item in misses] == ["author-date", "source-line"]
 
     covered = tmp_path / "page-cite-covered.docx"
     _save(

@@ -9,13 +9,11 @@ path remains. The person is told only when every path is exhausted.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from essay_writer.stage_llm import HOUSE_MODEL
 
 MODEL_LINE = f"Critical note: {HOUSE_MODEL}"
-_NOTE_LABEL = re.compile(r"^critical note:?$", re.IGNORECASE)
 
 
 def _text(value: object) -> str | None:
@@ -59,23 +57,24 @@ def trim_model_line(markdown: str) -> tuple[str, int]:
     return text, dropped
 
 
+def _marker_only(line: str) -> bool:
+    """True when the line is the structural marker and nothing else."""
+    return line.strip().casefold().rstrip(":") == "critical note"
+
+
 def student_review_text(markdown: str) -> str:
-    """Source-review text a student opens. A model name is not part of that note."""
+    """Review text a student opens.
+
+    The model-metadata line is removed, and so is a line that is only the
+    structural marker. A quoted model name stays. The stored markdown that
+    ``has_critical_note`` reads is a different copy and keeps that marker.
+    """
     if not isinstance(markdown, str) or not markdown:
         return markdown
     cleaned, _dropped = trim_model_line(markdown)
-    kept: list[str] = []
-    for line in cleaned.splitlines():
-        if HOUSE_MODEL in line:
-            line = line.replace(HOUSE_MODEL, "")
-        while "  " in line:
-            line = line.replace("  ", " ")
-        line = line.rstrip()
-        if _NOTE_LABEL.fullmatch(line.strip()):
-            continue
-        kept.append(line)
+    kept = [line for line in cleaned.splitlines() if not _marker_only(line)]
     text = "\n".join(kept)
-    if markdown.endswith("\n") and text and not text.endswith("\n"):
+    if cleaned.endswith("\n") and text and not text.endswith("\n"):
         text += "\n"
     return text
 

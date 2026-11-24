@@ -389,22 +389,18 @@ _HOUSE_HEADING = re.compile(r"(?i)\bnorth[-\s]star(?:\s+judgement)?\b")
 def student_findings_text(findings: str) -> str:
     """Wording for a findings Word file a student would open.
 
-    The section heading is Overall judgement. A house heading, a critical-note
-    label, or a model name is not written into that file.
+    The section heading is Overall judgement. The model-metadata line and a
+    line that is only the structural marker are removed. A quoted model name
+    stays. The stored note keeps the marker. A house heading is renamed.
     """
-    from essay_writer.stage_llm import HOUSE_MODEL
+    from essay_writer.context_fit import student_review_text
 
-    model = HOUSE_MODEL.casefold()
+    cleaned = student_review_text(findings if isinstance(findings, str) else "")
     kept: list[str] = []
-    for line in findings.splitlines():
-        folded = line.casefold()
-        if re.match(r"(?i)^\s*critical note\b", line):
-            continue
-        if model and model in folded:
-            continue
-        cleaned = _HOUSE_HEADING.sub("Overall judgement", line)
-        cleaned = cleaned.replace("Overall judgement judgement", "Overall judgement")
-        kept.append(cleaned)
+    for line in cleaned.splitlines():
+        renamed = _HOUSE_HEADING.sub("Overall judgement", line)
+        renamed = renamed.replace("Overall judgement judgement", "Overall judgement")
+        kept.append(renamed)
     return "\n".join(kept)
 
 

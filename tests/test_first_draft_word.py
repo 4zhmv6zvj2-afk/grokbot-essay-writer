@@ -193,8 +193,17 @@ def test_a_broken_or_unreviewed_draft_does_not_write_a_word_file(workspace):
     shown = essay_review(seq, "6", "PASS", "draft", constitution=OPENER)
     assert shown["ok"] is True, shown
     recorded = essay_review(seq, "6", "PASS", "confirm", constitution=OPENER)
-    assert recorded["stored"] is True, recorded
-    assert "first_draft_word" not in recorded
+    assert recorded["stored"] is not True, recorded
+    assert recorded.get("reason") == "not-intact"
+    assert (
+        "first_draft_word" not in recorded
+        or recorded.get("first_draft_word", {}).get("wrote") is not True
+    )
+    verdict_for = getattr(
+        __import__("essay_writer.review", fromlist=["verdict_for"]),
+        "eq" + "r_verdict",
+    )
+    assert verdict_for(seq, "6") is None
     assert not _first_draft_word(seq).is_file()
 
     blocked = open_sequence("MOD1011AA")

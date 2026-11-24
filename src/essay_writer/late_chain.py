@@ -912,6 +912,7 @@ def _remember_stage10(source: Path, pack: dict[str, Any], body: dict[str, Any]) 
         "comments_place": body.get("comments_place") or "",
         "findings_place": body.get("findings_place") or "",
         "sequence_written": body.get("sequence_written") is True,
+        "reason": body.get("reason") if isinstance(body.get("reason"), str) else "",
     }
     path = _stage10_mark_path(source)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -948,11 +949,12 @@ def _reuse_stage10(
         body["comments_place"] = ""
         body["findings_place"] = ""
         return body
+    remembered = record.get("reason") if isinstance(record.get("reason"), str) else ""
     body["ok"] = True
     body["copied"] = record.get("copied") is True
     body["sequence_written"] = True
     body["reused"] = True
-    body["reason"] = ""
+    body["reason"] = remembered
     body["place"] = record.get("place") or body.get("place") or ""
     body["comments_place"] = record.get("comments_place") or ""
     body["findings_place"] = record.get("findings_place") or ""
@@ -1306,12 +1308,19 @@ def _write_stage10_sequence(
         body["refused"] = "empty-references"
         body["reason"] = reason
         return None, body
-    from essay_writer.harvard_ref_check import writer_reference_block
+    from essay_writer.harvard_ref_check import (
+        sources_the_file_accounts_for,
+        writer_reference_block,
+    )
 
     blocked_harvard = writer_reference_block(
         essay_id,
         pending,
-        list(report.get("sources") or []),
+        sources_the_file_accounts_for(
+            pending,
+            list(report.get("sources") or []),
+            essay_id,
+        ),
     )
     if blocked_harvard:
         pending.unlink(missing_ok=True)
@@ -1530,7 +1539,7 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
 def _write_comments(essay_id: str, path: Path) -> None:
     from docx import Document
 
-    from essay_writer.specialists.eqr import eqr_record, eqr_verdict
+    from essay_writer.specialists.eqr import eqr_record, eqr_verdict, student_findings_text
     from essay_writer.word import (
         WORD_TITLE_LIMIT,
         _font,
@@ -1544,7 +1553,7 @@ def _write_comments(essay_id: str, path: Path) -> None:
     findings_raw = stored.get("findings")
     findings = findings_raw if isinstance(findings_raw, str) else ""
     if stored.get("word_opened") and findings.strip():
-        review = findings.strip()
+        review = student_findings_text(findings).strip()
     else:
         verdict = eqr_verdict(essay_id, "9")
         if verdict == "PASS":

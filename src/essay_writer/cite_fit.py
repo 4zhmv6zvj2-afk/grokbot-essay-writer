@@ -289,8 +289,74 @@ def _label(token: str, text: str) -> str:
     return f"{shown} ({year})"
 
 
+class StripReport(str):
+    """Cleaned sentence plus the spans this strip removed.
+
+    ``subject_gap`` is true when a removed narrative cite was the subject
+    or the name, so the sentence no longer reads.
+    """
+
+    removed: tuple[str, ...]
+    subject_gap: bool
+
+    def __new__(
+        cls,
+        text: str,
+        removed: tuple[str, ...] = (),
+        subject_gap: bool = False,
+    ) -> StripReport:
+        obj = str.__new__(cls, text)
+        obj.removed = removed
+        obj.subject_gap = subject_gap
+        return obj
+
+
+def carry_subject_gap(text: str, gap: bool = False) -> str:
+    """Keep a subject gap on text after a plain-string rewrite.
+
+    A ``StripReport`` does not survive JSON, ``str.strip``, or a join. The
+    flag has to be put back on the string the first-draft check will read.
+    """
+
+    if not isinstance(text, str):
+        return ""
+    flagged = bool(gap) or bool(getattr(text, "subject_gap", False))
+    if not flagged:
+        return text
+    if isinstance(text, StripReport) and text.subject_gap:
+        return text
+    return StripReport(str(text), tuple(getattr(text, "removed", ())), True)
+
+
+def _subject_gap_of(*values: object) -> bool:
+    return any(bool(getattr(value, "subject_gap", False)) for value in values)
+
+
+_PREP_BEFORE_NAME = frozenset({"by", "from", "of", "with", "for"})
+
+
+def _subject_hole(text: str, start: int, end: int) -> bool:
+    """True when the cite at this span was the subject or the name."""
+    before = text[:start].rstrip()
+    after = text[end:].lstrip()
+    if not after:
+        return False
+    words = re.findall(r"[A-Za-z']+", before)
+    last = words[-1].casefold() if words else ""
+    if last in _PREP_BEFORE_NAME and after[0].islower():
+        return True
+    boundary = (not before) or before[-1] in ".!?\n,"
+    if boundary and (after[0].islower() or re.match(r"and\b", after, flags=re.IGNORECASE)):
+        return True
+    return False
+
+
 def strip_token(text: str, token: str) -> str:
-    """Remove one author-year cite. The student's sentence stays."""
+    """Remove one author-year cite. The student's sentence stays.
+
+    The result reports every span removed on ``removed``. A narrative cite
+    that was the subject or the name sets ``subject_gap``.
+    """
 
     if not isinstance(text, str) or not text or "," not in token:
         return text
@@ -302,12 +368,16 @@ def strip_token(text: str, token: str) -> str:
     et_al = r"(?:\s+et\s+al\.?)?"
     page = r"(?:\s*,\s*(?:pp?\.\s*)?\d+(?:\s*[-–—]\s*\d+)?)?"
     piece_re = rf"{name_re}{et_al}\s*,\s*{year_re}{page}"
+    prior = tuple(getattr(text, "removed", ()))
+    gap = bool(getattr(text, "subject_gap", False))
+    removed: list[str] = []
 
     def repl_paren(match: re.Match[str]) -> str:
         kept: list[str] = []
         for part in match.group(1).split(";"):
             piece = norm_space(part)
             if re.fullmatch(piece_re, piece, flags=re.IGNORECASE):
+                removed.append(piece)
                 continue
             kept.append(piece)
         if not kept:
@@ -316,10 +386,20 @@ def strip_token(text: str, token: str) -> str:
 
     cleaned = re.sub(r"\(([^)]*\d{4}[^)]*)\)", repl_paren, text)
     narrative = rf"\b{name_re}{et_al}\s*\(\s*{year_re}{page}\s*\)"
-    cleaned = re.sub(narrative, "", cleaned, flags=re.IGNORECASE)
+
+    def repl_narrative(match: re.Match[str]) -> str:
+        nonlocal gap
+        removed.append(norm_space(match.group(0)))
+        if _subject_hole(cleaned, match.start(), match.end()):
+            gap = True
+        return ""
+
+    cleaned = re.sub(narrative, repl_narrative, cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
     cleaned = re.sub(r" +([,.;:!?])", r"\1", cleaned)
-    return cleaned
+    if not removed and not prior and not gap and not isinstance(text, StripReport):
+        return cleaned
+    return StripReport(cleaned, prior + tuple(removed), gap)
 
 
 def _ask_sentence(labels: list[str]) -> str | None:
@@ -377,7 +457,14 @@ def _gate_text(
 
 
 def _passthrough(text: str, edited: str | None) -> dict[str, Any]:
-    return {"text": text, "edited": edited, "ask": None, "held": [], "applied": False}
+    return {
+        "text": text,
+        "edited": edited,
+        "ask": None,
+        "held": [],
+        "applied": False,
+        "subject_gap": _subject_gap_of(text, edited),
+    }
 
 
 def apply_body_cites(
@@ -422,12 +509,14 @@ def apply_body_cites(
             if isinstance(gated_edited, str):
                 gated_edited = strip_token(gated_edited, token)
         if cleaned != incoming or gated_edited != edited_text:
+            kept_edited = gated_edited if edited_text is not None else edited
             return {
                 "text": cleaned,
-                "edited": gated_edited if edited_text is not None else edited,
+                "edited": kept_edited,
                 "ask": None,
                 "held": [],
                 "applied": True,
+                "subject_gap": _subject_gap_of(cleaned, kept_edited),
             }
         return _passthrough(incoming, edited)
 
@@ -478,13 +567,15 @@ def apply_body_cites(
     }
     if stored["ok"] or stored["rejected"] or stored["withheld"]:
         _write_record(essay_id, stored)
+    kept_edited = gated_edited if edited_text is not None else edited
     return {
         "text": cleaned,
-        "edited": gated_edited if edited_text is not None else edited,
+        "edited": kept_edited,
         "ask": _ask_sentence(labels),
         "gap": gap_ask(held),
         "held": held,
         "applied": True,
+        "subject_gap": _subject_gap_of(cleaned, kept_edited),
     }
 
 
