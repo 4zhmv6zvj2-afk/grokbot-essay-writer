@@ -16,3 +16,13 @@ These writes stay outside that replace. Each one is a stream, a download, or a t
 - A photo note is published only after the photo file has moved.
 
 Secret files are still written in place and flushed. They are not sequence state.
+
+## A sequence saved by an earlier 0.9 release
+
+`state.json` and `tracking/stage.json` have the same keys from 0.9.14 through 0.9.19. A file from one of those releases loads, the tracking note is readable, and the next stage confirm advances it. The synthetic copies live in `tests/fixtures/state/`. A stage 6 snapshot with a saved stage 5 look can also write the first-draft Word file.
+
+A load does not rewrite the file. A missing known field is filled in memory and recorded as `state-field-filled` or `pointer-field-filled`. An unknown field is kept, including an unknown saved entry or file entry, and recorded as `state-unknown-field` or `pointer-unknown-field`. The next real save writes that field again.
+
+A `current` value that is not a stage becomes stage 1 in memory and is recorded as `pointer-unknown-current`. A `saved` or `files` value that is not a list or an object is left out of the loaded pointer and recorded as `pointer-field-dropped`. The bytes on disk stay until the next save, and that save writes the value the stage machine can use.
+
+A `state.json` that is not a JSON object is the existing damage refusal. The load records `state-damaged` and does not replace the file. A stage pointer that is not a JSON object stays the existing in-memory fallback. It records `pointer-damaged` and does not replace the file. Neither case adds a new student stop.

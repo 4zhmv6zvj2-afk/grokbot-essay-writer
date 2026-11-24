@@ -15,6 +15,43 @@ from essay_writer.records import write_json
 
 STATE_DAMAGED = "The state file is damaged."
 
+# Keys the 0.9.14 through 0.9.19 writers stored on state.json, plus the empty record.
+# A key outside this set is kept and recorded. It is not dropped on load.
+_KNOWN_STATE_KEYS = frozenset(
+    {
+        "approved_look",
+        "attempts",
+        "branch_reason",
+        "branched_from",
+        "eqr",
+        "essay_id",
+        "failures",
+        "first_draft",
+        "last_useful_at",
+        "papers",
+        "reference_index",
+        "registration_number",
+        "research",
+        "research_on_request",
+        "revisions",
+        "room_grant",
+        "room_lock",
+        "saved_pack",
+        "seen_urls",
+        "sequence",
+        "sequence_id",
+        "shelf",
+        "specialist_lookup",
+        "started_at",
+        "stop_reason",
+        "stopped",
+        "unresolved_references",
+        "user_feedback",
+        "validations",
+        "word",
+    }
+)
+
 
 class DamagedState(Exception):
     """state.json exists and is not a JSON object."""
@@ -89,11 +126,19 @@ def state_path(essay_id: str):
     return work_dir(essay_id) / "state.json"
 
 
+def _note_state(code: str, *, disposition: str, severity: str = "info") -> None:
+    from essay_writer.incident import note
+
+    note(code, severity=severity, disposition=disposition, tool="state", step="load")
+
+
 def load_state(essay_id: str) -> dict[str, Any]:
     """Load one sequence's state.
 
     A missing file starts empty. A file that exists and is not a JSON object
-    is damage: the sequence is not treated as empty.
+    is damage: the sequence is not treated as empty, and the file is not
+    rewritten. A missing known field is filled in memory and recorded. An
+    unknown field is kept and recorded. Neither fill writes the file.
     """
     path = state_path(essay_id)
     data: dict[str, Any] | None = None
@@ -101,12 +146,18 @@ def load_state(essay_id: str) -> dict[str, Any]:
         try:
             loaded = json.loads(path.read_text(encoding="utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            _note_state("state-damaged", disposition="refuse", severity="warn")
             raise DamagedState() from exc
         if not isinstance(loaded, dict):
+            _note_state("state-damaged", disposition="refuse", severity="warn")
             raise DamagedState()
         data = loaded
     base = empty_state(essay_id)
     if data is not None:
+        if any(key not in data for key in base):
+            _note_state("state-field-filled", disposition="fallback")
+        if any(key not in _KNOWN_STATE_KEYS for key in data):
+            _note_state("state-unknown-field", disposition="fallback")
         for key in base:
             if key in data:
                 base[key] = data[key]
