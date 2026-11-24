@@ -207,6 +207,9 @@ def deletion_allowed(path: Path, *, explicit: Path | None) -> str | None:
     tmp = tmp_root().resolve()
     if resolved in {Path("/").resolve(), tmp, Path.home().resolve()}:
         return "parent"
+    evidence = evidence_dir().resolve()
+    if resolved == evidence or evidence in resolved.parents or resolved in evidence.parents:
+        return "evidence"
     if explicit is not None:
         if resolved != explicit.expanduser().resolve():
             return "not the run dir"

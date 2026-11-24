@@ -2,7 +2,7 @@
 
 `tools/run_gates.py` runs the checkout checks CI runs. A clean pass writes a stamp into the git directory (`git rev-parse --git-dir` / `gate-stamp.json`), never into the worktree. `tools/tag_release.py` creates an annotated tag only when that stamp is a fresh full pass for this commit on `main`. `--allow-branch` is the maintainer exception for any other branch. It does not run the gate, and it does not push.
 
-Use the project interpreter so ruff, mypy, and pytest are the ones the suite uses:
+Use the project interpreter so ruff, mypy, and pytest are the ones the suite uses. The ruff step compiles `.cursor/skills/verify-essay-writer/scripts/verify-essay-writer` and checks it with `src`, `tests`, and `tools`. The format step checks those same paths.
 
 ```bash
 uv run python tools/run_gates.py

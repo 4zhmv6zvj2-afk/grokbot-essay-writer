@@ -103,7 +103,8 @@ def test_skill_names_the_student_path():
     ):
         assert heading in text
     assert "ESSAY_WRITER_ROOT" in text
-    assert essay_writer.__version__ in text
+    assert "installed package version" in text
+    assert essay_writer.__version__ not in text
     assert "scripts/verify-essay-writer launch" in text
     assert "scripts/verify-essay-writer doctor" in text
     assert "scripts/verify-essay-writer drive-research-gather" in text
@@ -341,13 +342,14 @@ def test_cleanup_leaves_the_named_evidence():
 
 
 def test_package_version_matches_the_skill():
-    """AC-ver-7. The package and the skill stay on the same version."""
+    """AC-ver-7. The package version has one source. The skill does not copy the number."""
     version = essay_writer.__version__
     project = (REPO / "pyproject.toml").read_text(encoding="utf-8")
     assert f'version = "{version}"' in project
     skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     helper = HELPER.read_text(encoding="utf-8")
-    assert version in skill
+    assert "installed package version" in skill
+    assert version not in skill
     assert version not in helper
     assert "package_version()" in helper
     assert "Expected {expected}." in helper
@@ -463,6 +465,50 @@ def test_cleanup_refuses_a_missing_marker():
             shutil.rmtree(run)
         if evidence.exists():
             shutil.rmtree(evidence)
+
+
+def test_cleanup_refuses_a_run_dir_that_overlaps_evidence(tmp_path: Path):
+    """Cleanup leaves a run directory that sits inside the evidence directory or contains it."""
+    evidence = tmp_path / "evidence"
+    inside = evidence / "essay-verify-inside"
+    inside.mkdir(parents=True)
+    token = "overlap-token"
+    (inside / ".essay-verify-created").write_text(token + "\n", encoding="utf-8")
+    (inside / "keep.txt").write_text("stay", encoding="utf-8")
+    _proof(evidence, inside, token)
+    harness = _load_harness(
+        {
+            "ESSAY_WRITER_EVIDENCE": str(evidence),
+            "ESSAY_WRITER_VERIFY_RUN": str(inside),
+            "ESSAY_WRITER_ROOT": str(inside / "student"),
+            "ESSAY_WRITER_VERIFY_KB1": str(inside / "KB1"),
+            "ESSAY_WRITER_VERIFY_DEPS": str(inside / "deps"),
+        }
+    )
+    harness.EXPLICIT_RUN_DIR = inside.resolve()
+    with pytest.raises(SystemExit):
+        harness.cmd_cleanup()
+    assert (inside / "keep.txt").read_text(encoding="utf-8") == "stay"
+
+    outer = tmp_path / "essay-verify-outer"
+    nested = outer / "evidence"
+    outer.mkdir()
+    (outer / ".essay-verify-created").write_text(token + "\n", encoding="utf-8")
+    (outer / "keep.txt").write_text("stay", encoding="utf-8")
+    _proof(nested, outer, token)
+    harness = _load_harness(
+        {
+            "ESSAY_WRITER_EVIDENCE": str(nested),
+            "ESSAY_WRITER_VERIFY_RUN": str(outer),
+            "ESSAY_WRITER_ROOT": str(outer / "student"),
+            "ESSAY_WRITER_VERIFY_KB1": str(outer / "KB1"),
+            "ESSAY_WRITER_VERIFY_DEPS": str(outer / "deps"),
+        }
+    )
+    harness.EXPLICIT_RUN_DIR = outer.resolve()
+    with pytest.raises(SystemExit):
+        harness.cmd_cleanup()
+    assert (outer / "keep.txt").read_text(encoding="utf-8") == "stay"
 
 
 def test_cleanup_removes_only_the_explicit_run_dir(tmp_path: Path):
@@ -711,7 +757,9 @@ def test_skill_docs_match_the_script():
     assert "--require-hashes" in text
     assert "--run-dir" in text
     for path in SKILL.rglob("*.md"):
-        assert "/opt/cursor/artifacts" not in path.read_text(encoding="utf-8")
+        body = path.read_text(encoding="utf-8")
+        assert "/opt/cursor/artifacts" not in body
+        assert essay_writer.__version__ not in body
     helper = HELPER.read_text(encoding="utf-8")
     assert "mcp==" not in helper
     assert "/proc" not in helper

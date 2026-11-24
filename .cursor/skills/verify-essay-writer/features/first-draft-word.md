@@ -19,7 +19,7 @@ After the citation list, the student gets a first draft and then a Word file. St
 
 Preconditions:
 
-- Doctor reports version `0.9.18` on this student folder.
+- Doctor reports the installed package version on this student folder.
 - The sequence already has a written citation list, and `essay.dig` is not blocked for a further page.
 - Launch and the research-gather drive have already been run, or the same doors have been driven by hand on this folder.
 

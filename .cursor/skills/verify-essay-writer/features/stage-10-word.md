@@ -19,7 +19,7 @@ The finished essay is the stage 10 Word file. It is written only after the revie
 
 Preconditions:
 
-- Doctor reports version `0.9.18` on this student folder.
+- Doctor reports the installed package version on this student folder.
 - A current Word file already exists on the sequence, and stage 9 is the open stage.
 - The citation list for this sequence is already written.
 

@@ -23,7 +23,7 @@ The student files an assignment, asks for sources, and gets a citation list of t
 Preconditions:
 
 - Launch has finished and the student folder is empty of essays.
-- Doctor reports version `0.9.18` and `essay.dig` is mounted.
+- Doctor reports the installed package version and `essay.dig` is mounted.
 - `ESSAY_WRITER_ROOT` is the student folder from launch.
 
 - **File the brief.** The helper writes `unassigned/brief.md`, then calls `essay.intake` with `name` `brief.md`, `module` `MOD1004AA`, `confirmPhase` `draft`, then `confirm`. The confirm path ends with `Essay-writer/MOD1004AA/brief.md`.
