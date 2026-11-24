@@ -6,6 +6,7 @@ from helpers import (
     card_digest_for,
     open_sequence,
     pack,
+    plant_saved_draft,
     source,
     write_upload,
 )
@@ -153,8 +154,10 @@ def test_word_writes_a_possible_citation_and_refuses_a_hard_miss(workspace):
         seq, TOPIC, "confirm", [source()], cardDigest=card_digest_for(seq, "essay.research.summary")
     )
     constitution = f"This is a report. {QUESTION}"
+    plant_saved_draft(seq, constitution)
     essay_review(seq, "6", "PASS", "draft", constitution=constitution)
-    essay_review(seq, "6", "PASS", "confirm", constitution=constitution)
+    confirmed = essay_review(seq, "6", "PASS", "confirm", constitution=constitution)
+    assert confirmed["stored"] is True, confirmed
 
     possible = pack()
     possible["sections"][1] = {

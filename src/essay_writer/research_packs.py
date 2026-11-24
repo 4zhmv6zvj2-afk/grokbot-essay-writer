@@ -576,7 +576,8 @@ def _review_body(essay_id: str, source: dict[str, Any], supplied: str | None) ->
             text = f'{line}\n\n"{quote.strip()}"\n'
         else:
             text = f"{line}\n"
-    return student_review_text(prose_for_surface(text, "review"))
+    marked = f"Critical note:\n\n{text}"
+    return student_review_text(prose_for_surface(marked, "review"))
 
 
 def open_critical_markdown(path: Path, essay_id: str | None = None) -> str:

@@ -551,9 +551,9 @@ def _replay_confirm_card(
     digest = record.get("digest")
     if not isinstance(digest, str) or not digest:
         return None
-    from essay_writer.specialists.grok_bot import confirm_reply_fields
+    from essay_writer.specialists.grok_bot import card_next, confirm_reply_fields
     from essay_writer.spine import stage_confirm_card
-    from essay_writer.stage_next import write_replay_card_next
+    from essay_writer.stage_next import write_stage_next
 
     revisit = _revisit_window(pointer) and stage in {"2", "3"}
     line = _confirm_line(stage, genre, revisit=revisit)
@@ -574,7 +574,7 @@ def _replay_confirm_card(
         "advanced": False,
         "wrote": False,
     }
-    return write_replay_card_next(replayed, stage, title)
+    return write_stage_next(replayed, card_next(stage, title))
 
 
 def _stage7_skip_reply(

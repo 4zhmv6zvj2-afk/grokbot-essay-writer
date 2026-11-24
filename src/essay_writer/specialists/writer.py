@@ -478,23 +478,15 @@ def _research_sources(essay_id: str) -> list[dict[str, Any]]:
 
 
 def _with_assignment(essay_id: str, text: str) -> str:
-    """Keep the format and the assignment question in the draft being written."""
-    from essay_writer.assignment_gate import question_is_answered, read_assignment
+    """The student's draft. Nothing is added that the student did not write.
 
-    record = read_assignment(essay_id)
-    if record.get("active") is not True:
-        return text
-    pieces = [text.strip()] if isinstance(text, str) and text.strip() else []
-    joined = "\n\n".join(pieces)
-    format_name = record.get("format") if isinstance(record.get("format"), str) else ""
-    question = record.get("question") if isinstance(record.get("question"), str) else ""
-    if format_name and format_name.casefold() not in joined.casefold():
-        pieces.insert(0, f"This {format_name} takes up the assignment.")
-        joined = "\n\n".join(pieces)
-    if question and not question_is_answered(joined, question):
-        sentence = question if question.endswith((".", "?", "!")) else f"{question}."
-        pieces.insert(0, sentence)
-    return "\n\n".join(piece for piece in pieces if piece).strip()
+    A missing word band is filled from gathered claims, or refused. The raw
+    question and a filler sentence are not stored.
+    """
+    del essay_id
+    if not isinstance(text, str):
+        return ""
+    return text.strip()
 
 
 def _sections_to_look(sections: list[Any]) -> str:
@@ -651,11 +643,14 @@ def first_draft_unreadable(text: str) -> dict[str, Any] | None:
     A doubled comma, a full stop glued to a comma, a sentence or line that
     starts with the verb the author name used to govern, a verb left after a
     prepositional opening, a modal left after a preposition, or a verb left
-    after a conjunction with no subject are not readable English. A readable
-    sentence is left alone.
+    after a conjunction with no subject are not readable English. A cite
+    removal that leaves a subject gap is not readable either. The verb list
+    is not the only gate. A readable sentence is left alone.
     """
     if not isinstance(text, str) or not text.strip():
         return None
+    if getattr(text, "subject_gap", False):
+        return refuse("draft", UNREADABLE_DRAFT, readable=False)
     if (
         ",," in text
         or _glued_period_comma(text)

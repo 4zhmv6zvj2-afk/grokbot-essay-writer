@@ -373,13 +373,34 @@ def _three_opening_lines(essay_id: str, record: dict[str, Any]) -> tuple[str, st
 def read_basics_opening(essay_id: str) -> BasicsOpening:
     """Whether a brief is active, and the three opening lines.
 
-    Each call loads the assignment once. A later ask does not reuse this load.
+    One draft ask loads the assignment once. A later call in that ask reuses
+    the opening. A call outside an ask loads once for itself.
     """
-    record = essay_assignment_gate.read_assignment(essay_id)
-    return BasicsOpening(
-        active=record.get("active") is True,
-        lines=_three_opening_lines(essay_id, record),
+    from essay_writer.textutil import (
+        begin_brief_ask,
+        brief_ask_active,
+        end_brief_ask,
+        keep_opening,
+        take_opening,
     )
+
+    own = None
+    if not brief_ask_active():
+        own = begin_brief_ask()
+    try:
+        cached = take_opening(essay_id)
+        if isinstance(cached, BasicsOpening):
+            return cached
+        record = essay_assignment_gate.read_assignment(essay_id)
+        opening = BasicsOpening(
+            active=record.get("active") is True,
+            lines=_three_opening_lines(essay_id, record),
+        )
+        keep_opening(essay_id, opening)
+        return opening
+    finally:
+        if own is not None:
+            end_brief_ask(own)
 
 
 def basics_pass_lines(essay_id: str) -> tuple[str, str, str]:
@@ -535,7 +556,7 @@ def basics_pass_block(essay_id: str, text: str) -> dict[str, object] | None:
     """Refuse a save while the short Basics pass is not the first three lines.
 
     Daily use, with no brief and no mark scheme, is unchanged. Stage 5 does not call this.
-    This ask loads the opening once and does not change the student's note.
+    This ask loads the brief once and does not change the student's note.
     """
 
     opening = read_basics_opening(essay_id)

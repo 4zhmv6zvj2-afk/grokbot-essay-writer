@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- A stage 6 pass is recorded after the first-draft Word file is written from the saved draft. A failed write returns that error and leaves the pass unrecorded. A later reading of the pass requires the same saved draft text.
+- A review counts when the markdown has the structural marker and names the paper. A file that only names the paper does not count.
+- Stripping a citation reports each span it removed. A sentence that loses its subject or its name at that span is not a finished first draft. A readable phrase such as a can-do attitude still passes.
+- A short first draft stores only the student's text and gathered source text. When gathered claims cannot reach the word band, the draft is refused on the existing shortfall path.
+- Student review text and findings text drop only the model-metadata line. A quoted model name stays. A line that is only the marker stays. The comments Word file uses those same scrubbers.
+- The Word cover drops the opening paragraph once. A section heading stays. The document title uses the short title on the first-draft Word file, then the assessment id, then the file name without .docx. The opening is never the title. The title is at most 255 characters.
+- Italic titles are checked on the Word file stage 10 writes, including a review subtitle. A source the reference check cannot line up is recorded as a miss.
+- The remaining stage next sentences from the body builder and the stage runner are stored by the stage next module. A helper that only forwarded a sentence is gone.
+- One draft ask loads the brief once. The basics opening in that ask reuses the same load.
+- A stage 10 build that cannot see the Mac folder remembers that reason. A later confirm of the same build still says the folder is not on this computer.
 - The sdist ships `.githooks/pre-push`, so the local push hook is in the extracted tree.
 - The sdist ships `.cursor/skills/**`, so the verify-skill checks pass from the extracted tarball.
 - A printed source range uses its low end. "Up to N sources" is a cap, not a floor. A stated source count beside a word count stays the floor.

@@ -74,43 +74,6 @@ from essay_writer.stage_state import (
     load_pointer,
 )
 
-ANSWER_NEXT = (
-    "I have stored that answer beside the brief. This stage still needs one sentence of your own."
-)
-CLEARED_NEXT = (
-    "I have cleared that answer beside the brief. This stage still needs one sentence of your own."
-)
-IGNORED_NEXT = "I have not stored that answer. This stage still needs one sentence of your own."
-_ANSWER_TAIL = "This stage still needs one sentence of your own."
-
-
-def answer_next(format_outcome: str | None, question_outcome: str | None) -> str:
-    """The draft line for this call. A mixed call names each field."""
-    sent = [
-        (label, outcome)
-        for label, outcome in (("format", format_outcome), ("question", question_outcome))
-        if outcome is not None
-    ]
-    kinds = {outcome for _label, outcome in sent}
-    if kinds == {"stored"}:
-        return ANSWER_NEXT
-    if kinds == {"cleared"}:
-        return CLEARED_NEXT
-    if not kinds or kinds == {"ignored"}:
-        return IGNORED_NEXT
-    stored = [label for label, outcome in sent if outcome == "stored"]
-    cleared = [label for label, outcome in sent if outcome == "cleared"]
-    ignored = [label for label, outcome in sent if outcome == "ignored"]
-    if stored and cleared:
-        lead = f"I have stored the {stored[0]} and cleared the {cleared[0]} beside the brief."
-    elif stored:
-        lead = f"I have stored the {stored[0]} beside the brief."
-    else:
-        lead = f"I have cleared the {cleared[0]} beside the brief."
-    if ignored:
-        return f"{lead} I have not stored the {ignored[0]}. {_ANSWER_TAIL}"
-    return f"{lead} {_ANSWER_TAIL}"
-
 
 def _continues_inherited_lock(
     essay_id: str,
@@ -160,29 +123,35 @@ def essay_stage(
     questionAnswer: str | None = None,
 ) -> dict[str, Any]:
     """A card saves the final look. Stage 5 starts stage 6."""
-    return _stage_call(
-        StageArgs(
-            essay_id=essay_id,
-            stage=stage,
-            confirmPhase=confirmPhase,
-            look=look,
-            master=master,
-            namedFolder=namedFolder,
-            answers=answers,
-            edited=edited,
-            webCheck=webCheck,
-            heldFile=heldFile,
-            cardAction=cardAction,
-            cardDigest=cardDigest,
-            card_only=card_only,
-            encourageChoice=encourageChoice,
-            paperChoice=paperChoice,
-            lockChoice=lockChoice,
-            formatAnswer=formatAnswer,
-            questionAnswer=questionAnswer,
-        ),
-        minting=False,
-    )
+    from essay_writer.textutil import begin_brief_ask, end_brief_ask
+
+    token = begin_brief_ask()
+    try:
+        return _stage_call(
+            StageArgs(
+                essay_id=essay_id,
+                stage=stage,
+                confirmPhase=confirmPhase,
+                look=look,
+                master=master,
+                namedFolder=namedFolder,
+                answers=answers,
+                edited=edited,
+                webCheck=webCheck,
+                heldFile=heldFile,
+                cardAction=cardAction,
+                cardDigest=cardDigest,
+                card_only=card_only,
+                encourageChoice=encourageChoice,
+                paperChoice=paperChoice,
+                lockChoice=lockChoice,
+                formatAnswer=formatAnswer,
+                questionAnswer=questionAnswer,
+            ),
+            minting=False,
+        )
+    finally:
+        end_brief_ask(token)
 
 
 def _run_card_only(
@@ -250,10 +219,6 @@ def _stage_call(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         )
     except DamagedState:
         result = state_file_refusal()
-    if isinstance(result, dict) and isinstance(result.get("next"), str):
-        from essay_writer.stage_next import write_stage_next
-
-        write_stage_next(result, result["next"])
     return result
 
 
@@ -266,8 +231,7 @@ def _turn_redirect(
     for message in messages:
         reply = redirect_for(message)
         if reply is not None:
-            from essay_writer.stage_next import write_stage_next
-            from essay_writer.student_voice import say
+            from essay_writer.stage_next import write_turn_redirect_next
 
             refused = refuse(
                 "turn",
@@ -275,7 +239,7 @@ def _turn_redirect(
                 stage=stage,
                 confirmPhase=confirm_phase,
             )
-            return write_stage_next(refused, say(reply) if isinstance(reply, str) else "")
+            return write_turn_redirect_next(refused, reply)
     return None
 
 
@@ -403,8 +367,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
 
     auto_next = advances_without_confirm(stage)
     if confirmPhase == CONFIRM and auto_next:
-        from essay_writer.stage_next import write_stage_next
-        from essay_writer.student_voice import say
+        from essay_writer.stage_next import write_no_card_between_next
 
         refused = refuse(
             "confirm-card",
@@ -413,13 +376,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
             current=pointer["current"],
             waiting_confirm=False,
         )
-        return write_stage_next(
-            refused,
-            say(
-                "This step moves on when the draft is stored. "
-                "There is no Confirm card between this step and the next."
-            ),
-        )
+        return write_no_card_between_next(refused)
     if (
         confirmPhase == CONFIRM
         and not auto_next
@@ -484,9 +441,9 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         if isinstance(outcome, dict):
             return outcome
         if not look_is_confirmable(essay_id, stage, genre, text):
-            from essay_writer.stage_next import write_stage_next
+            from essay_writer.stage_next import write_answer_stage_next
 
-            return write_stage_next(
+            return write_answer_stage_next(
                 {
                     "ok": True,
                     "essay_id": essay_id,
@@ -496,7 +453,8 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
                     "advanced": False,
                     "wrote": False,
                 },
-                answer_next(outcome[0], outcome[1]),
+                outcome[0],
+                outcome[1],
             )
     resolved = replace(
         args,

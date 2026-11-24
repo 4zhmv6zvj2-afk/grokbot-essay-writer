@@ -32,7 +32,7 @@ from test_word_references_4a import (
 import essay_writer.shells as shells
 from essay_writer.build_office import stage_launch
 from essay_writer.cite_fit import strip_token
-from essay_writer.context_fit import student_review_text
+from essay_writer.context_fit import MODEL_LINE, student_review_text
 from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.dig import _save_lookup_abstracts, _save_lookup_pdfs
 from essay_writer.late_chain import FIRST_DRAFT_READY, write_stage10
@@ -162,11 +162,12 @@ def test_source_review_word_and_note_stay_plain(workspace):
     word_path = note_path.with_suffix(".docx")
     word = _docx_text(word_path)
     zipped = _zip_docx(work_dir(seq) / "output" / "critical-reviews.zip", word_path.name)
-    assert note.splitlines()[0].startswith("Smith, J.")
-    assert word.splitlines()[0].startswith("Smith, J.")
+    assert note.splitlines()[0].startswith("Critical note:")
+    assert any(line.startswith("Smith, J.") for line in note.splitlines())
+    assert any(line.startswith("Smith, J.") for line in word.splitlines())
     assert zipped.splitlines()[0] == word.splitlines()[0]
-    assert "Critical note:" not in note
-    assert "Critical note:" not in word
+    assert MODEL_LINE not in note
+    assert MODEL_LINE not in word
     assert student_review_text(note) == note
     _assert_plain(note, word, zipped)
     assert has_critical_note(seq, source) is True

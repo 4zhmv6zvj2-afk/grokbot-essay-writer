@@ -289,8 +289,53 @@ def _label(token: str, text: str) -> str:
     return f"{shown} ({year})"
 
 
+class StripReport(str):
+    """Cleaned sentence plus the spans this strip removed.
+
+    ``subject_gap`` is true when a removed narrative cite was the subject
+    or the name, so the sentence no longer reads.
+    """
+
+    removed: tuple[str, ...]
+    subject_gap: bool
+
+    def __new__(
+        cls,
+        text: str,
+        removed: tuple[str, ...] = (),
+        subject_gap: bool = False,
+    ) -> StripReport:
+        obj = str.__new__(cls, text)
+        obj.removed = removed
+        obj.subject_gap = subject_gap
+        return obj
+
+
+_PREP_BEFORE_NAME = frozenset({"by", "from", "of", "with", "for"})
+
+
+def _subject_hole(text: str, start: int, end: int) -> bool:
+    """True when the cite at this span was the subject or the name."""
+    before = text[:start].rstrip()
+    after = text[end:].lstrip()
+    if not after:
+        return False
+    words = re.findall(r"[A-Za-z']+", before)
+    last = words[-1].casefold() if words else ""
+    if last in _PREP_BEFORE_NAME and after[0].islower():
+        return True
+    boundary = (not before) or before[-1] in ".!?\n,"
+    if boundary and (after[0].islower() or re.match(r"and\b", after, flags=re.IGNORECASE)):
+        return True
+    return False
+
+
 def strip_token(text: str, token: str) -> str:
-    """Remove one author-year cite. The student's sentence stays."""
+    """Remove one author-year cite. The student's sentence stays.
+
+    The result reports every span removed on ``removed``. A narrative cite
+    that was the subject or the name sets ``subject_gap``.
+    """
 
     if not isinstance(text, str) or not text or "," not in token:
         return text
@@ -302,12 +347,16 @@ def strip_token(text: str, token: str) -> str:
     et_al = r"(?:\s+et\s+al\.?)?"
     page = r"(?:\s*,\s*(?:pp?\.\s*)?\d+(?:\s*[-–—]\s*\d+)?)?"
     piece_re = rf"{name_re}{et_al}\s*,\s*{year_re}{page}"
+    prior = tuple(getattr(text, "removed", ()))
+    gap = bool(getattr(text, "subject_gap", False))
+    removed: list[str] = []
 
     def repl_paren(match: re.Match[str]) -> str:
         kept: list[str] = []
         for part in match.group(1).split(";"):
             piece = norm_space(part)
             if re.fullmatch(piece_re, piece, flags=re.IGNORECASE):
+                removed.append(piece)
                 continue
             kept.append(piece)
         if not kept:
@@ -316,10 +365,20 @@ def strip_token(text: str, token: str) -> str:
 
     cleaned = re.sub(r"\(([^)]*\d{4}[^)]*)\)", repl_paren, text)
     narrative = rf"\b{name_re}{et_al}\s*\(\s*{year_re}{page}\s*\)"
-    cleaned = re.sub(narrative, "", cleaned, flags=re.IGNORECASE)
+
+    def repl_narrative(match: re.Match[str]) -> str:
+        nonlocal gap
+        removed.append(norm_space(match.group(0)))
+        if _subject_hole(cleaned, match.start(), match.end()):
+            gap = True
+        return ""
+
+    cleaned = re.sub(narrative, repl_narrative, cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
     cleaned = re.sub(r" +([,.;:!?])", r"\1", cleaned)
-    return cleaned
+    if not removed and not prior and not gap and not isinstance(text, StripReport):
+        return cleaned
+    return StripReport(cleaned, prior + tuple(removed), gap)
 
 
 def _ask_sentence(labels: list[str]) -> str | None:

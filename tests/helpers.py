@@ -141,6 +141,27 @@ def plant_renderable_pack(seq: str) -> None:
     save_state(seq, state)
 
 
+def plant_saved_draft(seq: str, look: str) -> None:
+    """Store a final stage 5 look so a stage 6 pass has a saved draft."""
+    import json
+
+    from essay_writer.paths import work_dir
+    from essay_writer.stage_note import render_tracking
+    from essay_writer.stage_state import _note_path, load_pointer
+
+    pointer = load_pointer(seq)
+    pointer["saved"] = list(dict.fromkeys([*(pointer.get("saved") or []), "5"]))
+    saved = work_dir(seq) / "tracking" / "stage.json"
+    saved.parent.mkdir(parents=True, exist_ok=True)
+    saved.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
+    note = _note_path(seq, "5")
+    note.parent.mkdir(parents=True, exist_ok=True)
+    note.write_text(
+        render_tracking("5", status="final", look=look, essay_id=seq),
+        encoding="utf-8",
+    )
+
+
 def open_sequence(module=None) -> str:
     """Draft and confirm sequence 1 (or the next id) and return its sequence id."""
     from essay_writer.projects import essay_sequence_new

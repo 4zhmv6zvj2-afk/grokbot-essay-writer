@@ -176,6 +176,23 @@ def compliance_misses(
         for source in prepared:
             paragraph = _match_paragraph(references, source)
             if paragraph is None:
+                author = _text(source.get("author"))
+                year = _text(source.get("year"))
+                surname = _surname(author)
+                label = (
+                    surname
+                    or _text(source.get("title"))
+                    or _text(source.get("id"))
+                    or "this source"
+                )
+                if year and surname:
+                    label = f"{surname} ({year})"
+                misses.append(
+                    {
+                        "code": "source-line",
+                        "detail": f"Reference for {label} has no matching reference line.",
+                    }
+                )
                 continue
             misses.extend(_source_misses(paragraph, source))
     return misses
@@ -357,6 +374,20 @@ def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
         folded = title.casefold()
         hit = once(
             [paragraph for paragraph in paragraphs if folded in (paragraph.text or "").casefold()]
+        )
+        if hit is not None:
+            return hit
+    surname = _surname(_text(source.get("author")))
+    year = _text(source.get("year"))
+    if surname and year:
+        # One line with this family name and year is that source. Two lines
+        # that share the short form stay unmatched and are recorded.
+        hit = once(
+            [
+                paragraph
+                for paragraph in paragraphs
+                if _author_year_present(paragraph.text or "", surname, year)
+            ]
         )
         if hit is not None:
             return hit

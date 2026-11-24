@@ -36,8 +36,9 @@ from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_context import StageArgs
 from essay_writer.stage_llm import stage_tool_description
+from essay_writer.stage_next import ANSWER_NEXT, CLEARED_NEXT, IGNORED_NEXT
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import ANSWER_NEXT, CLEARED_NEXT, IGNORED_NEXT, essay_stage
+from essay_writer.stage_track import essay_stage
 from essay_writer.textutil import module_brief_text
 
 REPO = Path(__file__).resolve().parents[1]

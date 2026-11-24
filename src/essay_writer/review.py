@@ -53,6 +53,12 @@ def eqr_verdict(essay_id: str, stage: str) -> str | None:
             return None
         if stage == "9" and submit_pass_unlocked(essay_id).get("unlocked") is not True:
             return None
+        if stage == "6" and "draft_text" in record:
+            tied = record.get("draft_text")
+            from essay_writer.word import saved_first_draft_text
+
+            if not isinstance(tied, str) or saved_first_draft_text(essay_id) != tied:
+                return None
     return verdict
 
 
@@ -238,6 +244,26 @@ def essay_review(
     if ready.get("ok") is False:
         ready["confirmPhase"] = CONFIRM
         return ready
+    draft_text = None
+    first_draft_word = None
+    if verdict == "PASS" and stage == "6" and not opened.get("opened"):
+        from essay_writer.word import intact_saved_first_draft, write_first_draft_word
+
+        saved_draft = intact_saved_first_draft(essay_id)
+        if not isinstance(saved_draft, str) or not saved_draft.strip():
+            return refuse("review", "not-intact")
+        written = write_first_draft_word(essay_id)
+        if written.get("wrote") is not True:
+            reason = written.get("reason")
+            if not isinstance(reason, str) or not reason:
+                reason = "not-intact"
+            return refuse("review", reason, first_draft_word=written)
+        draft_text = saved_draft
+        first_draft_word = written
+        updated = findings.replace(_WORD_NOT_SAVED, FIRST_DRAFT_WORD_LINE, 1)
+        if updated != findings:
+            findings = updated
+            body["findings"] = findings
     findings_file = {"wrote": False, "place": "", "reason": ""}
     if opened.get("opened"):
         findings_file = write_findings_note(essay_id, findings)
@@ -256,6 +282,8 @@ def essay_review(
         "findings_place": findings_file.get("place") or "",
         "opened_places": list(opened.get("places") or []),
     }
+    if isinstance(draft_text, str):
+        eqr[stage]["draft_text"] = draft_text
     if top_band is not None:
         eqr[stage]["top_band"] = top_band
     state["eqr"] = eqr
@@ -292,27 +320,13 @@ def essay_review(
             )
         else:
             body["next"] = say("The review opened the saved Word file.")
-    elif stage == "6" and verdict == "PASS":
-        from essay_writer.word import write_first_draft_word
-
-        written = write_first_draft_word(essay_id)
-        if written.get("wrote") is True:
-            updated = findings.replace(_WORD_NOT_SAVED, FIRST_DRAFT_WORD_LINE, 1)
-            if updated != findings:
-                findings = updated
-                body["findings"] = findings
-                stored_state = load_state(essay_id)
-                stored_eqr = stored_state.get("eqr")
-                if isinstance(stored_eqr, dict) and isinstance(stored_eqr.get(stage), dict):
-                    stored_eqr[stage]["findings"] = findings
-                    stored_state["eqr"] = stored_eqr
-                    save_state(essay_id, stored_state)
-            body["first_draft_word"] = {
-                "wrote": True,
-                "path": written.get("path") or "",
-                "counted_words": written.get("counted_words"),
-            }
-            body["next"] = say(FIRST_DRAFT_WORD_LINE)
+    elif isinstance(first_draft_word, dict):
+        body["first_draft_word"] = {
+            "wrote": True,
+            "path": first_draft_word.get("path") or "",
+            "counted_words": first_draft_word.get("counted_words"),
+        }
+        body["next"] = say(FIRST_DRAFT_WORD_LINE)
     return body
 
 

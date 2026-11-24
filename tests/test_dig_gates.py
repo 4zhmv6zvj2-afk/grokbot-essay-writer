@@ -12,6 +12,7 @@ from helpers import (
     card_digest_for,
     open_sequence,
     pack,
+    plant_saved_draft,
     source,
     store_confirmed_question,
     write_upload,
@@ -590,6 +591,7 @@ def test_writer_server_has_no_review_tool_and_stage_word_needs_eqr(workspace):
     assert not target.exists()
 
     constitution = "This is a report. How do chokepoints constrain the corridor?"
+    plant_saved_draft(seq, constitution)
     draft = essay_review(seq, "6", "PASS", "draft", constitution=constitution)
     assert draft["wrote"] is False
     assert draft["seat"] == "reviewer"

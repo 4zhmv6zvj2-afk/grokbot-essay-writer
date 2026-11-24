@@ -9,13 +9,11 @@ path remains. The person is told only when every path is exhausted.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from essay_writer.stage_llm import HOUSE_MODEL
 
 MODEL_LINE = f"Critical note: {HOUSE_MODEL}"
-_NOTE_LABEL = re.compile(r"^critical note:?$", re.IGNORECASE)
 
 
 def _text(value: object) -> str | None:
@@ -60,24 +58,15 @@ def trim_model_line(markdown: str) -> tuple[str, int]:
 
 
 def student_review_text(markdown: str) -> str:
-    """Source-review text a student opens. A model name is not part of that note."""
+    """Source-review text a student opens.
+
+    Only the model-metadata line is removed. A quoted model name stays.
+    A line that is only "Critical note:" stays. That line is the marker.
+    """
     if not isinstance(markdown, str) or not markdown:
         return markdown
     cleaned, _dropped = trim_model_line(markdown)
-    kept: list[str] = []
-    for line in cleaned.splitlines():
-        if HOUSE_MODEL in line:
-            line = line.replace(HOUSE_MODEL, "")
-        while "  " in line:
-            line = line.replace("  ", " ")
-        line = line.rstrip()
-        if _NOTE_LABEL.fullmatch(line.strip()):
-            continue
-        kept.append(line)
-    text = "\n".join(kept)
-    if markdown.endswith("\n") and text and not text.endswith("\n"):
-        text += "\n"
-    return text
+    return cleaned
 
 
 def _pending() -> dict[str, object]:

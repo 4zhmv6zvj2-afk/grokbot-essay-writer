@@ -271,6 +271,46 @@ def test_unmounted_documents_is_not_created(workspace):
     assert not (workspace / "Documents").exists()
 
 
+def test_confirm_retry_keeps_the_unmounted_reason(workspace):
+    """A later confirm of an unmounted build still says the Mac folder is absent."""
+    _brief(
+        "Genre: report\n"
+        "Assignment title: Individual report\n"
+        "Question: How do chokepoints constrain the corridor?\n"
+    )
+    seq = open_sequence(MODULE)
+    pack = {
+        "essay_id": seq,
+        "title": "Individual report",
+        "assessment": "Individual report",
+        "referencing": "harvard",
+        "conclusion": "noted",
+        "word_count_acknowledged": True,
+        "references_markdown": ALDEN_LINE,
+        "sections": [{"heading": "Notes", "body": "The corridor depends on a narrow strait."}],
+    }
+    _save(seq, pack)
+    missing = workspace / "Documents"
+    built = write_stage10(seq, documents=missing)
+    assert built.get("reason") == "mac-not-mounted"
+    assert built.get("sequence_written") is True
+    again = write_stage10(seq, documents=missing)
+    assert again.get("reused") is True
+    assert again.get("reason") == "mac-not-mounted"
+    from essay_writer.late_chain import finish_stage_reply
+    from essay_writer.stage_next import STAGE10_UNMOUNTED
+
+    finished = finish_stage_reply(
+        {"ok": True, "stored": True, "final_word": dict(again)},
+        seq,
+        "10",
+        armed=True,
+    )
+    spoken = str(finished.get("next") or "")
+    assert spoken.startswith(STAGE10_UNMOUNTED)
+    assert not spoken.startswith("Open ")
+
+
 def test_diary_column_keeps_the_printed_name(workspace):
     """The quote uses the column header printed on the diary table."""
     del workspace

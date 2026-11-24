@@ -11,6 +11,26 @@ from essay_writer.stage_track import essay_stage
 from essay_writer.validate import essay_pack_validate
 
 
+def _plant_saved_draft(seq: str, look: str) -> None:
+    import json
+
+    from essay_writer.paths import work_dir
+    from essay_writer.stage_note import render_tracking
+    from essay_writer.stage_state import _note_path, load_pointer
+
+    pointer = load_pointer(seq)
+    pointer["saved"] = list(dict.fromkeys([*(pointer.get("saved") or []), "5"]))
+    saved = work_dir(seq) / "tracking" / "stage.json"
+    saved.parent.mkdir(parents=True, exist_ok=True)
+    saved.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
+    note = _note_path(seq, "5")
+    note.parent.mkdir(parents=True, exist_ok=True)
+    note.write_text(
+        render_tracking("5", status="final", look=look, essay_id=seq),
+        encoding="utf-8",
+    )
+
+
 def _open(module: str = ESSAY) -> str:
     essay_sequence_new(module, "draft")
     opened = essay_sequence_new(module, "confirm")
@@ -31,6 +51,7 @@ def test_daily_use_does_not_block_and_does_not_invent_a_band(workspace):
     assert essay_stage(seq, "1", "confirm", "", **picked(drafted))["stored"] is True
     draft = essay_review(seq, "6", "PASS", "draft")
     assert draft["ok"] is True
+    _plant_saved_draft(seq, "The corridor stays open.")
     assert essay_review(seq, "6", "PASS", "confirm")["stored"] is True
     mechanical = essay_gates(seq, pack())
     assert mechanical["gates"][0]["name"] == "brief"
@@ -65,7 +86,9 @@ def test_brief_without_a_mark_scheme_asks_format_and_question(workspace):
     assert drafted["ok"] is True
     assert essay_stage(seq, "1", "confirm", note, **picked(drafted))["stored"] is True
     assert essay_review(seq, "6", "PASS", "draft", constitution=note)["ok"] is True
-    assert essay_review(seq, "6", "PASS", "confirm", constitution=note)["stored"] is True
+    _plant_saved_draft(seq, note)
+    stored = essay_review(seq, "6", "PASS", "confirm", constitution=note)
+    assert stored["stored"] is True, stored
 
 
 def test_mark_scheme_aims_at_the_highest_band_and_prevails(workspace):

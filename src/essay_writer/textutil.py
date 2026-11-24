@@ -9,6 +9,7 @@ and an italic journal or report title.
 from __future__ import annotations
 
 import re
+from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from typing import Any
 
@@ -90,8 +91,57 @@ def decode_stored_text(raw: bytes) -> str:
     return raw.decode("utf-8")
 
 
+_BRIEF_ASK: ContextVar[dict[str, str] | None] = ContextVar("essay_writer_brief_ask", default=None)
+_OPENING_ASK: ContextVar[dict[str, Any] | None] = ContextVar(
+    "essay_writer_opening_ask", default=None
+)
+
+
+def begin_brief_ask() -> tuple[Token[dict[str, str] | None], Token[dict[str, Any] | None]]:
+    """Start one draft ask. The brief file and the basics opening load once."""
+    return _BRIEF_ASK.set({}), _OPENING_ASK.set({})
+
+
+def end_brief_ask(
+    token: tuple[Token[dict[str, str] | None], Token[dict[str, Any] | None]],
+) -> None:
+    _BRIEF_ASK.reset(token[0])
+    _OPENING_ASK.reset(token[1])
+
+
+def brief_ask_active() -> bool:
+    return _BRIEF_ASK.get() is not None
+
+
+def take_opening(essay_id: str) -> Any:
+    cache = _OPENING_ASK.get()
+    if cache is None:
+        return None
+    return cache.get(essay_id)
+
+
+def keep_opening(essay_id: str, opening: Any) -> None:
+    cache = _OPENING_ASK.get()
+    if cache is not None:
+        cache[essay_id] = opening
+
+
 def module_brief_text(essay_id: str) -> str:
-    """Text of the module brief file. Empty when the slot is empty."""
+    """Text of the module brief file. Empty when the slot is empty.
+
+    One draft ask reads the file once. A later read in that ask returns the
+    same text. A call outside an ask still reads the file.
+    """
+    cache = _BRIEF_ASK.get()
+    if cache is not None and essay_id in cache:
+        return cache[essay_id]
+    text = _read_module_brief(essay_id)
+    if cache is not None:
+        cache[essay_id] = text
+    return text
+
+
+def _read_module_brief(essay_id: str) -> str:
     from essay_writer.invent import read_gathered_text
 
     folder = essay_dir(essay_id)

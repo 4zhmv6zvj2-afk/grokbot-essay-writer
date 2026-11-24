@@ -12,7 +12,6 @@ seated once, on the test that proves it.
 from __future__ import annotations
 
 import hashlib
-import inspect
 from pathlib import Path
 
 from docx import Document
@@ -212,6 +211,16 @@ def _italic_of(runs: list[tuple[str, bool]]) -> str:
     return "".join(text for text, italic in runs if italic)
 
 
+def _italic_runs(path: Path) -> str:
+    """Italic run text in a Word file this product wrote."""
+    parts: list[str] = []
+    for paragraph in Document(str(path)).paragraphs:
+        for run in paragraph.runs:
+            if run.italic and run.text:
+                parts.append(run.text)
+    return "\n".join(parts)
+
+
 def _write_word(
     path: Path,
     body: str,
@@ -315,13 +324,6 @@ def test_review_titles_stay_italic_for_a_long_list_a_review_and_a_plan(workspace
     codes = {item["code"] for item in compliance_misses(roman, rows)}
     assert "title-italic" in codes
     assert "journal-italic" in codes
-    checker = inspect.getsource(compliance_misses)
-    assert "title-italic" in inspect.getsource(
-        __import__("essay_writer.harvard_ref_check", fromlist=["_source_misses"])._source_misses
-    )
-    assert "if not container" in inspect.getsource(
-        __import__("essay_writer.harvard_ref_check", fromlist=["_source_misses"])._source_misses
-    )
     extract = []
     for label, runs in (
         ("journal", journal_runs),
@@ -331,7 +333,6 @@ def test_review_titles_stay_italic_for_a_long_list_a_review_and_a_plan(workspace
         extract.append(f"{label}: {_italic_of(runs)}")
     write_proof("italic-line-extract.txt", "\n".join(extract) + "\n")
     write_proof("italic-lines.docx", path.read_bytes())
-    assert checker
     assert workspace is not None
 
 
@@ -364,6 +365,11 @@ def test_a_fair_review_then_writes_the_final_word_file(workspace, monkeypatch, t
     assert final.name != draft.name
     assert final.name.endswith("-final.docx")
     assert "10" in (load_pointer(seq).get("saved") or [])
+    italic = _italic_runs(final)
+    assert "ICES Journal of Marine Science" in italic
+    assert REVIEW_TITLE.casefold() in italic.casefold()
+    assert "A review" in italic
+    assert PLAN_TITLE.casefold() in italic.casefold()
     write_proof("fair-review-final.docx", final.read_bytes())
     write_proof("fair-review-first-draft.docx", first_draft)
     assert workspace is not None
@@ -740,6 +746,17 @@ def test_each_review_gate_allows_a_second_review(workspace):
     wrong = _gate(stage6, "6", constitution="This report is about a different topic.")
     assert wrong.get("stored") is not True
     assert "assignment question" in str(wrong.get("reason") or "").casefold()
+    pointer = load_pointer(stage6)
+    pointer["saved"] = list(dict.fromkeys([*(pointer.get("saved") or []), "5"]))
+    saved_pointer = work_dir(stage6) / "tracking" / "stage.json"
+    saved_pointer.parent.mkdir(parents=True, exist_ok=True)
+    saved_pointer.write_text(__import__("json").dumps(pointer, indent=2) + "\n", encoding="utf-8")
+    saved_note = _note_path(stage6, "5")
+    saved_note.parent.mkdir(parents=True, exist_ok=True)
+    saved_note.write_text(
+        render_tracking("5", status="final", look=LOOK, essay_id=stage6),
+        encoding="utf-8",
+    )
     draft = essay_review(stage6, "6", "PASS", "draft", constitution=LOOK)
     assert draft.get("ok") is True, draft
     stored = essay_review(stage6, "6", "PASS", "confirm", constitution=LOOK)
@@ -806,8 +823,8 @@ def test_public_wording_covers_cursor_and_build(workspace):
         )
         assert cursor_stage_launch(stage)["settings"] == stage_settings(stage)
     assert build_opened_word_gate is not cursor_opened_word_gate
-    assert "opened_word_gate" in inspect.getsource(build_opened_word_gate)
-    assert "opened_word_gate" in inspect.getsource(cursor_opened_word_gate)
+    shared = open_sequence(MODULE)
+    assert build_opened_word_gate(shared, LOOK) == cursor_opened_word_gate(shared, LOOK)
     assert "A first refusal does not end the job" in REVIEW_PROMPT
     assert student_surface_hits(REVIEW_PROMPT) == []
     assert _leaked(REVIEW_PROMPT) == []

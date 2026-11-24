@@ -6,7 +6,16 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
+from helpers import (
+    ESSAY,
+    TOPIC,
+    card_digest_for,
+    open_sequence,
+    pack,
+    plant_saved_draft,
+    source,
+    write_upload,
+)
 
 from essay_writer.doors import DOORS
 from essay_writer.health import essay_health
@@ -449,6 +458,7 @@ def test_fail_demo_writer_cannot_clear_a_review(workspace):
     assert writer_clears_left() == 0
 
     constitution = "This is a report. How do chokepoints constrain the corridor?"
+    plant_saved_draft(seq, constitution)
     passed = essay_review(seq, "6", "PASS", "draft", constitution=constitution)
     assert passed["seat"] == "reviewer"
     assert PERSON_BLOCK not in passed["next"]
