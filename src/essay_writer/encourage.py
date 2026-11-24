@@ -418,7 +418,7 @@ def attach_plan_encourage(body: dict[str, Any], essay_id: str, plan_text: str) -
             severity="warn",
             disposition="fallback",
             tool="encourage",
-            stage="plan",
+            step="plan",
         )
         return body
     ask = _current_ask(essay_id, record)
@@ -538,7 +538,7 @@ def answer_encourage(essay_id: str, choice: str | None) -> dict[str, Any]:
             severity="warn",
             disposition="fallback",
             tool="encourage",
-            stage="answer",
+            step="answer",
         )
         return _reply(essay_id, record, silence=False, accepted=False)
     return _reply(essay_id, record, silence=False, accepted=True)

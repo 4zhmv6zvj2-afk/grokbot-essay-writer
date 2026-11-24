@@ -469,7 +469,7 @@ def document_title(
             severity="info",
             disposition="fallback",
             tool="word",
-            stage="title",
+            step="title",
         )
         spare = WORD_TITLE_SPARE
     return spare[:WORD_TITLE_LIMIT]

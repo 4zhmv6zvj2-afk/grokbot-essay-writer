@@ -294,7 +294,7 @@ def _record_blank_pages(
                 severity="warn",
                 disposition="fallback",
                 tool="cite",
-                stage="read",
+                step="read",
             )
     return fresh
 
@@ -331,7 +331,7 @@ def open_for_citation(path: Path, essay_id: str | None = None) -> OpenedPaper:
                 severity="warn",
                 disposition="fallback",
                 tool="cite",
-                stage="read",
+                step="read",
             )
         return OpenedPaper("", (), None, None, True)
     page_texts = _page_texts(_mask_gaps(data, source_gaps))

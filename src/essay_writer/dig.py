@@ -1395,7 +1395,7 @@ def essay_dig(
                 severity="info",
                 disposition="fallback",
                 tool="dig",
-                stage="gather",
+                step="gather",
             )
             reply = None
         else:

@@ -26,7 +26,7 @@ def note(
     severity: str,
     disposition: str,
     tool: str = "",
-    stage: str = "",
+    step: str = "",
 ) -> None:
     """Append one metadata line. A logging failure does not stop the student."""
     if severity not in _SEVERITY or disposition not in _DISPOSITION:
@@ -37,7 +37,7 @@ def note(
         "code": code,
         "disposition": disposition,
         "severity": severity,
-        "stage": stage,
+        "stage": step,
         "tool": tool,
     }
     line = json.dumps(payload, sort_keys=True) + "\n"

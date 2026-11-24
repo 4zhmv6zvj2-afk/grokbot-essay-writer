@@ -326,7 +326,7 @@ def _read_pointer_data(essay_id: str) -> dict[str, object] | None:
             severity="warn",
             disposition="fallback",
             tool="stage",
-            stage="pointer",
+            step="pointer",
         )
         return None
     if not isinstance(data, dict):

@@ -217,7 +217,7 @@ Internal detail stays in the operator log.
 | master | (built at the door) | refuse | The reason sentence names the next step. | stage_body.py:580 |
 | eqr | (built at the door) | refuse | The reason sentence names the next step. | stage_body.py:605 |
 | draft | (built at the door) | refuse | The reason sentence names the next step. | stage_body.py:485 |
-| word-band | This first draft is not inside the brief's word band. | refuse | Change the draft so it fits the brief, then save again. | stage_body.py:511 |
+| word-band | This first draft is not inside the brief's word band. Change the draft so it fits the brief, then save again. | refuse | The reason sentence names the next step. | stage_body.py:511 |
 | pointer | (built at the door) | refuse | The reason sentence names the next step. | stage_hold.py:113 |
 | stage | (built at the door) | refuse | The reason sentence names the next step. | stage_hold.py:599 |
 | stage | The last stage is already saved. This tool does not submit. | refuse | The reason sentence names the next step. | stage_hold.py:785 |
@@ -231,11 +231,11 @@ Internal detail stays in the operator log.
 | lock-choice | The inherited lock is empty. Revise instead. | refuse | The reason sentence names the next step. | stage_landing.py:360 |
 | house-jargon | That note uses an internal label. Say it in plain words. | refuse | The reason sentence names the next step. | stage_landing.py:293 |
 | essay-id | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py:264 |
-| stage | stage must be 1, 2, 3, 4a, 4b, 5, 6, 7, 8, 9, or 10. | refuse | Send a stage from 1 to 10, including 4a and 4b. | stage_track.py:293 |
+| stage | Send a stage from 1 to 10, including 4a and 4b. | refuse | The reason sentence names the next step. | stage_track.py:293 |
 | confirm-card | This step moves on when the draft is stored. There is no save-card between this step and the next. | refuse | The reason sentence names the next step. | stage_track.py:373 |
 | stage | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py:214 |
 | turn | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py:237 |
-| stage | look must be plain text. | refuse | Send the look as plain text. | stage_track.py:302 |
+| stage | Send the look as plain text. | refuse | The reason sentence names the next step. | stage_track.py:302 |
 | state | (built at the door) | refuse | The reason sentence names the next step. | state.py:124 |
 | stage | (built at the door) | refuse | The reason sentence names the next step. | state.py:165 |
 | essay-id | (built at the door) | refuse | The reason sentence names the next step. | validate.py:945 |

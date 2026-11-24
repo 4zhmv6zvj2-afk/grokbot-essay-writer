@@ -138,8 +138,8 @@ def test_an_unwritten_gap_keeps_the_pages(workspace, monkeypatch) -> None:
 
 
 def test_the_same_code_is_not_written_twice(workspace) -> None:
-    note("word-title-spare", severity="info", disposition="fallback", tool="word", stage="title")
-    note("word-title-spare", severity="info", disposition="fallback", tool="word", stage="title")
+    note("word-title-spare", severity="info", disposition="fallback", tool="word", step="title")
+    note("word-title-spare", severity="info", disposition="fallback", tool="word", step="title")
     lines = incident_path().read_text(encoding="utf-8").splitlines()
     assert len(lines) == 1
 
