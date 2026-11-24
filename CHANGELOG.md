@@ -3,6 +3,7 @@
 ## Unreleased
 
 - A pull request runs the macOS suite only when the diff touches a macOS-sensitive path. Main still runs it every time.
+- A pull request builds the shipped artifacts when the diff adds or deletes a file, or touches the packaging files, the docs, or the prompts. Main and a release still build them every time.
 
 ## 0.9.20 — 2026-11-25
 
