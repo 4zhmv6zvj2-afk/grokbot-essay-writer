@@ -123,6 +123,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       macos: ${{ steps.filter.outputs.macos }}
+      artifacts: ${{ steps.filter.outputs.artifacts }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -137,6 +138,7 @@ jobs:
           # fails this job, and the macOS job then runs anyway.
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "macos=true" >> "$GITHUB_OUTPUT"
+            echo "artifacts=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           base="${{ github.event.pull_request.base.sha }}"
@@ -149,7 +151,11 @@ jobs:
           done
           git diff --name-status "$base" "$head" > "$RUNNER_TEMP/changed.txt"
           macos=false
-          while IFS="$(printf '\t')" read -r _status path extra; do
+          artifacts=false
+          while IFS="$(printf '\t')" read -r status path extra; do
+            case "$status" in
+              A|D|R*|C*) artifacts=true ;;
+            esac
             for candidate in "$path" "$extra"; do
               [ -n "$candidate" ] || continue
               case "$candidate" in
@@ -171,10 +177,22 @@ jobs:
                   macos=true
                   ;;
               esac
+              case "$candidate" in
+                pyproject.toml|\
+                MANIFEST.in|\
+                tools/normalize_sdist.py|\
+                tools/reproducible_build.py|\
+                docs/*|\
+                src/essay_writer/prompts/*)
+                  artifacts=true
+                  ;;
+              esac
             done
           done < "$RUNNER_TEMP/changed.txt"
           echo "macos=${macos}" >> "$GITHUB_OUTPUT"
+          echo "artifacts=${artifacts}" >> "$GITHUB_OUTPUT"
           echo "macOS suite for this pull request: ${macos}"
+          echo "artifacts job for this pull request: ${artifacts}"
 
   test-macos:
     name: Test (macOS, Python 3.15)
@@ -211,6 +229,14 @@ jobs:
 
   artifacts:
     name: Build and test the shipped artifacts
+    needs: changes
+    # Not a pull request: always run. A failed path decision: run. A pull
+    # request that adds or deletes a file, or touches the packaging docs and
+    # prompts: run. Otherwise skip. The release workflow is a separate build.
+    if: >-
+      github.event_name != 'pull_request' ||
+      needs.changes.result != 'success' ||
+      needs.changes.outputs.artifacts == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

@@ -91,8 +91,17 @@ def test_pull_requests_run_macos_only_for_a_sensitive_path() -> None:
     assert "github.event_name != 'pull_request'" in macos
     assert "needs.changes.outputs.macos == 'true'" in macos
     assert "needs.changes.result != 'success'" in macos
-    # The artifacts job is not path-filtered by this change.
-    assert "\n    if:" not in artifacts
+    assert "artifacts=true" in changes
+    for path in (
+        "tools/normalize_sdist.py",
+        "tools/reproducible_build.py",
+        "docs/*",
+        "src/essay_writer/prompts/*",
+    ):
+        assert path in changes, path
+    assert "needs: changes" in artifacts
+    assert "needs.changes.outputs.artifacts == 'true'" in artifacts
+    assert "needs.changes.result != 'success'" in artifacts
 
 
 def test_artifact_job_builds_on_the_3_12_line() -> None:

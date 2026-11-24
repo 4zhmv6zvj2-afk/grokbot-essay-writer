@@ -20,6 +20,8 @@ A stamp authorizes a tag for 60 minutes, and only when it records this commit, a
 
 On `main`, and on a manual run, CI runs the Python 3.12–3.15 matrix, the macOS Python 3.15 suite, and the shipped-artifacts job. A pull request runs that same matrix and the artifacts job. It runs the macOS suite only when the diff touches a macOS-sensitive path: `src/essay_writer/first_run_mac.py`, `intake.py`, `word.py`, `paths.py`, `setup.py`, `server.py`, a test whose name contains mac, first-run, word, or path, `pyproject.toml`, `requirements*.txt`, `MANIFEST.in`, or `.github/workflows/`. Any other pull request skips the macOS job. macOS is not a required check. The six required checks stay the four Linux test jobs and the two CodeQL analyze jobs. A failed path decision runs the macOS suite.
 
+A pull request runs the shipped-artifacts job when the diff adds or deletes a file, or touches `pyproject.toml`, `MANIFEST.in`, `tools/normalize_sdist.py`, `tools/reproducible_build.py`, `docs/`, or `src/essay_writer/prompts/`. A rename counts as a path change. Any other pull request skips that job. `main`, a manual run, and the release workflow still build the artifacts. A failed path decision runs the job. The decision is the same Changed paths job as the macOS filter.
+
 Exit 1 means a step failed. Exit 2 means the environment cannot run the gate.
 
 ## Optional push hook
