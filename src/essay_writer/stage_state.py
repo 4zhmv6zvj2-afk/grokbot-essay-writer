@@ -105,7 +105,8 @@ def _commit_record_ok(record: object) -> bool:
     if not isinstance(pointer, dict) or pointer.get("current") not in STAGE_ORDER:
         return False
     saved = pointer.get("saved", [])
-    if not isinstance(saved, list) or any(item not in STAGE_ORDER for item in saved):
+    # An unknown saved entry is kept. A value that is not a list still cannot be applied.
+    if not isinstance(saved, list):
         return False
     note_rel = record.get("note")
     note_text = record.get("note_text")
@@ -319,17 +320,10 @@ def _read_pointer_data(essay_id: str) -> dict[str, object] | None:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeError):
-        from essay_writer.incident import note
-
-        note(
-            "pointer-damaged",
-            severity="warn",
-            disposition="fallback",
-            tool="stage",
-            step="pointer",
-        )
+        _note_pointer("pointer-damaged", disposition="fallback", severity="warn")
         return None
     if not isinstance(data, dict):
+        _note_pointer("pointer-damaged", disposition="fallback", severity="warn")
         return None
     return data
 
@@ -344,16 +338,51 @@ def load_pointer(essay_id: str) -> dict[str, Any]:
         return _normalize_pointer(data)
 
 
+def _note_pointer(code: str, *, disposition: str, severity: str = "info") -> None:
+    from essay_writer.incident import note
+
+    note(code, severity=severity, disposition=disposition, tool="stage", step="pointer")
+
+
 def _normalize_pointer(data: dict[str, Any]) -> dict[str, Any]:
-    current = data.get("current")
-    if current not in STAGE_ORDER:
-        current = "1"
-    saved = [item for item in data.get("saved") or [] if item in STAGE_ORDER]
+    """Load a pointer without writing it.
+
+    A missing known field is filled in memory. An unknown field, including an
+    unknown saved entry or file entry, is kept. A current value that is not a
+    stage becomes stage 1 in memory. A saved or files value that is not a list
+    or an object is left out of the loaded pointer. Each of those is recorded.
+    The file on disk is unchanged until a later save.
+    """
+    known = blank_pointer()
+    if any(key not in data for key in known):
+        _note_pointer("pointer-field-filled", disposition="fallback")
+    saved_raw = data.get("saved")
     files_raw = data.get("files")
-    files: dict[str, object] = files_raw if isinstance(files_raw, dict) else {}
-    kept = {
-        key: value for key, value in files.items() if key in STAGE_ORDER and isinstance(value, str)
-    }
+    unknown = any(key not in known for key in data)
+    if isinstance(saved_raw, list) and any(
+        not isinstance(item, str) or item not in STAGE_ORDER for item in saved_raw
+    ):
+        unknown = True
+    if isinstance(files_raw, dict) and any(
+        key not in STAGE_ORDER or not isinstance(value, str) for key, value in files_raw.items()
+    ):
+        unknown = True
+    if unknown:
+        _note_pointer("pointer-unknown-field", disposition="fallback")
+    current = data.get("current")
+    if "current" in data and current not in STAGE_ORDER:
+        _note_pointer("pointer-unknown-current", disposition="fallback")
+        current = "1"
+    elif current not in STAGE_ORDER:
+        current = "1"
+    if isinstance(saved_raw, list):
+        saved = list(saved_raw)
+    else:
+        saved = []
+    if isinstance(files_raw, dict):
+        files = dict(files_raw)
+    else:
+        files = {}
     reopen = data.get("revisit_open")
     if reopen not in {"2", "3"}:
         reopen = None
@@ -361,10 +390,10 @@ def _normalize_pointer(data: dict[str, Any]) -> dict[str, Any]:
     if grant not in STAGE_ORDER:
         grant = None
     waiting_stage, waiting_digest = _waiting_pair(data)
-    return {
+    result = {
         "current": current,
         "saved": saved,
-        "files": kept,
+        "files": files,
         "closed": data.get("closed") is True,
         "revisit_open": reopen,
         "revisit_after_lock": data.get("revisit_after_lock") is True,
@@ -375,6 +404,20 @@ def _normalize_pointer(data: dict[str, Any]) -> dict[str, Any]:
         "waiting_digest": waiting_digest,
         "revision": _revision(data),
     }
+    dropped = ("saved" in data and not isinstance(saved_raw, list)) or (
+        "files" in data and not isinstance(files_raw, dict)
+    )
+    for key, value in result.items():
+        if key == "current" or key not in data:
+            continue
+        if data[key] != value:
+            dropped = True
+    if dropped:
+        _note_pointer("pointer-field-dropped", disposition="fallback")
+    for key, value in data.items():
+        if key not in result:
+            result[key] = value
+    return result
 
 
 def _room_state(pointer: dict[str, Any]) -> dict[str, object]:
@@ -530,6 +573,10 @@ def _commit_pointer(
         if _rolls_backward(fresh, proposed):
             return None
         stored = dict(proposed)
+        known = blank_pointer()
+        for key, value in base.items():
+            if key not in known and key not in stored:
+                stored[key] = value
         stored["revision"] = _revision(fresh) + 1
         record: dict[str, object] = {"pointer": stored}
         if note is not None and note_text is not None:

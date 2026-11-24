@@ -260,3 +260,10 @@ Internal detail stays in the operator log.
 | pdf-gap-unwritten | A gap note that cannot be saved stays in memory for this read. | fallback | The paper is still opened. The gap file is unchanged. | tests/test_refusals.py |
 | pointer-damaged | A stage pointer that is not JSON is not rewritten. | fallback | Ask me to show this step again before saving. | tests/test_refusals.py |
 | encourage-unwritten | An encourage note that cannot be saved is not stored. | fallback | The plan or the answer is unchanged on disk. Ask again. | tests/test_refusals.py |
+| state-damaged | The state file is damaged. | refuse | Ask me to show this step again. The file is not replaced. | state.py |
+| state-field-filled | A missing state field is filled in memory. | fallback | The file is unchanged until the next save. | state.py |
+| state-unknown-field | An unknown state field is kept. | fallback | The file is unchanged until the next save. | state.py |
+| pointer-field-filled | A missing pointer field is filled in memory. | fallback | The file is unchanged until the next save. | stage_state.py |
+| pointer-unknown-field | An unknown pointer field is kept. | fallback | The file is unchanged until the next save. | stage_state.py |
+| pointer-unknown-current | A current value that is not a stage becomes stage 1 in memory. | fallback | The file is unchanged until the next save. | stage_state.py |
+| pointer-field-dropped | A saved or files value of the wrong shape is left out of the loaded pointer. | fallback | The file is unchanged until the next save. | stage_state.py |

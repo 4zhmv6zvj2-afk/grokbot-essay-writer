@@ -1,0 +1,14 @@
+{
+  "current": "1",
+  "saved": [],
+  "files": {},
+  "closed": false,
+  "revisit_open": null,
+  "revisit_after_lock": false,
+  "chain_armed": false,
+  "room_grant": null,
+  "room_lock": false,
+  "waiting_stage": null,
+  "waiting_digest": null,
+  "revision": 0
+}

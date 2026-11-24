@@ -1,0 +1,16 @@
+{
+  "current": "2",
+  "saved": ["1"],
+  "files": {
+    "1": "tracking/1.md"
+  },
+  "closed": false,
+  "revisit_open": null,
+  "revisit_after_lock": false,
+  "chain_armed": false,
+  "room_grant": null,
+  "room_lock": false,
+  "waiting_stage": null,
+  "waiting_digest": null,
+  "revision": 1
+}
