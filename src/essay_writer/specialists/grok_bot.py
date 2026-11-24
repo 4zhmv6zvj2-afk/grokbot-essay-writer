@@ -18,6 +18,7 @@ from typing import Any, NamedTuple
 from essay_writer import assignment_gate as essay_assignment_gate
 from essay_writer.assignment_gate import assignment_gate, mark_scheme_text
 from essay_writer.confirm import DRAFT, refuse
+from essay_writer.durable import replace_text
 from essay_writer.paths import workspace_root
 from essay_writer.prompt_loader import text
 from essay_writer.state import load_state, refusal_for_damage, save_state
@@ -243,10 +244,7 @@ def _mark_eqr_first_run_seen() -> None:
     if path is None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps({"spoken": True}, indent=2) + "\n"
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(payload, encoding="utf-8")
-    os.replace(temporary, path)
+    replace_text(path, json.dumps({"spoken": True}, indent=2) + "\n")
 
 
 def _take_eqr_first_run_intro() -> str | None:

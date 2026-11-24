@@ -6,10 +6,10 @@ folder in that same step. That note is not a second student file.
 
 from __future__ import annotations
 
-import os
 import re
 from typing import Any
 
+from essay_writer.durable import replace_text
 from essay_writer.paths import work_dir
 from essay_writer.records import read_json, write_json
 from essay_writer.textutil import sentences
@@ -278,7 +278,8 @@ def rewrite_first_draft_md(essay_id: str, docx_path) -> None:
     document = Document(str(docx_path))
     lines = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
     target = work_dir(essay_id) / "first-draft.md"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_suffix(".md.tmp")
-    temporary.write_text("\n\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-    os.replace(temporary, target)
+    replace_text(
+        target,
+        "\n\n".join(lines) + ("\n" if lines else ""),
+        mkdir=True,
+    )

@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from essay_writer.durable import replace_text
 from essay_writer.paths import work_dir, workspace_root
 from essay_writer.records import read_json, write_json
 from essay_writer.sources import (
@@ -913,8 +914,7 @@ def attach_note(essay_id: str, source_id: str, prose: str) -> dict[str, Any]:
             wrote=False,
         )
     path = _resolve_note(note)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(prose if prose.endswith("\n") else prose + "\n", encoding="utf-8")
+    replace_text(path, prose if prose.endswith("\n") else prose + "\n", mkdir=True)
     _ensure_note_record(note, _official_from_entry(target))
     _save(essay_id, {"written": True, "entries": entries, "gap": record.get("gap") or ""})
     shown = load_citation_list(essay_id)

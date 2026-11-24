@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from essay_writer import paths as essay_paths
+from essay_writer.durable import replace_text
 from essay_writer.first_run_common import _internal_volume
 from essay_writer.known_paths import RepoSaveRefused, refuse_repo_write
 from essay_writer.paths import SETUP_DIRNAME, kb1_root, work_dir, workspace_root
@@ -147,9 +148,7 @@ def _take_upgrade_reread_card(root: Path) -> str | None:
             return None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(".json.tmp")
-        temporary.write_text(json.dumps({"shown": True}, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, path)
+        replace_text(path, json.dumps({"shown": True}, indent=2) + "\n")
     except OSError:
         return UPGRADE_REREAD_SPEECH
     return UPGRADE_REREAD_SPEECH
@@ -516,10 +515,7 @@ def remember_mac_deliverable(source: Path, target: Path) -> None:
         existing.append(stored)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps({"paths": existing}, indent=2) + "\n"
-        temporary = path.with_suffix(".json.tmp")
-        temporary.write_text(payload, encoding="utf-8")
-        os.replace(temporary, path)
+        replace_text(path, json.dumps({"paths": existing}, indent=2) + "\n")
     except OSError:
         return
 

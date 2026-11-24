@@ -26,6 +26,7 @@ from essay_writer.confirm import (
     save_draft,
 )
 from essay_writer.debug_log import record_requests_debug
+from essay_writer.durable import replace_text
 from essay_writer.paths import recommended_paths
 from essay_writer.prompt_loader import render_tokens, text
 from essay_writer.student_voice import speak
@@ -669,10 +670,8 @@ def essay_setup(
         )
     if record_requests_debug(record_path):
         record["debug"] = True
-    temporary = record_path.with_suffix(".json.tmp")
     try:
-        temporary.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, record_path)
+        replace_text(record_path, json.dumps(record, indent=2) + "\n")
     except OSError as exc:
         rollback()
         return refuse(
@@ -709,7 +708,8 @@ def essay_setup(
         except OSError:
             same = False
         if not same:
-            beside.write_text(record_path.read_text(encoding="utf-8"), encoding="utf-8")
+            beside.parent.mkdir(parents=True, exist_ok=True)
+            replace_text(beside, record_path.read_text(encoding="utf-8"))
             secret_src = _secrets_path(record_path)
             if secret_src.is_file():
                 _write_secret_text(_secrets_path(beside), secret_src.read_text(encoding="utf-8"))

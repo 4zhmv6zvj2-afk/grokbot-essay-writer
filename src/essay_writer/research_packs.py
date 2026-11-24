@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from essay_writer.confirm import refuse
+from essay_writer.durable import replace_text
 from essay_writer.harvard_4a import harvard_4a_line, harvard_4a_parts
 from essay_writer.known_paths import (
     allow_research_path,
@@ -660,7 +661,7 @@ def ship_4b(
                 opened = open_critical_markdown(reuse, essay_id)
             elif prose is not None and research_file(essay_id, str(reuse), save=True) is not None:
                 reuse.parent.mkdir(parents=True, exist_ok=True)
-                reuse.write_text(_review_body(essay_id, source, prose), encoding="utf-8")
+                replace_text(reuse, _review_body(essay_id, source, prose))
                 opened = open_critical_markdown(reuse, essay_id)
             notes[paper_id] = relative(reuse)
             claimed.append(dict(previous))
@@ -679,7 +680,7 @@ def ship_4b(
         if supplied is None and md_path.is_file():
             opened = open_critical_markdown(md_path, essay_id)
         else:
-            md_path.write_text(_review_body(essay_id, source, prose), encoding="utf-8")
+            replace_text(md_path, _review_body(essay_id, source, prose))
             opened = open_critical_markdown(md_path, essay_id)
         note = relative(md_path)
         notes[paper_id] = note

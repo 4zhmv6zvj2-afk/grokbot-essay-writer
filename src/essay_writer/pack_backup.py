@@ -551,6 +551,6 @@ def _apply_snapshot(essay_id: str, loaded: dict[str, Any]) -> None:
 
 
 def _replace_bytes(path: Path, data: bytes) -> None:
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_bytes(data)
-    os.replace(temporary, path)
+    from essay_writer.durable import replace_bytes
+
+    replace_bytes(path, data)

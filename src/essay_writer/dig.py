@@ -30,6 +30,7 @@ from essay_writer.confirm import (
     save_draft,
 )
 from essay_writer.downloads import BUCKET_LABELS, run_downloads
+from essay_writer.durable import replace_text
 from essay_writer.known_paths import guard_write_door
 from essay_writer.lookup_fields import (
     _KEPT_ON_ABSTRACT,
@@ -703,10 +704,7 @@ def _save_lookup_abstracts(
                 if isinstance(key, str) and isinstance(value, str) and value.strip():
                     kept_details[key] = value.strip()
         name = _abstract_name(doi, index, used)
-        (folder / name).write_text(
-            _abstract_text(abstract, kept_details),
-            encoding="utf-8",
-        )
+        replace_text(folder / name, _abstract_text(abstract, kept_details))
         row: dict[str, Any] = {"locator": f"uploads/{module}/{name}"}
         provenance: dict[str, str] = {}
         for field in _KEPT_ON_ABSTRACT:
@@ -1482,11 +1480,11 @@ def essay_dig(
     folder.mkdir(parents=True, exist_ok=True)
     to_write = dict(card)
     to_write["digest"] = ready["digest"]
-    (folder / "dig-card.json").write_text(
+    replace_text(folder / "dig-card.md", _card_markdown(query, essay_id, card))
+    replace_text(
+        folder / "dig-card.json",
         json.dumps(to_write, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
     )
-    (folder / "dig-card.md").write_text(_card_markdown(query, essay_id, card), encoding="utf-8")
     body["wrote"] = True
     body["stored"] = True
     body["json"] = f"{essay_id}/dig-card.json"

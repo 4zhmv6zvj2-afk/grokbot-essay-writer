@@ -10,6 +10,8 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from essay_writer.durable import replace_text
+
 # A brief code such as MOD1004AA or RPT5001AA, or a short id minted from a title.
 _COURSE_CODE = r"[A-Z]{2,6}\d{3,4}[A-Z]{2,8}"
 _MINTED_CODE = r"[A-Z]{4,16}"
@@ -145,7 +147,7 @@ def _legacy_beside_setup() -> Path | None:
 def _adopt_legacy_setup(legacy: Path, dest: Path) -> None:
     """Copy a product beside-app record into the home record later tools read."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(legacy.read_text(encoding="utf-8"), encoding="utf-8")
+    replace_text(dest, legacy.read_text(encoding="utf-8"))
     secret = legacy.parent / "setup.secrets.json"
     if not secret.is_file():
         return
@@ -442,9 +444,7 @@ def write_last_saved(module: str, number: int) -> None:
         )
         + "\n"
     )
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(payload, encoding="utf-8")
-    os.replace(temporary, path)
+    replace_text(path, payload)
 
 
 def sequence_write_error(value: object) -> str | None:

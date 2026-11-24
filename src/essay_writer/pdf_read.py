@@ -8,9 +8,10 @@ That missing part is recorded in pdf-read-gaps.json for a later citation pass.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
+
+from essay_writer.durable import replace_bytes, replace_text
 
 PART_LIMIT = 20_000_000
 GAPS_NAME = "pdf-read-gaps.json"
@@ -74,9 +75,11 @@ def record_read_gaps(folder: Path, gaps: list[dict[str, Any]]) -> Path | None:
         "bytes_leave_machine": False,
         "gaps": _load_gaps(path) + gaps,
     }
-    temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    replace_text(
+        path,
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        mkdir=True,
+    )
     return path
 
 
@@ -127,7 +130,7 @@ def chop_pdf(path: Path, *, limit: int = PART_LIMIT) -> dict[str, Any]:
         if readable_pdf(piece) and len(piece) <= limit:
             folder.mkdir(parents=True, exist_ok=True)
             dest = folder / f"part-{index}.pdf"
-            dest.write_bytes(piece)
+            replace_bytes(dest, piece)
             parts.append({"name": dest.name, "path": str(dest), "readable": True})
             continue
         if readable_pdf(piece) and len(piece) > limit:

@@ -23,6 +23,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from essay_writer.durable import replace_text
 from essay_writer.prompt_loader import text
 from essay_writer.student_voice import say
 
@@ -1224,7 +1225,7 @@ def _write_index(index: dict[str, str]) -> None:
     if path is None:
         return
     try:
-        path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        replace_text(path, json.dumps(index, indent=2, sort_keys=True) + "\n")
         with _lock:
             _persisted.add(path)
     except OSError:
@@ -1259,7 +1260,7 @@ def _persist(essay_id: str) -> None:
         "shell": session.get("shell") or "",
     }
     try:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        replace_text(path, json.dumps(payload, indent=2) + "\n")
     except OSError:
         return
     with _lock:

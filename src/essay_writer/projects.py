@@ -36,6 +36,7 @@ from essay_writer.confirm import (
     refuse,
     save_draft,
 )
+from essay_writer.durable import replace_text
 from essay_writer.known_paths import guard_write_door
 from essay_writer.paths import (
     ESSAY_ID,
@@ -208,8 +209,11 @@ def load_sequence_state(module: str, number: int) -> dict[str, Any]:
 
 def save_sequence_state(module: str, number: int, state: dict[str, Any]) -> None:
     path = sequence_dir(module, number) / "state.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    replace_text(
+        path,
+        json.dumps(state, indent=2, ensure_ascii=False) + "\n",
+        mkdir=True,
+    )
     write_last_saved(module, number)
 
 
@@ -472,8 +476,7 @@ def essay_project_archive(module: str, confirmPhase: str | None = None) -> dict[
         "sequences": snapshot["sequences"],
     }
     path = archived_path(module)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
+    replace_text(path, json.dumps(marker, indent=2) + "\n", mkdir=True)
     body["wrote"] = True
     body["stored"] = True
     body["archived"] = True
@@ -1243,17 +1246,17 @@ def _rewrite_tree(root: Path, old: str, new: str) -> None:
                 data = json.loads(path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 text = _replace_token(path.read_text(encoding="utf-8"), old, new)
-                path.write_text(text, encoding="utf-8")
+                replace_text(path, text)
             else:
-                path.write_text(
+                replace_text(
+                    path,
                     json.dumps(_rewrite(data, old, new), indent=2, ensure_ascii=False) + "\n",
-                    encoding="utf-8",
                 )
         elif suffix in text_suffixes:
             text = path.read_text(encoding="utf-8")
             updated = _replace_token(text, old, new)
             if updated != text:
-                path.write_text(updated, encoding="utf-8")
+                replace_text(path, updated)
         elif suffix == ".docx":
             _rewrite_docx(path, old, new)
         renamed = _replace_token(path.name, old, new)
@@ -1287,7 +1290,7 @@ def _write_cloned_state(
     base["sequence_id"] = new
     base["branched_from"] = old
     base["branch_reason"] = reason
-    path.write_text(json.dumps(base, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    replace_text(path, json.dumps(base, indent=2, ensure_ascii=False) + "\n")
 
 
 def clone_sequence(module: str, parent: int, child: int, *, reason: str) -> None:

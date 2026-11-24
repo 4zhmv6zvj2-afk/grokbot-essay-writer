@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import contextvars
 import json
-import os
 import sys
 import threading
 from contextlib import contextmanager
@@ -22,6 +21,7 @@ try:
 except ImportError:  # pragma: no cover - exercised by the no-fcntl subprocess test
     fcntl = None  # type: ignore[assignment]
 
+from essay_writer.durable import replace_text
 from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import work_dir
 from essay_writer.stage_llm import POINTER_FILE, STAGE_ORDER, tracking_file
@@ -36,16 +36,9 @@ _INHERITED_KEEP: contextvars.ContextVar[bool] = contextvars.ContextVar(
 
 
 def _atomic(path, text: str) -> None:
-
     refuse_repo_write(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-    temporary.write_text(text, encoding="utf-8")
-    try:
-        os.replace(temporary, path)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+    replace_text(path, text)
 
 
 # One file. The note body and the pointer that names it land together.
@@ -287,9 +280,10 @@ def rebind_cloned_confirms(folder, essay_id: str) -> None:
             record["digest"] = new_digest
             record["essay_id"] = essay_id
             dest = path.with_name(f"{new_digest}.json")
-            dest.write_text(
+            replace_text(
+                dest,
                 json.dumps(record, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
+                mkdir=True,
             )
             if dest != path and path.is_file():
                 path.unlink()
