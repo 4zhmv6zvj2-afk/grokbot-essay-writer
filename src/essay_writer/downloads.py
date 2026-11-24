@@ -475,10 +475,9 @@ def _save_docx(path, lines: list[tuple[str, bool, bool]]) -> None:
     )
     for index, (text, bold, hang) in enumerate(lines):
         _write_line(document, text, bold=bold, hang=hang, size=14 if index == 0 and bold else 12)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".docx.tmp")
-    document.save(str(temporary))
-    os.replace(temporary, path)
+    from essay_writer.word import save_docx
+
+    save_docx(path, document)
 
 
 def links_card(rows: list[dict[str, Any]]) -> dict[str, Any]:

@@ -1210,6 +1210,8 @@ def _rewrite_docx(path: Path, old: str, new: str) -> None:
         if rel.reltype.endswith("/header") or rel.reltype.endswith("/footer"):
             if _rewrite_story(rel.target_part.element, old, new):
                 changed = True
+    from essay_writer.word import WORD_TITLE_LIMIT, WORD_TITLE_SPARE, save_docx
+
     props = document.core_properties
     for name in _CORE_FIELDS:
         if not hasattr(props, name):
@@ -1218,14 +1220,15 @@ def _rewrite_docx(path: Path, old: str, new: str) -> None:
         if not isinstance(current, str):
             continue
         updated = _replace_token(current, old, new)
-        if len(updated) > 255:
+        if len(updated) > WORD_TITLE_LIMIT:
             stem = path.stem.strip()
-            updated = stem if stem and len(stem) <= 255 else (stem or "Essay")[:255]
+            spare = stem if stem and len(stem) <= WORD_TITLE_LIMIT else (stem or WORD_TITLE_SPARE)
+            updated = spare[:WORD_TITLE_LIMIT]
         if updated != current:
             setattr(props, name, updated)
             changed = True
     if changed:
-        document.save(str(path))
+        save_docx(path, document)
 
 
 def _rewrite_tree(root: Path, old: str, new: str) -> None:

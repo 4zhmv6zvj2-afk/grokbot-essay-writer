@@ -300,7 +300,7 @@ def test_a_failed_check_leaves_files_and_the_step_unsaved(
     assert working.read_bytes() == b"previous-working"
     assert sequence_final.read_bytes() == b"previous-sequence-final"
     assert student.read_bytes() == b"previous-student-final"
-    assert not working.with_name(f".{working.name}.writing").exists()
+    assert not working.with_suffix(".docx.tmp").exists()
 
 
 @pytest.mark.parametrize(

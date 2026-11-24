@@ -216,26 +216,6 @@ def write_revisit_stage_next(
     return write_stage_next(body, saved_next("5", stage_title("5", genre)))
 
 
-def write_refusal_reason_next(body: dict[str, Any]) -> dict[str, Any]:
-    """A stopped draft says the reason already stored on the reply."""
-    reason = body.get("reason")
-    sentence = reason if isinstance(reason, str) else ""
-    return write_stage_next(body, sentence)
-
-
-def write_note_refusal_next(body: dict[str, Any], sentence: object) -> dict[str, Any]:
-    """A stopped edit says the next sentence the note already chose."""
-    if isinstance(sentence, str):
-        return write_stage_next(body, sentence)
-    return body
-
-
-def write_turn_redirect_next(body: dict[str, Any], reply: object) -> dict[str, Any]:
-    """A short ask uses the approved reply as the next sentence."""
-    sentence = reply if isinstance(reply, str) else ""
-    return write_stage_next(body, say(sentence))
-
-
 def write_no_card_between_next(body: dict[str, Any]) -> dict[str, Any]:
     """A step that moves on by itself does not offer a save card."""
     return write_stage_next(
@@ -275,15 +255,6 @@ def answer_next(format_outcome: str | None, question_outcome: str | None) -> str
     return f"{lead} {_ANSWER_TAIL}"
 
 
-def write_answer_stage_next(
-    body: dict[str, Any],
-    format_outcome: str | None,
-    question_outcome: str | None,
-) -> dict[str, Any]:
-    """Store the brief-answer sentence. The stage caller does not write it."""
-    return write_stage_next(body, answer_next(format_outcome, question_outcome))
-
-
 def write_critical_reviews_next(body: dict[str, Any]) -> dict[str, Any]:
     """Name the saved critical-review file, then the following sentence."""
     from essay_writer.specialists.grok_bot import critical_reviews_delivery_next
@@ -307,23 +278,15 @@ def write_closed_stage_next(body: dict[str, Any]) -> dict[str, Any]:
     return write_stage_next(body, sentence)
 
 
-def write_missing_confirm_next(
-    body: dict[str, Any], stage: str, title: str, *, say_it: bool = False
-) -> dict[str, Any]:
-    """A missing card still names the card, with the typed fallback."""
-    from essay_writer.specialists.grok_bot import missing_confirm_next
-
-    sentence = missing_confirm_next(stage, title)
-    return write_stage_next(body, say(sentence) if say_it else sentence)
-
-
 def write_blocked_card_next(
     body: dict[str, Any], opened_next: object, *, stage: str, title: str
 ) -> dict[str, Any]:
     """Use the open card's sentence, or name the missing card."""
     if isinstance(opened_next, str) and opened_next.strip():
         return write_stage_next(body, opened_next)
-    return write_missing_confirm_next(body, stage, title)
+    from essay_writer.specialists.grok_bot import missing_confirm_next
+
+    return write_stage_next(body, missing_confirm_next(stage, title))
 
 
 def write_stage7_skip_next(
@@ -348,15 +311,10 @@ def write_reoffer_next(
     if isinstance(lead, str) and lead.strip():
         return write_stage_next(body, say(lead.strip()))
     if not replayed:
-        return write_missing_confirm_next(body, stage, title, say_it=True)
+        from essay_writer.specialists.grok_bot import missing_confirm_next
+
+        return write_stage_next(body, say(missing_confirm_next(stage, title)))
     return body
-
-
-def write_reason_next(body: dict[str, Any]) -> dict[str, Any]:
-    """Say the reason already stored on a stopped reply."""
-    reason = body.get("reason")
-    text = reason if isinstance(reason, str) else ""
-    return write_stage_next(body, say(text))
 
 
 def append_conclusion_next(body: dict[str, Any], line: str) -> dict[str, Any]:
@@ -391,7 +349,8 @@ def apply_finished_stage_next(
     if stage == "10" and body.get("stored"):
         final = body.get("final_word")
         if body.get("ok") is False and body.get("refused") == "word":
-            write_reason_next(body)
+            reason = body.get("reason")
+            write_stage_next(body, say(reason if isinstance(reason, str) else ""))
         elif isinstance(final, dict) and final.get("reason") == "mac-not-mounted":
             write_stage_next(body, say(STAGE10_UNMOUNTED))
         elif isinstance(final, dict):
