@@ -16,6 +16,7 @@ from helpers import open_sequence, picked
 
 from essay_writer.incident import incident_path
 from essay_writer.paths import work_dir
+from essay_writer.stage_llm import STAGE_ORDER
 from essay_writer.stage_note import _note_look
 from essay_writer.stage_state import blank_pointer, load_pointer
 from essay_writer.stage_track import essay_stage
@@ -188,6 +189,48 @@ def test_a_saved_value_that_is_not_a_list_stays_on_disk(workspace) -> None:
     assert loaded["saved"] == []
     assert path.read_bytes() == before
     assert "pointer-field-dropped" in _codes()
+
+
+def test_an_unknown_saved_entry_and_file_key_survive_an_advance(workspace) -> None:
+    """An unknown saved entry and an unknown files key stay through load, advance, and save.
+
+    The stage machine still stores stage 1 and moves to a real stage.
+    """
+    seq = open_sequence()
+    path = work_dir(seq) / "tracking" / "stage.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pointer = blank_pointer()
+    pointer["saved"] = ["kept-earlier"]
+    pointer["files"] = {"kept-file": "notes/kept.txt"}
+    path.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
+    loaded = load_pointer(seq)
+    assert "kept-earlier" in loaded["saved"]
+    assert loaded["files"]["kept-file"] == "notes/kept.txt"
+    saved = _advance(seq, "1", LOOK)
+    assert saved.get("stored") is True, saved
+    again = json.loads(path.read_text(encoding="utf-8"))
+    assert "kept-earlier" in again["saved"]
+    assert "1" in again["saved"]
+    assert again["files"]["kept-file"] == "notes/kept.txt"
+    assert again["current"] in STAGE_ORDER
+
+
+def test_a_normalized_unknown_current_is_written_as_a_stage(workspace) -> None:
+    """A current value that is not a stage is saved as a usable stage on the next save."""
+    seq = open_sequence()
+    path = work_dir(seq) / "tracking" / "stage.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pointer = blank_pointer()
+    pointer["current"] = "nope"
+    path.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
+    loaded = load_pointer(seq)
+    assert loaded["current"] == "1"
+    assert json.loads(path.read_text(encoding="utf-8"))["current"] == "nope"
+    saved = _advance(seq, "1", LOOK)
+    assert saved.get("stored") is True, saved
+    again = json.loads(path.read_text(encoding="utf-8"))
+    assert again["current"] == "2"
+    assert again["current"] in STAGE_ORDER
 
 
 def test_a_damaged_state_file_is_refused_and_not_rewritten(workspace) -> None:
