@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from essay_writer.confirm import refuse
-from essay_writer.durable import replace_text
+from essay_writer.durable import replace_bytes, replace_text
 from essay_writer.harvard_4a import harvard_4a_line, harvard_4a_parts
 from essay_writer.known_paths import (
     allow_research_path,
@@ -898,8 +898,6 @@ def reconcile_before_4b(
     disk when it was outside the sequence, then annotation.docx and the
     papers zip are rewritten.
     """
-    import shutil
-
     from essay_writer.downloads import _load_state, _save_state, _state_path
 
     research = load_state(essay_id).get("research") or {}
@@ -958,7 +956,7 @@ def reconcile_before_4b(
             folder.mkdir(parents=True, exist_ok=True)
             dest = folder / pdf.name
             if dest.resolve() != pdf.resolve():
-                shutil.copy2(pdf, dest)
+                replace_bytes(dest, pdf.read_bytes())
         rel = relative(dest)
         if rel not in known_paths:
             row: dict[str, Any] = {"path": rel, "bucket": "paper", "url": hit.get("url") or rel}

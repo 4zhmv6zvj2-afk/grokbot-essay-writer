@@ -157,3 +157,39 @@ def test_a_crash_between_the_note_and_the_pointer_loads_one_pair(workspace, monk
     assert pointer["current"] == "2"
     assert LOOK in note
     assert not (folder / "tracking" / ".stage.commit").exists()
+
+
+def test_a_failed_mac_copy_keeps_the_previous_deliverable(tmp_path, monkeypatch):
+    from essay_writer.first_run_mac import copy_deliverable_to_mac
+
+    mac = tmp_path / "mac"
+    mac.mkdir()
+    source = tmp_path / "essay.docx"
+    source.write_bytes(b"NEW-DELIVERABLE")
+    previous = mac / "essay.docx"
+    previous.write_bytes(b"PREVIOUS-DELIVERABLE")
+
+    def boom(src, dst):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(os, "replace", boom)
+    reply = copy_deliverable_to_mac(source, mac_dir=mac)
+    assert reply["ok"] is False
+    assert previous.read_bytes() == b"PREVIOUS-DELIVERABLE"
+    assert list(mac.glob(".essay.docx.*.tmp")) == []
+
+
+def test_a_failed_brief_rollback_does_not_leave_a_partial_file(tmp_path, monkeypatch):
+    from essay_writer.assignment_gate import _rollback_brief_meta
+
+    path = tmp_path / "answer.json"
+    path.write_bytes(b'{"brief_sha256": "bad"}\n')
+    kept = b'{"brief_sha256": "kept"}\n'
+
+    def boom(src, dst):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(os, "replace", boom)
+    _rollback_brief_meta(path, kept)
+    assert not path.exists()
+    assert list(tmp_path.glob(".answer.json.*.tmp")) == []

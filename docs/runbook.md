@@ -2,7 +2,7 @@
 
 ## A crash during a save
 
-A saved file is replaced as a whole. The writer puts the new bytes in a temp file in the same directory, flushes that file, then renames it over the previous file. A crash before the rename leaves the previous file. A second save of the same bytes leaves one file.
+A saved file is replaced as a whole. The writer puts the new bytes in a temp file in the same directory, flushes that file, then renames it over the previous file. A crash before the rename leaves the previous file. A second save of the same bytes, with no earlier crash, leaves one file. A killed save can leave a hidden temp beside that file. The temp is not loaded, and the next save does not delete it, because another writer may still be using a temp of its own.
 
 Sequence state is the last file in its pair. `state.json` is written, then `last-saved.json`. A stage note is written, then `tracking/stage.json`. The next load finishes a stage pair whose pointer did not land. A dig card writes the markdown, then `dig-card.json`. The card the product loads is the JSON. A crash after the JSON and before the markdown leaves a new card and a stale note.
 

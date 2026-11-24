@@ -10,13 +10,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
 from essay_writer import paths as essay_paths
-from essay_writer.durable import replace_text
+from essay_writer.durable import replace_bytes, replace_text
 from essay_writer.first_run_common import _internal_volume
 from essay_writer.known_paths import RepoSaveRefused, refuse_repo_write
 from essay_writer.paths import SETUP_DIRNAME, kb1_root, work_dir, workspace_root
@@ -636,7 +635,7 @@ def copy_deliverable_to_mac(source: Path, *, mac_dir: Path | None = None) -> dic
                 "quarantine": cleared,
             }
         replaced = target.is_file()
-        shutil.copy2(path, target)
+        replace_bytes(target, path.read_bytes())
         cleared = _clear_delivered(target, generated=generated)
     except OSError as exc:
         return {"ok": False, "copied": False, "source": str(path), "reason": str(exc)}
