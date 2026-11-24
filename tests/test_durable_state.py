@@ -90,9 +90,15 @@ os.replace = pause
 from essay_writer.durable import replace_bytes
 replace_bytes(path, b'{"kept": 2}\\n')
 """
+    root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    src = str(root / "src")
+    previous = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = src if not previous else src + os.pathsep + previous
     proc = subprocess.Popen(
         [sys.executable, "-c", script, str(path), str(ready)],
-        cwd=Path(__file__).resolve().parents[1],
+        cwd=root,
+        env=env,
     )
     deadline = time.monotonic() + 10
     while not ready.exists():
