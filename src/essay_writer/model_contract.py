@@ -1,8 +1,12 @@
 """Typed boundary for the high-risk model payloads.
 
 A payload is parsed into a dataclass before a door uses it. A bad payload
-is a ``ContractRefusal`` with student-facing copy. Prose quality is not
-scored. Lower-risk payloads stay documented as safe unvalidated.
+is a ``ContractRefusal``. The door either returns that sentence or falls
+back to the documented safe value. ``essay.dig`` does not speak a refused
+``smallerQuestions`` list. It keeps the confirmed question.
+``document_title`` does not speak a refused Word title. It uses the spare
+title ``Essay``. Prose quality is not scored. Lower-risk payloads stay
+documented as safe unvalidated.
 """
 
 from __future__ import annotations
@@ -11,7 +15,9 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
+# Spoken by essay.dig and by store_brief_answer.
 MISSING_QUESTION = "Name the essay question. An empty question is not searched."
+# Spoken by essay.review when the verdict is missing or not PASS or FAIL.
 VERDICT_SHAPE = "The verdict is PASS or FAIL."
 
 _OPERATOR = re.compile(r"site:|filetype:|(?<![A-Za-z])(?:AND|OR|NOT)(?![A-Za-z])")
@@ -27,13 +33,21 @@ Code = Literal["missing", "malformed", "extra", "contradictory"]
 
 @dataclass(frozen=True)
 class ContractRefusal:
-    """One refusal vocabulary. ``reason`` is the sentence the student reads."""
+    """One refusal vocabulary. ``reason`` is the parser sentence.
+
+    A door speaks it, or falls back and leaves it unspoken.
+    """
 
     code: Code
     reason: str
 
 
 def _refuse(code: Code, part: str) -> ContractRefusal:
+    """Build one parser sentence.
+
+    The sentences for ``smaller questions`` and ``Word title`` are covered
+    by ``tests/test_model_contract.py``. Those two doors do not speak them.
+    """
     if code == "missing":
         reason = f"The {part} is missing. Nothing was saved."
     elif code == "malformed":
@@ -126,7 +140,10 @@ def parse_smaller_questions(
     value: object,
     confirmed: str = "",
 ) -> SmallerQuestions | ContractRefusal:
-    """The dig list is strings. A bad shape is not passed to the gather."""
+    """The dig list is strings. A bad shape is not passed to the gather.
+
+    ``essay.dig`` drops this refusal and keeps the confirmed question.
+    """
     if value is None:
         return SmallerQuestions(())
     if isinstance(value, dict):
@@ -265,7 +282,10 @@ def parse_word_title(
     *,
     limit: int = 255,
 ) -> WordTitle | ContractRefusal:
-    """A Word document title is a short string, and it is not the opening paragraph."""
+    """A Word document title is a short string, and it is not the opening paragraph.
+
+    ``document_title`` drops this refusal and uses the spare title ``Essay``.
+    """
     if isinstance(value, dict):
         extra = set(value) - {"title"}
         if extra:
