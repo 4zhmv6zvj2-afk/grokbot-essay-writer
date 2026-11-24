@@ -117,8 +117,74 @@ jobs:
             tail -n 1 "$RUNNER_TEMP/pin-audit.txt"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      macos: ${{ steps.filter.outputs.macos }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Decide which pull-request jobs the diff needs
+        id: filter
+        run: |
+          set -euo pipefail
+          # Main and a manual run always take the full macOS suite. A pull
+          # request runs it only for a macOS-sensitive path. A failed decision
+          # fails this job, and the macOS job then runs anyway.
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "macos=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          for sha in "$base" "$head"; do
+            if ! printf '%s' "$sha" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "::error::refusing a pull-request sha that is not 40 hex characters"
+              exit 1
+            fi
+          done
+          git diff --name-status "$base" "$head" > "$RUNNER_TEMP/changed.txt"
+          macos=false
+          while IFS="$(printf '\t')" read -r _status path extra; do
+            for candidate in "$path" "$extra"; do
+              [ -n "$candidate" ] || continue
+              case "$candidate" in
+                src/essay_writer/first_run_mac.py|\
+                src/essay_writer/intake.py|\
+                src/essay_writer/word.py|\
+                src/essay_writer/paths.py|\
+                src/essay_writer/setup.py|\
+                src/essay_writer/server.py|\
+                pyproject.toml|\
+                MANIFEST.in|\
+                requirements*.txt|\
+                .github/workflows/*|\
+                tests/test_*mac*.py|\
+                tests/test_*first_run*.py|\
+                tests/test_*first-run*.py|\
+                tests/test_*word*.py|\
+                tests/test_*path*.py)
+                  macos=true
+                  ;;
+              esac
+            done
+          done < "$RUNNER_TEMP/changed.txt"
+          echo "macos=${macos}" >> "$GITHUB_OUTPUT"
+          echo "macOS suite for this pull request: ${macos}"
+
   test-macos:
     name: Test (macOS, Python 3.15)
+    needs: changes
+    # Not a pull request: always run. A failed path decision: run. A pull
+    # request whose diff is macOS-sensitive: run. Otherwise skip.
+    if: >-
+      github.event_name != 'pull_request' ||
+      needs.changes.result != 'success' ||
+      needs.changes.outputs.macos == 'true'
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
