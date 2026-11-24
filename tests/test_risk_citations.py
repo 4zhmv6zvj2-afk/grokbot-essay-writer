@@ -182,10 +182,10 @@ def test_withheld_page_cite_is_removed_from_the_returned_text(workspace):
     from essay_writer.cite_fit import _write_record
 
     page = strip_token("The claim (Peng, 2018, p. 12) stands.", "peng, 2018")
-    assert "Peng" not in page
-    assert "stands" in page
+    assert "Peng" not in page.text
+    assert "stands" in page.text
     et_al = strip_token("Peng et al. (2018) found the same.", "peng, 2018")
-    assert "Peng" not in et_al
+    assert "Peng" not in et_al.text
     seq = open_sequence()
     _write_record(seq, {"ok": [], "rejected": [], "withheld": ["peng, 2018"]})
     applied = apply_body_cites(seq, "5", "The claim (Peng, 2018, p. 12) stands.")

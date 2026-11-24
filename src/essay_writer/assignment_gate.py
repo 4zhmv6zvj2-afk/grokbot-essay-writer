@@ -932,6 +932,12 @@ def store_brief_answer(
     """
     if _no_assignment_document(essay_id):
         return _no_brief_refusal()
+    if question_answer is not None:
+        from essay_writer.model_contract import ContractRefusal, parse_confirmed_question
+
+        parsed_question = parse_confirmed_question(question_answer, required=False)
+        if isinstance(parsed_question, ContractRefusal):
+            return {"ok": False, "stored": False, "reason": parsed_question.reason}
     brief = _brief_text(essay_id)
     saved = _accepted_brief_meta(essay_id, brief)
     kept_format = _allowed_format(saved.get("format")) if saved is not None else None

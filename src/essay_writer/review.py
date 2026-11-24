@@ -44,20 +44,18 @@ def eqr_verdict(essay_id: str, stage: str) -> str | None:
     if verdict not in {"PASS", "FAIL"}:
         return None
     if verdict == "PASS":
-        from essay_writer.specialists.eqr import (
-            findings_note_clears,
-            submit_pass_unlocked,
-        )
+        from essay_writer.model_contract import ContractRefusal, parse_draft_tie, parse_findings
+        from essay_writer.specialists.eqr import submit_pass_unlocked
 
-        if not findings_note_clears(record.get("findings"), essay_id):
+        if isinstance(parse_findings(record.get("findings"), essay_id), ContractRefusal):
             return None
         if stage == "9" and submit_pass_unlocked(essay_id).get("unlocked") is not True:
             return None
         if stage == "6" and "draft_text" in record:
-            tied = record.get("draft_text")
             from essay_writer.word import saved_first_draft_text
 
-            if not isinstance(tied, str) or saved_first_draft_text(essay_id) != tied:
+            tied = parse_draft_tie(saved_first_draft_text(essay_id), record.get("draft_text"))
+            if isinstance(tied, ContractRefusal):
                 return None
     return verdict
 
@@ -84,8 +82,12 @@ def essay_review(
         return refuse("essay-id", id_error)
     if stage not in STAGES:
         return refuse("review", "EQR stage is 6 (first Word) or 9 (final Word).")
-    if verdict not in {"PASS", "FAIL"}:
-        return refuse("review", "The verdict is PASS or FAIL.")
+    from essay_writer.model_contract import ContractRefusal, parse_verdict
+
+    parsed_verdict = parse_verdict(verdict)
+    if isinstance(parsed_verdict, ContractRefusal):
+        return refuse("review", parsed_verdict.reason)
+    verdict = parsed_verdict.verdict
     from essay_writer.specialists.eqr import (
         build_findings,
         claim_check_opened,

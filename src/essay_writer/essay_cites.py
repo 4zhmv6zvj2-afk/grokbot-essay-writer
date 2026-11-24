@@ -210,23 +210,28 @@ def _shared_short_form(source: dict[str, Any], sources: list[dict[str, Any]]) ->
     return len(matches) != 1
 
 
-def fit_essay_cites(essay_id: str, text: str) -> str:
+def fit_essay_cites(essay_id: str, text: Any) -> Any:
     """Cite enough relevant works in the essay, and not more than the cap.
 
     The citation list is left as it is. Nothing is added for a work that
     does not bear on the question and the plan. A missing question or a
     missing plan leaves the essay text unchanged.
     """
-    if not isinstance(text, str) or not text.strip():
+    from essay_writer.model_contract import StripReport
+
+    if isinstance(text, StripReport):
+        gap = text.subject_gap
+        text = text.text
+    elif not isinstance(text, str) or not text.strip():
         return text if isinstance(text, str) else ""
+    else:
+        gap = False
     from essay_writer.citation_list import list_written, usable_sources
     from essay_writer.cite_fit import carry_subject_gap
     from essay_writer.source_floor import confirmed_question
 
-    gap = bool(getattr(text, "subject_gap", False))
-
-    def finish(value: str) -> str:
-        return carry_subject_gap(value, gap or bool(getattr(value, "subject_gap", False)))
+    def finish(value: str) -> Any:
+        return carry_subject_gap(value, gap)
 
     if not list_written(essay_id):
         return finish(text)
@@ -271,7 +276,9 @@ def fit_essay_cites(essay_id: str, text: str) -> str:
             from essay_writer.cite_fit import strip_token
 
             text = strip_token(text, inner)
-            gap = gap or bool(getattr(text, "subject_gap", False))
+            if isinstance(text, StripReport):
+                gap = gap or text.subject_gap
+                text = text.text
     current = cited()
     if len(current) >= minimum:
         return finish(text)

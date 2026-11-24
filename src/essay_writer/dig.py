@@ -1378,11 +1378,21 @@ def essay_dig(
     elif not caller:
         return refuse("dig", "Name the dig query. An empty query does not invent papers.")
     else:
-        return refuse("dig", ASK_QUESTION, stored=False, wrote=False)
+        from essay_writer.model_contract import ContractRefusal, parse_confirmed_question
+
+        missing = parse_confirmed_question(question, required=True)
+        reason = missing.reason if isinstance(missing, ContractRefusal) else ASK_QUESTION
+        return refuse("dig", reason, stored=False, wrote=False)
     payload = {"essay_id": essay_id, "query": query}
     fingerprint = _dig_fingerprint(query)
     if confirmPhase == DRAFT:
-        card = _build_floor_card(question, essay_id, smallerQuestions)
+        from essay_writer.model_contract import ContractRefusal, parse_smaller_questions
+
+        parsed_smaller = parse_smaller_questions(smallerQuestions, question)
+        reply = (
+            None if isinstance(parsed_smaller, ContractRefusal) else list(parsed_smaller.questions)
+        )
+        card = _build_floor_card(question, essay_id, reply)
         card["query"] = query
         body = _dig_reply(essay_id, query, confirmPhase, card)
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint, shown=card)
