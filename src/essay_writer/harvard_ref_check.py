@@ -51,6 +51,48 @@ def claim_reference_pass(seat: str = "writer") -> dict[str, object]:
     )
 
 
+def sources_the_file_accounts_for(
+    path: Path,
+    sources: list[Any],
+    essay_id: str | None = None,
+) -> list[Any]:
+    """Sources this Word file cites or already lines up on its reference list.
+
+    A gathered paper the essay does not cite, and whose line is not in the
+    References section, is not a mismatch for this file. A source this
+    function returns is still recorded when the check cannot line it up.
+    """
+    document = _open(path)
+    if document is None:
+        return [source for source in sources if isinstance(source, dict)]
+    body, references = _split(document)
+    if not references:
+        return [source for source in sources if isinstance(source, dict)]
+    from essay_writer.textutil import citation_tokens
+    from essay_writer.word_references import readable_cite_text
+
+    body_text = readable_cite_text("\n".join(paragraph.text for paragraph in body))
+    tokens = {token.casefold() for token in citation_tokens(body_text)}
+    accounted: list[Any] = []
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        prepared = _normalized(source, essay_id)
+        if _match_paragraph(references, prepared) is not None:
+            accounted.append(source)
+            continue
+        author = _text(prepared.get("author"))
+        year = _text(prepared.get("year"))
+        surname = _surname(author)
+        label = f"{family_name(author)}, {year}".casefold() if author and year else ""
+        cited = bool(label and label in tokens) or bool(
+            surname and year and _author_year_present(body_text, surname, year)
+        )
+        if cited:
+            accounted.append(source)
+    return accounted
+
+
 def writer_reference_block(
     essay_id: str,
     path: Path,

@@ -1308,12 +1308,19 @@ def _write_stage10_sequence(
         body["refused"] = "empty-references"
         body["reason"] = reason
         return None, body
-    from essay_writer.harvard_ref_check import writer_reference_block
+    from essay_writer.harvard_ref_check import (
+        sources_the_file_accounts_for,
+        writer_reference_block,
+    )
 
     blocked_harvard = writer_reference_block(
         essay_id,
         pending,
-        list(report.get("sources") or []),
+        sources_the_file_accounts_for(
+            pending,
+            list(report.get("sources") or []),
+            essay_id,
+        ),
     )
     if blocked_harvard:
         pending.unlink(missing_ok=True)

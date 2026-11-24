@@ -29,6 +29,7 @@ from essay_writer.diary import (
     cover_field_rows,
     cover_lines_from_field_rows,
     layout_for,
+    stored_cover_title,
 )
 from essay_writer.draft_from_review import CRITICAL_REVIEW
 from essay_writer.known_paths import guard_write_door, refuse_repo_write
@@ -347,7 +348,11 @@ def _flat_title(value: object) -> str:
 
 
 def _first_essay_paragraph(sections: object) -> str:
-    """The paragraph the essay body starts with. A section heading is not that paragraph."""
+    """The paragraph the essay body starts with.
+
+    A short section heading is not that paragraph. A heading longer than
+    the Word title limit is the opening paragraph itself.
+    """
     if not isinstance(sections, list):
         return ""
     for section in sections:
@@ -356,6 +361,8 @@ def _first_essay_paragraph(sections: object) -> str:
         heading = _flat_title(section.get("heading"))
         if heading.casefold() == "references":
             continue
+        if len(heading) > WORD_TITLE_LIMIT:
+            return heading
         body = section.get("body")
         if not isinstance(body, str):
             continue
@@ -395,8 +402,8 @@ def document_title(
 
     The short title already stored on the Word file is kept when it is not
     the opening paragraph and it is at most 255 characters. A later candidate
-    is skipped on the same terms. When nothing short is stored, the fallback
-    is the assessment id, then the file name without .docx. Never the opening.
+    is skipped on the same terms. The caller passes a real stored pack or
+    report title before the assessment id. The opening is never the title.
     """
     banned = _flat_title(opening)
 
@@ -476,6 +483,7 @@ def _word_document_title(
         stem = path.stem
     return document_title(
         stored,
+        stored_cover_title(pack, report),
         str(essay_id),
         stem,
         opening=opening,
