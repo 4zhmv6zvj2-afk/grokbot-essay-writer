@@ -100,6 +100,14 @@ jobs:
       - name: Pytest with coverage
         if: matrix.python-version == '3.12'
         run: python -m pytest -q --cov=essay_writer --cov-report=term --cov-fail-under=85
+      - name: Pin audit
+        if: matrix.python-version == '3.12'
+        run: |
+          python tools/pin_audit.py | tee "$RUNNER_TEMP/pin-audit.txt"
+          {
+            echo "### Pin audit"
+            tail -n 1 "$RUNNER_TEMP/pin-audit.txt"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   test-macos:
     name: Test (macOS, Python 3.15)
