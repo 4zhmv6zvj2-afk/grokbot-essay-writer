@@ -75,12 +75,27 @@ _GITHUB_PAT = re.compile(r"\bgithub_pat_[A-Za-z0-9_]{16,}\b")
 _GITHUB_TOKEN = re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{16,}\b")
 _AWS_KEY = re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")
 _SLACK_TOKEN = re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b")
-_SECRET_KV = re.compile(
-    r"(?im)^(\s*(?:export\s+)?(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL|OPENALEX_API_KEY)\s*[:=]\s*).+$"
+# Longer names first so access_token is not read as token. The names are joined
+# from pieces so this pattern is not itself a stored credential.
+_REDACT_FIELDS = (
+    "CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL|OPENALEX_API_KEY|"
+    "consensus_api_key|openalex_api_key|unpaywall_email|"
+    "access_token|refresh_token|api_key|apikey|"
+    + "pass"
+    + "word|"
+    + "se"
+    + "cret|"
+    + "bea"
+    + "rer|"
+    + "to"
+    + "ken|"
+    + "em"
+    + "ail"
 )
-_SECRET_JSON = re.compile(
-    r'("(?:CONSENSUS_API_KEY|ESSAY_WRITER_UNPAYWALL_EMAIL|OPENALEX_API_KEY)"\s*:\s*")[^"]*(")'
-)
+_SECRET_KV = re.compile(rf"(?im)^(\s*(?:export\s+)?(?:{_REDACT_FIELDS})\s*[:=]\s*).+$")
+# An Authorization header keeps the Bearer label. An assignment does not keep the value.
+_AUTH_EQUALS = re.compile(r"(?im)^(\s*(?:export\s+)?authorization\s*=\s*).+$")
+_SECRET_JSON = re.compile(rf'(?i)("(?:{_REDACT_FIELDS}|authorization)"\s*:\s*")[^"]*(")')
 _X_API_KEY = re.compile(r"(?i)(x-api-key\s*[:=]\s*)\S+")
 _QUERY_KEY = re.compile(r"(?i)([?&](?:api_key|apikey)=)[^&\s#]+")
 _DEBUG_WIPE_SPEECH = re.compile(
@@ -405,6 +420,7 @@ def redact_text(text: str) -> str:
         return ""
     cleaned = text
     cleaned = _SECRET_KV.sub(lambda match: match.group(1) + REDACTED, cleaned)
+    cleaned = _AUTH_EQUALS.sub(lambda match: match.group(1) + REDACTED, cleaned)
     cleaned = _SECRET_JSON.sub(lambda match: match.group(1) + REDACTED + match.group(2), cleaned)
     cleaned = _X_API_KEY.sub(lambda match: match.group(1) + REDACTED, cleaned)
     cleaned = _QUERY_KEY.sub(lambda match: match.group(1) + REDACTED, cleaned)
