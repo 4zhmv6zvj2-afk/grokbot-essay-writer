@@ -334,7 +334,11 @@ def _match_paragraph(paragraphs: list[Any], source: dict[str, object]):
             return hit
         if title and len(hits) > 1:
             hit = once(
-                [paragraph for paragraph in hits if title.casefold() in (paragraph.text or "").casefold()]
+                [
+                    paragraph
+                    for paragraph in hits
+                    if title.casefold() in (paragraph.text or "").casefold()
+                ]
             )
             if hit is not None:
                 return hit

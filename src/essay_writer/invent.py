@@ -264,8 +264,6 @@ def gather_source(
     if opened is not None:
         text = opened.text
     issues: list[dict[str, str]] = []
-    # A supplied id is kept. A missing id is minted from the work. The list
-    # position in the label above is not the source id.
     kept: dict[str, Any] = {
         "id": _as_text(raw.get("id")) or "",
         "origin": origin,
@@ -276,7 +274,7 @@ def gather_source(
     folded = text.casefold()
     field_sources: dict[str, str] = {}
     locator_key = locator.strip().replace("\\", "/")
-    from essay_writer.dig import abstract_lookup_fields, same_lookup_value
+    from essay_writer.lookup_fields import abstract_lookup_fields, same_lookup_value
 
     abstract_kept = abstract_lookup_fields(essay_id, locator_key)
     lookup_kept = _lookup_kept(essay_id, locator)
@@ -289,10 +287,21 @@ def gather_source(
         else:
             remembered = None
         if field in _ABSTRACT_KEPT and remembered:
-            # A look-up author, year, title, or DOI stays, including on a kept PDF.
-            # A value taken from the file does not replace it.
-            kept[field] = remembered
-            field_sources[field] = "lookup"
+            # A matching look-up author, year, title, or DOI stays, including on a
+            # kept PDF. A different claimed value refuses the source.
+            if text_value is None or same_lookup_value(field, text_value, remembered):
+                kept[field] = remembered
+                field_sources[field] = "lookup"
+                continue
+            issues.append(
+                {
+                    "code": "invent-forbid",
+                    "reason": (
+                        f"{label} {field} {text_value!r} does not match "
+                        f"the looked-up value {remembered!r}."
+                    ),
+                }
+            )
             continue
         if text_value is None:
             continue
@@ -365,9 +374,15 @@ def gather_source(
         kept["field_sources"] = field_sources
     if issues:
         return None, issues
-    if not kept["id"]:
-        from essay_writer.source_ids import stable_source_id
+    from essay_writer.source_ids import saved_source_id, stable_source_id, valid_source_id
 
+    saved = saved_source_id(essay_id, kept["locator"])
+    supplied = valid_source_id(kept["id"])
+    if saved:
+        kept["id"] = saved
+    elif supplied:
+        kept["id"] = supplied
+    else:
         kept["id"] = stable_source_id(kept) or ("loc:" + kept["locator"].casefold())
     return kept, []
 

@@ -14,6 +14,7 @@ from helpers import (
     pack,
     plant_gathered_source,
     source,
+    store_confirmed_question,
     write_upload,
 )
 
@@ -132,6 +133,7 @@ def _research_draft(seq: str, *, confirm: bool) -> None:
 
 def _dig_draft(seq: str) -> None:
     """The dig draft still has a card, so its student line names Choose Confirm."""
+    store_confirmed_question(seq, "chokepoints")
     missing_dig = essay_dig(seq, "corridor", "confirm")
     assert missing_dig["ok"] is False, missing_dig
     assert missing_dig["reason"] == NO_MATCHING_DRAFT
@@ -337,6 +339,7 @@ def test_essay_copy_r2_a2_dig_keeps_its_card(workspace, monkeypatch):
     """essay-copy-r2-a2. The dig draft still returns a card and keeps the Choose Confirm line."""
     _stub_lookups(monkeypatch)
     seq = _open(ESSAY)["sequence_id"]
+    store_confirmed_question(seq, "corridor")
     card = essay_dig(seq, "corridor", "draft")
     assert card["ok"] is True, card
     assert isinstance(card.get("card"), dict)
@@ -351,6 +354,7 @@ def test_essay_copy_r2_a3_research_and_dig_lines_are_split(workspace, monkeypatc
     write_upload(workspace)
     seq = _open(ESSAY)["sequence_id"]
     research = essay_research_summary(seq, TOPIC, "draft", [source()])
+    store_confirmed_question(seq, "corridor")
     dig = essay_dig(seq, "corridor", "draft")
     assert SAY_YES in research["next"]
     assert KEEP not in research["next"]
@@ -394,6 +398,7 @@ def test_essay_copy_r2_a4_b_dig_keeps_the_card_path(workspace, monkeypatch):
     """Neighbouring case: dig still has a card, and a typed yes does not confirm it."""
     _stub_lookups(monkeypatch)
     seq = _open(ESSAY)["sequence_id"]
+    store_confirmed_question(seq, "corridor")
     draft = essay_dig(seq, "corridor", "draft")
     assert draft["ok"] is True, draft
     assert isinstance(draft.get("card"), dict)

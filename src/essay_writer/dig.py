@@ -31,6 +31,16 @@ from essay_writer.confirm import (
 )
 from essay_writer.downloads import BUCKET_LABELS, run_downloads
 from essay_writer.known_paths import guard_write_door
+from essay_writer.lookup_fields import (
+    _KEPT_ON_ABSTRACT,
+    _doi_key,
+)
+from essay_writer.lookup_fields import (
+    abstract_lookup_fields as abstract_lookup_fields,
+)
+from essay_writer.lookup_fields import (
+    same_lookup_value as same_lookup_value,
+)
 from essay_writer.paths import module_code, sequence_write_error, uploads_dir, work_dir
 from essay_writer.resolvers import (
     openalex_api_key,
@@ -292,7 +302,8 @@ def openalex_search(query: str, cursor: str | None = None) -> dict[str, Any]:
             _copy_openalex_urls(hit, work)
             hits.append(hit)
     body: dict[str, Any] = {"called": True, "hits": hits, "row_count": row_count}
-    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    meta_value = payload.get("meta")
+    meta = meta_value if isinstance(meta_value, dict) else {}
     next_cursor = meta.get("next_cursor")
     # A short page, or a missing cursor, has no further official page.
     if isinstance(next_cursor, str) and next_cursor.strip() and row_count >= 5:
@@ -516,12 +527,6 @@ def _download_name(item: dict[str, Any]) -> str:
     return "Untitled download"
 
 
-def _doi_key(value: object) -> str:
-    if not isinstance(value, str):
-        return ""
-    return value.strip().removeprefix("https://doi.org/").casefold()
-
-
 def _pdf_dois(downloads: object) -> set[str]:
     if not isinstance(downloads, dict):
         return set()
@@ -544,18 +549,6 @@ def _abstract_name(doi_key: str, index: int, used: set[str]) -> str:
     return name
 
 
-_KEPT_ON_ABSTRACT = (
-    "author",
-    "year",
-    "title",
-    "doi",
-    "oa_url",
-    "pdf_url",
-    "journal",
-    "pages",
-    "volume",
-    "url",
-)
 _HIT_TEXT_FIELDS = ("oa_url", "pdf_url", "journal", "pages", "volume", "url")
 
 
@@ -632,60 +625,6 @@ def _abstract_text(abstract: str, details: dict[str, str]) -> str:
     if not heading:
         return body + "\n"
     return f"{heading}\n\n{body}\n"
-
-
-def same_lookup_value(field: str, claimed: str, stored: str) -> bool:
-    """True when the claimed value is the one the look-up already stored."""
-    if field == "doi":
-        return bool(_doi_key(stored)) and _doi_key(claimed) == _doi_key(stored)
-    return claimed.strip() == stored.strip()
-
-
-def _fields_on_row(row: dict[str, Any]) -> dict[str, str]:
-    kept: dict[str, str] = {}
-    for field in _KEPT_ON_ABSTRACT:
-        value = row.get(field)
-        if isinstance(value, str) and value.strip():
-            kept[field] = value.strip()
-    return kept
-
-
-def _matching_lookup_row(rows: object, wanted: str) -> dict[str, str] | None:
-    if not isinstance(rows, list):
-        return None
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        found = row.get("locator")
-        if not isinstance(found, str) or found.strip().replace("\\", "/") != wanted:
-            continue
-        return _fields_on_row(row)
-    return None
-
-
-def abstract_lookup_fields(essay_id: str, locator: str) -> dict[str, str]:
-    """Bibliographic fields stored when this file was saved from a look-up.
-
-    A saved abstract and a kept PDF use the same record. Only fields the
-    look-up returned are present. Nothing is invented.
-    """
-    if not isinstance(locator, str) or not locator.strip():
-        return {}
-    wanted = locator.strip().replace("\\", "/")
-    path = work_dir(essay_id) / "dig-card.json"
-    if not path.is_file():
-        return {}
-    try:
-        stored = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(stored, dict):
-        return {}
-    for key in ("abstract_files", "pdf_files"):
-        matched = _matching_lookup_row(stored.get(key), wanted)
-        if matched is not None:
-            return matched
-    return {}
 
 
 def _abstract_hits(card: dict[str, Any]) -> list[dict[str, Any]]:
@@ -783,47 +722,89 @@ def _save_lookup_abstracts(
 _PDF_LOOKUP_FIELDS = ("author", "year", "title", "doi")
 
 
-def _hits_by_doi(card: dict[str, Any]) -> dict[str, dict[str, str]]:
-    """Look-up author, year, title, and DOI, keyed by DOI.
+def _fold_lookup(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
+
+
+def _pdf_field_details(hit: dict[str, Any], *, author: bool) -> dict[str, str]:
+    return {
+        field: value
+        for field, value in _provided_details(hit).items()
+        if field in _PDF_LOOKUP_FIELDS and (author or field != "author")
+    }
+
+
+def _remember_lookup(index: dict[str, dict[str, str]], key: str, details: dict[str, str]) -> None:
+    if not key or not details:
+        return
+    _fill_blank_details(index.setdefault(key, {}), details)
+
+
+def _index_lookup_hit(
+    index: dict[str, dict[str, str]], hit: dict[str, Any], *, author: bool
+) -> None:
+    """Key one hit by DOI, by locator or URL, and by title with author."""
+    details = _pdf_field_details(hit, author=author)
+    if not details:
+        return
+    doi = details.get("doi")
+    if doi:
+        _remember_lookup(index, "doi:" + doi, details)
+    for field in ("locator", "path", "pdf_url", "oa_url", "url"):
+        raw = hit.get(field)
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        kind = "locator" if field in {"locator", "path"} else "url"
+        _remember_lookup(index, f"{kind}:{raw.strip().replace('\\', '/')}", details)
+    title = details.get("title")
+    writer = details.get("author")
+    if title and writer:
+        _remember_lookup(index, f"work:{_fold_lookup(title)}|{_fold_lookup(writer)}", details)
+
+
+def _lookup_index(card: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """Look-up author, year, title, and DOI.
 
     OpenAlex and Consensus supply those fields. Unpaywall may fill a blank
-    year, title, or DOI. Unpaywall does not supply an author.
+    year, title, or DOI. Unpaywall does not supply an author. A title alone
+    is not a key.
     """
-    by_doi: dict[str, dict[str, str]] = {}
+    index: dict[str, dict[str, str]] = {}
     for key in ("openalex", "consensus"):
         block = card.get(key)
         hits = block.get("hits") if isinstance(block, dict) else None
         if not isinstance(hits, list):
             continue
         for hit in hits:
-            if not isinstance(hit, dict):
-                continue
-            doi = _doi_key(hit.get("doi"))
-            if not doi:
-                continue
-            details = {
-                field: value
-                for field, value in _provided_details(hit).items()
-                if field in _PDF_LOOKUP_FIELDS
-            }
-            slot = by_doi.setdefault(doi, {})
-            _fill_blank_details(slot, details)
+            if isinstance(hit, dict):
+                _index_lookup_hit(index, hit, author=True)
     unpaywall = card.get("unpaywall")
     if isinstance(unpaywall, list):
         for item in unpaywall:
-            if not isinstance(item, dict):
-                continue
-            doi = _doi_key(item.get("doi"))
-            if not doi:
-                continue
-            details = {
-                field: value
-                for field, value in _provided_details(item).items()
-                if field in _PDF_LOOKUP_FIELDS and field != "author"
-            }
-            slot = by_doi.setdefault(doi, {})
-            _fill_blank_details(slot, details)
-    return by_doi
+            if isinstance(item, dict):
+                _index_lookup_hit(index, item, author=False)
+    return index
+
+
+def _paper_lookup_keys(paper: dict[str, Any]) -> list[str]:
+    """DOI, then URL, then locator, then title with author. A bare title is not a key."""
+    keys: list[str] = []
+    doi = _doi_key(paper.get("doi"))
+    if doi:
+        keys.append("doi:" + doi)
+    url = paper.get("url")
+    if isinstance(url, str) and url.strip():
+        keys.append("url:" + url.strip())
+    path = paper.get("path")
+    if isinstance(path, str) and path.strip():
+        keys.append("locator:" + path.strip().replace("\\", "/"))
+    title = paper.get("title")
+    author = paper.get("author")
+    if isinstance(author, list):
+        author = _lookup_author(paper)
+    if isinstance(title, str) and title.strip() and isinstance(author, str) and author.strip():
+        keys.append(f"work:{_fold_lookup(title)}|{_fold_lookup(author)}")
+    return keys
 
 
 def _save_lookup_pdfs(
@@ -833,11 +814,12 @@ def _save_lookup_pdfs(
     """Copy look-up author, year, title, and DOI onto each kept PDF.
 
     A field the look-up did not return stays off the record. A name is not
-    read from the PDF.
+    read from the PDF. A hit with no DOI still matches on its URL, its
+    locator, or its title together with its author.
     """
     if not isinstance(papers, list) or not papers:
         return []
-    by_doi = _hits_by_doi(card)
+    index = _lookup_index(card)
     saved: list[dict[str, Any]] = []
     for paper in papers:
         if not isinstance(paper, dict):
@@ -845,8 +827,12 @@ def _save_lookup_pdfs(
         path = paper.get("path")
         if not isinstance(path, str) or not path.strip():
             continue
-        doi = _doi_key(paper.get("doi"))
-        details = by_doi.get(doi, {}) if doi else {}
+        details: dict[str, str] = {}
+        for key in _paper_lookup_keys(paper):
+            found = index.get(key)
+            if found:
+                details = found
+                break
         present = {
             field: details[field]
             for field in _PDF_LOOKUP_FIELDS
@@ -901,13 +887,13 @@ def _open_candidates(card: dict[str, Any]) -> list[dict[str, Any]]:
             return
         seen.add(url)
         candidate: dict[str, Any] = {"url": url}
+        named = title if isinstance(title, str) and title.strip() else None
         if isinstance(doi, str) and doi.strip():
             candidate["doi"] = doi.strip()
-            named = title if isinstance(title, str) and title.strip() else None
             if named is None:
                 named = titles.get(doi.strip())
-            if isinstance(named, str) and named.strip():
-                candidate["title"] = named.strip()
+        if isinstance(named, str) and named.strip():
+            candidate["title"] = named.strip()
         candidates.append(candidate)
 
     for hit in card["openalex"]["hits"]:
@@ -931,18 +917,7 @@ def _hit_lines(hits: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
-_prepared_questions: list[str] = []
 _PAGE_CAP = 200
-
-
-def _legacy_query_allowed() -> bool:
-    """Existing tests open a look-up with the caller query when no question is stored.
-
-    A normal run does not. It asks for the question and does not search.
-    """
-    if os.environ.get("ESSAY_WRITER_FLOOR_STRICT") == "1":
-        return False
-    return bool(os.environ.get("PYTEST_CURRENT_TEST"))
 
 
 def _same_question(left: str, right: str) -> bool:
@@ -1065,16 +1040,44 @@ def _take_consensus(
     _refresh_gaps(slot)
 
 
-def _count_slots(slots: list[dict[str, Any]], essay_id: str) -> int:
-    from essay_writer.source_floor import distinct_works, saved_upload_records, work_key
+def _count_slots(slots: list[dict[str, Any]]) -> int:
+    from essay_writer.source_floor import distinct_works, work_key
 
     records: list[dict[str, Any]] = []
     for slot in slots:
         for hit in _slot_hits(slot["openalex"]) + _slot_hits(slot["consensus"]):
             if work_key(hit):
                 records.append(hit)
-    records.extend(saved_upload_records(essay_id))
     return len(distinct_works(records))
+
+
+def _upload_count(essay_id: str) -> int:
+    from essay_writer.source_floor import distinct_works, saved_upload_records
+
+    return len(distinct_works(saved_upload_records(essay_id)))
+
+
+def _resume_cursor(essay_id: str, question: str) -> str | None:
+    """The OpenAlex cursor saved when the page budget stopped the previous gather."""
+    path = work_dir(essay_id) / "dig-card.json"
+    if not path.is_file():
+        return None
+    try:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(stored, dict):
+        return None
+    saved_question = stored.get("question")
+    if not isinstance(saved_question, str) or not _same_question(saved_question, question):
+        return None
+    gather = stored.get("gather")
+    if not isinstance(gather, dict):
+        return None
+    cursor = gather.get("openalex_cursor")
+    if isinstance(cursor, str) and cursor.strip():
+        return cursor.strip()
+    return None
 
 
 def _further_page(slots: list[dict[str, Any]]) -> bool:
@@ -1098,23 +1101,17 @@ def _further_page(slots: list[dict[str, Any]]) -> bool:
 
 def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[str, Any]:
     """Search each stored question, then further pages until the floor is met."""
-    global _prepared_questions
     from essay_writer.source_floor import (
-        accept_split,
-        ask_planning_model,
+        accept_smaller_questions,
         assignment_floor,
         decide_gather,
+        rate_for_words,
     )
 
     floor = assignment_floor(essay_id)
-    try:
-        reply = ask_planning_model(question, reply)
-    except Exception:
-        reply = None
-    searches = accept_split(question, reply)
+    searches = accept_smaller_questions(question, reply)
     if not searches:
         searches = [question]
-    _prepared_questions = list(searches)
     status = consensus_status()
     slots = [
         _new_question_slot(text, "confirmed" if _same_question(text, question) else "split")
@@ -1123,16 +1120,26 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
     seen: set[str] = set()
     seen_cursors: set[str] = set()
     seen_pages: set[tuple[str, int]] = set()
+    resume = _resume_cursor(essay_id, question)
+    if resume:
+        seen_cursors.add(resume)
     for slot in slots:
-        _take_openalex(slot, openalex_search(slot["question"]), extend=False)
+        cursor = resume if _same_question(slot["question"], question) else None
+        _take_openalex(slot, openalex_search(slot["question"], cursor=cursor), extend=False)
         _take_consensus(slot, consensus_search(slot["question"]), status, extend=False)
         _remember_unpaywall(slot, seen)
-    count = _count_slots(slots, essay_id)
+    count = _count_slots(slots)
+    raw_floor = floor.get("floor")
+    needed = (
+        raw_floor
+        if isinstance(raw_floor, int) and not isinstance(raw_floor, bool)
+        else rate_for_words(None)
+    )
     pages = 0
-    while count < int(floor.get("floor") or 0) and pages < _PAGE_CAP:
+    while count < needed and pages < _PAGE_CAP:
         moved = False
         for slot in slots:
-            if count >= int(floor.get("floor") or 0):
+            if count >= needed:
                 break
             cursor = slot["openalex"].get("next_cursor")
             if isinstance(cursor, str) and cursor in seen_cursors:
@@ -1144,8 +1151,8 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
                 _remember_unpaywall(slot, seen)
                 moved = True
                 pages += 1
-                count = _count_slots(slots, essay_id)
-                if count >= int(floor.get("floor") or 0) or pages >= _PAGE_CAP:
+                count = _count_slots(slots)
+                if count >= needed or pages >= _PAGE_CAP:
                     break
             next_page = slot["consensus"].get("next_page")
             page_key = (slot["question"], next_page) if isinstance(next_page, int) else None
@@ -1164,12 +1171,27 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
                 _remember_unpaywall(slot, seen)
                 moved = True
                 pages += 1
-                count = _count_slots(slots, essay_id)
-                if count >= int(floor.get("floor") or 0) or pages >= _PAGE_CAP:
+                count = _count_slots(slots)
+                if count >= needed or pages >= _PAGE_CAP:
                     break
         if not moved:
             break
-    gather = decide_gather(slots, floor, count, _further_page(slots))
+    page_cursor = None
+    if pages >= _PAGE_CAP and count < needed:
+        for slot in slots:
+            raw_cursor = slot["openalex"].get("next_cursor")
+            if isinstance(raw_cursor, str) and raw_cursor.strip():
+                page_cursor = raw_cursor.strip()
+                break
+    gather = decide_gather(
+        slots,
+        floor,
+        count,
+        _further_page(slots),
+        _upload_count(essay_id),
+        page_capped=pages >= _PAGE_CAP and count < needed,
+        page_cursor=page_cursor,
+    )
     openalex_hits: list[dict[str, Any]] = []
     consensus_hits: list[dict[str, Any]] = []
     unpaywall: list[dict[str, Any]] = []
@@ -1234,38 +1256,6 @@ def _build_floor_card(question: str, essay_id: str, reply: Any = None) -> dict[s
         "gather": gather,
         "openalex": openalex_body,
         "consensus": consensus_body,
-        "unpaywall": unpaywall,
-        "invent_forbid": True,
-    }
-    from essay_writer.roll_forward import omit_keepers_from_card
-
-    return omit_keepers_from_card(essay_id, card)
-
-
-def _build_card(query: str, essay_id: str) -> dict[str, Any]:
-    status = consensus_status()
-    openalex = openalex_search(query)
-    consensus = consensus_search(query)
-    unpaywall: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for hit in list(openalex["hits"]) + list(consensus["hits"]):
-        doi = hit.get("doi")
-        if isinstance(doi, str) and doi not in seen:
-            seen.add(doi)
-            unpaywall.append(unpaywall_lookup(doi))
-    card = {
-        "essay_id": essay_id,
-        "query": query,
-        "openalex": openalex,
-        "consensus": {
-            "called": consensus.get("called"),
-            "tier": consensus.get("tier"),
-            "hits": consensus.get("hits") or [],
-            "switch": status["switch"],
-            "enabled": status["enabled"],
-            "key_present": status["key_present"],
-            "remind": consensus.get("remind") or status["remind"],
-        },
         "unpaywall": unpaywall,
         "invent_forbid": True,
     }
@@ -1364,9 +1354,9 @@ def essay_dig(
 
     The draft reply carries cardDigest. Confirm rebuilds it from the stored
     card and refuses a confirm that does not send the same value.
-    smallerQuestions is the one-shot list from the shell, at most three
+    smallerQuestions is the list the shell asked for once, at most three
     ordinary-language questions. Omit it when that reply is missing.
-    Confirm does not ask again.
+    The gather does not ask again. Confirm does not search again.
     """
     id_error = sequence_write_error(essay_id)
     if id_error:
@@ -1384,8 +1374,6 @@ def essay_dig(
     caller = query.strip() if isinstance(query, str) else ""
     if question:
         query = caller
-    elif caller and _legacy_query_allowed():
-        query = caller
     elif not caller:
         return refuse("dig", "Name the dig query. An empty query does not invent papers.")
     else:
@@ -1393,11 +1381,8 @@ def essay_dig(
     payload = {"essay_id": essay_id, "query": query}
     fingerprint = _dig_fingerprint(query)
     if confirmPhase == DRAFT:
-        if question:
-            card = _build_floor_card(question, essay_id, smallerQuestions)
-            card["query"] = query
-        else:
-            card = _build_card(query, essay_id)
+        card = _build_floor_card(question, essay_id, smallerQuestions)
+        card["query"] = query
         body = _dig_reply(essay_id, query, confirmPhase, card)
         body["digest"] = save_draft(essay_id, TOOL, payload, fingerprint, shown=card)
         body["cardDigest"] = card_digest(payload, card)

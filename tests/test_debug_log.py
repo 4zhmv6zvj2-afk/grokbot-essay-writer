@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-from helpers import open_sequence
+from helpers import open_sequence, store_confirmed_question
 
 from essay_writer.debug_log import LOG_FILENAME, debug_enabled, debug_log_path, traced
 from essay_writer.doors import DOORS
@@ -65,6 +65,7 @@ def test_debug_log_on_writes_lines_for_delete_dig_and_setup(workspace, monkeypat
     )
     assert deleted["ok"] is True
     assert deleted["wrote"] is False
+    store_confirmed_question(sequence, "chokepoints")
     dug = front_office_call(
         "essay.dig",
         {"essay_id": sequence, "query": "chokepoints", "confirmPhase": "draft"},

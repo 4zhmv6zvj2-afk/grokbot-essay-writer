@@ -10,13 +10,14 @@ import inspect
 from pathlib import Path
 
 from docx import Document
-from helpers import open_sequence, picked
+from helpers import open_sequence, picked, write_proof
 from test_student_plain_close import _assert_plain, _close_pack, _final_file
 from test_word_references_4a import JONES_LINE, MODULE, QIN_LINE, _plant_stage10_pack
 
 from essay_writer import __version__
 from essay_writer.build_office import stage_launch
 from essay_writer.citation_list import (
+    _stored_for_part,
     attach_note,
     load_citation_list,
     research_note_for,
@@ -25,7 +26,7 @@ from essay_writer.citation_list import (
 )
 from essay_writer.cite_fit import apply_body_cites
 from essay_writer.cursor_office import cursor_stage_launch
-from essay_writer.dig import _save_lookup_pdfs
+from essay_writer.dig import _open_candidates, _save_lookup_pdfs
 from essay_writer.harvard_4a import harvard_4a_line
 from essay_writer.late_chain import write_stage10
 from essay_writer.paths import module_code, work_dir
@@ -39,7 +40,6 @@ from essay_writer.word_references import stage10_reference_block, usable_word_re
 from essay_writer.writing_basics import STAGE_ORDER
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
 HYPHEN = "\u2010"
 NOT_WRITTEN = (
     "The citation list has not been written. The first draft waits until that list is saved."
@@ -60,16 +60,6 @@ DRAFT = (
     "(Smith, 2020). Effort limits had cut fishing mortality by the middle of the decade "
     "(Froese and Quaas, 2012). A paper outside the gathered set is not used (Nobody, 1999)."
 )
-
-
-def _proof(name: str, payload: str | bytes) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    target = ARTIFACTS / name
-    if isinstance(payload, bytes):
-        target.write_bytes(payload)
-        return
-    target.write_text(payload, encoding="utf-8")
 
 
 def _docx_text(path: Path) -> str:
@@ -119,7 +109,9 @@ def _walk(seq: str, stop_before: str | None = "5") -> None:
 def _ready(seq: str | None = None) -> tuple[str, list[dict[str, str]]]:
     seq = open_sequence() if seq is None else seq
     rows = [
-        _source(seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"),
+        _source(
+            seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"
+        ),
         _source(
             seq,
             "froese",
@@ -135,11 +127,7 @@ def _ready(seq: str | None = None) -> tuple[str, list[dict[str, str]]]:
 
 
 def _entry(seq: str, ident: str) -> dict:
-    found = [
-        item
-        for item in load_citation_list(seq)["entries"]
-        if item.get("source_id") == ident
-    ]
+    found = [item for item in load_citation_list(seq)["entries"] if item.get("source_id") == ident]
     assert len(found) == 1, load_citation_list(seq)
     return found[0]
 
@@ -164,7 +152,7 @@ def test_citation_list_is_written_when_stage_4b_finishes(workspace):
     for row in rows:
         assert row["author"] in extract
         assert row["year"] in extract
-    _proof("citation-list-stage-4b.txt", extract + "\n")
+    write_proof("citation-list-stage-4b.txt", extract + "\n")
     assert workspace is not None
 
 
@@ -181,7 +169,7 @@ def test_student_research_notes_show_the_same_list(workspace):
         assert row["title"] in text
         assert "Research note:" in text
         assert row["id"] in text
-    _proof("citation-list-student-extract.txt", text + "\n")
+    write_proof("citation-list-student-extract.txt", text + "\n")
     assert workspace is not None
 
 
@@ -206,8 +194,8 @@ def test_first_draft_uses_the_list_citation(workspace):
     assert "(Smith, 2020)" in text
     assert "(Froese and Quaas, 2012)" in text
     assert "Nobody" not in text
-    _proof("citation-list-stored-draft.txt", look + "\n")
-    _proof("citation-list-word-extract.txt", text + "\n")
+    write_proof("citation-list-stored-draft.txt", look + "\n")
+    write_proof("citation-list-word-extract.txt", text + "\n")
     assert workspace is not None
 
 
@@ -290,7 +278,7 @@ def test_first_write_waits_for_the_list_and_does_not_invent(workspace):
     )
     assert "(Nobody, 1999)" not in cleaned["text"]
     assert "Nobody" not in cleaned["text"]
-    _proof("citation-list-empty-gap.txt", student_list_text(seq) + "\n")
+    write_proof("citation-list-empty-gap.txt", student_list_text(seq) + "\n")
     assert workspace is not None
 
 
@@ -299,8 +287,12 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     seq = open_sequence()
     hyphen_author = f"Dickey{HYPHEN}Collas, M."
     rows = [
-        _source(seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"),
-        _source(seq, "dickey", hyphen_author, "2010", title="Herring recovery", doi="10.1000/herring"),
+        _source(
+            seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"
+        ),
+        _source(
+            seq, "dickey", hyphen_author, "2010", title="Herring recovery", doi="10.1000/herring"
+        ),
     ]
     _plant(seq, rows)
     _walk(seq)
@@ -377,27 +369,38 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     assert listed["stage"] == "4b"
 
     reference = (
-        f"Dickey{HYPHEN}Collas, M. (2010) 'Herring recovery', "
-        "Fisheries Journal, 1(1), pp. 1-9."
+        f"Dickey{HYPHEN}Collas, M. (2010) 'Herring recovery', Fisheries Journal, 1(1), pp. 1-9."
     )
     assert (
         stage10_reference_block(
             [],
             {"references_markdown": reference},
-            [{"heading": "Findings", "body": "Herring collapsed and later recovered (Dickey-Collas, 2010)."}],
+            [
+                {
+                    "heading": "Findings",
+                    "body": "Herring collapsed and later recovered (Dickey-Collas, 2010).",
+                }
+            ],
         )
         is None
     )
     empty = stage10_reference_block(
         [],
         {},
-        [{"heading": "Findings", "body": "Herring collapsed and later recovered (Dickey-Collas, 2010)."}],
+        [
+            {
+                "heading": "Findings",
+                "body": "Herring collapsed and later recovered (Dickey-Collas, 2010).",
+            }
+        ],
     )
     assert empty is not None
     assert empty["reason"] == EMPTY_REFERENCES
 
     diary = open_sequence(MODULE)
-    pack = _close_pack(diary, references=QIN_LINE, body="One decision used (Qin, 2021) as evidence for this diary.")
+    pack = _close_pack(
+        diary, references=QIN_LINE, body="One decision used (Qin, 2021) as evidence for this diary."
+    )
     written = write_stage10(diary)
     assert written["ok"] is True, written
     path = _final_file(diary)
@@ -413,6 +416,77 @@ def test_lookup_fields_hyphen_and_existing_refusals_stay(workspace):
     assert path.read_bytes() == before
     assert working.read_bytes() == working_before
     assert workspace is not None
+
+
+def test_a_kept_pdf_without_a_doi_keeps_the_lookup_fields():
+    """A kept PDF matches its hit by URL, locator, or title with author. A bare title does not."""
+    card = {
+        "openalex": {
+            "hits": [
+                {
+                    "authors": ["Ada Lovelace"],
+                    "year": "2019",
+                    "title": "Harbour capacity without a DOI",
+                    "pdf_url": "https://oa.example/harbour.pdf",
+                },
+                {
+                    "authors": ["Grace Hopper"],
+                    "year": "2018",
+                    "title": "Harbour capacity without a DOI",
+                    "doi": "10.1000/hopper",
+                    "pdf_url": "https://oa.example/hopper.pdf",
+                },
+            ]
+        },
+        "consensus": {"hits": []},
+        "unpaywall": [],
+    }
+    opened = _open_candidates(card)
+    by_url = {item["url"]: item for item in opened}
+    assert "doi" not in by_url["https://oa.example/harbour.pdf"]
+    assert by_url["https://oa.example/harbour.pdf"]["title"] == "Harbour capacity without a DOI"
+    assert by_url["https://oa.example/hopper.pdf"]["doi"] == "10.1000/hopper"
+    rows = _save_lookup_pdfs(
+        card,
+        [
+            {
+                "path": "uploads/MOD1004AA/harbour.pdf",
+                "url": "https://oa.example/harbour.pdf",
+            },
+            {
+                "path": "uploads/MOD1004AA/hopper.pdf",
+                "url": "https://oa.example/hopper.pdf",
+            },
+            {
+                "path": "uploads/MOD1004AA/title-only.pdf",
+                "title": "Harbour capacity without a DOI",
+            },
+            {
+                "path": "uploads/MOD1004AA/named.pdf",
+                "title": "Harbour capacity without a DOI",
+                "author": "Ada Lovelace",
+            },
+        ],
+    )
+    by_path = {row["locator"]: row for row in rows}
+    harbour = by_path["uploads/MOD1004AA/harbour.pdf"]
+    assert harbour["author"] == "Ada Lovelace"
+    assert harbour["year"] == "2019"
+    assert harbour["title"] == "Harbour capacity without a DOI"
+    assert "doi" not in harbour
+    assert harbour["field_sources"] == {
+        "author": "lookup",
+        "year": "lookup",
+        "title": "lookup",
+    }
+    hopper = by_path["uploads/MOD1004AA/hopper.pdf"]
+    assert hopper["author"] == "Grace Hopper"
+    assert hopper["doi"] == "10.1000/hopper"
+    assert "uploads/MOD1004AA/title-only.pdf" not in by_path
+    named = by_path["uploads/MOD1004AA/named.pdf"]
+    assert named["author"] == "Ada Lovelace"
+    assert named["year"] == "2019"
+    assert "doi" not in named
 
 
 def test_public_wording_and_shared_rules():
@@ -498,7 +572,9 @@ def test_a_missing_research_note_stays_visible(workspace):
 def test_a_note_without_an_entry_blocks_the_draft(workspace):
     """AC-cite-lib-10: A research note that is not on the list blocks stage 4b and the first draft."""
     seq = open_sequence()
-    row = _source(seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait")
+    row = _source(
+        seq, "smith", "Smith, J.", "2020", title="Chokepoints and crude", doi="10.1000/strait"
+    )
     _plant(seq, [row])
     _walk(seq, stop_before="4b")
     folder = _reviews(seq)
@@ -520,7 +596,9 @@ def test_a_note_without_an_entry_blocks_the_draft(workspace):
     blocked = essay_stage(seq, "5", "draft", DRAFT)
     assert blocked["ok"] is False, blocked
     assert blocked["reason"] == NOTE_UNLISTED
-    fresh = _source(seq, "later-note", "Jones, A.", "2021", title="Added after the list", doi="10.1000/later")
+    fresh = _source(
+        seq, "later-note", "Jones, A.", "2021", title="Added after the list", doi="10.1000/later"
+    )
     ship_4b(seq, [row, fresh], None)
     assert later.is_file()
     assert _entry(seq, "later-note")["usable"] is True
@@ -570,6 +648,11 @@ def test_a_disagreement_is_named_and_not_silently_resolved(workspace):
     held = apply_body_cites(seq, "5", DRAFT)
     assert "(Smith, 2020)" not in held["text"]
     assert "(Froese and Quaas, 2012)" in held["text"]
+    blocked = essay_stage(seq, "5", "draft", DRAFT)
+    assert blocked["ok"] is False, blocked
+    assert blocked.get("stored") is not True
+    assert "do not agree" in str(blocked.get("reason", "")).casefold()
+    assert "(Smith, 2020)" not in (_note_look(seq, "5") or "")
     record_path.write_text(stored, encoding="utf-8")
     restored = _entry(seq, "smith")
     assert restored["usable"] is True
@@ -580,6 +663,52 @@ def test_a_disagreement_is_named_and_not_silently_resolved(workspace):
     assert saved["ok"] is True, saved
     assert "(Smith, 2020)" in (_note_look(seq, "5") or "")
     assert workspace is not None
+
+
+def test_two_editorials_stay_two_works(workspace):
+    """Two works titled Editorial stay two entries, two notes, and two source records."""
+    seq = open_sequence()
+    rows = [
+        _source(seq, "ed-ada", "Ada Lovelace", "2020", title="Editorial"),
+        _source(seq, "ed-grace", "Grace Hopper", "2021", title="Editorial"),
+    ]
+    _plant(seq, rows)
+    delivered = ship_4b(
+        seq,
+        rows,
+        {
+            "ed-ada": "Ada's editorial records one harbour decision.\n",
+            "ed-grace": "Grace's editorial records a different harbour decision.\n",
+        },
+    )
+    assert delivered.get("blocked") is not True, delivered
+    entries = load_citation_list(seq)["entries"]
+    assert {item["source_id"] for item in entries} == {"ed-ada", "ed-grace"}
+    assert {item["author"] for item in entries} == {"Ada Lovelace", "Grace Hopper"}
+    notes = list(_reviews(seq).glob("*.md"))
+    assert len(notes) == 2
+    records = list((work_dir(seq) / "output" / "source-records").glob("*.record.json"))
+    assert {path.stem.removesuffix(".record") for path in records} == {"ed-ada", "ed-grace"}
+    assert workspace is not None
+
+
+def test_the_exact_short_form_beats_the_longer_stored_form():
+    """(Smith, 2020) stays the Smith entry when Smith and Jones is also stored."""
+    rows = [
+        {
+            "in_text": "(Smith and Jones, 2020)",
+            "source_id": "both",
+            "author": "Smith, J. and Jones, A.",
+            "year": "2020",
+        },
+        {
+            "in_text": "(Smith, 2020)",
+            "source_id": "one",
+            "author": "Smith, J.",
+            "year": "2020",
+        },
+    ]
+    assert _stored_for_part("Smith, 2020", rows) == "Smith, 2020"
 
 
 def test_a_source_already_listed_is_reused(workspace):
@@ -593,14 +722,18 @@ def test_a_source_already_listed_is_reused(workspace):
     notes_before = sorted(path.name for path in _reviews(seq).glob("*.md"))
     copy = dict(rows[0])
     copy["id"] = "smith-copy"
-    fresh = _source(seq, "jones", "Jones, A.", "2021", title="A second corridor paper", doi="10.1000/second")
+    fresh = _source(
+        seq, "jones", "Jones, A.", "2021", title="A second corridor paper", doi="10.1000/second"
+    )
     early = apply_body_cites(
         seq,
         "5",
         "A later paper records the same corridor limit (Jones, 2021). The stock stayed outside safe limits.",
     )
     assert "(Jones, 2021)" not in early["text"]
-    delivered = ship_4b(seq, [copy, fresh], {"jones": "The second paper is a new gathered source.\n"})
+    delivered = ship_4b(
+        seq, [copy, fresh], {"jones": "The second paper is a new gathered source.\n"}
+    )
     assert "already" in delivered["student_note"].casefold()
     assert "(Smith, 2020)" in delivered["student_note"]
     assert note.read_bytes() == before
@@ -643,7 +776,7 @@ def test_each_entry_stores_the_short_form_and_the_full_line(workspace, monkeypat
     assert smith["reference"] in extract
     assert "(Froese and Quaas, 2012)" in extract
     assert froese["reference"] in extract
-    _proof("citation-list-forms.txt", extract + "\n")
+    write_proof("citation-list-forms.txt", extract + "\n")
     saved = essay_stage(seq, "5", "draft", DRAFT)
     assert saved["ok"] is True, saved
     assert "(Smith, 2020)" in (_note_look(seq, "5") or "")

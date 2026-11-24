@@ -24,7 +24,7 @@ import json
 from pathlib import Path
 
 from docx import Document
-from helpers import open_sequence, picked
+from helpers import open_sequence, picked, write_proof
 from test_stage10_close_and_findings import _leaked
 from test_word_references_4a import NUMBER, _park_stage10
 from test_word_title_limit import (
@@ -60,17 +60,6 @@ from essay_writer.word import (
 )
 
 REPO = Path(__file__).resolve().parents[1]
-ARTIFACTS = Path("/opt/cursor/artifacts")
-
-
-def _proof(name: str, payload: str | bytes) -> None:
-    if not ARTIFACTS.is_dir():
-        return
-    target = ARTIFACTS / name
-    if isinstance(payload, bytes):
-        target.write_bytes(payload)
-        return
-    target.write_text(payload, encoding="utf-8")
 
 
 def _flat(text: str) -> str:
@@ -200,7 +189,7 @@ def test_stage10_close_writes_the_opening_once_after_the_cover(workspace, monkey
     assert final.name != f"{seq}.docx"
     assert "first-draft" not in final.name
     shown = _assert_opening_once(final, paragraphs, short=STORED_TITLE)
-    _proof(
+    write_proof(
         "final-cover-close.json",
         json.dumps(
             {
@@ -214,8 +203,8 @@ def test_stage10_close_writes_the_opening_once_after_the_cover(workspace, monkey
         )
         + "\n",
     )
-    _proof("final-cover-opening.docx", final.read_bytes())
-    _proof(
+    write_proof("final-cover-opening.docx", final.read_bytes())
+    write_proof(
         "final-cover-paragraphs.txt",
         "\n".join(f"{index:02d} {text}" for index, text in enumerate(shown)) + "\n",
     )
@@ -233,7 +222,7 @@ def test_the_live_opening_is_not_repeated_above_the_short_cover(workspace, monke
     assert written.get("pack_path") == "pack_from_docx"
     final = _final_file(seq)
     _assert_opening_once(final, paragraphs, short=STORED_TITLE)
-    _proof("final-cover-live.docx", final.read_bytes())
+    write_proof("final-cover-live.docx", final.read_bytes())
     assert workspace is not None
 
 
@@ -256,7 +245,7 @@ def test_the_essay_after_the_cover_matches_the_first_draft(workspace, monkeypatc
     followed = flats[reference_at + 1 :]
     for line in references:
         assert _flat(line) in followed
-    _proof(
+    write_proof(
         "final-cover-body.txt",
         "\n".join(paragraphs) + "\n---\n" + "\n".join(shown) + "\n",
     )
@@ -275,7 +264,7 @@ def test_the_final_document_title_stays_the_short_title(workspace, monkeypatch, 
     assert len(title) <= LIMIT
     assert title != OPENING
     assert not title.startswith("When is it fair to close a fishery")
-    _proof("final-cover-title.txt", title + "\n")
+    write_proof("final-cover-title.txt", title + "\n")
 
     other, _other_paragraphs, _other_draft = _live_fixture(title="")
     assert _title_of(work_dir(other) / "output" / f"{other}.docx") == ""
@@ -413,7 +402,7 @@ def test_an_off_list_cite_and_a_missing_line_are_still_refused(workspace):
     pointer = load_pointer(seq)
     assert pointer["current"] == "10"
     assert pointer["closed"] is False
-    _proof("final-cover-unlisted-refusal.txt", str(refused.get("reason") or "") + "\n")
+    write_proof("final-cover-unlisted-refusal.txt", str(refused.get("reason") or "") + "\n")
 
     other, _other_paragraphs, other_first = _live_fixture(title=STORED_TITLE)
     path = work_dir(other) / "citation-list.json"
@@ -430,7 +419,7 @@ def test_an_off_list_cite_and_a_missing_line_are_still_refused(workspace):
     assert other_first.read_bytes() == other_before
     assert not list((work_dir(other) / "output").rglob("*-final.docx"))
     assert first.read_bytes() == before
-    _proof("final-cover-missing-line-refusal.txt", str(missing.get("reason") or "") + "\n")
+    write_proof("final-cover-missing-line-refusal.txt", str(missing.get("reason") or "") + "\n")
     assert workspace is not None
 
 
@@ -453,7 +442,7 @@ def test_findings_heading_stays_overall_judgement(workspace, tmp_path):
     assert lines[0] == "Findings"
     assert lines[1] == "Overall judgement"
     assert _leaked(text) == []
-    _proof("final-cover-findings-lines.txt", "\n".join(lines[:6]) + "\n")
+    write_proof("final-cover-findings-lines.txt", "\n".join(lines[:6]) + "\n")
     assert workspace is not None
 
 

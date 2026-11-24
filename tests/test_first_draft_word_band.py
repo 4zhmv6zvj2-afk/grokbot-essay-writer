@@ -20,14 +20,8 @@ from essay_writer.stage_track import essay_stage
 from essay_writer.textutil import count_words
 
 QUESTION = "How do chokepoints constrain tanker flows through the corridor?"
-OPENER = (
-    "This essay answers how chokepoints constrain tanker flows through the corridor."
-)
-BRIEF = (
-    "Genre: essay\n"
-    f"Question: {QUESTION}\n"
-    "Word count: 2,000 words (1,800 to 2,200).\n"
-)
+OPENER = "This essay answers how chokepoints constrain tanker flows through the corridor."
+BRIEF = f"Genre: essay\nQuestion: {QUESTION}\nWord count: 2,000 words (1,800 to 2,200).\n"
 BAND_RULE = (
     "When the brief states a word band, write the first draft inside that band, "
     "counting both ends as inside."

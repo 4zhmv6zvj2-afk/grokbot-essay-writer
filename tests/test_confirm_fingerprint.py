@@ -16,6 +16,7 @@ from helpers import (
     confirm_download_words,
     open_sequence,
     source,
+    store_confirmed_question,
     write_upload,
 )
 
@@ -150,6 +151,7 @@ def _dig_flip(seq, query, phase, calls, fetched):
 
 
 def _query_change_refuses(seq, phase, calls):
+    store_confirmed_question(seq, "first lock")
     phase["live"] = "draft"
     draft = essay_dig(seq, "first lock", "draft")
     assert draft["ok"] is True, draft
@@ -227,6 +229,7 @@ def test_ac4_essay_and_diary_use_the_same_essay_dig_handler(workspace, monkeypat
         "query",
         "confirmPhase",
         "cardDigest",
+        "smallerQuestions",
     ]
     source = inspect.getsource(essay_dig)
     assert "genre" not in source

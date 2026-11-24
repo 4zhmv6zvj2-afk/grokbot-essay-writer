@@ -16,21 +16,16 @@ from essay_writer.confirm import (
     save_draft,
 )
 from essay_writer.paths import module_code, sequence_write_error
+from essay_writer.review_block import PERSON_BLOCK, writer_clears_left
+from essay_writer.review_block import WRITER_CLEARS_LEFT as WRITER_CLEARS_LEFT
 from essay_writer.specialists.eqr import REVIEW_PROMPT
 from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import say
 
 TOOL = "essay.review"
 STAGES = frozenset({"6", "9"})
-# The writer cannot clear a review. This number does not increase.
-WRITER_CLEARS_LEFT = 0
-PERSON_BLOCK = "You can't clear this review. Only the reviewer can clear it."
 FIRST_DRAFT_WORD_LINE = "The first-draft Word file is saved from the draft that was reviewed."
 _WORD_NOT_SAVED = "The finished Word file is not saved yet."
-
-
-def writer_clears_left() -> int:
-    return WRITER_CLEARS_LEFT
 
 
 def eqr_record(essay_id: str, stage: str) -> dict[str, object] | None:

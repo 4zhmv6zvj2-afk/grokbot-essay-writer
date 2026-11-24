@@ -1460,6 +1460,15 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
     root = documents_root(documents)
     source = work_dir(essay_id) / "output" / f"{essay_id}.docx"
     body = _stage10_body(project=project, source=source, place=place, notes=notes)
+    from essay_writer.source_floor import draft_block
+
+    waiting = draft_block(essay_id)
+    if waiting:
+        body["ok"] = False
+        body["copied"] = False
+        body["sequence_written"] = False
+        body["reason"] = waiting
+        return body
     pack, pack_path, saved_pack_state, existing_ref_lines = _load_stage10_pack(
         essay_id,
         source,

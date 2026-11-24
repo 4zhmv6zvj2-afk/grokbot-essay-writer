@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- The sdist ships `.githooks/pre-push`, so the local push hook is in the extracted tree.
+- The sdist ships `.cursor/skills/**`, so the verify-skill checks pass from the extracted tarball.
+- A printed source range uses its low end. "Up to N sources" is a cap, not a floor. A stated source count beside a word count stays the floor.
+- A silent brief cites at least ceil(words / 1000 * 8) works and at most 12 per 1,000 words. A stated count above that cap raises the cap. The rate is not added to the stated count.
+- One work counts once across a DOI record and a no-DOI record. Two works that share a title and a year and name different authors stay two. Uploaded files do not meet the official floor. The gather reports both counts.
+- When the OpenAlex page budget stops a gather, the note names the found count, the floor, and that budget, and it either saves the OpenAlex cursor or says that no more official pages are available.
+- An empty gather does not write a sourced essay when no source record and no citation entry exist, including when dig-card.json is absent. Stage 4b, stage 5, and stage 10 wait.
+- The shell asks once before the gather and passes up to three smaller questions. The gather reads that list once and does not ask again.
+- A kept PDF whose hit has no DOI still keeps the author, year, and title the look-up returned. The match uses the URL or the locator, or the title with the author. A title alone does not match. A DOI on that hit is kept too.
+- A source id is stored on first sight. A later DOI, author, or title does not mint a new one. A very long title is hashed so the filename stays short. A supplied id is kept only when its shape is safe.
+- Two works that share a title stay two entries, two notes, and two source records. A citation matches a source id exactly, or the stored short form when the id is absent. A stored conflict is named, and that citation is not used.
+- The download shortlist keeps the works that best fit the saved plan. A tie keeps the earlier work. A draft plan is not a saved plan, so nothing is downloaded until the plan is saved. The essay question still comes first when both are missing.
+- A gather with no confirmed question asks for the question and does not search.
+- A gathered sentence keeps the citation-list short form when that source is listed. When it is not, the short form comes from the stored author and year, including the stored look-up record. A source with no stored author or year is not appended.
+- A remembered author, year, title, or DOI is kept only when it matches the claimed value. A different claimed value refuses the source.
+- A first draft that misses the named parts is refused for those parts before the word band is checked. A note that already names those parts is not refused for the word band.
+
 ## 0.9.18 — 2026-11-23
 
 - Each stored work has one unique source id that does not change when the list is rebuilt. The opened file, the research note, and the citation-list entry share that id. Matching and look-up use that id, not a short in-text form.
@@ -16,7 +33,7 @@
 
 ## 0.9.17 — 2026-11-23
 
-- A stated source count is the floor. When the assignment is silent, the floor is eight sources for each 1,000 words of the stated length, rounded up. After the essay question is confirmed, both shells pass up to three smaller questions on the same tool field, `smallerQuestions`, and the gather asks once before the first catalog call. A missing or unusable reply searches only the confirmed question. Each question keeps its own result. OpenAlex follows its next-page cursor, and Consensus turns the page only when the stored plan allows it. Unpaywall stays a DOI fill. Crossref stays an exact-title fill. The citation list is still written at the end of stage 4b. A further official page blocks that list and the draft while the floor is unmet. An honest short gather writes the list and names the found count. An empty gather does not write a sourced essay. A refused lookup leaves the gather unfinished. Cursor and Grok Build call the same gather, the same one-shot ask, the same citation list, and the same pack gate. Build covered.
+- A stated source count is the floor. When the assignment is silent, the floor is eight sources for each 1,000 words of the stated length, rounded up. After the essay question is confirmed, the shell asks once before the gather and passes up to three smaller questions on the same tool field, `smallerQuestions`, before the first catalog call. A missing or unusable reply searches only the confirmed question. Each question keeps its own result. OpenAlex follows its next-page cursor, and Consensus turns the page only when the stored plan allows it. Unpaywall stays a DOI fill. Crossref stays an exact-title fill. The citation list is still written at the end of stage 4b. A further official page blocks that list and the draft while the floor is unmet. An honest short gather writes the list and names the found count. An empty gather does not write a sourced essay. A refused lookup leaves the gather unfinished. Cursor and Grok Build call the same gather, the same smaller questions, the same citation list, and the same pack gate. Build covered.
 - 0.9.17 ships the wheel, the sdist, and `SHA256SUMS`, and does not include Sigstore bundles or build-provenance attestations.
 
 ## 0.9.16 — 2026-11-23

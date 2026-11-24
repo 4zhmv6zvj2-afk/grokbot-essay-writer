@@ -41,7 +41,7 @@ from essay_writer.paths import (
     work_dir,
 )
 from essay_writer.programme import STYLE_ID
-from essay_writer.review import PERSON_BLOCK, writer_clears_left
+from essay_writer.review_block import PERSON_BLOCK, writer_clears_left
 from essay_writer.state import guard_damaged_records, load_state, save_state
 from essay_writer.student_voice import (
     for_word,
