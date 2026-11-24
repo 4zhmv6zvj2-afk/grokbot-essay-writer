@@ -137,6 +137,13 @@ def test_an_unwritten_gap_keeps_the_pages(workspace, monkeypatch) -> None:
     assert "pdf-gap-unwritten" in codes
 
 
+def test_a_bad_incident_line_does_not_stop_the_student(workspace) -> None:
+    path = incident_path()
+    path.write_bytes(b"\xff\n")
+    note("word-title-spare", severity="info", disposition="fallback", tool="word", step="title")
+    assert b"word-title-spare" in path.read_bytes()
+
+
 def test_the_same_code_is_not_written_twice(workspace) -> None:
     note("word-title-spare", severity="info", disposition="fallback", tool="word", step="title")
     note("word-title-spare", severity="info", disposition="fallback", tool="word", step="title")

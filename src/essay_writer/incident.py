@@ -44,13 +44,23 @@ def note(
     path = incident_path()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        if path.is_file():
-            previous = path.read_text(encoding="utf-8").splitlines()
-            if previous:
-                last = json.loads(previous[-1])
-                if isinstance(last, dict) and last.get("code") == code and last.get("tool") == tool:
-                    return
+        if _same_as_last(path, code, tool):
+            return
         with path.open("a", encoding="utf-8") as handle:
             handle.write(line)
-    except (OSError, json.JSONDecodeError):
+    except OSError:
         return
+
+
+def _same_as_last(path: Path, code: str, tool: str) -> bool:
+    """A damaged last line is not a reason to drop the new one."""
+    try:
+        if not path.is_file():
+            return False
+        previous = path.read_text(encoding="utf-8").splitlines()
+        if not previous:
+            return False
+        last = json.loads(previous[-1])
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return False
+    return isinstance(last, dict) and last.get("code") == code and last.get("tool") == tool
