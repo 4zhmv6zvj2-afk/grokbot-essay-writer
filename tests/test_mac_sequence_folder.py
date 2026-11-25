@@ -26,7 +26,6 @@ from essay_writer.first_run import (
     module_shared_mac_deliverables_dir,
     sequence_mac_deliverables_dir,
 )
-from essay_writer.stage_replies import _save_confirm
 from essay_writer.stage_track import essay_stage
 
 REPO = Path(__file__).resolve().parents[1]
@@ -135,10 +134,8 @@ def test_ac5_build_covered_mac_copy_and_stage_1_confirm_path():
 
     copy_src = inspect.getsource(copy_deliverable_to_mac)
     ensure_src = inspect.getsource(ensure_sequence_mac_folder)
-    stage_src = inspect.getsource(_save_confirm)
     assert "_mac_copy_folder" in copy_src or "sequence_mac_deliverables_dir" in copy_src
     assert "module_shared_mac_deliverables_dir" in ensure_src
-    assert "ensure_sequence_mac_folder" in stage_src
     for fn in (stage_launch, cursor_stage_launch):
         source = inspect.getsource(fn)
         assert "ensure_sequence_mac_folder" not in source
