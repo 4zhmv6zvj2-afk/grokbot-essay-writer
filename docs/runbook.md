@@ -52,8 +52,10 @@ After the five-minute check and the README verify steps, prove the published
 assets outside CI. From the repository root, against a published tag:
 
 ```bash
-python tools/release_acceptance.py --tag v0.9.21
+python tools/release_acceptance.py --tag v0.9.22
 ```
+
+Omit `--tag` to use the version in `pyproject.toml` (`project_tag()` in `tools/release_acceptance.py`). On this tree that tag is `v0.9.22`.
 
 The harness is stdlib-only on the outer path. It downloads the wheel, the
 sdist, and `SHA256SUMS` for that tag, checks each named file against
@@ -64,10 +66,10 @@ Word file, opens it with python-docx (title and paragraphs), advances stage 6,
 kills a save before replace and confirms the previous state still loads, exports
 a support bundle (manifest and incident members; no debug logs, no essay text,
 no paths), wipes `incident.jsonl` and `incident.jsonl.1`, then loads the same
-`0.9.19` fixture again and advances under the installed `0.9.21`.
+`0.9.19` fixture again and advances under the installed tag.
 
 A pass prints `PASS:` lines for each check, then `ALL PASS`, and exits 0. Keep
-the work tree with `--workdir /tmp/accept-0.9.21` (or `--keep`) when you need
+the work tree with `--workdir /tmp/accept-0.9.22` (or `--keep`) when you need
 the downloaded hashes and probe folders as evidence. To accept a local build
 before the tag is published, put the wheel, the sdist, and `SHA256SUMS` in one
 folder and pass `--assets-dir` that folder with `--tag` matching the version
@@ -84,9 +86,7 @@ Ask for these, and nothing that contains the essay:
 - the time they saw the problem
 - a screenshot of the refusal
 
-Open the zip. `health.json` names the version, the build commit, the prompt hash, and the door names. `incident.jsonl` is one JSON object per line. A line names the tool, the stage, the stable code, and the build. `files.json` names the sequence id and the SHA-256 of `state.json` and, when the pointer exists, of `tracking/stage.json`. It does not contain the file body. `manifest.json` counts lines by code, including soft incidents (`warn` and `info`).
-
-`debug.log` and `ml-events.jsonl` are not in the zip. Those files can contain the essay. When the student already had debug on, `essay-writer --debug-export` is a separate zip and it is redacted. Do not turn debug on to produce that zip.
+Open the zip. What `support.zip` contains, and what `essay-writer --debug-tail` prints, is in [Incident record](operator-log.md#incident-record) and [Opt-in record](operator-log.md#opt-in-record). `debug.log` and `ml-events.jsonl` are not in the zip. When the student already had debug on, `essay-writer --debug-export` is a separate zip and it is redacted. Do not turn debug on to produce that zip.
 
 A line is enough to name the tool, the stage, the code, and the build. Match the code to `docs/refusals.md`. Match `build_commit` in `--health` to `health.json`. Match `state_sha256` to the sequence file only when the student still has that file. Do not ask the student to paste the essay.
 
@@ -114,4 +114,4 @@ The student is not stopped. The incident line uses a stable code such as `read-b
 
 `state-damaged` means `state.json` is not a JSON object. `pointer-damaged` means the stage pointer is not a JSON object. The load records the code and does not replace the file. Ask for `support.zip`. Use `files.json` for the sequence id and the state hash. Do not tell the student to delete `state.json`.
 
-`essay.debug.wipe` removes `incident.jsonl`, `incident.jsonl.1`, `debug.log`, and `ml-events.jsonl`. It does not remove sequence state.
+`essay.debug.wipe` removes `incident.jsonl`, `incident.jsonl.1`, `debug.log`, `debug.log.1`, `ml-events.jsonl`, and `ml-events.jsonl.1`. It does not remove sequence state. The file list is in [Operator log](operator-log.md).

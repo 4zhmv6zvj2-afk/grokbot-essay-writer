@@ -1,6 +1,6 @@
 # Academic writing helpers
 
-**Status:** Router only. Not a faculty style sheet. Not a build plan. A reflective diary is a third kind of writing, in its own helper. This note does not copy that helper. Pasted into research and write tool text, so this note does not name a shell.
+This page routes a brief to one helper. A reflective diary has its own helper, and this page does not copy that helper. The page is pasted into research and write tool text, so it does not name a shell.
 
 ## What this note is
 
@@ -44,11 +44,11 @@ Same ids for essay, report, and reflective diary. Chat and status use the genre 
 | 5 | Write your first draft | Write your first draft | Write your first draft | Yes |
 | 6 | Re-read and make changes | Re-read and make changes | Re-read and make changes | Yes |
 | 7 | Ask for feedback | Ask for feedback | Ask for feedback | Yes |
-| 8 | Edit and redraft your essay | Edit and redraft your report | Edit and redraft your diary | No |
+| 8 | Edit and redraft | Edit and redraft | Edit and redraft your diary | No |
 | 9 | Complete your references and citations | Complete your references and citations | Complete your references and citations | Yes |
-| 10 | Complete and submit your final draft | Complete and submit your final draft | Complete and submit your final draft | Yes |
+| 10 | Finish the Word file | Finish the Word file | Finish the Word file | Yes |
 
-**Differ (name each):** 2, 3, 8. **Identical (one label):** 1, 4a, 4b, 5, 6, 7, 9, 10.
+Labels differ on stages 2, 3, and 8. Stages 1, 4a, 4b, 5, 6, 7, 9, and 10 use one label. Chat titles come from `essay_writer.stage_llm.stage_title` (`src/essay_writer/stage_llm.py`).
 
 ## Stages with one checklist
 
@@ -309,7 +309,7 @@ The tool drafts. The student directs and confirms. Stage 7 asks questions and ed
 - Do not decorate the draft with bold labels, emoji headings, or a list where every item is a bold label and a colon. Use plain prose and ordinary headings. The Word file is not a chat reply.
 - Use a section lean, an example, or a surprise only when the student gave that detail after the plan was saved. A skip or silence leaves that slot empty. Do not invent that detail.
 
-### 8. Essay: Edit and redraft your essay. Report: Edit and redraft your report
+### 8. Edit and redraft
 
 Read the helper the brief picked. An essay conclusion adds nothing new, and each paragraph supports the thesis. A report conclusion summarises and evaluates the findings, from the Business School *Writing a report* PDF. The engineering marker list is not this test. Approve the save before the tool writes `.docx`.
 
@@ -377,7 +377,7 @@ Final in-text citations and reference list — **Harvard Referencing** only. If 
 
 ### 10. Complete and submit your final draft
 
-Submission to the university (the LMS, portal, or other channel named in the brief). **Out of MCP** — the essay-writer tool does not submit.
+The chat title is Finish the Word file. This heading is the checklist name. Submission to the university (the LMS, portal, or other channel named in the brief) stays with the student. The essay-writer tool does not submit.
 
 **Guideline:** Module brief submission rules only.
 

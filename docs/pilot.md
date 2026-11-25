@@ -1,6 +1,6 @@
 # Run a simulated pilot
 
-You run four synthetic students against the installed essay-writer 0.9.21 wheel, then read a plain-text report. These runs are simulations. They are not validation with real students. The tools do not change product behavior.
+You run four synthetic students against an installed essay-writer wheel, then read a plain-text report. These runs are simulations. They are not validation with real students. The tools do not change product behavior.
 
 ## Install and simulate
 
@@ -10,13 +10,13 @@ From the repository root:
 python tools/pilot_simulation.py --keep --workdir /tmp/essay-pilot --out /tmp/essay-pilot/report.txt
 ```
 
-The command downloads `essay_writer-0.9.21-py3-none-any.whl` for tag `v0.9.21` when `--assets-dir` does not already contain that file. It installs the wheel into a new virtualenv, checks that `essay_writer.__file__` is under that virtualenv's `site-packages`, and runs the four personas one after another. Each persona has its own `ESSAY_WRITER_ROOT`.
+Omit `--tag` and the command uses the version in `pyproject.toml` (`project_tag()` in `tools/release_acceptance.py`). On this tree that tag is `v0.9.22`. Pass `--tag vX.Y.Z` to choose another published release. The downloaded wheel is `essay_writer-<version>-py3-none-any.whl` for the version in that tag. The install check expects that same version. When `--assets-dir` does not already contain the wheel, the command downloads it.
+
+The command installs the wheel into a new virtualenv, checks that `essay_writer.__file__` is under that virtualenv's `site-packages`, and runs the four personas one after another. Each persona has its own `ESSAY_WRITER_ROOT`.
 
 Pass `--assets-dir DIR` when that directory already holds the wheel. Pass `--keep` to leave the virtualenv and the `runs/` directory in the work directory. Without `--keep`, and without `--workdir`, the command deletes the temporary work directory after it writes the report.
 
 The default report path is `pilot-report.txt` in the current directory.
-
-Pass `--tag v0.9.21` to choose the release. The default is `v0.9.21`. The downloaded wheel is `essay_writer-<version>-py3-none-any.whl` for the version in that tag, and the install check expects that same version.
 
 ## Read a saved run
 
@@ -56,13 +56,17 @@ The student text is the synthetic fixtures in `tests/conversations/`. Resolvers 
 
 ## A clean run
 
-A clean run exits 0. The first line of the report is:
+A clean run exits 0. The first line names the installed version (`tools/pilot_schema.py`):
 
 ```text
-These four runs are simulations on installed essay-writer 0.9.21. They are not validation with real students.
+These four runs are simulations on installed essay-writer <version>. They are not validation with real students.
 ```
 
 Each persona line shows an incident count and `stopped=false`. The report has no essay text, no prompt, no path, and no door sentence.
+
+## Recorded run on 0.9.21
+
+This section is one saved run. It is not the default tag.
 
 The recorded run used this command.
 
