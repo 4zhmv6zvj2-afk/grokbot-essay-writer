@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.9.22 — 2026-11-25
+
+- One module writes each opt-in operator event once. `ml-events.jsonl` stores the JSON line and `debug.log` stores the rendered line of that same record. `essay-writer --debug-tail` prints those rendered lines. It does not turn debug on, does not create a file, and does not write an incident. A missing live `ml-events.jsonl` prints nothing and exits 0, including when only the rotated file is present. The rotated file is read only while the live file exists.
+- A `guidance-only` incident line is severity `error` and disposition `refuse`. The look was only the checklist. That row is expected friction. It is not a product fault and it is not a harness fault. `query`, `title`, `reason`, and `stderr` stay on the opt-in record. `incident.jsonl` stays content-free, and `support.zip` still leaves the opt-in files out.
+- A new `state.json` writer key fails the known-key check. The set still keeps keys older files store, so an unknown field on load records the same incident. Each `open_url` call passes its own resolve clock, so two fetches do not share one module clock. HTTP errors and response statuses take the same retry, give-up, or keep decision, and a read tries three times. Source pins that repeat a result the tests already observe are gone.
+- The release tag is read from `pyproject.toml`. `ReleasePin` carries that tag. A pin of the tip version in tests or tools fails the scan, for any tip. Tests that are not release history use a fake version.
+- Release acceptance checks a published install outside CI. Pilot triage summarizes incident metadata and does not print essay text or paths.
+
 ## 0.9.21 — 2026-11-25
 
 - An installed wheel loads the mid-status tip sheet and the Harvard handbook from package data. A checkout docs copy stays for humans; the packaged bytes must match. Land-SHA lookup stays on the package or a real checkout, not a site-packages parent path.

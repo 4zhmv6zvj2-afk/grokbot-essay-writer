@@ -381,7 +381,7 @@ wheels = [
 
 [[package]]
 name = "essay-writer"
-version = "0.9.21"
+version = "0.9.22"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
