@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.9.21 — 2026-11-25
+
+- An installed wheel loads the mid-status tip sheet and the Harvard handbook from package data. A checkout docs copy stays for humans; the packaged bytes must match. Land-SHA lookup stays on the package or a real checkout, not a site-packages parent path.
 - A pull request runs the macOS suite only when the diff touches a macOS-sensitive path. Main still runs it every time.
 - A pull request builds the shipped artifacts when the diff adds or deletes a file, or touches the packaging files, the docs, or the prompts. Main and a release still build them every time.
 - A pull request that only changes documentation runs the docs checks and the docs-truth tests. It skips the full suite, the coverage run, the macOS suite, and the shipped-artifacts job. Main does not.
