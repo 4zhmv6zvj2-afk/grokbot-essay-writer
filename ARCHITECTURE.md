@@ -28,12 +28,15 @@ validation, and Word output.
   - `stage_replies.py` — the draft and save reply writers (`_draft_reply`,
     `_save_confirm`) and the no-op result. They do not assign the stage
     "what happens next" sentence.
-  - `stage_next.py` — the one writer for that sentence on an `essay.stage`
-    reply, including the upload line, the stage 7 ask, the mid-run wait, and
-    Confirm wording stripped while a mid-run is going. A reply that only
-    repeats a sentence already chosen calls `write_stage_next` directly.
-    Dig, shelf, setup, intake, review, and projects still write their own
-    next sentence.
+  - `stage_next.py` — the one writer for the stage runner's next sentence
+    on an `essay.stage` reply, including the upload line, the stage 7 ask,
+    the mid-run wait, and Confirm wording stripped while a mid-run is going.
+    A reply that only repeats a sentence already chosen calls
+    `write_stage_next` directly. Other reply modules set their own next
+    sentence: dig, shelf, setup, intake, review, projects, research, word,
+    validate, encourage, free_alt, late_chain, the specialist wrapper
+    `specialists/grok_bot`, and the tool wrappers `student_progress` and
+    `student_voice`.
   - `stage_confirm.py` — the confirm path and the shared stage-7 skip probe.
     The body builder may import this module for the skip probe. This module
     never imports the body builder or the orchestrator.

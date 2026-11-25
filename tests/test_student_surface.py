@@ -7,6 +7,7 @@ from pathlib import Path
 from helpers import ESSAY, TOPIC, card_digest_for, open_sequence, pack, source, write_upload
 
 from essay_writer.harvard_4a import FOUR_A_PARTS
+from essay_writer.invent import check_claims
 from essay_writer.research import essay_research_summary
 from essay_writer.research_packs import write_annotation_docx
 from essay_writer.review import REVIEW_PROMPT
@@ -209,3 +210,57 @@ def test_malformed_replies_keep_student_words(workspace):
         if _builder_words(text)
     ]
     assert not leaks, leaks
+
+
+def _confirmed_sequence(workspace):
+    write_upload(workspace)
+    seq = open_sequence()
+    row = [source()]
+    essay_research_summary(seq, TOPIC, "draft", row)
+    saved = essay_research_summary(
+        seq, TOPIC, "confirm", row, cardDigest=card_digest_for(seq, "essay.research.summary")
+    )
+    assert saved["stored"] is True
+    return seq
+
+
+def _no_builder_words(body: dict) -> None:
+    leaks = [text for text in _person_readable(body) if _builder_words(text)]
+    assert not leaks, leaks
+
+
+def test_formed_view_shape_error_keeps_student_words(workspace):
+    seq = _confirmed_sequence(workspace)
+    body = pack()
+    body["formed_views"] = ["bad"]
+    reply = essay_pack_validate(seq, body, "draft")
+    assert "One formed view in the draft was not sent in a form I can read." in _person_readable(
+        reply
+    )
+    _no_builder_words(reply)
+
+
+def test_section_shape_error_keeps_student_words(workspace):
+    seq = _confirmed_sequence(workspace)
+    body = pack()
+    body["sections"] = ["bad"]
+    reply = essay_pack_validate(seq, body, "draft")
+    assert "One section of the draft was not sent in a form I can read." in _person_readable(reply)
+    _no_builder_words(reply)
+
+
+def test_figure_shape_error_keeps_student_words(workspace):
+    seq = _confirmed_sequence(workspace)
+    body = pack()
+    body["figures"] = ["bad"]
+    reply = essay_pack_validate(seq, body, "draft")
+    assert "One figure in the draft was not sent in a form I can read." in _person_readable(reply)
+    _no_builder_words(reply)
+
+
+def test_claim_shape_error_keeps_student_words():
+    issues = check_claims([], ["bad"], {})
+    assert [item["reason"] for item in issues] == [
+        "Part of the gathered source was not sent in a form I can read."
+    ]
+    _no_builder_words({"issues": issues})

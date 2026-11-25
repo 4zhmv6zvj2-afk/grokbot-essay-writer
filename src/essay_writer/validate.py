@@ -895,7 +895,7 @@ def _visuals(
             blockers.append(
                 {
                     "code": "pack",
-                    "reason": f"One {kind} in the draft was not sent in a form I can read.",
+                    "reason": f"One {kind.lower()} in the draft was not sent in a form I can read.",
                 }
             )
             continue
