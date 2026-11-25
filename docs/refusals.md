@@ -201,7 +201,7 @@ The where column is a file name. The test owns the codes.
 | word-title-spare | A refused Word title becomes the spare title Essay. | fallback | The Word file still uses the spare title. | tests/test_model_contract.py |
 | pdf-gap-unwritten | A gap note that cannot be saved stays in memory for this read. | fallback | The paper is still opened. The gap file is unchanged. | tests/test_refusals.py |
 | pointer-damaged | A stage pointer that is not JSON is not rewritten. | fallback | Ask me to show this step again before saving. | tests/test_refusals.py |
-| crash-recovered | A load found a stage-commit temp while the commit journal was absent. The temp stays. | fallback | The load continues and the temp is not removed. | stage_state.py |
+| crash-recovered | A load found a stage-commit temp. The temp stays. A valid journal beside it is still replayed. | fallback | The load continues and the temp is not removed. | stage_state.py |
 | encourage-unwritten | An encourage note that cannot be saved is not stored. | fallback | The plan or the answer is unchanged on disk. Ask again. | tests/test_refusals.py |
 | state-damaged | The state file is damaged. | refuse | Ask me to show this step again. The file is not replaced. | state.py |
 | state-field-filled | A missing state field is filled in memory. | fallback | The file is unchanged until the next save. | state.py |

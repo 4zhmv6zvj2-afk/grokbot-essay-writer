@@ -292,7 +292,7 @@ def test_a_journal_beside_a_commit_temp_replays_and_keeps_the_temp(workspace) ->
     )
     assert saved["ok"] is True, saved
     assert temp.read_bytes() == BESIDE_BYTES
-    assert _sha256(state) == state_hash
+    assert load_pointer(seq)["current"] != "1"
     assert len(_crash_rows(seq)) == 1
 
 

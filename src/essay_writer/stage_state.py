@@ -378,11 +378,11 @@ def _note_crash_recovered(sequence: str) -> None:
 def _settle_stage_commit(essay_id: str) -> None:
     root = work_dir(essay_id)
     shape = _stage_commit_shape(root)
-    if shape == "orphan":
-        _note_crash_recovered(essay_id)
-    elif shape == "both":
+    if shape == "both":
         _raise_if_journal_damaged(root)
-        return
+        _note_crash_recovered(essay_id)
+    elif shape == "orphan":
+        _note_crash_recovered(essay_id)
     elif shape != "absent" and shape != "published":
         unexpected: Never = shape
         raise AssertionError(unexpected)
@@ -592,11 +592,7 @@ def _pointer_lock(essay_id: str):
 
 
 def stage_lock(essay_id: str):
-    """Exclusive lock for this sequence's note and pointer.
-
-    A published journal with no commit temp is replayed first. A journal
-    beside a commit temp is left in place.
-    """
+    """Exclusive lock for this sequence's note and pointer."""
     return _pointer_lock(essay_id)
 
 
