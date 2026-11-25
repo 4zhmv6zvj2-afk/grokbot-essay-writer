@@ -11,7 +11,7 @@ ACCEPTANCE = ROOT / "tools" / "release_acceptance.py"
 
 ESSAY = "The fisheries opening stayed on the page."
 PATH = "/Users/student/essay.txt"
-VOLUME = "/Volumes/secret"
+VOLUME = "/Volumes/ResearchDrive"
 
 
 def test_sentinels_match_release_acceptance() -> None:
