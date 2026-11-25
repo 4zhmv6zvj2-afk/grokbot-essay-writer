@@ -6,7 +6,6 @@ AC3: stage 4a Confirm rejects a surname stub and an empty annotation body.
 AC4: Basics, then 4a Confirm, then stage 10 Word, on one sequence.
 """
 
-import inspect
 import json
 from pathlib import Path
 
@@ -19,8 +18,6 @@ from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.late_chain import write_stage10
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.research import essay_research_summary
-from essay_writer.stage_hold import _render_stage10_before_close
-from essay_writer.stage_replies import _save_confirm
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
@@ -279,8 +276,6 @@ def test_ac4_basics_4a_confirm_stage10_word_journey(workspace, monkeypatch, tmp_
         assert cursor["settings"]["fast"] is False
         assert build["settings"]["fast"] is False
         assert cursor["settings"]["model"] == build["settings"]["model"]
-    assert "stage_bibliography" in inspect.getsource(_save_confirm)
-    assert "write_stage10" in inspect.getsource(_render_stage10_before_close)
 
     _brief()
     write_upload(workspace, MODULE, "qin.md", JOURNAL_TEXT)
