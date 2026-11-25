@@ -57,6 +57,9 @@ NOTES.local
 
 # Local review artifacts (reports and reviewer correspondence; never published)
 review-notes/
+.audit/
+plans/
+.cursor/settings.json
 
 # Editor and OS
 .DS_Store

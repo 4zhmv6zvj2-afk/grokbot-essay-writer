@@ -956,7 +956,3 @@ def student_list_text(essay_id: str) -> str:
         if _text(entry.get("conflict")):
             lines.append(_text(entry.get("conflict")))
     return "\n".join(lines)
-
-
-def already_note(labels: list[str]) -> str:
-    return " ".join(label for label in labels if label).strip()

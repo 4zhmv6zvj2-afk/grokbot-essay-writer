@@ -235,26 +235,6 @@ def _draft_next_card(
     )
 
 
-def _next_card_fields(
-    opened: dict[str, object], essay_id: str, following: str
-) -> dict[str, object] | None:
-    """card, cardAction, and cardDigest for this sequence's next stage, or nothing."""
-    card = opened.get("card")
-    if not isinstance(card, dict):
-        return None
-    if card.get("essay_id") != essay_id or card.get("stage") != following:
-        return None
-    if card.get("kind") != "confirm":
-        return None
-    action = opened.get("cardAction") or card.get("cardAction")
-    digest = opened.get("cardDigest") or card.get("cardDigest") or card.get("digest")
-    if action != "confirm" or not isinstance(digest, str) or len(digest) != 64:
-        return None
-    if card.get("digest") not in (None, digest):
-        return None
-    return {"card": card, "cardAction": action, "cardDigest": digest}
-
-
 def _pending_inherited(essay_id: str, stage: str | None) -> dict[str, object] | None:
     """Parent save still waiting on a copied stage 2 or 3."""
     if not stage:
