@@ -24,7 +24,7 @@ from essay_writer.specialists.grok_bot import read_basics_opening
 
 SENTINEL = "ZEBRASENTINEL"
 SECRET = "github_pat_" + ("a" * 22)
-HOME = "/Users/ada/Documents/essay"
+HOME = "/Users/student/Documents/essay"
 SEQUENCE = "MOD1004AA-1"
 
 
@@ -118,7 +118,7 @@ def test_debug_tail_prints_views_without_enabling_debug(workspace, monkeypatch, 
     printed = capsys.readouterr().out
     assert "essay.health" in printed
     assert "<home>" in printed
-    assert "/Users/ada" not in printed
+    assert "/Users/student" not in printed
     assert SECRET not in printed
     assert "[redacted]" in printed
     assert "sequence-mark" not in printed
@@ -257,7 +257,7 @@ def test_export_redacts_a_home_path_and_a_secret(workspace, monkeypatch) -> None
         assert "debug.log.1" in names
         assert "ml-events.jsonl" in names
         blob = b"\n".join(zipped.read(name) for name in names).decode("utf-8")
-    assert "/Users/ada" not in blob
+    assert "/Users/student" not in blob
     assert "<home>" in blob
     assert SECRET not in blob
     assert "[redacted]" in blob
