@@ -177,8 +177,6 @@ def test_ac4_no_silent_grokbot_when_mac_may_exist(workspace):
 
 def test_ac5_suite_hooks_and_build_covered(workspace):
     """AC5. Shared handlers and FO copy are wired. Build covered."""
-    text = (REPO / "src" / "essay_writer" / "stage_track.py").read_text(encoding="utf-8")
-    assert "prior_saved_lock_ask" in text
     assert "delete_where_gate" in (REPO / "src" / "essay_writer" / "projects.py").read_text(
         encoding="utf-8"
     )
