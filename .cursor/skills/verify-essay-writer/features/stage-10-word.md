@@ -25,9 +25,9 @@ Preconditions:
 
 - **Review the current file.** Start `python -m essay_writer --reviewer` with the same `ESSAY_WRITER_ROOT`. Call `essay.review` for stage 9, draft then confirm, against the Word file that is about to be finished. An older file, or a pass with no file, does not clear the write.
 - **Finish.** On the writer server, call `essay.stage` with `stage` `10`, draft then confirm, using `cardAction` `confirm` and the `cardDigest` from that draft. Stage 10 writes the final copy and does not submit.
-- **Proof.** The file is `Essay-writer/<module>/sequences/<n>/output/<module>-10/<module>-final.docx`. A mark file `.stage10-copied.json` sits beside the Word file that was copied. Both must be present. The final file is absent when stage 9 has no PASS.
+- **Proof.** The file is `Essay-writer/<module>/sequences/<n>/output/<module>-10/<module>-final.docx`. A mark file `.stage10-copied.json` sits beside the working `output/<sequence-id>.docx` that was copied (not beside the final file). Both must be present. The final file is absent when stage 9 has no PASS.
 
-`drive-research-gather` does not reach stage 10. A research-gather evidence pack is not proof of this feature.
+`drive-research-gather` does not reach stage 10. A research-gather evidence pack is not proof of this feature. Run the calls above, or `verify-essay-writer conversations` for the synthetic golden path on the real doors.
 
 ## Gotchas
 

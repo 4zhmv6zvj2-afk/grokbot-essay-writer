@@ -258,13 +258,18 @@ def _ps(args: list[str]) -> str:
 
     ``ps -ax`` on Linux hides session leaders, and a narrow column cuts a long
     command before ``essay_writer``. ``-e`` and ``-ww`` keep both.
+    A host that refuses ``ps`` (sandboxed agent shells) returns empty so launch
+    can still finish; cleanup then skips a pid it cannot confirm.
     """
-    completed = subprocess.run(
-        ["ps", "-ww", *args],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(
+            ["ps", "-ww", *args],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return ""
     if completed.returncode != 0:
         return ""
     return completed.stdout
@@ -581,7 +586,8 @@ def cmd_doctor() -> None:
 def distinct_records(card: dict[str, Any]) -> list[dict[str, str]]:
     sys.path.insert(0, str(SRC))
     os.environ["ESSAY_WRITER_ROOT"] = str(STUDENT)
-    from essay_writer.source_floor import author_text, distinct_works, title_text, year_text
+    from essay_writer.source_floor import distinct_works, title_text, year_text
+    from essay_writer.sources import author_text
 
     rows: list[dict[str, Any]] = []
     for catalog in ("openalex", "consensus"):
@@ -984,6 +990,7 @@ def cmd_scan(paths: list[str]) -> None:
 
 def cmd_conversations() -> None:
     """Run the synthetic golden paths. No catalog call and no package install."""
+    ensure_deps()
     tests = str(REPO / "tests")
     if tests not in sys.path:
         sys.path.insert(0, tests)

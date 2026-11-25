@@ -24,11 +24,11 @@ Preconditions:
 - Launch and the research-gather drive have already been run, or the same doors have been driven by hand on this folder.
 
 - **Store the draft.** Call `essay.stage` with the sequence id, `stage` `5`, and `confirmPhase` `draft`. The draft call stores the first draft and moves the pointer to stage 6. Do not send a confirm for stage 5.
-- **Review.** Start a second server with `python -m essay_writer --reviewer` and the same `ESSAY_WRITER_ROOT`. Call `essay.review` for stage 6, draft then confirm. The writer server does not mount `essay.review`. PASS is the result that allows Word.
-- **Write Word.** On the writer server, call `essay.pack.render_word` with `stage` `6`, draft then confirm, for the same pack that validation confirmed. Draft writes nothing. Confirm writes the file.
-- **Proof.** The file is `Essay-writer/<module>/sequences/<n>/output/<sequence-id>.docx`. A missing PASS, or a gather that is still blocked, leaves that file absent. Record the review result and the file path.
+- **Review.** Start a second server with `python -m essay_writer --reviewer` and the same `ESSAY_WRITER_ROOT`. Call `essay.review` for stage 6, draft then confirm. The writer server does not mount `essay.review`. PASS is the result that allows Word. On PASS confirm, the reviewer may write a plain first draft to `output/<sequence-id>.docx` when that file is not already there.
+- **Write Word.** On the writer server, after `essay.pack.validate` confirm, call `essay.pack.render_word` with `stage` `6`, draft then confirm, for the same pack that validation confirmed. Draft writes nothing. Confirm writes the formatted pack file.
+- **Proof.** The file is `Essay-writer/<module>/sequences/<n>/output/<sequence-id>.docx`. A missing PASS, or a gather that is still blocked, leaves that file absent from the render path. Record the review result and the file path.
 
-This command does not drive the Word file. `drive-research-gather` stops at the citation list. Run the three calls above when you verify this feature. Do not mark it passed from the gather evidence.
+`drive-research-gather` stops at the citation list. Run the three calls above when you verify this feature, or run `verify-essay-writer conversations` for the synthetic golden path on the real doors. Do not mark it passed from the gather evidence alone.
 
 ## Gotchas
 
