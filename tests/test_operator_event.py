@@ -244,10 +244,16 @@ def test_one_emit_does_not_write_a_second_row(workspace, monkeypatch) -> None:
 
 def test_export_redacts_a_home_path_and_a_secret(workspace, monkeypatch) -> None:
     monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
-    debug_log_path().parent.mkdir(parents=True, exist_ok=True)
-    debug_log_path().write_text(f"query={HOME} reason={SECRET}\n", encoding="utf-8")
+    emit(
+        {
+            "t": "",
+            "tool": "essay.health",
+            "phase": "read",
+            "query": HOME,
+            "reason": SECRET,
+        }
+    )
     debug_log_path().with_name("debug.log.1").write_text(f"title={HOME}\n", encoding="utf-8")
-    ml_events_path().write_text('{"tool":"essay.health"}\n', encoding="utf-8")
     exported = essay_debug_export()
     assert exported["ok"] is True
     archive = workspace / "debug.zip"
