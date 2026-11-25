@@ -163,7 +163,9 @@ def test_tail_reads_rotated_then_live(workspace, monkeypatch, capsys) -> None:
         "".join(json.dumps(row, sort_keys=True) + "\n" for row in older),
         encoding="utf-8",
     )
-    (folder / "ml-events.jsonl").write_text(json.dumps(live, sort_keys=True) + "\n", encoding="utf-8")
+    (folder / "ml-events.jsonl").write_text(
+        json.dumps(live, sort_keys=True) + "\n", encoding="utf-8"
+    )
     assert debug_tail(None, limit=2) == 0
     printed = capsys.readouterr().out.splitlines()
     assert len(printed) == 2
@@ -175,7 +177,9 @@ def test_tail_reads_rotated_then_live(workspace, monkeypatch, capsys) -> None:
 def test_rotation_renames_both_files_at_the_line_cap(workspace, monkeypatch) -> None:
     monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
     for index in range(MAX_LINES):
-        emit({"t": "", "tool": "essay.health", "phase": "read", "ok": True, "query": f"row-{index}"})
+        emit(
+            {"t": "", "tool": "essay.health", "phase": "read", "ok": True, "query": f"row-{index}"}
+        )
     assert len(_lines(ml_events_path())) == MAX_LINES
     assert not ml_events_path().with_name("ml-events.jsonl.1").exists()
     emit({"t": "", "tool": "essay.dig", "phase": "read", "query": "after-cap"})
@@ -323,9 +327,7 @@ def test_guidance_only_door_fills_tool_and_stage(workspace) -> None:
         encoding="utf-8",
     )
     seq = open_sequence()
-    before = [
-        row for row in _rows(incident_path()) if row.get("code") == "guidance-only"
-    ]
+    before = [row for row in _rows(incident_path()) if row.get("code") == "guidance-only"]
     look = "\n".join(read_basics_opening(seq).lines)
     reply = FakeShell().call(
         "essay.stage",
@@ -335,9 +337,7 @@ def test_guidance_only_door_fills_tool_and_stage(workspace) -> None:
         look=look,
     )
     assert reply["refused"] == "guidance-only"
-    matched = [
-        row for row in _rows(incident_path()) if row.get("code") == "guidance-only"
-    ]
+    matched = [row for row in _rows(incident_path()) if row.get("code") == "guidance-only"]
     assert len(matched) == len(before) + 1
     fresh = matched[-1]
     assert fresh["tool"] == "essay.stage"

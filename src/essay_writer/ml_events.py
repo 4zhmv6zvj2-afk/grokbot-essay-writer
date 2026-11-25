@@ -373,4 +373,3 @@ def note_cli_handoff(flag: str, essay_id: str | None, outcome: str, reason: str 
         emit(event)
     except Exception:
         return
-

@@ -911,9 +911,6 @@ def note_product_trace(event: str, essay_id: str, **fields: Any) -> None:
     log_word_step(event, essay_id, **fields)
 
 
-
-
-
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
@@ -958,7 +955,6 @@ def note_mid_office(
         {"essay_id": essay_id.strip(), "confirmPhase": event},
         result=payload,
     )
-
 
 
 def note_call(

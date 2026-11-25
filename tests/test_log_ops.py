@@ -190,11 +190,7 @@ def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
         build_on = start_stage_mid(sequence, "6", launch=_GROK)
         assert cursor_on["started"] is True and cursor_on["shell"] == "cursor"
         assert build_on["started"] is True and build_on["shell"] == "grok"
-        starts = [
-            row
-            for row in _rows(sequence)
-            if row.get("shell_event") == "start"
-        ]
+        starts = [row for row in _rows(sequence) if row.get("shell_event") == "start"]
         assert [(row["shell"], row["stage"]) for row in starts] == [
             ("Cursor", "4b"),
             ("Build", "6"),
@@ -218,11 +214,7 @@ def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
             assert "rules" not in row
 
         finish_mid_process(sequence)
-        done = [
-            row
-            for row in _rows(sequence)
-            if row.get("shell_event") == "done"
-        ]
+        done = [row for row in _rows(sequence) if row.get("shell_event") == "done"]
         assert len(done) == 1
         assert done[0]["shell"] == "Build"
         for key in (
