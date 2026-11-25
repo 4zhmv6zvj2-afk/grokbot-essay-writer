@@ -191,7 +191,9 @@ def test_word_keeps_ordinary_english_and_drops_builder_labels(workspace):
     plain = re.sub(r"<[^>]+>", "", xml)
     assert re.search(r"\bdig\b", plain, re.IGNORECASE) is None
     assert "essay.dig" not in plain.casefold()
+    assert "essay." not in plain
     assert "dig-card" not in plain.casefold()
+    assert "look-up-card" not in plain
     assert "look-up" in plain
     assert "invent-forbid" not in plain.casefold()
     assert "do not invent" not in plain.casefold()
@@ -316,8 +318,9 @@ def test_setup_pick_persists_and_branches_the_prompt(tmp_path, monkeypatch):
     assert "dig" not in worded.casefold()
     assert "look-up" in worded
     named = for_word("Keep essay.dig and dig-card.json.")
+    assert "essay." not in named
+    assert "look-up" not in named
     assert "dig" not in named.casefold()
-    assert "look-up" in named
 
     app = tmp_path / "app"
     kb1 = tmp_path / "KB1"

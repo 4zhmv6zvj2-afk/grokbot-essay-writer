@@ -128,7 +128,12 @@ def gather_source(
 ) -> tuple[dict[str, Any] | None, list[dict[str, str]]]:
     label = f"sources[{index}]"
     if not isinstance(raw, dict):
-        return None, [{"code": "invent-forbid", "reason": f"{label} must be an object"}]
+        return None, [
+            {
+                "code": "invent-forbid",
+                "reason": "Part of the gathered source was not sent in a form I can read.",
+            }
+        ]
     origin = raw.get("origin")
     if origin in {"sample", "samples", "reference-list"}:
         return None, [
@@ -443,7 +448,12 @@ def check_claims(
     for index, claim in enumerate(claims):
         label = f"claims[{index}]"
         if not isinstance(claim, dict):
-            issues.append({"code": "invent-forbid", "reason": f"{label} must be an object"})
+            issues.append(
+                {
+                    "code": "invent-forbid",
+                    "reason": "Part of the gathered source was not sent in a form I can read.",
+                }
+            )
             continue
         source = by_id.get(claim.get("source_id"))
         if source is None:
