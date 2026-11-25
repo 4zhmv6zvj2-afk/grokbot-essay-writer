@@ -118,7 +118,7 @@ def _stamp_path(git_box: dict[str, object]) -> Path:
 
 
 def test_no_stamp_refuses(git_box: dict[str, object], capsys: pytest.CaptureFixture[str]) -> None:
-    assert tag_release.main(["v0.9.19", "--dry-run"]) == 1
+    assert tag_release.main(["v1.2.3", "--dry-run"]) == 1
     assert "no gate stamp" in capsys.readouterr().err
     assert not _pushed(git_box)
 
@@ -127,7 +127,7 @@ def test_stamp_for_another_sha_refuses(
     git_box: dict[str, object], capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_stamp(Path(str(git_box["git_dir"])), head_sha=OTHER)
-    assert tag_release.main(["v0.9.19"]) == 1
+    assert tag_release.main(["v1.2.3"]) == 1
     assert "different commit" in capsys.readouterr().err
     assert not _tagged(git_box)
 
@@ -135,7 +135,7 @@ def test_stamp_for_another_sha_refuses(
 def test_dirty_tree_refuses(git_box: dict[str, object], capsys: pytest.CaptureFixture[str]) -> None:
     git_box["dirty"] = True
     _write_stamp(Path(str(git_box["git_dir"])))
-    assert tag_release.main(["v0.9.19"]) == 1
+    assert tag_release.main(["v1.2.3"]) == 1
     assert "the tree is dirty" in capsys.readouterr().err
     assert not _tagged(git_box)
 
@@ -145,14 +145,14 @@ def test_stale_stamp_refuses(
 ) -> None:
     when = (NOW - timedelta(minutes=61)).isoformat()
     _write_stamp(Path(str(git_box["git_dir"])), when=when)
-    assert tag_release.main(["v0.9.19"]) == 1
+    assert tag_release.main(["v1.2.3"]) == 1
     assert "older than 60 minutes" in capsys.readouterr().err
     assert not _tagged(git_box)
 
 
 def test_fast_mode_refuses(git_box: dict[str, object], capsys: pytest.CaptureFixture[str]) -> None:
     _write_stamp(Path(str(git_box["git_dir"])), mode="fast")
-    assert tag_release.main(["v0.9.19"]) == 1
+    assert tag_release.main(["v1.2.3"]) == 1
     assert "mode is not full" in capsys.readouterr().err
     assert not _tagged(git_box)
 
@@ -163,7 +163,7 @@ def test_failed_step_refuses(
     steps = {name: "pass" for name in run_gates.FULL_STEPS}
     steps["pytest"] = "fail"
     _write_stamp(Path(str(git_box["git_dir"])), steps=steps)
-    assert tag_release.main(["v0.9.19"]) == 1
+    assert tag_release.main(["v1.2.3"]) == 1
     assert "step pytest is not pass" in capsys.readouterr().err
     assert not _tagged(git_box)
 
@@ -177,9 +177,9 @@ def test_version_check_failure_refuses(
     monkeypatch.setattr(
         tag_release,
         "version_check",
-        lambda tag, root: (1, "Tag v0.9.19 does not match pyproject.toml version 0.9.18.\n"),
+        lambda tag, root: (1, "Tag v1.2.3 does not match pyproject.toml version 1.2.2.\n"),
     )
-    assert tag_release.main(["v0.9.19", "--dry-run"]) == 1
+    assert tag_release.main(["v1.2.3", "--dry-run"]) == 1
     assert "check_release_version" in capsys.readouterr().err
     assert not _tagged(git_box)
 
@@ -189,7 +189,7 @@ def test_feature_branch_refuses(
 ) -> None:
     git_box["branch"] = "p05-local-gate"
     _write_stamp(Path(str(git_box["git_dir"])))
-    assert tag_release.main(["v0.9.19"]) == 1
+    assert tag_release.main(["v1.2.3"]) == 1
     assert "is not main" in capsys.readouterr().err
     assert not _tagged(git_box)
 
@@ -199,7 +199,7 @@ def test_main_branch_with_a_valid_stamp_creates_a_tag(
 ) -> None:
     git_box["branch"] = "main"
     _write_stamp(Path(str(git_box["git_dir"])))
-    assert tag_release.main(["v0.9.19"]) == 0
+    assert tag_release.main(["v1.2.3"]) == 0
     assert "branch main" in capsys.readouterr().out
     assert _tagged(git_box)
 
@@ -209,7 +209,7 @@ def test_allow_branch_creates_a_tag_off_main(
 ) -> None:
     git_box["branch"] = "p05-local-gate"
     _write_stamp(Path(str(git_box["git_dir"])))
-    assert tag_release.main(["v0.9.19", "--allow-branch"]) == 0
+    assert tag_release.main(["v1.2.3", "--allow-branch"]) == 0
     assert "allowed by --allow-branch" in capsys.readouterr().out
     assert _tagged(git_box)
     assert not _pushed(git_box)
@@ -220,7 +220,7 @@ def test_dry_run_on_an_allowed_branch_creates_nothing(
 ) -> None:
     git_box["branch"] = "p05-local-gate"
     _write_stamp(Path(str(git_box["git_dir"])))
-    assert tag_release.main(["v0.9.19", "--allow-branch", "--dry-run"]) == 0
+    assert tag_release.main(["v1.2.3", "--allow-branch", "--dry-run"]) == 0
     assert "dry-run: no tag created" in capsys.readouterr().out
     assert not _tagged(git_box)
 
@@ -229,7 +229,7 @@ def test_valid_stamp_dry_run_creates_no_tag(
     git_box: dict[str, object], capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_stamp(Path(str(git_box["git_dir"])))
-    assert tag_release.main(["v0.9.19", "--dry-run"]) == 0
+    assert tag_release.main(["v1.2.3", "--dry-run"]) == 0
     assert "dry-run: no tag created" in capsys.readouterr().out
     assert not _tagged(git_box)
     assert not _pushed(git_box)
@@ -240,9 +240,9 @@ def test_valid_stamp_creates_a_tag_and_does_not_push(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     _write_stamp(Path(str(git_box["git_dir"])))
-    assert tag_release.main(["v0.9.19"]) == 0
+    assert tag_release.main(["v1.2.3"]) == 0
     out = capsys.readouterr().out
-    assert "created annotated tag v0.9.19" in out
+    assert "created annotated tag v1.2.3" in out
     assert "Dispatch the Release workflow" in out
     assert _tagged(git_box)
     assert not _pushed(git_box)

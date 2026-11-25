@@ -155,20 +155,20 @@ def test_upload_into_a_folder_with_an_older_copy_installs_the_new_tree(tmp_path,
     cloud.mkdir()
     monkeypatch.setattr("essay_writer.paths.CLOUD_WORKSPACE", cloud)
     install = cloud / "essay-writer-install"
-    older = install / "grokbot-essay-writer-0.9.4"
+    older = install / "grokbot-essay-writer-1.2.4"
     older.mkdir(parents=True)
     (older / "pyproject.toml").write_text(
-        '[project]\nname = "essay-writer"\nversion = "0.9.4"\n', encoding="utf-8"
+        '[project]\nname = "essay-writer"\nversion = "1.2.4"\n', encoding="utf-8"
     )
     (older / "requirements-runtime.txt").write_text("mcp==2.3.0 --hash=sha256:" + "0" * 64 + "\n")
-    upload = tmp_path / "essay-writer-0.9.6.zip"
+    upload = tmp_path / "essay-writer-1.2.6.zip"
     _zip(
         upload,
         {
-            "grokbot-essay-writer-0.9.6/pyproject.toml": _pyproject().encode(),
-            "grokbot-essay-writer-0.9.6/FIRST-RUN.txt": b"pip install -e .\n",
-            "grokbot-essay-writer-0.9.6/requirements-runtime.txt": _requirements(),
-            "grokbot-essay-writer-0.9.6/src/essay_writer/__init__.py": b"",
+            "grokbot-essay-writer-1.2.6/pyproject.toml": _pyproject().encode(),
+            "grokbot-essay-writer-1.2.6/FIRST-RUN.txt": b"pip install -e .\n",
+            "grokbot-essay-writer-1.2.6/requirements-runtime.txt": _requirements(),
+            "grokbot-essay-writer-1.2.6/src/essay_writer/__init__.py": b"",
         },
     )
     calls: list[tuple[list[str], Path]] = []
@@ -183,11 +183,11 @@ def test_upload_into_a_folder_with_an_older_copy_installs_the_new_tree(tmp_path,
     )
 
     assert result["ok"] is True, result
-    newest = install / "grokbot-essay-writer-0.9.6"
+    newest = install / "grokbot-essay-writer-1.2.6"
     assert Path(result["root"]) == newest
     assert Path(result["code_install_folder"]) == newest
     assert calls and all(cwd == newest for _command, cwd in calls)
-    assert "0.9.4" in (older / "pyproject.toml").read_text(encoding="utf-8")
+    assert "1.2.4" in (older / "pyproject.toml").read_text(encoding="utf-8")
 
 
 def test_upload_reports_when_health_still_names_the_old_version(tmp_path, monkeypatch):
@@ -199,7 +199,7 @@ def test_upload_reports_when_health_still_names_the_old_version(tmp_path, monkey
     _zip(
         upload,
         {
-            "essay-writer-main/pyproject.toml": b'[project]\nname = "essay-writer"\nversion = "0.9.6"\n',
+            "essay-writer-main/pyproject.toml": b'[project]\nname = "essay-writer"\nversion = "1.2.6"\n',
             "essay-writer-main/FIRST-RUN.txt": b"pip install -e .\n",
             "essay-writer-main/requirements-runtime.txt": _requirements(),
             "essay-writer-main/src/essay_writer/__init__.py": b"",
@@ -208,7 +208,7 @@ def test_upload_reports_when_health_still_names_the_old_version(tmp_path, monkey
     health: dict[str, object] = {
         "ok": True,
         "alive": True,
-        "version": "0.9.4",
+        "version": "1.2.4",
         "doors": [{"name": "essay.health"}],
     }
     monkeypatch.setattr(
@@ -229,12 +229,12 @@ def test_upload_reports_when_health_still_names_the_old_version(tmp_path, monkey
     assert result["installed"] is False
     assert result["environment_changed"] is True
     assert result["rolled_back"] is False
-    assert "0.9.4" in result["reason"]
-    assert "0.9.6" in result["reason"]
+    assert "1.2.4" in result["reason"]
+    assert "1.2.6" in result["reason"]
     assert "on disk but unverified" in result["reason"]
-    assert result["expected_version"] == "0.9.6"
+    assert result["expected_version"] == "1.2.6"
 
-    health["version"] = "0.9.6"
+    health["version"] = "1.2.6"
     accepted = install_uploaded_copy(
         upload,
         attach=False,
@@ -243,7 +243,7 @@ def test_upload_reports_when_health_still_names_the_old_version(tmp_path, monkey
         allow_cursor_install=False,
     )
     assert accepted["ok"] is True, accepted
-    assert accepted["health_check"]["version"] == "0.9.6"
+    assert accepted["health_check"]["version"] == "1.2.6"
 
 
 def test_zip_slip_and_clone_urls_do_not_install(tmp_path, monkeypatch):

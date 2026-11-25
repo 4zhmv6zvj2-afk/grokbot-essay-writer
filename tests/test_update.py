@@ -17,7 +17,7 @@ import pytest
 
 from essay_writer import update
 
-CURRENT = "0.9.4"
+CURRENT = "1.2.4"
 LATEST = "9.9.9"
 
 
@@ -61,13 +61,13 @@ def _health_payload(version: str) -> dict:
 
 
 def test_version_compare_reads_a_tag_and_ignores_noise():
-    assert update.version_tuple("v0.9.5") == (0, 9, 5)
-    assert update.version_tuple("0.9.5") == (0, 9, 5)
+    assert update.version_tuple("v1.2.5") == (1, 2, 5)
+    assert update.version_tuple("1.2.5") == (1, 2, 5)
     assert update.version_tuple("release") is None
-    assert update.is_newer("0.9.10", "0.9.9")
-    assert update.is_newer("0.10.0", "0.9.9")
-    assert not update.is_newer("0.9.4", "0.9.4")
-    assert not update.is_newer("0.9.3", "0.9.4")
+    assert update.is_newer("1.2.10", "1.2.9")
+    assert update.is_newer("1.10.0", "1.9.9")
+    assert not update.is_newer("1.2.4", "1.2.4")
+    assert not update.is_newer("1.2.3", "1.2.4")
 
 
 def test_check_update_names_the_newer_release(monkeypatch):
@@ -121,25 +121,25 @@ def test_feed_tag_ignores_a_note_that_appears_before_the_link():
         "<feed><title>Also see releases/tag/v8.8.8</title><entry>"
         "<content>Ship notes mention releases/tag/v1.2.3 before the real link.</content>"
         '<link rel="alternate" '
-        'href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v0.9.12"/>'
+        'href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v1.2.12"/>'
         "</entry>"
         '<entry><link rel="alternate" '
         'href="https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v9.9.9"/>'
         "</entry></feed>"
     )
-    assert update._feed_tag(feed) == "0.9.12"
+    assert update._feed_tag(feed) == "1.2.12"
 
 
 def test_feed_tag_rejects_a_prerelease_suffix():
     feed = (
         '<feed><entry><link rel="alternate" '
-        'href="https://github.com/org/repo/releases/tag/v0.9.12-rc1"/>'
+        'href="https://github.com/org/repo/releases/tag/v1.2.12-rc1"/>'
         "</entry></feed>"
     )
     assert update._feed_tag(feed) is None
     longer = (
         '<feed><entry><link rel="alternate" '
-        'href="https://github.com/org/repo/releases/tag/v0.9.12/notes"/>'
+        'href="https://github.com/org/repo/releases/tag/v1.2.12/notes"/>'
         "</entry></feed>"
     )
     assert update._feed_tag(longer) is None
