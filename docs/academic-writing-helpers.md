@@ -1,6 +1,6 @@
 # Academic writing helpers
 
-This page routes a brief to the right helper. The reflective-diary helper is separate, and because this page is pasted into tool text it does not name a shell.
+This page routes a brief to the right helper. The reflective-diary helper is separate, and, because this page is pasted into tool text, it does not name a shell.
 
 ## What this note is
 
