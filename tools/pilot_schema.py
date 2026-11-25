@@ -3,8 +3,6 @@ from __future__ import annotations
 import re
 from typing import Literal, TypedDict, cast
 
-from release_acceptance import asset_names, version_of
-
 PersonaName = Literal["careful", "rushed", "non-native", "error-prone"]
 FaultKind = Literal["timeout", "malformed_payload", "crash", "refused_save"]
 FaultOrigin = Literal["product", "harness"]
@@ -33,9 +31,6 @@ StepId = Literal[
     "refused_save",
 ]
 
-TAG = "v0.9.21"
-VERSION = version_of(TAG)
-WHEEL_NAME = asset_names(VERSION)[0]
 REPO = "4zhmv6zvj2-afk/grokbot-essay-writer"
 UNEXPECTED = "unexpected"
 
@@ -47,7 +42,6 @@ def disclaimer_for(version: str) -> str:
     )
 
 
-DISCLAIMER = disclaimer_for(VERSION)
 NONE_KEY = "(none)"
 
 ESSAY_SENTINEL = "The fisheries opening stayed on the page."
@@ -295,7 +289,7 @@ def make_run(
     incident_count: int,
     stopped: bool,
     stop_code: str,
-    version: str = VERSION,
+    version: str,
 ) -> PersonaRun:
     if not stopped:
         code = ""

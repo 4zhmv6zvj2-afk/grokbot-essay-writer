@@ -6,9 +6,10 @@ clean venv and the sdist into another, then runs ``essay-writer --health``
 and a probe in each. The ``--probe`` path imports the installed package (and
 its python-docx dependency) and is not part of the product runtime.
 
-From the repository root:
+From the repository root. Pass a tag, or omit ``--tag`` to use the version in
+``pyproject.toml``:
 
-    python tools/release_acceptance.py --tag v0.9.21
+    python tools/release_acceptance.py --tag v1.2.3
 
 Exit 0 when every check passes. Exit 1 when a check fails. Exit 2 when the
 environment cannot run the harness.
@@ -25,13 +26,14 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 import urllib.error
 import urllib.request
 import venv
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_TAG = "v0.9.21"
 DEFAULT_REPO = "4zhmv6zvj2-afk/grokbot-essay-writer"
 LOOK_STAGE6 = "The draft is saved in Word."
 ESSAY_SENTINEL = "The fisheries opening stayed on the page."
@@ -63,6 +65,33 @@ def asset_names(version: str) -> tuple[str, str, str]:
         f"essay_writer-{version}.tar.gz",
         "SHA256SUMS",
     )
+
+
+def project_version(root: Path | None = None) -> str:
+    """The ``[project] version`` in pyproject.toml."""
+    base = repo_root() if root is None else root
+    text = (base / "pyproject.toml").read_text(encoding="utf-8")
+    return str(tomllib.loads(text)["project"]["version"])
+
+
+def project_tag(root: Path | None = None) -> str:
+    """The release tag for the version in pyproject.toml."""
+    return f"v{project_version(root)}"
+
+
+@dataclass(frozen=True)
+class ReleasePin:
+    """A release tag plus the version and wheel name derived from that tag."""
+
+    tag: str
+    version: str
+    wheel_name: str
+
+    def __init__(self, tag: str) -> None:
+        version = version_of(tag)
+        object.__setattr__(self, "tag", tag)
+        object.__setattr__(self, "version", version)
+        object.__setattr__(self, "wheel_name", asset_names(version)[0])
 
 
 def _download_one(url: str, target: Path) -> None:
@@ -549,8 +578,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--tag",
-        default=DEFAULT_TAG,
-        help=f"published release tag (default {DEFAULT_TAG})",
+        default=None,
+        help="published release tag; omit to use the v-prefixed version from pyproject.toml",
     )
     parser.add_argument(
         "--repo",
@@ -591,7 +620,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.version is None or args.fixtures is None or args.workspace is None:
             fail("--probe needs --version, --fixtures, and --workspace", code=2)
         return probe_main(args.version, args.fixtures, args.workspace)
-    return accept_main(args.tag, args.repo, args.workdir, args.keep, args.assets_dir)
+    tag = args.tag if args.tag is not None else project_tag()
+    return accept_main(tag, args.repo, args.workdir, args.keep, args.assets_dir)
 
 
 if __name__ == "__main__":
