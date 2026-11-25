@@ -591,8 +591,6 @@ def main(argv: list[str] | None = None) -> int:
         if args.version is None or args.fixtures is None or args.workspace is None:
             fail("--probe needs --version, --fixtures, and --workspace", code=2)
         return probe_main(args.version, args.fixtures, args.workspace)
-    if sys.version_info < (3, 12):
-        fail(f"Python 3.12+ required, got {sys.version}", code=2)
     return accept_main(args.tag, args.repo, args.workdir, args.keep, args.assets_dir)
 
 
