@@ -46,7 +46,7 @@ def test_ac10c_docs_say_every_stage_context_is_256000():
     section = workflow.split("## Stage LLM", 1)[1].split("\n## ", 1)[0]
     assert "256000 on every stage" in section
     assert "stage 4b" in section
-    assert "EQR" in section
+    assert "the independent review" in section
     for text in (workflow, section):
         assert "256000" in text
         assert "500000" not in text

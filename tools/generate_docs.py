@@ -137,7 +137,7 @@ def render_workflow() -> str:
     lines.extend(
         [
             "",
-            "Fast is off on every stage. Context is 256000 on every stage, including stage 4b, the first draft, and EQR.",
+            "Fast is off on every stage. Context is 256000 on every stage, including stage 4b, the first draft, and the independent review.",
             "",
             "Grok Build loads this table from `essay_writer.stage_llm.stage_settings` through `essay_writer.build_office.stage_launch` (`grok --model` and `--effort`). Cursor loads that same function through `essay_writer.cursor_office.cursor_stage_launch` (`agent --model` with the reasoning in the model id). The agent CLI has no context-window flag. `grok-4.7-<reasoning>[context=N]` is rejected. The window is not written into the agent prompt to stand in for a flag.",
         ]
