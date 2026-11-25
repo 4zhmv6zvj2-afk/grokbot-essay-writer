@@ -46,6 +46,32 @@ The version check exits 0 when `pyproject.toml`, `uv.lock`, and the newest `CHAN
 
 The published bytes are checked from the GitHub release, not from this checkout. Download the wheel, the sdist, `SHA256SUMS`, each `*.sigstore.json`, and `provenance.intoto.jsonl` into one folder, then run the checksum, `cosign verify-blob`, and `gh attestation verify` commands in the README section "Verify a release". Do not publish a release whose checksum or attestation fails.
 
+## Release acceptance
+
+After the five-minute check and the README verify steps, prove the published
+assets outside CI. From the repository root, against a published tag:
+
+```bash
+python tools/release_acceptance.py --tag v0.9.20
+```
+
+The harness is stdlib-only on the outer path. It downloads the wheel, the
+sdist, and `SHA256SUMS` for that tag, checks each named file against
+`SHA256SUMS`, installs the wheel into a clean venv, installs the sdist into a
+second clean venv, and in each venv runs `essay-writer --health` plus a probe.
+The probe plants the shipped `0.9.19` sequence fixture, writes the first-draft
+Word file, opens it with python-docx (title and paragraphs), advances stage 6,
+kills a save before replace and confirms the previous state still loads, exports
+a support bundle (manifest and incident members; no debug logs, no essay text,
+no paths), wipes `incident.jsonl` and `incident.jsonl.1`, then loads the same
+`0.9.19` fixture again and advances under the installed `0.9.20`.
+
+A pass prints `PASS:` lines for each check, then `ALL PASS`, and exits 0. Keep
+the work tree with `--workdir /tmp/accept-0.9.20` (or `--keep`) when you need
+the downloaded hashes and probe folders as evidence. A product bug found here
+stops the release acceptance; do not patch the product in the same change as
+this harness.
+
 ## A student report
 
 Ask for these, and nothing that contains the essay:

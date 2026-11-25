@@ -1,0 +1,9 @@
+ts	phase	decision	why	evidence	result
+2026-11-25T01:50:16Z	start	Branch from origin/main for release acceptance harness	Prove published v0.9.20 outside CI; no product change	origin/main fffe826	open
+2026-11-25T01:50:16Z	design	One script: outer stdlib harness + --probe in installed venv	Avoids a second file and keeps python-docx only in the installed env	tools/release_acceptance.py	recorded
+2026-11-25T01:50:16Z	design	Reuse tests/fixtures/state/0.9.19 for Word and upgrade	Matches runbook and test_state_fixtures; never mutates the 0.9.19 release	fixtures path via repo root	recorded
+2026-11-25T01:50:16Z	design	No workflow change; full suite on PR because tools/ is not docs-only	Prefer no workflow change; required checks must still go green	ci.yml docs_only filter	recorded
+2026-11-25T01:52:24Z	impl	Wrote tools/release_acceptance.py and runbook section	Outer stdlib download/hash/venv; --probe does Word/crash/bundle/wipe/upgrade	files in tree	recorded
+2026-11-25T01:54:08Z	bug	STOP: published v0.9.20 wheel install cannot advance a stage	TIP_SHEET uses Path(__file__).parents[2]/docs/templates/mid-status.md which resolves under site-packages parent; wheel omits that file; pip install of sdist same layout	build_status.py:40 FileNotFoundError during essay_stage after Word write	blocked
+2026-11-25T01:54:08Z	evidence	Partial accept run kept under /tmp/essay-writer-accept-0.9.20	Hashes matched; wheel install; health 0.9.20; Word OK; stage-6 advance crashed	workdir kept	recorded
+2026-11-25T01:58:15Z	contract	Adopted hotfix-0.9.21.md; keep cursor/release-acceptance; authorized to publish v0.9.21	v0.9.20 immutable; three workstream PRs	/Users/radial4088/Downloads/hotfix-0.9.21.md	recorded
