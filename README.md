@@ -51,9 +51,9 @@ governance process. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## What it is not
 
-- Not a submission service: it never submits. The tool drafts the essay from
-  the sources the workflow gathered; the student directs the work, reviews each
-  stage, confirms saves on a card, and owns what is submitted.
+- Not a submission service: it never submits. The tool writes the essay from
+  the sources the workflow gathered; the student approves the focus, the plan,
+  and the gathered research, edits the draft, and owns what is submitted.
 - Not a hosted service: no server, no account, no bundled keys. It is a local
   process the agent talks to.
 - Not a general-purpose Word or referencing library.
@@ -62,16 +62,19 @@ governance process. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Academic integrity
 
 The tool researches and gathers sources, then drafts, revises, and formats the
-essay from them. The student directs the work, reviews each stage, confirms
-saves on a card, and owns what is submitted. The tool does not decide what is
-acceptable at the student's institution, and it never submits anything.
+essay from them. The student approves the focus, the plan, and the gathered
+research, reviews each stage, confirms most saves on a card, edits the draft,
+and owns what is submitted. The tool does not decide what is acceptable at the
+student's institution, and it never submits anything.
 
-- The student owns what they submit. Using a drafting aid without disclosure, or
+- The student owns what they submit. Using a drafting tool without disclosure, or
   where the institution forbids it, is the student's decision and
   responsibility. The tool does not police it, and the maintainer does not
   endorse it.
-- The workflow keeps the student in control: each stage is shown in chat, saves
-  are confirmed on a card, and the final Word file is theirs.
+- The workflow keeps the student in control: each stage is shown in chat, most
+  saves are confirmed on a card, and the final Word file is theirs. The first
+  draft is the one exception: the tool writes and saves it, then the student
+  reads and edits it.
 - If your course forbids generative assistance, do not use this.
 
 ## Using Essay Bot (students)
@@ -86,7 +89,7 @@ or a reflective diary are in
 [docs/academic-writing-helpers.md](docs/academic-writing-helpers.md).
 
 You share the assignment and start a new essay. You review each stage in the
-chat. A save waits on that stage's Confirm card. If the card cannot be used,
+chat. Most saves wait on that stage's Confirm card. If the card cannot be used,
 typing yes, ok, or Confirm saves that same waiting stage. One Confirm saves
 that stage only.
 
@@ -101,9 +104,11 @@ that stage only.
    one-sentence answer. A diary plan holds the entries.
 4. **Annotated bibliography**, then the **critical review.** Research finds
    papers. It downloads a PDF when it can, or gives you the title and a link.
-5. **Write your first draft.** This stage is the exception. The first full
-   draft is saved when it is written, then shown. There is no Confirm card
-   between that draft and the next stage.
+5. **The tool writes the first draft.** It writes the first full draft from the
+   sources already gathered, inside the word band when the brief states one.
+   This is the stage you do not confirm. The first full draft is saved when it
+   is written, then shown. There is no Confirm card between that draft and the
+   next stage, and the workflow moves to your read-through.
 6. **Re-read and make changes.** This is your read-through. The chat shows a
    short list once, then you edit. It does not rewrite the draft for you.
 7. **Ask for feedback.** The chat asks about structure, argument, and clarity,
