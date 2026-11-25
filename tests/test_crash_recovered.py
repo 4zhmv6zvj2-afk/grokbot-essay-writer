@@ -238,7 +238,7 @@ def test_a_held_stage_lock_is_not_a_crash(workspace) -> None:
     assert not temp.exists()
 
 
-def test_a_journal_and_a_commit_temp_stay_and_do_not_replay(workspace) -> None:
+def test_a_journal_beside_a_commit_temp_replays_and_keeps_the_temp(workspace) -> None:
     seq = open_sequence("MOD1005AA")
     root = work_dir(seq)
     tracking = root / "tracking"
@@ -259,22 +259,41 @@ def test_a_journal_and_a_commit_temp_stay_and_do_not_replay(workspace) -> None:
         temp=temp_hash,
     )
     loaded = load_pointer(seq)
-    assert loaded["current"] == "1", f"journal={journal_hash} pointer={pointer_hash}"
-    assert loaded["saved"] == []
-    assert journal.read_bytes() == journal_bytes
+    assert loaded["current"] == "3", f"journal={journal_hash} pointer={pointer_hash}"
+    assert loaded["saved"] == ["1"]
+    assert not journal.exists()
+    assert temp.is_file()
     assert temp.read_bytes() == BESIDE_BYTES
-    assert pointer.read_bytes() == _pointer_bytes(DISK_POINTER)
     assert _sha256(state) == state_hash
-    assert _sha256(journal) == journal_hash
     assert _sha256(temp) == temp_hash
-    assert _crash_rows(seq) == []
-    with stage_lock(seq):
-        nested = load_pointer(seq)
-    assert nested["current"] == "1"
-    assert nested["saved"] == []
-    assert journal.read_bytes() == journal_bytes
+    _assert_one_crash(seq)
+    _emit(
+        "both-after",
+        state=_sha256(state),
+        pointer=_sha256(pointer),
+        journal=None,
+        temp=_sha256(temp),
+    )
+    load_pointer(seq)
+    assert len(_crash_rows(seq)) == 1
     assert temp.read_bytes() == BESIDE_BYTES
-    assert _crash_rows(seq) == []
+    brief = essay_dir(seq) / "brief.md"
+    brief.parent.mkdir(parents=True, exist_ok=True)
+    brief.write_text("Assignment task: Name the corridor.\n", encoding="utf-8")
+    draft = essay_stage(seq, "3", "draft", LOOK)
+    assert draft["ok"] is True, draft
+    saved = essay_stage(
+        seq,
+        "3",
+        "confirm",
+        None,
+        cardAction="confirm",
+        cardDigest=draft["digest"],
+    )
+    assert saved["ok"] is True, saved
+    assert temp.read_bytes() == BESIDE_BYTES
+    assert load_pointer(seq)["current"] != "1"
+    assert len(_crash_rows(seq)) == 1
 
 
 def test_a_published_journal_without_a_commit_temp_still_replays(workspace) -> None:
