@@ -30,6 +30,8 @@ Each line is one JSON object. It has the UTC time, the build commit, a prompt ha
 
 A `guidance-only` line is severity `error` and disposition `refuse`. The look was only the checklist. That row is expected friction. It is not a product fault and it is not a harness fault.
 
+`crash-recovered` is severity `warn` and disposition `fallback`. A load records it when `tracking/.stage.commit` is absent and a temp named `..stage.commit.*.tmp` or `.stage.commit.*.tmp` is present. The temp stays. `state.json` and `tracking/stage.json` are not rewritten. The student is not stopped. The load result is unchanged. One line is stored for each sequence in a process. When `tracking/.stage.commit` and a temp are both present, both files stay, the journal is not applied, and `crash-recovered` is not recorded. When `tracking/.stage.lock` exists, the load takes that exclusive lock before it classifies. A live save holds the lock from before it creates the temp until replace finishes. When the lock file is absent, the load looks again after it sees the temp. It records the line only if the lock file is still absent, and it does not create the lock file.
+
 `essay-writer --support-bundle` writes `support.zip` in the app folder. The zip contains the incident lines, `health.json` (version, build commit, prompt hash, and door names), `files.json` (sequence ids and SHA-256 values of state files, not the file contents), and `manifest.json` (counts, including soft incidents by code). `debug.log`, `debug.log.1`, `ml-events.jsonl`, and `ml-events.jsonl.1` are not members. A logging failure does not stop the student.
 
 ## Environment overrides (operators and tests)
