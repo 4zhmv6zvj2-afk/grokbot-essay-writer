@@ -505,7 +505,18 @@ def test_an_unchanged_reference_list_can_be_approved(case_id, workspace):
     assert OLD_STAGE9 not in template
     assert f"- {NEW_STAGE9}" in helpers
     assert OLD_STAGE9 not in helpers
-    assert "### 10. Complete and submit your final draft" in helpers
+    assert "### 10. Finish the Word file" in helpers
+    old_stage10 = "Complete and submit your final draft"
+    helper_docs = "\n".join(
+        (REPO / name).read_text(encoding="utf-8")
+        for name in (
+            "docs/academic-writing-helpers.md",
+            "docs/essay-writing-helpers.md",
+            "docs/report-writing-helpers.md",
+            "docs/reflective-diary-helpers.md",
+        )
+    )
+    assert old_stage10 not in helper_docs
     assert NEW_STAGE9 in CHECKLISTS["9"]
     assert OLD_STAGE9 not in "\n".join(CHECKLISTS["9"])
     leftovers = (REPO / "tests" / "test_leftovers_stage9_asks.py").read_text(encoding="utf-8")

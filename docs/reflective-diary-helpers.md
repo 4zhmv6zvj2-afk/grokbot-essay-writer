@@ -160,7 +160,7 @@ Approve the save before the tool writes `.docx`.
 
 Harvard stays the Harvard Referencing guide. Do not restate this stage. Use `docs/referencing-harvard.md` only. A brief line about spelling every author in the text is not adopted.
 
-### 10. Complete and submit your final draft
+### 10. Finish the Word file
 
 The tool does not submit. It prepares the final Word file and tells the student where the brief says the file goes. The final file follows the brief’s presentation. Review notes stay in their own file. The diary does not contain the marker form.
 

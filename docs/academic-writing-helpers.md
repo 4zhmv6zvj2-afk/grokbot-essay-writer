@@ -1,6 +1,6 @@
 # Academic writing helpers
 
-This page routes a brief to one helper. A reflective diary has its own helper, and this page does not copy that helper. The page is pasted into research and write tool text, so it does not name a shell.
+This page routes a brief to the right helper. The reflective-diary helper is separate, and because this page is pasted into tool text it does not name a shell.
 
 ## What this note is
 
@@ -375,9 +375,9 @@ Final in-text citations and reference list — **Harvard Referencing** only. If 
 **Shared rules:**
 - On this Word save, rewrite first-draft.md in the sequence folder from the saved Word file in the same step. Do not say that path in the chat.
 
-### 10. Complete and submit your final draft
+### 10. Finish the Word file
 
-The chat title is Finish the Word file. This heading is the checklist name. Submission to the university (the LMS, portal, or other channel named in the brief) stays with the student. The essay-writer tool does not submit.
+Submission to the university (the LMS, portal, or other channel named in the brief) stays with the student. The essay-writer tool does not submit.
 
 **Guideline:** Module brief submission rules only.
 

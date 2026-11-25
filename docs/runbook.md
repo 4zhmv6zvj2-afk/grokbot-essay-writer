@@ -52,10 +52,10 @@ After the five-minute check and the README verify steps, prove the published
 assets outside CI. From the repository root, against a published tag:
 
 ```bash
-python tools/release_acceptance.py --tag v0.9.22
+python tools/release_acceptance.py
 ```
 
-Omit `--tag` to use the version in `pyproject.toml` (`project_tag()` in `tools/release_acceptance.py`). On this tree that tag is `v0.9.22`.
+Omit `--tag` and the command uses the version in `pyproject.toml` (`project_tag()` in `tools/release_acceptance.py`). Pass `--tag vX.Y.Z` for another published release.
 
 The harness is stdlib-only on the outer path. It downloads the wheel, the
 sdist, and `SHA256SUMS` for that tag, checks each named file against
@@ -69,7 +69,7 @@ no paths), wipes `incident.jsonl` and `incident.jsonl.1`, then loads the same
 `0.9.19` fixture again and advances under the installed tag.
 
 A pass prints `PASS:` lines for each check, then `ALL PASS`, and exits 0. Keep
-the work tree with `--workdir /tmp/accept-0.9.22` (or `--keep`) when you need
+the work tree with `--workdir /tmp/accept-<version>` (or `--keep`) when you need
 the downloaded hashes and probe folders as evidence. To accept a local build
 before the tag is published, put the wheel, the sdist, and `SHA256SUMS` in one
 folder and pass `--assets-dir` that folder with `--tag` matching the version

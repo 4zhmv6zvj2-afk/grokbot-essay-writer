@@ -10,7 +10,7 @@ uv run python tools/run_gates.py --full
 uv run python tools/tag_release.py vX.Y.Z --dry-run
 ```
 
-`vX.Y.Z` is the tag you are about to create. It has to match the version in `pyproject.toml`. `--dry-run` does not create the tag. The current release is v0.9.22.
+`vX.Y.Z` is the tag you are about to create. It has to match the version in `pyproject.toml`. `--dry-run` does not create the tag.
 
 `--allow-dirty` runs the fast checks on a dirty tree and does not write a stamp. `--json` prints a machine-readable result on stdout.
 
