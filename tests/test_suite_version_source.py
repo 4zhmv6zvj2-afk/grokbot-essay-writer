@@ -108,7 +108,6 @@ def test_the_tests_that_already_read_the_package_version_keep_doing_so():
 
 
 def test_the_package_version_string_matches_pyproject() -> None:
-    """The package ``__version__`` stays a string literal, and it matches pyproject.toml."""
     init_path = TESTS.parent / "src" / "essay_writer" / "__init__.py"
     project_path = TESTS.parent / "pyproject.toml"
     literals: list[str] = []

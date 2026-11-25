@@ -68,21 +68,17 @@ def asset_names(version: str) -> tuple[str, str, str]:
 
 
 def project_version(root: Path | None = None) -> str:
-    """The ``[project] version`` in pyproject.toml."""
     base = repo_root() if root is None else root
     text = (base / "pyproject.toml").read_text(encoding="utf-8")
     return str(tomllib.loads(text)["project"]["version"])
 
 
 def project_tag(root: Path | None = None) -> str:
-    """The release tag for the version in pyproject.toml."""
     return f"v{project_version(root)}"
 
 
 @dataclass(frozen=True)
 class ReleasePin:
-    """A release tag plus the version and wheel name derived from that tag."""
-
     tag: str
     version: str
     wheel_name: str
