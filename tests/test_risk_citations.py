@@ -316,7 +316,9 @@ def test_doi_org_miss_does_not_invent_a_url(monkeypatch):
     def fake_open(request, timeout: int = 15) -> _Handle:
         return _Handle(payloads.pop(0))
 
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["93.184.216.34"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["93.184.216.34"]
+    )
     monkeypatch.setattr(safe_url, "_open", fake_open)
     assert doi_org_lookup("10.1000/not-a-match") is None
     found = doi_org_lookup("10.1000/not-a-match")

@@ -350,7 +350,9 @@ def test_a_refusal_card_hides_the_resolved_address(monkeypatch, caplog, address)
     """The student card names a non-public address. The operator log keeps the address."""
     from essay_writer import dig
 
-    monkeypatch.setattr(dig.safe_url, "_resolve_addresses", lambda host, port: [address])
+    monkeypatch.setattr(
+        dig.safe_url, "_resolve_addresses", lambda host, port, clock=None: [address]
+    )
     with caplog.at_level(logging.WARNING, logger="essay_writer.dig"):
         with pytest.raises(LookupRefused) as caught:
             dig._get_json("https://api.openalex.org/works?search=x")

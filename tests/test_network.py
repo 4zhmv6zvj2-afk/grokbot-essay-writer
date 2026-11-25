@@ -9,6 +9,7 @@ from __future__ import annotations
 import io
 import json
 import socket
+import threading
 import urllib.error
 import urllib.request
 
@@ -257,6 +258,44 @@ def test_a_dns_failure_retries_and_does_not_call_the_transport(workspace, monkey
     assert len(clock.slept) == safe_url.READ_ATTEMPTS - 1
     assert marker.read_bytes() == before
     assert "read-dns" in _codes()
+
+
+def test_concurrent_callers_keep_their_own_clocks(monkeypatch) -> None:
+    barrier = threading.Barrier(2)
+    seen: list[safe_url.Clock] = []
+
+    def resolve(host: str, port: int, clock: safe_url.Clock | None = None) -> list[str]:
+        assert clock is not None
+        seen.append(clock)
+        barrier.wait(timeout=5)
+        return [PUBLIC]
+
+    def transport(request: urllib.request.Request, timeout: float) -> FakeRaw:
+        return FakeRaw(b"{}")
+
+    monkeypatch.setattr(safe_url, "_resolve_addresses", resolve)
+    first = FakeClock()
+    second = FakeClock()
+    errors: list[BaseException] = []
+
+    def run(clock: FakeClock) -> None:
+        try:
+            safe_url.open_url(
+                "https://api.example.org/works",
+                max_bytes=1024,
+                transport=transport,
+                clock=clock,
+            )
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [threading.Thread(target=run, args=(clock,)) for clock in (first, second)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+    assert errors == []
+    assert {id(clock) for clock in seen} == {id(first), id(second)}
 
 
 def test_a_failed_download_does_not_leave_a_partial_file(workspace, monkeypatch):
