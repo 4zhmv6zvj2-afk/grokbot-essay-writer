@@ -94,7 +94,7 @@ The default quality test is **What makes a good report (business)** below. Share
 
 Do not restate this stage. Use `docs/referencing-harvard.md` only.
 
-## 10. Complete and submit your final draft
+## 10. Finish the Word file
 
 Do not restate this stage. Submission is out of this tool. Follow the brief’s submission rules.
 

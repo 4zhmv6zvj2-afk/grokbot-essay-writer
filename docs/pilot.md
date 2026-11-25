@@ -10,7 +10,7 @@ From the repository root:
 python tools/pilot_simulation.py --keep --workdir /tmp/essay-pilot --out /tmp/essay-pilot/report.txt
 ```
 
-Omit `--tag` and the command uses the version in `pyproject.toml` (`project_tag()` in `tools/release_acceptance.py`). On this tree that tag is `v0.9.22`. Pass `--tag vX.Y.Z` to choose another published release. The downloaded wheel is `essay_writer-<version>-py3-none-any.whl` for the version in that tag. The install check expects that same version. When `--assets-dir` does not already contain the wheel, the command downloads it.
+Omit `--tag` and the command uses the version in `pyproject.toml` (`project_tag()` in `tools/release_acceptance.py`). Pass `--tag vX.Y.Z` to choose another published release. The downloaded wheel is `essay_writer-<version>-py3-none-any.whl` for the version in that tag. The install check expects that same version. When `--assets-dir` does not already contain the wheel, the command downloads it.
 
 The command installs the wheel into a new virtualenv, checks that `essay_writer.__file__` is under that virtualenv's `site-packages`, and runs the four personas one after another. Each persona has its own `ESSAY_WRITER_ROOT`.
 

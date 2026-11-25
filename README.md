@@ -30,7 +30,7 @@ this repository is its source.
   save call must repeat the same values. A typed yes, ok, or Confirm saves the
   waiting stage only when the host cannot send the card fields; a supplied card
   field still has to be the Confirm action; it never saves a later stage.
-  The full gate is in [Confirm](docs/workflow.md#confirm).
+  The full Confirm protocol is described in [Confirm](docs/workflow.md#confirm).
 - **Prompt-heavy by design.** The stage instructions, genre rules, and
   validation checks are the product. They are packaged with the code under
   `src/essay_writer/prompts/` and are not fetched at runtime.
