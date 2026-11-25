@@ -1,0 +1,18 @@
+---
+description: Gates for data shape, independent review, and refusal codes
+alwaysApply: true
+---
+
+# Reliability gates
+
+## Design first
+
+A change to shared or persistent state, a schema, security, or anything expensive to reverse starts by naming the data shape and why that shape was chosen. This is judgement. No check enforces it.
+
+## Independent review
+
+Before that kind of diff merges, a fresh read-only review reads it. The author is not that review. This is judgement. No check enforces it.
+
+## Refusal table
+
+`tests/test_refusals.py` owns the codes in `docs/refusals.md` (`test_every_refusal_code_is_in_the_table`). A new refusal code belongs in that table. Do not copy the table into a rule or a prompt. The docs-only CI lane runs `tests/test_docs_truth.py`. It does not run `tests/test_refusals.py`. `main` runs the full suite, which runs `tests/test_refusals.py`.
