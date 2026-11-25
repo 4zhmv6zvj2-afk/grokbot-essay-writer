@@ -132,13 +132,6 @@ def strip_duplicate_card_ids(row: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
-def latest_number(module: str) -> int | None:
-    numbers = sequence_numbers(module)
-    if not numbers:
-        return None
-    return numbers[-1]
-
-
 def archived_path(module: str) -> Path:
     return essay_dir(module) / "archived.json"
 

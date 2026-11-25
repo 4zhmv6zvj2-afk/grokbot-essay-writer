@@ -312,17 +312,6 @@ def _text(value: object) -> str:
     return ""
 
 
-def _name_present(body: str, family: str) -> bool:
-    if not family:
-        return False
-    from essay_writer.textutil import fold_name
-
-    return (
-        re.search(rf"\b{re.escape(fold_name(family))}\b", fold_name(body), re.IGNORECASE)
-        is not None
-    )
-
-
 def _dois_in(text: str) -> list[str]:
     found: list[str] = []
     for item in _DOI.findall(text):
