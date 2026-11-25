@@ -70,19 +70,21 @@ def test_trusted_egress_is_honored_only_when_opted_in(monkeypatch) -> None:
     """A trusted CIDR allows its range only after the opt-in. Other private ranges stay blocked."""
     monkeypatch.delenv(safe_url.TRUSTED_EGRESS_ENV, raising=False)
     monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["198.18.0.1"]
+    )
     with pytest.raises(safe_url.BlockedURL):
         safe_url.validate_url("https://api.example.org/works")
 
     monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
     assert safe_url.validate_url("https://api.example.org/works").startswith("https://")
 
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["10.0.0.1"])
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port, clock=None: ["10.0.0.1"])
     with pytest.raises(safe_url.BlockedURL):
         safe_url.validate_url("https://api.example.org/works")
 
 
-def _resolve(host: str, port: int) -> list[str]:
+def _resolve(host: str, port: int, _clock: object = None) -> list[str]:
     if host in {"api.example.org", "cdn.example.org"}:
         return [PUBLIC]
     return [host]
@@ -130,7 +132,7 @@ class _Socket:
 def test_a_body_over_the_cap_is_refused(monkeypatch, workspace) -> None:
     """A body one byte over the cap raises, and the caller receives no bytes."""
     assert workspace.is_dir()
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: [PUBLIC])
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port, clock=None: [PUBLIC])
 
     class Raw:
         def __init__(self) -> None:
@@ -188,7 +190,7 @@ def test_a_dns_rebind_is_rejected(monkeypatch) -> None:
     monkeypatch.setattr(
         safe_url,
         "_resolve_addresses",
-        lambda host, port: [PUBLIC, "127.0.0.1"],
+        lambda host, port, clock=None: [PUBLIC, "127.0.0.1"],
     )
     with pytest.raises(safe_url.BlockedURL):
         safe_url.validate_url("https://rebind.example.org/works")

@@ -87,7 +87,6 @@ class Clock:
 
 
 _CLOCK = Clock()
-_RESOLVE_CLOCK: Clock | None = None
 Transport = Callable[[urllib.request.Request, float], Any]
 
 
@@ -236,9 +235,8 @@ def _status_copy(status: int) -> str:
     return SERVER_COPY
 
 
-def _resolve_addresses(host: str, port: int) -> list[str]:
+def _resolve_addresses(host: str, port: int, clock: Clock | None = None) -> list[str]:
     """Every address the host resolves to. A host that does not resolve is refused."""
-    clock = _RESOLVE_CLOCK
     timer = clock or _CLOCK
     attempts = READ_ATTEMPTS if clock is not None else 1
     infos: list[Any] | None = None
@@ -274,7 +272,7 @@ def _resolve_addresses(host: str, port: int) -> list[str]:
     return found
 
 
-def _checked_url(url: object) -> tuple[str, tuple[str, ...]]:
+def _checked_url(url: object, clock: Clock | None = None) -> tuple[str, tuple[str, ...]]:
     """The fragment-free URL and the addresses that passed validation."""
     if not isinstance(url, str) or not url.strip():
         raise BlockedURL("the address is empty")
@@ -303,7 +301,7 @@ def _checked_url(url: object) -> tuple[str, tuple[str, ...]]:
     elif port != default_port:
         raise BlockedURL("only the default port is allowed")
     trusted = _trusted_networks()
-    addresses = tuple(_resolve_addresses(host, port))
+    addresses = tuple(_resolve_addresses(host, port, clock))
     for address in addresses:
         if _public_address(address, trusted):
             continue
@@ -631,13 +629,7 @@ def open_url(
     opener = transport or _open
     connect = timeout if connect_timeout is None else connect_timeout
     read = timeout if read_timeout is None else read_timeout
-    global _RESOLVE_CLOCK
-    previous_clock = _RESOLVE_CLOCK
-    _RESOLVE_CLOCK = timer
-    try:
-        clean, addresses = _checked_url(url)
-    finally:
-        _RESOLVE_CLOCK = previous_clock
+    clean, addresses = _checked_url(url, timer)
     request = urllib.request.Request(  # noqa: S310 - the scheme and host are validated above
         clean,
         headers=dict(headers or {}),

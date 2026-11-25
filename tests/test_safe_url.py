@@ -26,7 +26,7 @@ PUBLIC_V6 = "2606:4700:4700::1111"
 
 
 def _public_dns(monkeypatch) -> None:
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: [PUBLIC_V4])
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port, clock=None: [PUBLIC_V4])
 
 
 class FakeRaw:
@@ -130,7 +130,7 @@ def test_every_resolved_address_must_be_public(monkeypatch):
     monkeypatch.setattr(
         safe_url,
         "_resolve_addresses",
-        lambda host, port: [PUBLIC_V4, "10.0.0.7"],
+        lambda host, port, clock=None: [PUBLIC_V4, "10.0.0.7"],
     )
     with pytest.raises(safe_url.BlockedURL):
         safe_url.validate_url("https://rebind.example.org/paper.pdf")
@@ -198,7 +198,7 @@ def test_http_error_status_is_returned_for_the_caller_to_classify(monkeypatch):
 
 
 def test_redirect_to_a_private_address_is_refused(monkeypatch):
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: [PUBLIC_V4])
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port, clock=None: [PUBLIC_V4])
     handler = safe_url._GuardedRedirectHandler()
     request = urllib.request.Request("https://api.example.org/a")
     with pytest.raises(safe_url.BlockedURL):
@@ -255,7 +255,9 @@ def test_a_cross_host_redirect_drops_sensitive_headers(monkeypatch):
 
 def test_a_trusted_egress_network_allows_a_fake_ip(monkeypatch):
     monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["198.18.0.1"]
+    )
     raw = FakeRaw(b"{}")
     _fake_open(monkeypatch, raw)
     with safe_url.open_url("https://api.openalex.org/works", max_bytes=1024) as response:
@@ -269,7 +271,9 @@ def test_trusted_egress_can_come_from_the_setup_secret(monkeypatch):
         "essay_writer.setup.read_setup_secret",
         lambda name: "198.18.0.0/15" if name == safe_url.TRUSTED_EGRESS_ENV else None,
     )
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["198.18.0.1"]
+    )
     assert (
         safe_url.validate_url("https://api.openalex.org/works") == "https://api.openalex.org/works"
     )
@@ -277,7 +281,7 @@ def test_trusted_egress_can_come_from_the_setup_secret(monkeypatch):
 
 def test_trusted_egress_does_not_allow_another_private_range(monkeypatch):
     monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["10.0.0.1"])
+    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port, clock=None: ["10.0.0.1"])
     with pytest.raises(safe_url.BlockedURL):
         safe_url.validate_url("https://api.openalex.org/works")
 
@@ -285,7 +289,9 @@ def test_trusted_egress_does_not_allow_another_private_range(monkeypatch):
 def test_unset_trusted_egress_refuses_the_fake_ip_and_names_the_setting(monkeypatch):
     monkeypatch.delenv(safe_url.TRUSTED_EGRESS_ENV, raising=False)
     monkeypatch.setattr("essay_writer.setup.read_setup_secret", lambda name: None)
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["198.18.0.1"]
+    )
     with pytest.raises(safe_url.BlockedURL) as caught:
         safe_url.validate_url("https://api.openalex.org/works")
     assert "198.18.0.0/15" in str(caught.value)
@@ -295,7 +301,9 @@ def test_unset_trusted_egress_refuses_the_fake_ip_and_names_the_setting(monkeypa
 
 def test_a_host_address_inside_the_fake_ip_range_is_trusted(monkeypatch):
     monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.1/32")
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["198.18.0.1"]
+    )
     assert (
         safe_url.validate_url("https://api.openalex.org/works") == "https://api.openalex.org/works"
     )
@@ -303,7 +311,9 @@ def test_a_host_address_inside_the_fake_ip_range_is_trusted(monkeypatch):
 
 def test_a_mapped_fake_ip_is_trusted_and_names_the_setting_when_it_is_not(monkeypatch):
     monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["::ffff:198.18.0.1"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["::ffff:198.18.0.1"]
+    )
     assert (
         safe_url.validate_url("https://api.openalex.org/works") == "https://api.openalex.org/works"
     )
@@ -331,10 +341,14 @@ def test_a_mapped_fake_ip_is_trusted_and_names_the_setting_when_it_is_not(monkey
 )
 def test_trusted_egress_rejects_a_network_outside_the_fake_ip_range(monkeypatch, setting):
     monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, setting)
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["198.18.0.1"]
+    )
     with pytest.raises(safe_url.BlockedURL):
         safe_url.validate_url("https://api.openalex.org/works")
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["169.254.169.254"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["169.254.169.254"]
+    )
     with pytest.raises(safe_url.BlockedURL):
         safe_url.validate_url("https://api.openalex.org/works")
 
@@ -390,7 +404,7 @@ def test_open_connects_to_the_validated_address(monkeypatch):
     monkeypatch.setattr(
         safe_url,
         "_resolve_addresses",
-        lambda host, port: ["93.184.216.34", "1.1.1.1"],
+        lambda host, port, clock=None: ["93.184.216.34", "1.1.1.1"],
     )
     seen: dict[str, object] = {}
     sock = _ScriptedSocket(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
@@ -414,7 +428,9 @@ def test_open_connects_to_the_validated_address(monkeypatch):
 
     monkeypatch.setattr(safe_url, "_DEFAULT_OPENER", None)
     monkeypatch.setenv(safe_url.TRUSTED_EGRESS_ENV, "198.18.0.0/15")
-    monkeypatch.setattr(safe_url, "_resolve_addresses", lambda host, port: ["198.18.0.1"])
+    monkeypatch.setattr(
+        safe_url, "_resolve_addresses", lambda host, port, clock=None: ["198.18.0.1"]
+    )
     fake = _ScriptedSocket(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
 
     def connect_fake(address, timeout, source_address=None):
