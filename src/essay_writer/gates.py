@@ -256,6 +256,45 @@ def _band_edges(rules: dict[str, Any]) -> tuple[int | None, int | None]:
     return band_edges(rules)
 
 
+def _plagiarism_verdict(
+    blocked: list[str], unreadable: list[str], matches: list[str]
+) -> dict[str, Any]:
+    """Report a copied sentence, or a gathered file that could not be scanned."""
+    if blocked or unreadable:
+        reason_parts: list[str] = []
+        if blocked:
+            reason_parts.append(
+                "A gathered file is not valid UTF-8 and was not scanned: "
+                + ", ".join(blocked)
+                + ". Re-save it as UTF-8 and run this check again."
+            )
+        if unreadable:
+            reason_parts.append(
+                "A gathered file could not be read: "
+                + ", ".join(unreadable)
+                + ". Allow file access and run this check again."
+            )
+        reason = " ".join(reason_parts)
+        if matches:
+            reason += " A gathered sentence appears in the body without quotation marks."
+        plagiarism_code = "gathered-encoding" if blocked else "gathered-unreadable"
+        plagiarism_passed = False
+    elif matches:
+        reason = "A gathered sentence appears in the body without quotation marks."
+        plagiarism_code = "unquoted-exact"
+        plagiarism_passed = False
+    else:
+        reason = "No unquoted exact sentence from a gathered file."
+        plagiarism_code = "unquoted-exact"
+        plagiarism_passed = True
+    return {
+        "code": plagiarism_code,
+        "passed": plagiarism_passed,
+        "matches": matches,
+        "reason": reason,
+    }
+
+
 def evaluate_gates(
     essay_id: str, pack: dict[str, Any] | None = None, body: str | None = None
 ) -> dict[str, Any]:
@@ -530,39 +569,7 @@ def evaluate_gates(
 
     gathered, blocked, unreadable = _gathered_scan(essay_id, pack_data)
     matches = unquoted_exact(text, gathered)
-    if blocked or unreadable:
-        reason_parts: list[str] = []
-        if blocked:
-            reason_parts.append(
-                "A gathered file is not valid UTF-8 and was not scanned: "
-                + ", ".join(blocked)
-                + ". Re-save it as UTF-8 and run this check again."
-            )
-        if unreadable:
-            reason_parts.append(
-                "A gathered file could not be read: "
-                + ", ".join(unreadable)
-                + ". Allow file access and run this check again."
-            )
-        reason = " ".join(reason_parts)
-        if matches:
-            reason += " A gathered sentence appears in the body without quotation marks."
-        plagiarism_code = "gathered-encoding" if blocked else "gathered-unreadable"
-        plagiarism_passed = False
-    elif matches:
-        reason = "A gathered sentence appears in the body without quotation marks."
-        plagiarism_code = "unquoted-exact"
-        plagiarism_passed = False
-    else:
-        reason = "No unquoted exact sentence from a gathered file."
-        plagiarism_code = "unquoted-exact"
-        plagiarism_passed = True
-    plagiarism = {
-        "code": plagiarism_code,
-        "passed": plagiarism_passed,
-        "matches": matches,
-        "reason": reason,
-    }
+    plagiarism = _plagiarism_verdict(blocked, unreadable, matches)
     passed = all(item["passed"] for item in gates) and plagiarism["passed"] and not extra_blockers
     return {
         "ok": passed,
