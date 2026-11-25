@@ -67,14 +67,20 @@ Each persona line shows an incident count and `stopped=false`. The report has no
 The recorded run used this command.
 
 ```bash
-.venv/bin/python tools/pilot_simulation.py --keep --workdir /tmp/essay-pilot-0.9.21 --out /tmp/essay-pilot-0.9.21/report.txt
+.venv/bin/python tools/pilot_simulation.py --assets-dir /tmp/essay-pilot-0.9.21/assets --keep --workdir /tmp/essay-pilot-0.9.21-final --out /tmp/essay-pilot-0.9.21-final/report.txt
 ```
 
-The virtualenv's `essay_writer` version was 0.9.21, and the package file was under that virtualenv's `site-packages`. The process exited 3. `non-native` stopped at `stages_short` with stop code `guidance-only`. `error-prone` did not start. `careful` and `rushed` finished. Each of those three personas recorded one `guidance-only` incident. The full report is `/tmp/essay-pilot-0.9.21/report.txt`.
+The virtualenv's `essay_writer` version was 0.9.21, and the package file was under that virtualenv's `site-packages`. The process exited 0. These four runs are simulations on installed essay-writer 0.9.21. They are not validation with real students. The full report is `/tmp/essay-pilot-0.9.21-final/report.txt`. Counts below are from this single run.
 
 | Persona | Incidents | Stopped | Stop code |
 | --- | --- | --- | --- |
 | careful | 1 | false | |
 | rushed | 1 | false | |
-| non-native | 1 | true | guidance-only |
-| error-prone | not started | | |
+| non-native | 1 | false | |
+| error-prone | 5 | false | |
+
+The top codes are `guidance-only` (4), `state-damaged` (2), `confirm` (1), and `state` (1).
+
+Each persona recorded one `guidance-only` refusal and still finished. That refusal is the friction on every persona. `error-prone` also ran the four planned faults.
+
+Product faults are `malformed_payload=noted` (1) and `refused_save=refused` (1). Harness faults are `crash=previous_bytes_kept` (1) and `timeout=noted` (1). The timeout child returned within 2 seconds and added an incident line, so the harness recorded `noted`.
