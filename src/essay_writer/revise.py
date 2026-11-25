@@ -50,7 +50,7 @@ def essay_revise(
     if not isinstance(message, str) or not message.strip():
         return refuse(
             "revise",
-            "message says what to change. The door does not invent the revision.",
+            "message says what to change. I do not invent the revision.",
             next="Say what to change.",
         )
     state = load_state(essay_id)

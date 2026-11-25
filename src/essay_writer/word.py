@@ -755,7 +755,11 @@ def essay_pack_render_word(
     if blocked:
         return blocked
     if not isinstance(pack, dict):
-        return refuse("pack", "pack must be an object", next="Send the pack as an object.")
+        return refuse(
+            "pack",
+            "The draft was not sent in a form I can read.",
+            next="Send the draft again.",
+        )
     from essay_writer.brief_contract import student_fields_label, word_contract_refusal
     from essay_writer.validate import _pack_assignment_text
 
@@ -909,17 +913,17 @@ def essay_pack_render_word(
     if not report["passed"]:
         return refuse(
             "validate",
-            "This pack did not pass validation. Word was not written.",
+            "This draft did not pass validation. Word was not written.",
             blockers=report["blockers"],
             path=planned,
             pack_digest=identity,
-            next="Fix the pack, then ask me to write the Word file again.",
+            next="Fix the draft, then ask me to write the Word file again.",
         )
     if not isinstance(validation, dict) or not validation.get("ok"):
         return refuse(
             "validate",
-            "Validate this pack with draft, then confirm, before Word confirm. "
-            "A changed pack needs both steps again.",
+            "Validate this draft, show it, then confirm, before Word confirm. "
+            "A changed draft needs both steps again.",
             path=planned,
             pack_digest=identity,
         )

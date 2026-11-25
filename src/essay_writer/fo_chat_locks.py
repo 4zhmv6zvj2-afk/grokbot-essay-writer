@@ -258,7 +258,7 @@ def delete_where_gate(
         return refuse(
             "delete",
             "Ask whether to delete the cloud workspace only, Mac-local copies only, or both. "
-            "Pass where grokbot, local, or both on essay.project.delete draft. Nothing was removed.",
+            "Say grokbot, local, or both. Nothing was removed.",
             needs_where_choice=True,
             where_choices=sorted(WHERE_CHOICES),
             where_labels=WHERE_LABELS,

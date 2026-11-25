@@ -27,7 +27,7 @@ _CHAT_SWAPS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bmid office\b", re.IGNORECASE), ""),
     (re.compile(r"\bfront-office\b", re.IGNORECASE), ""),
     (re.compile(r"\bmid-office\b", re.IGNORECASE), ""),
-    (re.compile(r"\bEQR\b"), ""),
+    (re.compile(r"\bEQR\b"), "the independent review"),
     (re.compile(r"\bGO\b"), ""),
     (re.compile(r"\bPASS\b"), ""),
 )

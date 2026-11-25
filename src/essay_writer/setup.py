@@ -104,7 +104,7 @@ def resolve_setup_shell(value: object) -> str | dict[str, object]:
         return refuse(
             "setup",
             "That file-work pick is not one of the two setup choices. "
-            "Ask again, then call essay.setup with that choice. "
+            "Ask again, then set up with that choice. "
             "Do not infer it from what is installed.",
         )
     return parsed
@@ -435,9 +435,9 @@ def essay_setup(
         return refuse(
             "setup",
             "The file-work program stays where it is already installed. "
-            "This door does not install it, and it does not install it on the Mac. "
-            "Call essay.setup without install_grokbuild.",
-            next="Call essay.setup without install_grokbuild.",
+            "This step does not install it, and it does not install it on the Mac. "
+            "Set up again without asking me to install it.",
+            next="Set up again without asking me to install it.",
         )
     shell = resolve_setup_shell(mid_office_shell)
     if isinstance(shell, dict):
@@ -644,11 +644,11 @@ def essay_setup(
             rollback()
             return refuse(
                 "setup",
-                "Could not create the folders. Allow file access, then call essay.setup again.",
+                "Could not create the folders. Allow file access, then try setup again.",
                 app=str(app),
                 kb1=str(kb1),
                 wrote=False,
-                next="Allow file access, then call essay.setup again.",
+                next="Allow file access, then try setup again.",
             )
 
     record = {

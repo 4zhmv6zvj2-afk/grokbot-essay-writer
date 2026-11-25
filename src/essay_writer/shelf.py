@@ -77,19 +77,25 @@ def essay_shelf_put(
     if blocked:
         return blocked
     if not isinstance(pack, dict):
-        return refuse("pack", "pack must be an object", next="Send the pack as an object.")
+        return refuse(
+            "pack",
+            "The draft was not sent in a form I can read.",
+            next="Send the draft again.",
+        )
     if pack_id is not None and _clean_id(pack_id) is None:
         return refuse(
             "shelf",
-            "pack_id has characters the local shelf will not store",
-            next="Use a pack id this shelf can store.",
+            "That id has characters the saved copy will not store.",
+            next="Use an id this saved copy can store.",
         )
     if (
         isinstance(topic, str)
         and topic.strip()
         and topic.strip() != str(pack.get("title", "")).strip()
     ):
-        return refuse("shelf", "topic does not match the pack title. Confirm one title, not two.")
+        return refuse(
+            "shelf", "The topic does not match the draft title. Confirm one title, not two."
+        )
     report = inspect_pack(essay_id, pack)
     hard = [item for item in report["blockers"] if item["code"] in {"invent-forbid", "cross-essay"}]
     if hard:
@@ -100,12 +106,13 @@ def essay_shelf_put(
     if not isinstance(word, dict):
         return refuse(
             "shelf",
-            "Shelf stores a pack only after Word confirm for that same pack.",
+            "A saved copy is kept only after Word confirm for that same draft.",
         )
     if not report["passed"] or word.get("files") != report["files"]:
         return refuse(
             "confirm",
-            "The pack or its gathered files changed after Word. Validate and write Word again before the shelf.",
+            "The draft or its gathered files changed after Word. "
+            "Validate and write Word again before the saved copy.",
         )
     local_id = _derive(essay_id, pack, pack_id)
     payload = {"essay_id": essay_id, "pack": pack, "pack_id": local_id}
@@ -178,23 +185,29 @@ def essay_shelf_get(
     cleaned = _clean_id(pack_id)
     if cleaned is None:
         return refuse(
-            "shelf", "pack_id is not a local shelf id", next="Choose a pack id from this shelf."
+            "shelf",
+            "That id is not a saved-copy id.",
+            next="Choose an id from this saved copy.",
         )
     path = _shelf_file(essay_id, cleaned)
     if not path.is_file():
         return refuse(
-            "shelf", "no shelf pack for this essay id", next="Choose a pack that is on this shelf."
+            "shelf",
+            "No saved copy for this essay.",
+            next="Choose a draft from this saved copy.",
         )
     record = read_json(path)
     if record is None:
         return refuse(
-            "shelf", "no shelf pack for this essay id", next="Choose a pack that is on this shelf."
+            "shelf",
+            "No saved copy for this essay.",
+            next="Choose a draft from this saved copy.",
         )
     if record.get("essay_id") != essay_id:
         return refuse(
             "cross-essay",
-            "that shelf record is not this essay",
-            next="Choose a pack saved for this essay.",
+            "That saved copy is not this essay.",
+            next="Choose a draft saved for this essay.",
         )
     payload = {"essay_id": essay_id, "pack_id": cleaned}
     fingerprint = {"sha256": file_sha256(path)}
@@ -212,7 +225,7 @@ def essay_shelf_get(
     if confirmPhase == DRAFT:
         body["digest"] = save_draft(essay_id, GET, payload, fingerprint)
         body["next"] = say(
-            "The draft shows the label only. Saying yes with the same pack_id returns it."
+            "The draft shows the label only. Saying yes with the same id returns it."
         )
         return body
     ready = confirm_ready(essay_id, GET, payload, fingerprint)

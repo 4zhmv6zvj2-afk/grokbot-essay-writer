@@ -63,14 +63,14 @@ def _door_options(
     ):
         return None, refuse(
             "packs",
-            "packs must be a list of local pack names from essay.health. Do not invent one.",
-            next="Send the local pack names from essay.health.",
+            "Drafts must be a list of local draft names. Do not invent one.",
+            next="Send the local draft names.",
         )
     elif len(packs) > 2:
         return None, refuse(
             "packs",
-            "At most two local packs. Do not invent extras.",
-            next="Keep at most two local packs.",
+            "At most two local drafts. Do not invent extras.",
+            next="Keep at most two local drafts.",
         )
     else:
         allowed = set(local_pack_names(essay_id))
@@ -80,8 +80,7 @@ def _door_options(
             if name not in allowed:
                 return None, refuse(
                     "packs",
-                    f"{name} is not a local pack on essay.health for this essay. "
-                    "The door does not invent packs.",
+                    f"{name} is not a local draft for this essay. I do not invent one.",
                 )
             names.append(name)
     if exclude_section_ids is None:
@@ -99,8 +98,8 @@ def _door_options(
     if industry is not None and not isinstance(industry, dict):
         return None, refuse(
             "industry",
-            "industry must be an object when it is sent. It is not evidence.",
-            next="Send industry as an object, or leave it off.",
+            "Industry was not sent in a form I can read. It is not evidence.",
+            next="Send industry in a form I can read, or leave it off.",
         )
     try:
         digest({"industry": industry, "host_voice": host_voice})
@@ -545,8 +544,9 @@ def _run(
             body["next"] = nxt if isinstance(nxt, str) else ""
         else:
             body["next"] = say(
-                "Research is stored for this essay. The annotated bibliography is the Word file in the chat. "
-                "Next is essay.pack.validate."
+                "Research is stored for this essay. "
+                "The annotated bibliography is the Word file in the chat. "
+                "Next, validate the draft."
             )
     else:
         body["delivery"] = ship_4b(

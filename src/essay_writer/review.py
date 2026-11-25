@@ -83,7 +83,7 @@ def essay_review(
     if stage not in STAGES:
         return refuse(
             "review",
-            "EQR stage is 6 (first Word) or 9 (final Word).",
+            "The independent review stage is 6 (first Word) or 9 (final Word).",
             next="Send stage 6 or stage 9.",
         )
     from essay_writer.model_contract import ContractRefusal, parse_verdict
