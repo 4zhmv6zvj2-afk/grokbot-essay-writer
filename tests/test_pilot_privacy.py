@@ -1,9 +1,3 @@
-"""Triage must not print planted essay text or paths.
-
-The subprocess is the tool a person runs. Assertions look at stdout, the exit
-code, and the report file.
-"""
-
 from __future__ import annotations
 
 import json

@@ -1,10 +1,3 @@
-"""Turn persona run metadata into a privacy-safe plain-text report.
-
-Dev-only. Reads run.json, faults.jsonl, and incident jsonl files. Does not
-import essay_writer. Render builds one string, then guard() is the only door
-to stdout and to the output file.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -52,7 +45,6 @@ def _text_field(raw: dict[str, object], key: str) -> str | None:
 
 
 def parse_incident(raw: object, persona: PersonaName) -> IncidentRow | None:
-    """Build one row, or None when the line must not be counted or printed."""
     if not isinstance(raw, dict) or contains_forbidden(raw):
         return None
     fields: dict[str, str] = {}
@@ -161,7 +153,6 @@ def _load_json(path: Path) -> object | None:
 
 
 def _iter_lines(path: Path) -> list[object] | None:
-    """Parsed JSON values, one per non-empty line. None when the file is unreadable."""
     if not path.is_file():
         return []
     try:
@@ -284,7 +275,6 @@ def _persona_line(run: PersonaRun) -> str:
 
 
 def render(report: PilotReport) -> str:
-    """Plain text. Only allowlisted fields and the fixed section titles."""
     lines = [report["disclaimer"], ""]
     for run in report["runs"]:
         lines.append(_persona_line(run))
@@ -311,7 +301,6 @@ def render(report: PilotReport) -> str:
 
 
 def guard(text: str) -> bool:
-    """True when the rendered report contains none of the privacy sentinels."""
     return not any(item in text for item in schema.FORBIDDEN)
 
 

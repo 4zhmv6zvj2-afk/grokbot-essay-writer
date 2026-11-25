@@ -1,17 +1,3 @@
-"""Simulate four student personas against the installed essay-writer 0.9.21 wheel.
-
-Dev-only. The outer process installs the wheel and does not import essay_writer.
-The --probe process is the virtualenv interpreter. It is the only process that
-imports the product. Each persona has its own ESSAY_WRITER_ROOT.
-
-Exit 0 when every persona finishes and the report passes the privacy scan.
-Exit 1 when the report fails that scan.
-Exit 2 when the wheel, virtualenv, or version check cannot run, or when the
-installed package files change during the run.
-Exit 3 when a persona stops on an unplanned product failure. The product is
-not edited.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -47,7 +33,6 @@ from pilot_schema import (
     make_run,
 )
 
-# Same names conversations.drive._fresh_root clears. Resolvers stay off.
 API_KEYS = (
     "CONSENSUS_API_KEY",
     "OPENALEX_API_KEY",
@@ -64,8 +49,6 @@ NORMAL_STEPS = frozenset(
 
 
 class Stop:
-    """A persona must not continue. The code is an incident code or unexpected."""
-
     def __init__(self, code: str) -> None:
         self.code = code if CODE_RE.fullmatch(code) else UNEXPECTED
 
@@ -365,7 +348,6 @@ def _copy_incidents(root: Path, dest: Path) -> int:
 
 
 def _normal_outcome(result: object) -> Stop | None:
-    """None when the door stored. Otherwise a stop code, never door text."""
     if isinstance(result, dict) and result.get("stored") is True:
         return None
     if isinstance(result, dict):
@@ -376,11 +358,6 @@ def _normal_outcome(result: object) -> Stop | None:
 
 
 def _stages_short(shell: Any, seq: str) -> dict[str, Any]:
-    """Non-native short looks through 4b, then a stage-5 draft only.
-
-    Same shape as ``first_draft``. Stage 5 stores on draft, so a follow-up
-    confirm is refused as ``confirm-card``. Each stage look must be unique.
-    """
     from conversations.fixtures import SHORT, STAGE_LOOK
 
     last: dict[str, Any] = {}
@@ -406,7 +383,6 @@ def _stages_short(shell: Any, seq: str) -> dict[str, Any]:
         )
         if last.get("stored") is not True:
             return last
-    # Stage 5 draft stores and advances. Do not confirm again.
     look5 = (
         "This essay says ports shape coastal trade when a narrow passage sets the route. "
         f"I write short. The gathered note supports that claim {SHORT}."

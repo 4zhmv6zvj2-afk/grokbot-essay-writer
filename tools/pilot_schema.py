@@ -1,9 +1,3 @@
-"""Shared types for the dev-only persona pilot and its triage report.
-
-The probe and the triage tool both import this module. It does not import
-essay_writer. A value crosses into these types only through the parsers below.
-"""
-
 from __future__ import annotations
 
 import re
@@ -48,8 +42,6 @@ DISCLAIMER = (
 )
 NONE_KEY = "(none)"
 
-# Same literals as tools/release_acceptance.py. Triage drops a row that
-# contains any of these, and the render guard refuses the whole report.
 ESSAY_SENTINEL = "The fisheries opening stayed on the page."
 PATH_SENTINEL = "/Users/student/essay.txt"
 FORBIDDEN: tuple[str, ...] = (
@@ -93,8 +85,6 @@ STEP_IDS: frozenset[StepId] = frozenset(
     }
 )
 
-# Timeout and crash interrupt the harness. The other two hand the installed
-# package a bad input and record the package's own reply.
 FAULT_ORIGIN: dict[FaultKind, FaultOrigin] = {
     "timeout": "harness",
     "crash": "harness",
@@ -112,34 +102,6 @@ INCIDENT_FIELDS: tuple[str, ...] = (
     "tool",
 )
 DROPPED_INCIDENT_KEYS: tuple[str, ...] = ("message", "prompt", "sequence", "time")
-
-# Keys a renderer may emit. Door text, paths, and the dropped incident keys
-# are absent on purpose.
-PRINTABLE: frozenset[str] = frozenset(
-    {
-        "build",
-        "code",
-        "disposition",
-        "exc",
-        "severity",
-        "stage",
-        "tool",
-        "persona",
-        "version",
-        "steps",
-        "faults",
-        "incident_count",
-        "stopped",
-        "stop_code",
-        "fault",
-        "observed",
-        "origin",
-        "simulation",
-        "count",
-        "dropped_rows",
-        "dropped_runs",
-    }
-)
 
 SECTION_TITLES: tuple[str, ...] = (
     "By code",
@@ -160,8 +122,6 @@ class PersonaSpec(TypedDict):
 
 
 class IncidentRow(TypedDict):
-    """One incident line after the risky keys are gone. Persona comes from the directory."""
-
     build: str
     code: str
     disposition: Disposition
@@ -180,8 +140,6 @@ class FaultResult(TypedDict):
 
 
 class PersonaRun(TypedDict):
-    """Path-free record for one persona. No workspace path and no essay text."""
-
     persona: PersonaName
     version: Literal["0.9.21"]
     steps: list[StepId]
@@ -248,7 +206,6 @@ PERSONA_NAMES: frozenset[str] = frozenset(spec["persona"] for spec in PERSONAS)
 
 
 def contains_forbidden(value: object) -> bool:
-    """True when any string in a JSON value contains a privacy sentinel."""
     if isinstance(value, str):
         return any(item in value for item in FORBIDDEN)
     if isinstance(value, dict):
@@ -315,7 +272,6 @@ def tool_ok(value: str) -> bool:
 
 
 def make_fault(persona: PersonaName, fault: FaultKind, observed: Observed) -> FaultResult:
-    """One fault row. Origin comes from the fault kind, not from the caller."""
     return {
         "persona": persona,
         "fault": fault,
@@ -332,7 +288,6 @@ def make_run(
     stopped: bool,
     stop_code: str,
 ) -> PersonaRun:
-    """One persona record. A stop with a free-form code becomes ``unexpected``."""
     if not stopped:
         code = ""
     elif CODE_RE.fullmatch(stop_code):
