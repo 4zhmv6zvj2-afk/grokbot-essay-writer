@@ -736,6 +736,50 @@ def write_first_draft_word(essay_id: str) -> dict[str, object]:
     return {"wrote": True, "path": relative(target), "counted_words": counted}
 
 
+def _reviewer_holds_word(
+    essay_id: str, stage: str | None, planned: str, identity: str
+) -> dict[str, object] | None:
+    """The reviewer refusal for stage 6 or 9, or nothing when the write may continue."""
+    if stage == "9":
+        from essay_writer.specialists.eqr import submit_pass_unlocked
+
+        submit = submit_pass_unlocked(essay_id)
+        if submit.get("unlocked") is not True:
+            from essay_writer.specialists.grok_bot import attach_eqr_first_run_speech
+
+            return attach_eqr_first_run_speech(
+                refuse(
+                    "eqr",
+                    f"The references confirm is waiting on the reviewer. {PERSON_BLOCK}",
+                    writer_clears_left=writer_clears_left(),
+                    submit_pass=submit.get("reason") or "",
+                    path=planned,
+                    pack_digest=identity,
+                    stage=stage,
+                    eqr=submit.get("eqr") or "missing",
+                )
+            )
+    elif stage == "6":
+        from essay_writer.specialists.eqr import eqr_verdict
+
+        verdict = eqr_verdict(essay_id, stage)
+        if verdict != "PASS":
+            from essay_writer.specialists.grok_bot import attach_eqr_first_run_speech
+
+            return attach_eqr_first_run_speech(
+                refuse(
+                    "eqr",
+                    f"The first Word file is waiting on the reviewer. {PERSON_BLOCK}",
+                    writer_clears_left=writer_clears_left(),
+                    path=planned,
+                    pack_digest=identity,
+                    stage=stage,
+                    eqr=verdict or "missing",
+                )
+            )
+    return None
+
+
 @guard_damaged_records
 def essay_pack_render_word(
     essay_id: str,
@@ -934,43 +978,9 @@ def essay_pack_render_word(
             pack_digest=identity,
             next="Ask me to validate again, then save.",
         )
-    if stage == "9":
-        from essay_writer.specialists.eqr import submit_pass_unlocked
-
-        submit = submit_pass_unlocked(essay_id)
-        if submit.get("unlocked") is not True:
-            from essay_writer.specialists.grok_bot import attach_eqr_first_run_speech
-
-            return attach_eqr_first_run_speech(
-                refuse(
-                    "eqr",
-                    f"The references confirm is waiting on the reviewer. {PERSON_BLOCK}",
-                    writer_clears_left=writer_clears_left(),
-                    submit_pass=submit.get("reason") or "",
-                    path=planned,
-                    pack_digest=identity,
-                    stage=stage,
-                    eqr=submit.get("eqr") or "missing",
-                )
-            )
-    elif stage == "6":
-        from essay_writer.specialists.eqr import eqr_verdict
-
-        verdict = eqr_verdict(essay_id, stage)
-        if verdict != "PASS":
-            from essay_writer.specialists.grok_bot import attach_eqr_first_run_speech
-
-            return attach_eqr_first_run_speech(
-                refuse(
-                    "eqr",
-                    f"The first Word file is waiting on the reviewer. {PERSON_BLOCK}",
-                    writer_clears_left=writer_clears_left(),
-                    path=planned,
-                    pack_digest=identity,
-                    stage=stage,
-                    eqr=verdict or "missing",
-                )
-            )
+    held = _reviewer_holds_word(essay_id, stage, planned, identity)
+    if held is not None:
+        return held
     if stage == "9":
         # References confirm only: one look-up for a specialist source class the
         # brief names and the gathered files do not. A hit is reported, never
