@@ -136,6 +136,26 @@ def test_debug_tail_prints_views_without_enabling_debug(workspace, monkeypatch, 
     assert "essay.health" in capsys.readouterr().out
 
 
+def test_debug_tail_missing_live_ignores_the_rotated_file(workspace, monkeypatch, capsys) -> None:
+    monkeypatch.delenv("ESSAY_WRITER_DEBUG", raising=False)
+    folder = debug_log_path().parent
+    folder.mkdir(parents=True, exist_ok=True)
+    rotated = folder / "ml-events.jsonl.1"
+    rotated.write_text(
+        json.dumps(
+            {"t": "2026-01-01T00:00:00+00:00", "tool": "essay.health", "query": "rotated-only"}
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    main(["--debug-tail"])
+    assert capsys.readouterr().out == ""
+    assert not ml_events_path().exists()
+    assert rotated.is_file()
+    assert debug_enabled() is False
+    assert not incident_path().exists()
+
+
 def test_debug_tail_missing_is_quiet_and_unreadable_exits(workspace, monkeypatch) -> None:
     monkeypatch.delenv("ESSAY_WRITER_DEBUG", raising=False)
     assert debug_tail(None) == 0
