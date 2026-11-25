@@ -17,13 +17,12 @@ import pytest
 from docx import Document
 from helpers import ESSAY, card_digest_for, open_sequence, pack, report_sections, write_upload
 
-from essay_writer.debug_log import debug_log_path, log_word_step
+from essay_writer.debug_log import debug_log_path, log_word_step, ml_events_path
 from essay_writer.late_chain import (
     log_word_docx_written,
     log_word_manifest,
     write_stage10,
 )
-from essay_writer.ml_events import ml_events_path
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.projects import essay_sequence_new
 from essay_writer.research import essay_research_summary
@@ -45,12 +44,14 @@ FAIL_MARKERS = [
 ]
 
 FAIL_GREP = [
-    "event=essay.product.write_stage10 essay_id=MOD2004AA-3 pack_path=pack_from_docx",
-    "event=essay.product.write_stage10 essay_id=MOD2004AA-3 saved_pack=null",
-    "event=essay.product.write_stage10 essay_id=MOD2004AA-3 cover_sequence_id=0",
-    "event=essay.product.write_stage10 essay_id=MOD2004AA-3 cover_title_line=0",
-    "event=essay.product.write_stage10 essay_id=MOD2004AA-3 cover_counted_words=0",
-    "event=essay.product.write_stage10 essay_id=MOD2004AA-3 refs_n=0",
+    "essay.product.write_stage10",
+    "essay_id=MOD2004AA-3",
+    "saved_pack=null",
+    "cover_sequence_id=0",
+    "cover_title_line=0",
+    "cover_counted_words=0",
+    "refs_n=0",
+    "title=empty",
 ]
 
 
@@ -156,7 +157,8 @@ def test_ac4_fail_sample_fixture_lists_debug_markers():
     joined = "\n".join(FAIL_MARKERS)
     for needle in FAIL_GREP:
         assert needle in joined
-    assert "event=essay.product.word_manifest" not in joined
+    assert "essay.product.word_manifest" not in joined
+    assert "pack_path" not in joined
 
 
 def test_ac4_operator_log_names_pack_from_docx_path_and_cover_audit(
@@ -207,20 +209,26 @@ def test_ac4_operator_log_names_pack_from_docx_path_and_cover_audit(
 
     log_text = log_path.read_text(encoding="utf-8")
     _no_consecutive_duplicate_lines(log_text)
-    assert "event=essay.product.word_manifest" not in log_text
-    assert "event=essay.product.write_docx" not in log_text
-    assert f"event=essay.product.write_stage10 essay_id={seq} stage=10" in log_text
-    assert f"event=essay.product.write_stage10 essay_id={seq} saved_pack=null" in log_text
-    assert f"event=essay.product.write_stage10 essay_id={seq} cover_sequence_id=1" in log_text
-    assert f"event=essay.product.write_stage10 essay_id={seq} cover_title_line=1" in log_text
-    assert f"event=essay.product.write_stage10 essay_id={seq} cover_counted_words=1" in log_text
-    assert f"event=essay.product.write_stage10 essay_id={seq} refs_n=2" in log_text or (
-        f"event=essay.product.write_stage10 essay_id={seq} refs_n=1" in log_text
+    assert "essay.product.word_manifest" not in log_text
+    assert "essay.product.write_docx" not in log_text
+    assert "pack_path" not in log_text
+    matched = [
+        line
+        for line in log_text.splitlines()
+        if "essay.product.write_stage10" in line and f"essay_id={seq}" in line
+    ]
+    assert any(
+        "stage=10" in line
+        and "saved_pack=null" in line
+        and "cover_sequence_id=1" in line
+        and "cover_title_line=1" in line
+        and "cover_counted_words=1" in line
+        and ("refs_n=2" in line or "refs_n=1" in line)
+        and "sha256=" in line
+        and f"title={ASSIGNMENT}" in line
+        for line in matched
     )
-    assert f"event=essay.product.write_stage10 essay_id={seq} sha=" in log_text
     assert "title=Draft" not in log_text
-    assert f'title="{ASSIGNMENT}"' in log_text or f"title={ASSIGNMENT}" in log_text
-    assert f'assessment="{ASSIGNMENT}"' in log_text or f"assessment={ASSIGNMENT}" in log_text
 
 
 def test_ac6_write_stage10_recovery_refreshes_ml_paths_sha(
@@ -287,18 +295,21 @@ def test_ac6_write_stage10_recovery_refreshes_ml_paths_sha(
     current_sha = hashlib.sha256(stage_path.read_bytes()).hexdigest()
     assert current_sha != stale_sha
     log_text = log_path.read_text(encoding="utf-8")
-    assert f"sha={current_sha}" in log_text
+    assert f"sha256={current_sha}" in log_text
 
     rows = [
         json.loads(line)
         for line in ml_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    paths = [row for row in rows if row.get("kind") == "paths" and row.get("essay_id") == seq]
-    assert paths
-    latest = paths[-1]["files"]
-    sequence_file = next(item for item in latest if item["display"].endswith(f"{seq}.docx"))
-    assert sequence_file["sha256"] == current_sha
+    fresh = [
+        row
+        for row in rows
+        if row.get("essay_id") == seq and row.get("sha256") == current_sha and "files" not in row
+    ]
+    assert fresh
+    assert "display" not in fresh[-1]
+    assert "pack_path" not in fresh[-1]
 
 
 def test_ac1_null_saved_pack_keeps_house_cover(workspace, monkeypatch, tmp_path):
@@ -477,7 +488,7 @@ def test_build_covered_shared_word_product_log_doors():
     )
 
     assert "log_word_step(" in inspect.getsource(_log_stage10_word)
-    assert "note_stage10_rewrite_paths(" in (
+    assert "note_stage10_sha(" in (
         inspect.getsource(_deliver_stage10) + inspect.getsource(_remember_stage10_result)
     )
     assert log_word_manifest.__module__ == "essay_writer.late_chain"

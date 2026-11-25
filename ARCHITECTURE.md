@@ -117,6 +117,7 @@ They are not product modules. `specialists/` is a package of helpers, already na
 - `mid_spawn.py`
 - `ml_events.py`
 - `model_contract.py`
+- `operator_event.py`
 - `originals.py`
 - `outline_primary.py`
 - `pack_backup.py`

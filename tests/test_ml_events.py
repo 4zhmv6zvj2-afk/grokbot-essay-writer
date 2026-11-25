@@ -14,21 +14,14 @@ from helpers import open_sequence
 
 from essay_writer.debug_log import (
     LOG_FILENAME,
+    ML_EVENTS_FILENAME,
     debug_enabled,
     debug_log_wipe_speech,
     essay_debug_wipe,
-)
-from essay_writer.debug_log import (
-    ml_events_path as wipe_ml_events_path,
+    ml_events_path,
 )
 from essay_writer.doors import DOORS
-from essay_writer.ml_events import (
-    FILENAME,
-    KINDS,
-    events_enabled,
-    ml_events_path,
-    note_events,
-)
+from essay_writer.ml_events import events_enabled, note_events
 from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.setup import essay_setup
 from essay_writer.shells import cursor_shell, front_office, front_office_call
@@ -44,87 +37,51 @@ PHRASES = (
     "wipe the run log",
     "please delete debug log",
 )
-_ALLOWED = {
-    "outcome": {
-        "kind",
-        "t",
-        "tool",
-        "phase",
-        "essay_id",
-        "module",
-        "ok",
-        "wrote",
-        "stored",
-        "advanced",
-        "refused",
-        "error",
-        "gate",
-        "land",
-        "flag",
-        "outcome",
-    },
-    "stage": {
-        "kind",
-        "t",
-        "tool",
-        "phase",
-        "essay_id",
-        "stage",
-        "stored",
-        "advanced",
-        "current",
-        "next_stage",
-    },
-    "confirm": {
-        "kind",
-        "t",
-        "tool",
-        "phase",
-        "essay_id",
-        "stage",
-        "card_action",
-        "card_present",
-        "stored",
-        "advanced",
-        "wrote",
-    },
-    "digest": {
-        "kind",
-        "t",
-        "tool",
-        "essay_id",
-        "card_digest",
-        "posted",
-        "payload",
-        "omitted",
-        "chars",
-    },
-    "paths": {"kind", "t", "tool", "essay_id", "files", "local_count", "local_suffixes"},
-    "shell": {
-        "kind",
-        "t",
-        "tool",
-        "essay_id",
-        "shell",
-        "event",
-        "stage",
-        "model",
-        "reasoning",
-        "fast",
-        "context_window",
-        "exit_code",
-        "stderr",
-    },
+_KEYS = {
+    "t",
+    "tool",
+    "phase",
+    "essay_id",
+    "stage",
+    "ok",
+    "wrote",
+    "stored",
+    "advanced",
+    "refused",
+    "error",
+    "refs_n",
+    "sources_n",
+    "sha256",
+    "land",
+    "flag",
+    "handoff",
+    "shell",
+    "shell_event",
+    "exit_code",
+    "digest",
+    "card_present",
+    "gate",
+    "module",
+    "parent",
+    "saved_pack",
+    "chain_armed",
+    "cover_n",
+    "cover_sequence_id",
+    "cover_title_line",
+    "cover_counted_words",
+    "query",
+    "title",
+    "reason",
+    "stderr",
 }
-_FILE_KEYS = {"display", "exists", "mtime_ns", "sha256", "mounted"}
 
 
 def _stream(workspace, essay_id=None):
     if essay_id:
         from essay_writer.paths import work_dir
 
-        return work_dir(essay_id) / FILENAME
-    return workspace / FILENAME
+        return work_dir(essay_id) / ML_EVENTS_FILENAME
+    return workspace / ML_EVENTS_FILENAME
 
 
 def _events(workspace, essay_id=None):
@@ -134,11 +91,11 @@ def _events(workspace, essay_id=None):
     for line in path.read_text(encoding="utf-8").splitlines():
         assert line.startswith("{") and line.endswith("}")
         row = json.loads(line)
-        assert row["kind"] in KINDS
-        assert set(row) <= _ALLOWED[row["kind"]]
-        if row["kind"] == "paths":
-            for item in row["files"]:
-                assert set(item) <= _FILE_KEYS
+        assert set(row) <= _KEYS
+        assert "t" in row and "tool" in row
+        assert "files" not in row
+        assert "display" not in row
+        assert "pack_path" not in row
         rows.append(row)
     return rows
 
@@ -159,8 +116,7 @@ def test_student_default_is_off(workspace, monkeypatch):
     front_office_call("essay.health", {})
     assert not _stream(workspace).exists()
     assert not (workspace / LOG_FILENAME).exists()
-    assert ml_events_path is wipe_ml_events_path
-    assert ml_events_path() == workspace / FILENAME
+    assert ml_events_path() == workspace / ML_EVENTS_FILENAME
 
 
 def test_cloud_where_stays_off_and_debug_or_e2e_turns_the_stream_on(workspace, monkeypatch):
@@ -180,7 +136,7 @@ def test_cloud_where_stays_off_and_debug_or_e2e_turns_the_stream_on(workspace, m
     assert events_enabled() is True
     front_office_call("essay.health", {})
     rows = _events(workspace)
-    assert any(row["kind"] == "outcome" and row["tool"] == "essay.health" for row in rows)
+    assert any(row["tool"] == "essay.health" for row in rows)
     assert CHAT not in _stream(workspace).read_text(encoding="utf-8")
 
     monkeypatch.setattr("essay_writer.paths.load_saved_setup", lambda: {"operator_e2e": True})
@@ -233,22 +189,20 @@ def test_stage_confirm_digest_are_structured_and_leave_out_chat(workspace, monke
     assert CHAT not in text
     assert "look" not in text
     rows = _events(workspace, sequence)
-    kinds = {row["kind"] for row in rows}
-    assert {"stage", "confirm", "digest", "outcome"} <= kinds
-    confirm = [row for row in rows if row["kind"] == "confirm" and row.get("phase") == "confirm"]
-    assert confirm
-    assert confirm[-1]["card_action"] == "confirm"
+    door = [row for row in rows if row["tool"] == "essay.stage"]
+    assert len(door) == 2
+    confirm = [row for row in door if row.get("phase") == "confirm"]
+    assert len(confirm) == 1
+    assert confirm[0].get("card_present") is False
     assert saved.get("card") is None
-    digest = [row for row in rows if row["kind"] == "digest"]
-    assert any(row.get("card_digest") == draft["cardDigest"] for row in digest)
-    assert all(row.get("posted") in (None, "", draft["cardDigest"]) for row in digest)
-    assert all(len(row["card_digest"]) == 64 for row in digest if "card_digest" in row)
+    assert confirm[0].get("digest") == draft["cardDigest"]
+    assert len(confirm[0]["digest"]) == 64
     assert "ml-events.jsonl" not in json.dumps(saved)
 
 
 def test_prose_digest_and_local_paths_are_not_copied(workspace, monkeypatch):
     monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
-    prose = CHAT + " extra sentences about the tutorial."
+    prose = (CHAT + " extra sentences about the tutorial. ") * 4
     note_events(
         "essay.project.delete",
         {
@@ -270,20 +224,20 @@ def test_prose_digest_and_local_paths_are_not_copied(workspace, monkeypatch):
         },
     )
     text = _stream(workspace).read_text(encoding="utf-8")
+    assert len(prose) > 160
     assert prose not in text
-    assert "Harbour chat transcript" not in text
+    assert "/tmp/papers.zip" not in text
     rows = _events(workspace)
-    digest = next(row for row in rows if row["kind"] == "digest")
-    assert digest["omitted"] is True
-    assert digest["chars"] == len(prose)
-    assert "card_digest" not in digest
-    paths = next(row for row in rows if row["kind"] == "paths")
-    assert paths["local_count"] == 2
-    assert paths["local_suffixes"] == ["docx", "zip"]
-    assert "files" in paths and paths["files"] == []
-    outcome = next(row for row in rows if row["kind"] == "outcome")
-    assert outcome["refused"] == "debug-wipe"
-    assert "reason" not in outcome
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["refused"] == "debug-wipe"
+    assert row["query"] == prose[:80]
+    assert row["reason"] == prose[:160]
+    assert row["query"].startswith("Harbour chat transcript")
+    assert len(row["query"]) <= 80
+    assert len(row["reason"]) <= 160
+    assert "digest" not in row
+    assert "files" not in row
 
 
 def test_stage10_paths_name_the_file_not_its_bytes(workspace, monkeypatch):
@@ -300,18 +254,14 @@ def test_stage10_paths_name_the_file_not_its_bytes(workspace, monkeypatch):
         {"essay_id": sequence, "stage": "10", "confirmPhase": "confirm", "look": CHAT},
         result={"ok": True, "wrote": True, "stored": True, "advanced": False, "stage": "10"},
     )
-    rows = _events(workspace, sequence)
-    paths = [row for row in rows if row["kind"] == "paths"]
-    assert paths
-    files = paths[-1]["files"]
-    sequence_file = next(item for item in files if item["display"].endswith(f"{sequence}.docx"))
-    assert sequence_file["exists"] is True
-    assert sequence_file["sha256"] == hashlib.sha256(payload).hexdigest()
-    assert payload.decode() not in _stream(workspace, sequence).read_text(encoding="utf-8")
-    documents = next(item for item in files if item["display"].startswith("Documents/"))
-    assert documents["mounted"] is False
-    assert documents["exists"] is False
-    assert CHAT not in _stream(workspace, sequence).read_text(encoding="utf-8")
+    rows = [row for row in _events(workspace, sequence) if row["tool"] == "essay.stage"]
+    assert len(rows) == 1
+    assert rows[0]["sha256"] == hashlib.sha256(payload).hexdigest()
+    assert "display" not in rows[0]
+    stream = _stream(workspace, sequence).read_text(encoding="utf-8")
+    assert payload.decode() not in stream
+    assert "Documents/" not in stream
+    assert CHAT not in stream
 
 
 def test_cursor_and_build_share_one_stream(workspace, monkeypatch):
@@ -339,11 +289,8 @@ def test_cursor_and_build_share_one_stream(workspace, monkeypatch):
     assert rules[40:140] not in text
     assert CHAT not in text
     rows = _events(workspace, sequence)
-    assert any(
-        row["kind"] == "shell" and row["shell"] == "Cursor" and row["event"] == "start"
-        for row in rows
-    )
-    assert not any(row["kind"] == "shell" and row["shell"] == "Build" for row in rows)
+    assert any(row.get("shell") == "Cursor" and row.get("shell_event") == "start" for row in rows)
+    assert not any(row.get("shell") == "Build" for row in rows)
     from essay_writer.build_status import finish_mid_process
 
     finish_mid_process(sequence)
@@ -362,10 +309,7 @@ def test_cursor_and_build_share_one_stream(workspace, monkeypatch):
     built = start_stage_mid(sequence, "8")
     assert built["shell"] == "grok"
     rows = _events(workspace, sequence)
-    assert any(
-        row["kind"] == "shell" and row["shell"] == "Build" and row["event"] == "start"
-        for row in rows
-    )
+    assert any(row.get("shell") == "Build" and row.get("shell_event") == "start" for row in rows)
     build_src = (REPO / "src" / "essay_writer" / "build_office.py").read_text(encoding="utf-8")
     cursor_src = (REPO / "src" / "essay_writer" / "cursor_office.py").read_text(encoding="utf-8")
     assert "ml-events.jsonl" not in build_src
@@ -449,7 +393,7 @@ def test_no_second_wipe_door_or_button():
     assert "ml-events.jsonl" not in inspect.getsource(essay_pack_render_word)
     note = (REPO / "docs" / "operator-log.md").read_text(encoding="utf-8")
     assert "ml-events.jsonl" in note
-    assert FILENAME in (REPO / ".gitignore").read_text(encoding="utf-8")
+    assert ML_EVENTS_FILENAME in (REPO / ".gitignore").read_text(encoding="utf-8")
     bot = (REPO / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
     assert "essay.debug.wipe" in bot
     assert "ml-events.jsonl" not in bot

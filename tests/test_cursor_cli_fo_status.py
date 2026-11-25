@@ -221,8 +221,8 @@ def test_ac4_early_exit_surfaces_exit_reason_to_fo_and_logs(workspace, monkeypat
 
     note_mid_office("exit", seq, "Cursor", reason="File work stopped.", exit_code=2)
     text = log_path.read_text(encoding="utf-8")
-    assert "Mid-office exit Cursor." in text
-    assert "Code 2." in text
+    assert "shell=Cursor" in text and "shell_event=exit" in text
+    assert "exit_code=2" in text
 
 
 class _Hold:
@@ -297,8 +297,8 @@ def test_reader_log_stays_on_the_workspace_that_started_it(workspace, monkeypatc
 
     assert original.is_file()
     original_text = original.read_text(encoding="utf-8")
-    assert "Mid-office exit Cursor." in original_text
-    assert "Code 2." in original_text
+    assert "shell=Cursor" in original_text and "shell_event=exit" in original_text
+    assert "exit_code=2" in original_text
     assert not (later / "Essay-writer" / ESSAY).exists()
     assert list(later.rglob("debug.log")) == []
     assert not (later / "debug.log").exists()
@@ -312,7 +312,8 @@ def test_reader_log_stays_on_the_workspace_that_started_it(workspace, monkeypatc
     hold, thread = _hold_reader(opened, "cursor")
     _finish_reader(hold, thread)
     assert later_log.is_file()
-    assert "Mid-office exit Cursor." in later_log.read_text(encoding="utf-8")
+    later_text = later_log.read_text(encoding="utf-8")
+    assert "shell=Cursor" in later_text and "shell_event=exit" in later_text
     assert original_text == original.read_text(encoding="utf-8")
 
 
@@ -328,9 +329,9 @@ def test_reader_log_stays_on_its_folder_for_build(workspace, monkeypatch):
 
     assert original.is_file()
     original_text = original.read_text(encoding="utf-8")
-    assert "Mid-office exit Build." in original_text
-    assert "Mid-office exit Cursor." not in original_text
-    assert "Code 2." in original_text
+    assert "shell=Build" in original_text and "shell_event=exit" in original_text
+    assert "shell=Cursor" not in original_text
+    assert "exit_code=2" in original_text
     assert not (later / "Essay-writer" / ESSAY).exists()
     assert list(later.rglob("debug.log")) == []
     _no_stop_line(seq)
@@ -394,8 +395,8 @@ def test_reader_log_stays_put_when_the_folder_does_not_move(workspace, monkeypat
 
     assert log_path.is_file()
     text = log_path.read_text(encoding="utf-8")
-    assert "Mid-office exit Cursor." in text
-    assert "Code 2." in text
+    assert "shell=Cursor" in text and "shell_event=exit" in text
+    assert "exit_code=2" in text
     assert student_inbox(seq)
 
 
@@ -453,7 +454,8 @@ def test_bound_reader_closes_its_session_where_it_started(workspace, monkeypatch
     assert list(later.rglob("mid-session.json")) == []
 
     assert original_log.is_file()
-    assert "Mid-office exit Cursor." in original_log.read_text(encoding="utf-8")
+    moved = original_log.read_text(encoding="utf-8")
+    assert "shell=Cursor" in moved and "shell_event=exit" in moved
     assert not (later / "Essay-writer" / ESSAY).exists()
     assert list(later.rglob("debug.log")) == []
     _no_stop_line(seq)
@@ -484,7 +486,8 @@ def test_bound_session_closes_with_no_move_and_unknown_shell(workspace, monkeypa
     assert seq not in build_status._sessions
     assert session_open(seq) is False
     assert session_file.is_file() is False
-    assert "Mid-office exit Cursor." in debug_log_path(seq).read_text(encoding="utf-8")
+    bound = debug_log_path(seq).read_text(encoding="utf-8")
+    assert "shell=Cursor" in bound and "shell_event=exit" in bound
 
     reset_status()
     begin_mid_build(seq, "gathering", subject=QUESTION)
@@ -501,7 +504,7 @@ def test_bound_session_closes_with_no_move_and_unknown_shell(workspace, monkeypa
     assert session_file.is_file() is False
     now = unknown_log.read_text(encoding="utf-8") if unknown_log.is_file() else ""
     assert now == before
-    assert "Mid-office exit Build." not in now
+    assert "shell=Build" not in now
     assert not (later / "Essay-writer" / ESSAY).exists()
     assert list(later.rglob("debug.log")) == []
     assert list(later.rglob("mid-session.json")) == []

@@ -8,9 +8,14 @@ from pathlib import Path
 
 from helpers import open_sequence, store_confirmed_question
 
-from essay_writer.debug_log import LOG_FILENAME, debug_enabled, debug_log_path, traced
+from essay_writer.debug_log import (
+    LOG_FILENAME,
+    ML_EVENTS_FILENAME,
+    debug_enabled,
+    debug_log_path,
+    traced,
+)
 from essay_writer.doors import DOORS
-from essay_writer.ml_events import FILENAME as ML_EVENTS_FILENAME
 from essay_writer.paths import workspace_root
 from essay_writer.server import INSTRUCTIONS, build_review_server, build_server
 from essay_writer.setup import essay_setup
@@ -93,16 +98,13 @@ def test_debug_log_on_writes_lines_for_delete_dig_and_setup(workspace, monkeypat
     )
     text = f"{global_text}\n{seq_text}"
     assert "essay.project.delete" in text
-    assert "draft" in text
+    assert "phase=draft" in text
     assert "MOD1004AA" in text
-    assert "Where grokbot." in text
-    assert "Nothing written." in text
+    assert "wrote=false" in text
     assert "essay.dig" in text
     assert sequence in text
-    assert "Query chokepoints." in text
+    assert "query=chokepoints" in text
     assert "essay.setup" in text
-    assert "Consensus key present." in text
-    assert "Unpaywall email present." in text
     assert KEY not in text
     assert EMAIL not in text
     assert "debug.log" not in json.dumps(deleted)
@@ -146,8 +148,8 @@ def test_secrets_are_redacted(workspace, monkeypatch):
     assert EMAIL not in text
     assert TOKEN not in text
     assert "[redacted]" in text
-    assert "Refused (setup)." in text
-    assert "Failed (RuntimeError)." in text
+    assert "refused=setup" in text
+    assert "error=RuntimeError" in text
 
 
 def _no_consecutive_duplicate_lines(text: str) -> None:
@@ -215,7 +217,8 @@ def test_mounted_call_writes_a_line_and_keeps_the_door_arguments(workspace, monk
     review_log = work_dir("MOD1004AA") / LOG_FILENAME
     review_text = review_log.read_text(encoding="utf-8") if review_log.is_file() else ""
     text = f"{global_text}\n{review_text}"
-    assert "essay.health read." in text
+    assert "essay.health" in text
+    assert "phase=read" in text
     assert "essay.review" in text
     health_text = health.content[0].text
     review_text = review.content[0].text
@@ -272,9 +275,9 @@ def test_path_is_documented_for_operators_and_shells():
     note = (REPO / "docs" / "operator-log.md").read_text(encoding="utf-8")
     assert "debug.log" in note
     assert "ESSAY_WRITER_DEBUG" in note
-    assert "Operators and shells use this file." in note
+    assert "Operators and shells use these files." in note
     assert "End users do not." in note
-    assert "Students do not use it." in note
+    assert "Students do not use them." in note
     assert "Cursor, and Grok Build" in note or "Essay Bot" in note
     assert "not shown in chat" in note
     assert "not written into Word" in note
@@ -332,16 +335,24 @@ def test_health_reads_land_sha_from_dot_land_sha_file(workspace, monkeypatch, tm
     debug_log._LAND_SHA = None
     try:
         front_office_call("essay.health", {})
-        text = _log(workspace).read_text(encoding="utf-8")
-        assert f"Land {pinned} pid" in text
+        from essay_writer.debug_log import debug_log_path, note_call
+
+        note_call(
+            "essay.dig",
+            {"essay_id": "MOD1004AA-1", "confirmPhase": "read", "query": "land"},
+            result={"ok": True, "wrote": False},
+        )
+        text = debug_log_path("MOD1004AA-1").read_text(encoding="utf-8")
+        assert text.splitlines()[0].split()[1] == "essay-writer.land"
+        assert f"land={pinned}" in text.splitlines()[0]
         assert "Land unknown" not in text
+        assert f"Land {pinned} pid" not in _log(workspace).read_text(encoding="utf-8")
     finally:
         debug_log._LAND_SHA = prior
 
 
 def test_health_and_confirm_lines_name_the_card_and_the_land(workspace, monkeypatch):
     """Health names land, pid, and tool count. Confirm names the card beside what would be posted."""
-    import os
     import subprocess
 
     from essay_writer import debug_log
@@ -373,19 +384,23 @@ def test_health_and_confirm_lines_name_the_card_and_the_land(workspace, monkeypa
     assert saved["stored"] is True, saved
     from essay_writer.debug_log import debug_log_path
 
-    global_text = debug_log_path().read_text(encoding="utf-8") if debug_log_path().is_file() else ""
     seq_text = (
         debug_log_path(sequence).read_text(encoding="utf-8")
         if debug_log_path(sequence).is_file()
         else ""
     )
-    text = f"{global_text}\n{seq_text}"
     land = subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip()
-    assert f"Land {land} pid {os.getpid()} tools {len(DOORS)}." in text
-    assert "Card digest none." in text
-    assert "Card absent." in text
-    assert "Posted none." in text
-    assert "Confirm store yes advance yes next-card none." in text
+    land_line = seq_text.splitlines()[0]
+    assert "essay-writer.land" in land_line
+    assert f"land={land}" in land_line
+    assert f"essay_id={sequence}" in land_line
+    confirm_lines = [line for line in seq_text.splitlines() if "phase=confirm" in line]
+    assert confirm_lines
+    confirm = confirm_lines[-1]
+    assert "stored=true" in confirm
+    assert "wrote=true" in confirm
+    assert f"digest={draft['cardDigest']}" in confirm
+    assert "card_present=false" in confirm
     assert "debug.log" not in json.dumps(saved)
 
 
@@ -422,8 +437,9 @@ def test_mid_office_logs_start_and_done_only_when_the_process_did(workspace, mon
     started = start_stage_mid(sequence, "6")
     assert started["started"] is True
     text = seq_log().read_text(encoding="utf-8")
-    assert "Mid-office start Cursor." in text
-    assert "Mid-office start Build." not in text
+    assert "shell=Cursor" in text
+    assert "shell_event=start" in text
+    assert "shell=Build" not in text
     finish_mid_process(sequence)
 
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: "grok_build")
@@ -441,12 +457,14 @@ def test_mid_office_logs_start_and_done_only_when_the_process_did(workspace, mon
     assert built["started"] is True
     assert built["shell"] == "grok"
     text = seq_log().read_text(encoding="utf-8")
-    assert "Mid-office start Build." in text
+    assert "shell=Build" in text
+    assert "shell_event=start" in text
 
     note_mid_office("start", sequence, "neither")
     begin_mid_build(sequence, "work")
     bind_job(sequence, pid=os.getpid(), stage="6", shell="cursor")
     finish_mid_process(sequence)
     text = seq_log().read_text(encoding="utf-8")
-    assert "Mid-office done Cursor." in text
+    assert "shell=Cursor" in text
+    assert "shell_event=done" in text
     assert "neither" not in text

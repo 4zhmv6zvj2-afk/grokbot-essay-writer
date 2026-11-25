@@ -197,13 +197,13 @@ def test_ac3_build_covered_cursor_and_grok_build_share_debug_default(workspace, 
         assert cursor_on["started"] is True
         assert grok_on["started"] is True
         text = debug_log_path(sequence).read_text(encoding="utf-8")
-        assert "Mid-office start Cursor." in text
-        assert "Mid-office start Build." in text
+        assert "shell=Cursor" in text and "shell_event=start" in text
+        assert "shell=Build" in text
         shells = []
         for line in ml_events_path(sequence).read_text(encoding="utf-8").splitlines():
             row = json.loads(line)
-            if row.get("kind") == "shell":
-                shells.append((row.get("shell"), row.get("event")))
+            if row.get("shell_event") == "start":
+                shells.append((row.get("shell"), row.get("shell_event")))
         assert ("Cursor", "start") in shells
         assert ("Build", "start") in shells
 

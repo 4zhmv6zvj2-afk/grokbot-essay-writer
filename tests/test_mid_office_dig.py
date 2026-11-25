@@ -271,7 +271,7 @@ def test_ac8_gates_fail_event_includes_gate_code(workspace, monkeypatch):
         if line.strip()
     ]
     outcomes = [
-        row for row in rows if row.get("kind") == "outcome" and row.get("tool") == "essay.gates"
+        row for row in rows if row.get("tool") == "essay.gates"
     ]
     assert outcomes
     assert outcomes[-1]["ok"] is False

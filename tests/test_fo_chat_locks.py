@@ -301,7 +301,7 @@ def test_ac12_failed_essay_gates_outcome_names_refused_or_gate(workspace, monkey
         if line.strip()
     ]
     outcomes = [
-        row for row in rows if row.get("kind") == "outcome" and row.get("tool") == "essay.gates"
+        row for row in rows if row.get("tool") == "essay.gates"
     ]
     assert outcomes
     last = outcomes[-1]

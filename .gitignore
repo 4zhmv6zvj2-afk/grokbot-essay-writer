@@ -74,7 +74,9 @@ uploads/*/
 
 # Shell diagnostic log and structured event stream. Off unless a shell sets ESSAY_WRITER_DEBUG.
 debug.log
+debug.log.1
 ml-events.jsonl
+ml-events.jsonl.1
 debug.zip
 
 # Always-on incident record and support bundle. Written in the app folder.

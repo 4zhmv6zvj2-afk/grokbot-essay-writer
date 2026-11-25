@@ -308,25 +308,17 @@ def log_word_manifest(
     pack: dict[str, Any],
     report: dict[str, Any],
     *,
-    pack_path: str,
     product_log: bool = True,
 ) -> None:
     if not product_log:
         return
-    from essay_writer.debug_log import (
-        log_word_step,
-        pack_log_assessment,
-        pack_log_title,
-    )
+    from essay_writer.debug_log import log_word_step, pack_log_title
 
     cover = report.get("cover") if isinstance(report.get("cover"), list) else []
     log_word_step(
         "word_manifest",
         essay_id,
-        pack_path=pack_path,
         title=pack_log_title(pack),
-        assessment=pack_log_assessment(pack),
-        conclusion=str(pack.get("conclusion") or ""),
         cover=cover,
         sources_count=len(report.get("sources") or []),
         refs_count=len(report.get("references") or []),
@@ -344,18 +336,12 @@ def log_word_docx_written(
 ) -> None:
     if not product_log:
         return
-    from essay_writer.debug_log import (
-        log_word_step,
-        pack_log_assessment,
-        pack_log_title,
-    )
+    from essay_writer.debug_log import log_word_step, pack_log_title
 
     log_word_step(
         "write_docx",
         essay_id,
         title=pack_log_title(pack),
-        assessment=pack_log_assessment(pack),
-        conclusion=str(pack.get("conclusion") or ""),
         cover=cover,
         sources_count=len(report.get("sources") or []),
         refs_count=len(report.get("references") or []),
@@ -1012,7 +998,6 @@ def _missing_stage10_pack(
     body: dict[str, Any],
     *,
     root: Path | None,
-    pack_path: str,
     saved_pack_state: str,
 ) -> dict[str, Any]:
     """The saved draft Word file and a usable pack are both absent."""
@@ -1024,7 +1009,6 @@ def _missing_stage10_pack(
         "write_stage10",
         essay_id,
         stage="10",
-        pack_path=pack_path,
         saved_pack=saved_pack_state,
         refused="missing-pack",
         reason=body["reason"],
@@ -1039,29 +1023,21 @@ def _log_stage10_word(
     essay_id: str,
     pack: dict[str, Any],
     *,
-    pack_path: str,
     saved_pack_state: str,
     cover: list[Any] | None,
     sources_count: int,
     refs_count: int,
     **extra: Any,
 ) -> None:
-    """One debug-line shape for every stage 10 Word stop and success."""
-    from essay_writer.debug_log import (
-        log_word_step,
-        pack_log_assessment,
-        pack_log_title,
-    )
+    """One record for every stage 10 Word stop and success."""
+    from essay_writer.debug_log import log_word_step, pack_log_title
 
     log_word_step(
         "write_stage10",
         essay_id,
         stage="10",
-        pack_path=pack_path,
         saved_pack=saved_pack_state,
         title=pack_log_title(pack),
-        assessment=pack_log_assessment(pack),
-        conclusion=str(pack.get("conclusion") or ""),
         cover=cover,
         sources_count=sources_count,
         refs_count=refs_count,
@@ -1081,7 +1057,7 @@ def _stage10_manifest(
     """Manifest the pack and refuse a recovery that would drop references."""
     from essay_writer.word import word_manifest
 
-    pack, report = word_manifest(essay_id, pack, pack_path=pack_path, product_log=False)
+    pack, report = word_manifest(essay_id, pack, product_log=False)
     refs_count = len(report.get("references") or [])
     sources_count = len(report.get("sources") or [])
     cover = report.get("cover") if isinstance(report.get("cover"), list) else []
@@ -1093,7 +1069,6 @@ def _stage10_manifest(
         _log_stage10_word(
             essay_id,
             pack,
-            pack_path=pack_path,
             saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
@@ -1136,7 +1111,6 @@ def _stage10_gate(
 
     pack = prepared["pack"]
     report = prepared["report"]
-    pack_path = prepared["pack_path"]
     saved_pack_state = prepared["saved_pack_state"]
     refs_count = prepared["refs_count"]
     sources_count = prepared["sources_count"]
@@ -1151,7 +1125,6 @@ def _stage10_gate(
         _log_stage10_word(
             essay_id,
             pack,
-            pack_path=pack_path,
             saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
@@ -1170,7 +1143,6 @@ def _stage10_gate(
                 _log_stage10_word(
                     essay_id,
                     pack,
-                    pack_path=pack_path,
                     saved_pack_state=saved_pack_state,
                     cover=cover,
                     sources_count=sources_count,
@@ -1203,7 +1175,6 @@ def _stage10_gate(
         _log_stage10_word(
             essay_id,
             pack,
-            pack_path=pack_path,
             saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
@@ -1260,7 +1231,6 @@ def _write_stage10_sequence(
 
     pack = prepared["pack"]
     report = prepared["report"]
-    pack_path = prepared["pack_path"]
     saved_pack_state = prepared["saved_pack_state"]
     refs_count = prepared["refs_count"]
     sources_count = prepared["sources_count"]
@@ -1291,7 +1261,6 @@ def _write_stage10_sequence(
         _log_stage10_word(
             essay_id,
             pack,
-            pack_path=pack_path,
             saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
@@ -1325,7 +1294,6 @@ def _write_stage10_sequence(
         _log_stage10_word(
             essay_id,
             pack,
-            pack_path=pack_path,
             saved_pack_state=saved_pack_state,
             cover=cover,
             sources_count=sources_count,
@@ -1364,27 +1332,22 @@ def _deliver_stage10(
     """Copy the one build to the final-named file, then to the student's folder."""
     pack = written["pack"]
     report = written["report"]
-    pack_path = written["pack_path"]
     saved_pack_state = written["saved_pack_state"]
     refs_count = written["refs_count"]
     sources_count = written["sources_count"]
     cover = written["cover"]
     sequence_final = _refresh_sequence_final(source, project)
     from essay_writer.assignment_handoff import attach_word_chat
-    from essay_writer.word_references import reference_lines_origin
 
     attach_word_chat(body, sequence_final)
     body["sequence_written"] = True
-    refs_from = reference_lines_origin(pack)
     _log_stage10_word(
         essay_id,
         pack,
-        pack_path=pack_path,
         saved_pack_state=saved_pack_state,
         cover=cover,
         sources_count=sources_count,
         refs_count=refs_count,
-        refs_from=refs_from,
         output_path=source,
     )
     body["references"] = report.get("references") or []
@@ -1442,9 +1405,9 @@ def _remember_stage10_result(
 ) -> dict[str, Any]:
     """Record the delivered pack, then point the ML event log at the new file."""
     _remember_stage10(source, pack, body)
-    from essay_writer.ml_events import note_stage10_rewrite_paths
+    from essay_writer.ml_events import note_stage10_sha
 
-    note_stage10_rewrite_paths(essay_id)
+    note_stage10_sha(essay_id)
     return body
 
 
@@ -1485,7 +1448,6 @@ def write_stage10(essay_id: str, *, documents: Path | None = None) -> dict[str, 
             essay_id,
             body,
             root=root,
-            pack_path=pack_path,
             saved_pack_state=saved_pack_state,
         )
     prepared, stopped = _stage10_manifest(

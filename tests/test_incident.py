@@ -310,14 +310,18 @@ def test_a_debug_log_stays_out_of_the_bundle(workspace, monkeypatch) -> None:
     monkeypatch.setenv("ESSAY_WRITER_DEBUG", "1")
     planted = f"Query {ESSAY} see /private/tmp/student-work.docx.\n"
     (workspace / "debug.log").write_text(planted, encoding="utf-8")
+    (workspace / "debug.log.1").write_text(planted, encoding="utf-8")
     (workspace / "ml-events.jsonl").write_text(planted, encoding="utf-8")
+    (workspace / "ml-events.jsonl.1").write_text(planted, encoding="utf-8")
     exported = support_bundle()
     assert exported["ok"] is True
     with zipfile.ZipFile(workspace / "support.zip") as archive:
         names = set(archive.namelist())
         blob = b"\n".join(archive.read(name) for name in archive.namelist())
     assert "debug.log" not in names
+    assert "debug.log.1" not in names
     assert "ml-events.jsonl" not in names
+    assert "ml-events.jsonl.1" not in names
     text = blob.decode("utf-8")
     assert ESSAY not in text
     assert "/private/tmp" not in text

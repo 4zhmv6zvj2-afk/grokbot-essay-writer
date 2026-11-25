@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from essay_writer.incident import call_frame
 from essay_writer.server import HANDLERS, REVIEW_HANDLERS
 
 
@@ -21,7 +22,8 @@ class FakeShell:
         handler = HANDLERS.get(tool)
         if handler is None:
             handler = REVIEW_HANDLERS[tool]
-        result = handler(**kwargs)
+        with call_frame(tool, kwargs):
+            result = handler(**kwargs)
         if not isinstance(result, dict):
             result = {"ok": False, "reason": "the door did not return an object"}
         self.replies.append({"tool": tool, "result": result})
