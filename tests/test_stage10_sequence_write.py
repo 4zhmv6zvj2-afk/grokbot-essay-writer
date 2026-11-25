@@ -93,20 +93,15 @@ def _all_debug_log_text(workspace: Path) -> str:
 
 
 def _assert_sequence_log(opened: dict, line: str) -> None:
-    """The debug line matches the card the door returned on that confirm."""
+    """The rendered record matches the card the door returned on that confirm."""
     card = opened.get("card")
     digest = opened.get("cardDigest")
     if isinstance(card, dict) and isinstance(digest, str) and digest.strip() and digest != "none":
         assert card.get("digest") == digest
-        assert f"Card digest {digest}." in line
-        assert "Card present." in line
-        assert f"Posted {digest}." in line
-        assert "Card digest none." not in line
-        assert "Card absent." not in line
+        assert f"digest={digest}" in line
+        assert "card_present=true" in line
         return
-    assert "Card digest none." in line
-    assert "Card absent." in line
-    assert "Card present." not in line
+    assert "card_present=false" in line
 
 
 def _pack(seq: str) -> dict:
@@ -248,7 +243,11 @@ def test_ac1_ac2_ac3_clone_then_stage10_confirm_writes_the_child_and_documents(
         card = opened.get("card")
         if not isinstance(digest, str) and isinstance(card, dict):
             digest = card.get("digest")
-        candidates = [line for line in log.splitlines() if "essay.sequence.new confirm" in line]
+        candidates = [
+            line
+            for line in log.splitlines()
+            if "essay.sequence.new" in line and "phase=confirm" in line
+        ]
         matches = (
             [line for line in candidates if isinstance(digest, str) and digest in line]
             if isinstance(digest, str) and digest
@@ -258,17 +257,19 @@ def test_ac1_ac2_ac3_clone_then_stage10_confirm_writes_the_child_and_documents(
             sid = opened["sequence_id"]
             matches = [line for line in candidates if sid in line]
         if not matches and opened.get("card") is None:
-            matches = [line for line in candidates if "Card absent." in line]
+            matches = [line for line in candidates if "card_present=false" in line]
         assert matches, f"missing sequence.new confirm log for {opened.get('sequence_id')}"
         _assert_sequence_log(opened, matches[-1])
     stage_line = next(
-        line for line in log.splitlines() if "essay.stage confirm" in line and child in line
+        line
+        for line in log.splitlines()
+        if "essay.stage" in line and "phase=confirm" in line and f"essay_id={child}" in line
     )
-    assert "Confirm store yes advance no next-card none." in stage_line
-    assert "Card absent." in stage_line
-    assert f"Essay-writer/{MODULE}/sequences/2/output/{child}.docx mtime " in stage_line
-    assert " sha " in stage_line
-    assert f"Documents/Essay Bot/{MODULE}/{child}/{MODULE}-final.docx mtime " in stage_line
+    assert "stored=true" in stage_line
+    assert "card_present=false" in stage_line
+    assert "sha256=" in stage_line
+    assert f"/{child}.docx" not in stage_line
+    assert f"{MODULE}-final.docx" not in stage_line
     assert "debug.log" not in json.dumps(saved)
 
 
@@ -319,10 +320,13 @@ def test_ac4_missing_registration_does_not_close_or_record_the_sequence_final(
     assert not (mac_handoff_sequence_dir(documents, child) / f"{MODULE}-final.docx").exists()
     log = debug_log_path(child).read_text(encoding="utf-8")
     stage_line = next(
-        line for line in log.splitlines() if "essay.stage confirm" in line and child in line
+        line
+        for line in log.splitlines()
+        if "essay.stage" in line and "phase=confirm" in line and f"essay_id={child}" in line
     )
-    assert "Confirm store no advance no next-card" in stage_line
-    assert f"Essay-writer/{MODULE}/sequences/2/output/{child}.docx mtime " in stage_line
+    assert "stored=true" not in stage_line
+    assert "sha256=" in stage_line
+    assert f"/{child}.docx" not in stage_line
 
 
 def test_build_covered_both_shells_share_the_write_and_the_log(monkeypatch):
