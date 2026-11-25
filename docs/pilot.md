@@ -62,4 +62,19 @@ A clean run exits 0. The first line of the report is:
 These four runs are simulations on installed essay-writer 0.9.21. They are not validation with real students.
 ```
 
-Each persona line shows an incident count and `stopped=false`. The report has no essay text, no prompt, no path, and no door sentence. Counts come from the run. A later section of this page records one run against the installed 0.9.21 wheel.
+Each persona line shows an incident count and `stopped=false`. The report has no essay text, no prompt, no path, and no door sentence.
+
+The recorded run used this command.
+
+```bash
+.venv/bin/python tools/pilot_simulation.py --keep --workdir /tmp/essay-pilot-0.9.21 --out /tmp/essay-pilot-0.9.21/report.txt
+```
+
+The virtualenv's `essay_writer` version was 0.9.21, and the package file was under that virtualenv's `site-packages`. The process exited 3. `non-native` stopped at `stages_short` with stop code `guidance-only`. `error-prone` did not start. `careful` and `rushed` finished. Each of those three personas recorded one `guidance-only` incident. The full report is `/tmp/essay-pilot-0.9.21/report.txt`.
+
+| Persona | Incidents | Stopped | Stop code |
+| --- | --- | --- | --- |
+| careful | 1 | false | |
+| rushed | 1 | false | |
+| non-native | 1 | true | guidance-only |
+| error-prone | not started | | |
