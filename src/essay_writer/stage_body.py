@@ -534,6 +534,9 @@ def _build_stage_body(
         and not answer_call
         and not look_is_confirmable(essay_id, stage, genre, text, prepared_lines)
     ):
+        # A mint is not a student save, and its card is not shown.
+        if minting:
+            return {"ok": False, "wrote": False, "stored": False}
         return guidance_only_refusal()
     # A waiting-card mint is not the student's answer. Part names, Entry N,
     # and house words are checked when the student later writes that stage.
