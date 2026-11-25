@@ -67,6 +67,32 @@ Recommendations, in order of value:
   be read read-only for the account that runs the server where the operating
   system allows it.
 
+## Known limits
+
+These are limits of the current code, not guarantees. They are listed so they
+are not mistaken for protection.
+
+- **Published file modes.** A new file is published 0644 (`durable.py`). That
+  includes the draft ledger under `.drafts/`, which holds full draft text. The
+  setup secrets file and `incident.jsonl` are created 0600. On a machine with
+  other local accounts, those accounts can read draft text but not the secrets
+  file.
+- **The file-work child is not sandboxed.** The local Cursor CLI (or Grok Build)
+  is started from the server with your account, a pseudo-terminal, and its own
+  session, and remote or cloud agents are refused. It has the same filesystem
+  and network access as that account while it reads uploaded briefs, downloaded
+  PDFs, and fetched pages. The prompt fence treats that text as quoted evidence,
+  not instructions, but a document that steers the child can make it act before
+  any Confirm. Run the stages attended.
+- **Where the durable files are.** On Grok Bot the durable store is the cloud
+  computer under `/workspace`: the setup record, the stored keys, and the
+  essays. There is no Documents fallback for that store; with no cloud
+  workspace, a user-local save is an explicit path passed to `essay.setup`.
+  Word copies are separate: when Documents is mounted and no Mac handoff
+  folder is configured, the Word file also lands at `Documents/<module>-10/`.
+  Draft text and the stored keys sit on whichever computer ran the tool, and
+  Word copies may also exist on the Mac.
+
 ## Scope
 
 - This project is a local MCP server. It does not bundle, proxy, or host any
