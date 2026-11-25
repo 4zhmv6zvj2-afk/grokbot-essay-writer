@@ -8,7 +8,7 @@ its python-docx dependency) and is not part of the product runtime.
 
 From the repository root:
 
-    python tools/release_acceptance.py --tag v0.9.20
+    python tools/release_acceptance.py --tag v0.9.21
 
 Exit 0 when every check passes. Exit 1 when a check fails. Exit 2 when the
 environment cannot run the harness.
@@ -31,7 +31,7 @@ import venv
 import zipfile
 from pathlib import Path
 
-DEFAULT_TAG = "v0.9.20"
+DEFAULT_TAG = "v0.9.21"
 DEFAULT_REPO = "4zhmv6zvj2-afk/grokbot-essay-writer"
 LOOK_STAGE6 = "The draft is saved in Word."
 ESSAY_SENTINEL = "The fisheries opening stayed on the page."
@@ -483,7 +483,24 @@ def probe_main(version: str, fixtures: Path, workspace: Path) -> int:
     return 0
 
 
-def accept_main(tag: str, repo: str, workdir: Path | None, keep: bool) -> int:
+def load_local_assets(folder: Path, version: str) -> tuple[Path, Path, Path]:
+    wheel_name, sdist_name, sums_name = asset_names(version)
+    wheel, sdist, sums = folder / wheel_name, folder / sdist_name, folder / sums_name
+    for path in (wheel, sdist, sums):
+        if not path.is_file():
+            fail(f"local assets missing {path.name} under {folder}", code=2)
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        print(f"  local {path.name} sha256={digest}")
+    return wheel, sdist, sums
+
+
+def accept_main(
+    tag: str,
+    repo: str,
+    workdir: Path | None,
+    keep: bool,
+    assets_dir: Path | None = None,
+) -> int:
     version = version_of(tag)
     fixtures = repo_root() / "tests" / "fixtures" / "state" / "0.9.19"
     if not fixtures.is_dir():
@@ -497,8 +514,13 @@ def accept_main(tag: str, repo: str, workdir: Path | None, keep: bool) -> int:
     print(f"work dir {root}")
 
     try:
-        assets = root / "assets"
-        wheel, sdist, sums = download_assets(tag, repo, assets)
+        if assets_dir is not None:
+            print(f"local assets {assets_dir}")
+            wheel, sdist, sums = load_local_assets(assets_dir, version)
+            assets = assets_dir
+        else:
+            assets = root / "assets"
+            wheel, sdist, sums = download_assets(tag, repo, assets)
         hashes = verify_sha256sums(assets, sums)
         print("verified hashes:")
         for name, digest in sorted(hashes.items()):
@@ -547,6 +569,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="keep the temp work directory after a pass",
     )
     parser.add_argument(
+        "--assets-dir",
+        type=Path,
+        default=None,
+        help="use a local folder of wheel+sdist+SHA256SUMS instead of downloading",
+    )
+    parser.add_argument(
         "--probe",
         action="store_true",
         help="run the in-venv probe (invoked by the outer harness)",
@@ -565,7 +593,7 @@ def main(argv: list[str] | None = None) -> int:
         return probe_main(args.version, args.fixtures, args.workspace)
     if sys.version_info < (3, 12):
         fail(f"Python 3.12+ required, got {sys.version}", code=2)
-    return accept_main(args.tag, args.repo, args.workdir, args.keep)
+    return accept_main(args.tag, args.repo, args.workdir, args.keep, args.assets_dir)
 
 
 if __name__ == "__main__":

@@ -7,3 +7,8 @@ ts	phase	decision	why	evidence	result
 2026-11-25T01:54:08Z	bug	STOP: published v0.9.20 wheel install cannot advance a stage	TIP_SHEET uses Path(__file__).parents[2]/docs/templates/mid-status.md which resolves under site-packages parent; wheel omits that file; pip install of sdist same layout	build_status.py:40 FileNotFoundError during essay_stage after Word write	blocked
 2026-11-25T01:54:08Z	evidence	Partial accept run kept under /tmp/essay-writer-accept-0.9.20	Hashes matched; wheel install; health 0.9.20; Word OK; stage-6 advance crashed	workdir kept	recorded
 2026-11-25T01:58:15Z	contract	Adopted hotfix-0.9.21.md; keep cursor/release-acceptance; authorized to publish v0.9.21	v0.9.20 immutable; three workstream PRs	/Users/radial4088/Downloads/hotfix-0.9.21.md	recorded
+2026-11-25T02:23:52Z	p1	Hotfix PR 128 merged; main CI green	packaged runtime tip sheet+handbook	merge a2b9888 run 45531288145	pass
+2026-11-25T02:23:52Z	p2	Local acceptance ALL PASS against hotfix wheel+sdist from main a2b9888	mid-status draft, Word, crash, bundle, wipe, upgrade	/tmp/ew-local-accept-run	pass
+2026-11-25T02:46:56Z	p3	Published v0.9.21; superseded 0.9.20 notes; tags immutable	tag 3adfb06 release 45534823194	https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v0.9.21	pass
+2026-11-25T02:47:16Z	p3	Published v0.9.21; superseded 0.9.20 notes; tags immutable	tag 3adfb06 release 45534823194	https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/releases/tag/v0.9.21	pass
+2026-11-25T02:47:45Z	p4	Published acceptance ALL PASS for v0.9.21 wheel+sdist	hashes 44a67bcf / 37d686ba; work /tmp/ew-pub-accept-0.9.21	pass
