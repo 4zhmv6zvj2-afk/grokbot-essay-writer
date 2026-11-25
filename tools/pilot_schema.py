@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Literal, TypedDict, cast
 
+from release_acceptance import asset_names, version_of
+
 PersonaName = Literal["careful", "rushed", "non-native", "error-prone"]
 FaultKind = Literal["timeout", "malformed_payload", "crash", "refused_save"]
 FaultOrigin = Literal["product", "harness"]
@@ -32,14 +34,20 @@ StepId = Literal[
 ]
 
 TAG = "v0.9.21"
-VERSION: Literal["0.9.21"] = "0.9.21"
-WHEEL_NAME = "essay_writer-0.9.21-py3-none-any.whl"
+VERSION = version_of(TAG)
+WHEEL_NAME = asset_names(VERSION)[0]
 REPO = "4zhmv6zvj2-afk/grokbot-essay-writer"
 UNEXPECTED = "unexpected"
-DISCLAIMER = (
-    "These four runs are simulations on installed essay-writer 0.9.21. "
-    "They are not validation with real students."
-)
+
+
+def disclaimer_for(version: str) -> str:
+    return (
+        f"These four runs are simulations on installed essay-writer {version}. "
+        "They are not validation with real students."
+    )
+
+
+DISCLAIMER = disclaimer_for(VERSION)
 NONE_KEY = "(none)"
 
 ESSAY_SENTINEL = "The fisheries opening stayed on the page."
@@ -141,7 +149,7 @@ class FaultResult(TypedDict):
 
 class PersonaRun(TypedDict):
     persona: PersonaName
-    version: Literal["0.9.21"]
+    version: str
     steps: list[StepId]
     faults: list[FaultKind]
     incident_count: int
@@ -156,7 +164,7 @@ class CountBucket(TypedDict):
 
 class PilotReport(TypedDict):
     simulation: Literal[True]
-    version: Literal["0.9.21"]
+    version: str
     disclaimer: str
     runs: list[PersonaRun]
     by_code: list[CountBucket]
@@ -287,6 +295,7 @@ def make_run(
     incident_count: int,
     stopped: bool,
     stop_code: str,
+    version: str = VERSION,
 ) -> PersonaRun:
     if not stopped:
         code = ""
@@ -296,7 +305,7 @@ def make_run(
         code = UNEXPECTED
     return {
         "persona": persona,
-        "version": VERSION,
+        "version": version,
         "steps": steps,
         "faults": faults,
         "incident_count": incident_count,

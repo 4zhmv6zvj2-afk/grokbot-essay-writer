@@ -16,7 +16,7 @@ Pass `--assets-dir DIR` when that directory already holds the wheel. Pass `--kee
 
 The default report path is `pilot-report.txt` in the current directory.
 
-There is no `--tag` flag. The wheel name and the version are fixed at 0.9.21.
+Pass `--tag v0.9.21` to choose the release. The default is `v0.9.21`. The downloaded wheel is `essay_writer-<version>-py3-none-any.whl` for the version in that tag, and the install check expects that same version.
 
 ## Read a saved run
 

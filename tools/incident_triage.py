@@ -10,7 +10,6 @@ import pilot_schema as schema
 from pilot_schema import (
     BUILD_RE,
     CODE_RE,
-    DISCLAIMER,
     EXC_RE,
     INCIDENT_FIELDS,
     NONE_KEY,
@@ -23,6 +22,7 @@ from pilot_schema import (
     PersonaRun,
     PilotReport,
     contains_forbidden,
+    disclaimer_for,
     parse_disposition,
     parse_fault_kind,
     parse_observed,
@@ -98,10 +98,10 @@ def parse_fault(raw: object, persona: PersonaName) -> FaultResult | None:
     }
 
 
-def parse_run(raw: object, persona: PersonaName) -> PersonaRun | None:
+def parse_run(raw: object, persona: PersonaName, version: str = VERSION) -> PersonaRun | None:
     if not isinstance(raw, dict) or contains_forbidden(raw):
         return None
-    if parse_persona(raw.get("persona")) != persona or raw.get("version") != VERSION:
+    if parse_persona(raw.get("persona")) != persona or raw.get("version") != version:
         return None
     steps_raw = raw.get("steps")
     faults_raw = raw.get("faults")
@@ -124,7 +124,7 @@ def parse_run(raw: object, persona: PersonaName) -> PersonaRun | None:
     faults = [fault for item in faults_raw if (fault := parse_fault_kind(item)) is not None]
     return {
         "persona": persona,
-        "version": VERSION,
+        "version": version,
         "steps": steps,
         "faults": faults,
         "incident_count": count,
@@ -133,10 +133,10 @@ def parse_run(raw: object, persona: PersonaName) -> PersonaRun | None:
     }
 
 
-def _placeholder(persona: PersonaName) -> PersonaRun:
+def _placeholder(persona: PersonaName, version: str = VERSION) -> PersonaRun:
     return {
         "persona": persona,
-        "version": VERSION,
+        "version": version,
         "steps": [],
         "faults": [],
         "incident_count": 0,
@@ -179,7 +179,7 @@ def _bucket(keys: list[str], required: tuple[str, ...] = ()) -> list[CountBucket
     return [{"key": key, "count": tally[key]} for key in sorted(tally)]
 
 
-def aggregate(runs_dir: Path) -> PilotReport:
+def aggregate(runs_dir: Path, version: str = VERSION) -> PilotReport:
     dropped_rows = 0
     dropped_runs = 0
     present: dict[str, Path] = {}
@@ -203,12 +203,12 @@ def aggregate(runs_dir: Path) -> PilotReport:
         run_path = folder / "run.json"
         if not run_path.is_file():
             dropped_runs += 1
-            runs.append(_placeholder(persona))
+            runs.append(_placeholder(persona, version))
             continue
-        parsed = parse_run(_load_json(run_path), persona)
+        parsed = parse_run(_load_json(run_path), persona, version)
         if parsed is None:
             dropped_runs += 1
-            runs.append(_placeholder(persona))
+            runs.append(_placeholder(persona, version))
             continue
         runs.append(parsed)
         for name in ("incident.jsonl", "incident.jsonl.1"):
@@ -242,8 +242,8 @@ def aggregate(runs_dir: Path) -> PilotReport:
     ]
     return {
         "simulation": True,
-        "version": VERSION,
-        "disclaimer": DISCLAIMER,
+        "version": version,
+        "disclaimer": disclaimer_for(version),
         "runs": runs,
         "by_code": _bucket([row["code"] for row in incidents]),
         "by_severity": _bucket(
@@ -315,11 +315,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Summarize pilot incident metadata.")
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--version", default=VERSION)
     args = parser.parse_args(argv)
     if not args.runs.is_dir():
         print("FAIL runs", file=sys.stderr)
         return 2
-    text = render(aggregate(args.runs))
+    text = render(aggregate(args.runs, args.version))
     if not guard(text):
         print("FAIL privacy")
         if args.out is not None and args.out.exists():
