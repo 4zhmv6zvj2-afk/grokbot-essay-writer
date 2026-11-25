@@ -22,8 +22,6 @@ from pilot_schema import (
     REPO,
     TAG,
     UNEXPECTED,
-    VERSION,
-    WHEEL_NAME,
     FaultKind,
     FaultResult,
     PersonaName,
@@ -32,6 +30,13 @@ from pilot_schema import (
     make_fault,
     make_run,
 )
+from release_acceptance import asset_names, version_of
+
+
+def release_pin(tag: str) -> tuple[str, str]:
+    version = version_of(tag)
+    return version, asset_names(version)[0]
+
 
 API_KEYS = (
     "CONSENSUS_API_KEY",
@@ -97,7 +102,7 @@ def _under_site_packages(file_path: Path, venv: Path, repo: Path) -> bool:
     return "site-packages" in resolved.parts
 
 
-def _read_install(python: Path) -> tuple[str, Path] | None:
+def _read_install(python: Path, expected: str) -> tuple[str, Path] | None:
     script = (
         "import json\n"
         "import essay_writer\n"
@@ -128,27 +133,29 @@ def _read_install(python: Path) -> tuple[str, Path] | None:
         return None
     version = payload.get("version")
     file_name = payload.get("file")
-    if version != VERSION or not isinstance(file_name, str):
+    if version != expected or not isinstance(file_name, str):
         return None
     return version, Path(file_name)
 
 
-def _resolve_wheel(acceptance: Any, assets_dir: Path | None, dest: Path) -> Path:
+def _resolve_wheel(
+    acceptance: Any, assets_dir: Path | None, dest: Path, tag: str, wheel_name: str
+) -> Path:
     if assets_dir is not None:
-        candidate = assets_dir / WHEEL_NAME
+        candidate = assets_dir / wheel_name
         if candidate.is_file():
             return candidate
     dest.mkdir(parents=True, exist_ok=True)
-    print(f"downloading {WHEEL_NAME}", file=sys.stderr)
-    acceptance.download_assets(TAG, REPO, dest)
-    wheel = dest / WHEEL_NAME
+    print(f"downloading {wheel_name}", file=sys.stderr)
+    acceptance.download_assets(tag, REPO, dest)
+    wheel = dest / wheel_name
     if not wheel.is_file():
         print("FAIL wheel", file=sys.stderr)
         raise SystemExit(2)
     return wheel
 
 
-def _health(acceptance: Any, python: Path, root: Path) -> bool:
+def _health(acceptance: Any, python: Path, root: Path, expected: str) -> bool:
     saved = {key: os.environ.get(key) for key in ("PYTHONPATH", "ESSAY_WRITER_ROOT", *API_KEYS)}
     os.environ.pop("PYTHONPATH", None)
     os.environ["ESSAY_WRITER_RESOLVERS"] = "off"
@@ -157,7 +164,7 @@ def _health(acceptance: Any, python: Path, root: Path) -> bool:
         os.environ.pop(name, None)
     try:
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            acceptance.health_version(python, VERSION)
+            acceptance.health_version(python, expected)
     except (SystemExit, subprocess.CalledProcessError, OSError):
         return False
     finally:
@@ -179,10 +186,19 @@ def _probe_env(tests: Path) -> dict[str, str]:
     return env
 
 
-def _run_triage(runs: Path, report: Path) -> int:
+def _run_triage(runs: Path, report: Path, version: str) -> int:
     triage = Path(__file__).resolve().parent / "incident_triage.py"
     completed = subprocess.run(
-        [sys.executable, str(triage), "--runs", str(runs), "--out", str(report)],
+        [
+            sys.executable,
+            str(triage),
+            "--runs",
+            str(runs),
+            "--out",
+            str(report),
+            "--version",
+            version,
+        ],
         capture_output=True,
         text=True,
         check=False,
@@ -200,6 +216,7 @@ def _run_triage(runs: Path, report: Path) -> int:
 
 
 def outer_main(args: argparse.Namespace) -> int:
+    version, wheel_name = release_pin(args.tag)
     repo = Path(__file__).resolve().parents[1]
     created = args.workdir is None
     workdir = (
@@ -207,17 +224,26 @@ def outer_main(args: argparse.Namespace) -> int:
     )
     report = args.out if args.out is not None else Path.cwd() / "pilot-report.txt"
     try:
-        return _outer(args, repo, workdir, report)
+        return _outer(args, repo, workdir, report, version, wheel_name)
     finally:
         if created and not args.keep:
             shutil.rmtree(workdir, ignore_errors=True)
 
 
-def _outer(args: argparse.Namespace, repo: Path, workdir: Path, report: Path) -> int:
+def _outer(
+    args: argparse.Namespace,
+    repo: Path,
+    workdir: Path,
+    report: Path,
+    version: str,
+    wheel_name: str,
+) -> int:
     workdir.mkdir(parents=True, exist_ok=True)
     try:
         acceptance = _load_acceptance()
-        wheel = _resolve_wheel(acceptance, args.assets_dir, workdir / "assets")
+        wheel = _resolve_wheel(
+            acceptance, args.assets_dir, workdir / "assets", args.tag, wheel_name
+        )
         python = acceptance.make_venv(workdir / "venv")
         acceptance.pip_install(python, wheel)
     except SystemExit as exc:
@@ -227,13 +253,13 @@ def _outer(args: argparse.Namespace, repo: Path, workdir: Path, report: Path) ->
         print("FAIL install", file=sys.stderr)
         return 2
 
-    installed = _read_install(python)
+    installed = _read_install(python, version)
     if installed is None or not _under_site_packages(installed[1], workdir / "venv", repo):
         print("FAIL installed package", file=sys.stderr)
         return 2
     version_root = workdir / "version-check"
     version_root.mkdir(parents=True, exist_ok=True)
-    if not _health(acceptance, python, version_root):
+    if not _health(acceptance, python, version_root, version):
         print("FAIL installed package", file=sys.stderr)
         return 2
 
@@ -251,7 +277,7 @@ def _outer(args: argparse.Namespace, repo: Path, workdir: Path, report: Path) ->
                 str(script),
                 "--probe",
                 "--version",
-                VERSION,
+                version,
                 "--workspace",
                 str(workspace),
                 "--out",
@@ -264,7 +290,7 @@ def _outer(args: argparse.Namespace, repo: Path, workdir: Path, report: Path) ->
             check=False,
         )
     drift = _package_digest(package_dir) != before
-    triage_code = _run_triage(runs, report)
+    triage_code = _run_triage(runs, report, version)
     if triage_code == 1:
         return 1
     if triage_code != 0:
@@ -538,7 +564,7 @@ FAULTS: dict[FaultKind, Any] = {
 }
 
 
-def _run_persona(spec: PersonaSpec, workspace: Path, runs: Path) -> str:
+def _run_persona(spec: PersonaSpec, workspace: Path, runs: Path, version: str) -> str:
     from conversations.drive import (
         final_word,
         first_draft,
@@ -610,6 +636,7 @@ def _run_persona(spec: PersonaSpec, workspace: Path, runs: Path) -> str:
         count,
         stopped,
         stop_code,
+        version,
     )
     _publish(dest / "run.json", json.dumps(record, sort_keys=True) + "\n")
     body = "".join(json.dumps(item, sort_keys=True) + "\n" for item in fault_rows)
@@ -638,7 +665,7 @@ def _assert_installed(expected: str, tests: Path) -> bool:
 
 
 def probe_main(args: argparse.Namespace) -> int:
-    if args.version != VERSION or args.workspace is None or args.out is None or args.tests is None:
+    if not args.version or args.workspace is None or args.out is None or args.tests is None:
         print("FAIL probe", file=sys.stderr)
         return 2
     tests = args.tests.resolve()
@@ -661,7 +688,7 @@ def probe_main(args: argparse.Namespace) -> int:
     args.workspace.mkdir(parents=True, exist_ok=True)
     try:
         for spec in schema.PERSONAS:
-            if _run_persona(spec, args.workspace, runs):
+            if _run_persona(spec, args.workspace, runs, args.version):
                 return 3
     except Exception:
         traceback.print_exc()
@@ -672,8 +699,9 @@ def probe_main(args: argparse.Namespace) -> int:
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Simulate four student personas on installed essay-writer 0.9.21."
+        description="Simulate four student personas on an installed essay-writer release."
     )
+    parser.add_argument("--tag", default=TAG)
     parser.add_argument("--assets-dir", type=Path)
     parser.add_argument("--workdir", type=Path)
     parser.add_argument("--keep", action="store_true")
