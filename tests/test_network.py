@@ -137,6 +137,80 @@ def test_a_post_is_not_retried(workspace, monkeypatch):
     assert str(caught.value) == safe_url.TIMEOUT_COPY
 
 
+def test_retry_statuses_and_the_attempt_count_stay_fixed() -> None:
+    assert safe_url.READ_ATTEMPTS == 3
+    assert safe_url._RETRY_STATUSES == frozenset({429, 500, 502, 503, 504})
+
+
+@pytest.mark.parametrize("status", [429, 500, 502, 503, 504])
+def test_an_http_error_status_retries_then_gives_up(workspace, monkeypatch, status: int) -> None:
+    _public(monkeypatch)
+    clock = FakeClock()
+    calls = {"n": 0}
+
+    def transport(request, timeout):
+        calls["n"] += 1
+        return _http_error(status)(request, timeout)
+
+    with pytest.raises(safe_url.GaveUp) as caught:
+        safe_url.open_url(
+            "https://api.example.org/works",
+            max_bytes=1024,
+            transport=transport,
+            clock=clock,
+        )
+    assert calls["n"] == safe_url.READ_ATTEMPTS
+    assert len(clock.slept) == safe_url.READ_ATTEMPTS - 1
+    expected = safe_url.RATE_COPY if status == 429 else safe_url.SERVER_COPY
+    assert str(caught.value) == expected
+
+
+@pytest.mark.parametrize("status", [429, 500, 502, 503, 504])
+def test_a_response_status_retries_then_gives_up(workspace, monkeypatch, status: int) -> None:
+    _public(monkeypatch)
+    clock = FakeClock()
+    calls = {"n": 0}
+
+    def transport(request, timeout):
+        calls["n"] += 1
+        raw = FakeRaw(b"busy")
+        raw.status = status
+        return raw
+
+    with pytest.raises(safe_url.GaveUp) as caught:
+        safe_url.open_url(
+            "https://api.example.org/works",
+            max_bytes=1024,
+            transport=transport,
+            clock=clock,
+        )
+    assert calls["n"] == safe_url.READ_ATTEMPTS
+    assert len(clock.slept) == safe_url.READ_ATTEMPTS - 1
+    expected = safe_url.RATE_COPY if status == 429 else safe_url.SERVER_COPY
+    assert str(caught.value) == expected
+
+
+def test_a_404_is_returned_once(workspace, monkeypatch) -> None:
+    _public(monkeypatch)
+    clock = FakeClock()
+    calls = {"n": 0}
+
+    def transport(request, timeout):
+        calls["n"] += 1
+        return _http_error(404)(request, timeout)
+
+    response = safe_url.open_url(
+        "https://api.example.org/works",
+        max_bytes=1024,
+        transport=transport,
+        clock=clock,
+    )
+    assert calls["n"] == 1
+    assert clock.slept == []
+    assert response.status == 404
+    assert response.read() == b"busy"
+
+
 def test_a_429_retries_then_falls_back(workspace, monkeypatch):
     _public(monkeypatch)
     clock = FakeClock()

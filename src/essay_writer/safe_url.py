@@ -32,7 +32,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 HTTP_SCHEMES = frozenset({"http", "https"})
 DEFAULT_PORTS = {"http": 80, "https": 443}
@@ -601,6 +601,21 @@ def _close(raw: Any) -> None:
             pass
 
 
+def _status_action(
+    status: int, attempt: int, attempts: int, timer: Clock, body: Any
+) -> Literal["retry", "gave_up", "keep"]:
+    """Close and classify one retryable HTTP status. Other statuses stay open."""
+    if status not in _RETRY_STATUSES:
+        return "keep"
+    _close(body)
+    if attempt + 1 < attempts:
+        _note_read("read-retry", disposition="retry")
+        _pause(timer, attempt)
+        return "retry"
+    _note_read("read-fallback", disposition="fallback")
+    return "gave_up"
+
+
 def open_url(
     url: object,
     *,
@@ -646,28 +661,20 @@ def open_url(
                 raw = opener(request, connect)
             except urllib.error.HTTPError as exc:
                 status = int(exc.code or 0)
-                if status in _RETRY_STATUSES and attempt + 1 < attempts:
-                    _close(exc)
-                    _note_read("read-retry", disposition="retry")
-                    _pause(timer, attempt)
+                action = _status_action(status, attempt, attempts, timer, exc)
+                if action == "retry":
                     continue
-                if status in _RETRY_STATUSES:
-                    _close(exc)
-                    _note_read("read-fallback", disposition="fallback")
+                if action == "gave_up":
                     raise GaveUp(_status_copy(status)) from None
                 return Response(status, exc.headers, _read_error_body(exc, max_bytes))
             status = int(getattr(raw, "status", 200) or 200)
             last_status = status
-            if status in _RETRY_STATUSES and attempt + 1 < attempts:
-                _close(raw)
+            action = _status_action(status, attempt, attempts, timer, raw)
+            if action == "retry":
                 raw = None
-                _note_read("read-retry", disposition="retry")
-                _pause(timer, attempt)
                 continue
-            if status in _RETRY_STATUSES:
-                _close(raw)
+            if action == "gave_up":
                 raw = None
-                _note_read("read-fallback", disposition="fallback")
                 raise GaveUp(_status_copy(status)) from None
             response_headers = getattr(raw, "headers", None)
             body = _read_capped(raw, response_headers, max_bytes)
