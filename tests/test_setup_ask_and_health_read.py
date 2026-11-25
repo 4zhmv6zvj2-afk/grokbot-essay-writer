@@ -33,7 +33,7 @@ PACKAGE = REPO / "src" / "essay_writer"
 # The setup ask, in the public words the student and the operator read.
 SETUP_ASK = (
     "Ordinary setup collects the Consensus key, the Consensus plan, the Unpaywall email, "
-    "and the OpenAlex key on the setup secret card, then passes them to essay.setup."
+    "and the OpenAlex key on the setup secret card. The host supplies those values to the essay.setup arguments."
 )
 SETUP_ASK_TOKEN = "{{install:ordinary_setup}}"
 
