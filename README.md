@@ -12,11 +12,11 @@ this repository is its source.
 
 ## What this is
 
-- **An MCP server for one workflow.** The writer seat's 24 tools take a single
+- **An MCP server for one workflow.** The writer's 24 tools take a single
   essay from brief to `.docx`: assignment, research, plan, annotated
   bibliography, critical review, first draft, re-read, feedback, edit,
   references, and final Word.
-- **A separate reviewer seat.** `essay-writer --reviewer` serves one tool,
+- **A separate reviewer.** `essay-writer --reviewer` serves one tool,
   `essay.review`, for the EQR pass. The writer refuses the Word write on stage 6
   and stage 9 until that pass returns `PASS`.
 - **Confirm-gated and local.** A save, stage advance, or deliverable write needs
@@ -24,7 +24,7 @@ this repository is its source.
   tracking note, and the stage pointer, and the Confirm re-derives the same
   argument digest and checks the on-disk file fingerprint. Stage 5 is the
   designed exception: it stores the first draft and advances to stage 6 on its
-  draft call, with no card. `essay.dig` and the research doors bind the card
+  draft call, with no card. `essay.dig` and the research tools bind the card
   they showed with a `cardDigest` that confirm re-derives and requires, and
   `essay.setup` binds the Consensus key, Unpaywall email, and OpenAlex key by SHA-256 so the
   save call must repeat the same values. A typed yes, ok, or Confirm saves the
