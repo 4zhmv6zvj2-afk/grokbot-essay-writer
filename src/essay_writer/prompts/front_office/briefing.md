@@ -218,7 +218,7 @@ OpenAlex runs without a key. Keyless calls share a small daily budget with every
 Unpaywall runs only when an email is stored.
 A Consensus key turns Consensus on for the search. No key leaves Consensus off and the search stays on OpenAlex.
 ESSAY_WRITER_CONSENSUS=0 turns Consensus off and health says so.
-Ordinary setup collects the Consensus key, the Consensus plan, the Unpaywall email, and the OpenAlex key on the setup secret card, then passes them to essay.setup.
+Ordinary setup collects the Consensus key, the Consensus plan, the Unpaywall email, and the OpenAlex key on the setup secret card. The host supplies those values to the essay.setup arguments.
 
 The Consensus key is for academic research search: it finds papers for the research step. Consensus's help center says the API is how a tool programmatically searches academic research and retrieves relevant papers: https://help.consensus.app/en/articles/16516328-the-consensus-api
 
