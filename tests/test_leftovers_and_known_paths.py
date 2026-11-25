@@ -402,7 +402,7 @@ def test_quotation_house_words_stay_on_every_surface(workspace):
         for word in ("pack", "house", "door", "tip", "smoke"):
             assert word in text
         assert "dig" not in text.casefold()
-    assert "pack" not in prose_for_surface("the pack size", "word")
+    assert prose_for_surface("the pack size", "word") == "the pack size"
     assert prose_for_surface("the pack size", "annotation") == "the pack size"
     assert prose_for_surface("the pack size", "review") == "the pack size"
 

@@ -160,4 +160,4 @@ def test_chat_keeps_the_tool_id_and_word_does_not():
     kept = strip_word_labels("The authors confirm the limit.")
     assert kept == "The authors confirm the limit."
     assert strip_word_labels("the pack size") == "the pack size"
-    assert "pack" not in for_word("the pack size")
+    assert for_word("the pack size") == "the pack size"

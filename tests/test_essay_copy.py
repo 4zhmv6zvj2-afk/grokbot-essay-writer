@@ -196,9 +196,8 @@ def test_essay_copy_a2_chat_drops_internal_labels_and_keeps_app_names():
 
 
 def test_essay_copy_a3_word_is_strict_and_the_lenient_note_is_not():
-    """essay-copy-a3. Word drops pack and the app names. The lenient note keeps pack and confirm."""
-    assert "pack" not in for_word("the pack size")
-    assert "draft" in for_word("the pack size")
+    """essay-copy-a3. Word keeps pack and drops the app names. The lenient note keeps pack and confirm."""
+    assert for_word("the pack size") == "the pack size"
     invented = for_word("The note says do not invent a source. Keep the rest.")
     assert "invent" not in invented.casefold()
     assert "Grok Build" not in for_word("Grok Build runs the file work.")

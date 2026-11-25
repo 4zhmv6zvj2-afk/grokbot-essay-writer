@@ -1,9 +1,9 @@
 """Words a student may hear or read in Word.
 
 Chat keeps ordinary English, including Confirm, Cursor, Grok Build, and
-Grok Bot. It still drops internal labels. Word drops the stricter list,
-including pack, and it drops invent guidance. A lenient note keeps
-ordinary English such as pack and the academic verb confirm.
+Grok Bot. It still drops internal labels. Word drops builder labels and
+invent guidance. Ordinary English such as pack, house, and door stays.
+A lenient note keeps ordinary English and the academic verb confirm.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ _CHAT_SWAPS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bPASS\b"), ""),
 )
 
-# Word only. These no longer run through say().
+# Word only. Builder labels. Ordinary English stays. These no longer run through say().
 _WORD_SWAPS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bdig card\b", re.IGNORECASE), "source card"),
     (re.compile(r"SuperGrok", re.IGNORECASE), ""),
@@ -42,17 +42,9 @@ _WORD_SWAPS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bmid office\b", re.IGNORECASE), ""),
     (re.compile(r"\bfront-office\b", re.IGNORECASE), ""),
     (re.compile(r"\bmid-office\b", re.IGNORECASE), ""),
-    (re.compile(r"\bEQR\b"), ""),
+    (re.compile(r"\bEQR\b"), "independent review"),
     (re.compile(r"\bdig\b", re.IGNORECASE), "look-up"),
-    (re.compile(r"\bdoors?\b", re.IGNORECASE), ""),
-    (re.compile(r"\bhouse\b", re.IGNORECASE), ""),
-    (re.compile(r"\bConfirm\b"), ""),
-    (re.compile(r"\bconfirm\b"), ""),
-    (re.compile(r"\bpacks?\b", re.IGNORECASE), "draft"),
-    (re.compile(r"\bshelf\b", re.IGNORECASE), "saved copy"),
-    (re.compile(r"\bseats?\b", re.IGNORECASE), ""),
-    (re.compile(r"\bsmoke\b", re.IGNORECASE), ""),
-    (re.compile(r"\btip\b", re.IGNORECASE), ""),
+    (re.compile(r"\bConfirm\b"), "approve"),
     (re.compile(r"\bGO\b"), ""),
     (re.compile(r"\bPASS\b"), ""),
     (re.compile(r"\bCursor\b", re.IGNORECASE), ""),
@@ -247,8 +239,8 @@ def prose_for_surface(text: str, surface: str) -> str:
     """Student prose for word, annotation, or review.
 
     Quoted spans keep QUOTATION_HOUSE_WORDS on every surface. Outside a
-    quotation, Word still drops the wider house list. Annotation and 4b
-    markdown use the narrower replacement, so ordinary English stays.
+    quotation, Word, annotation, and 4b markdown keep ordinary English.
+    Word still drops builder labels and invent guidance.
     """
     if not isinstance(text, str) or not text:
         return text
@@ -271,10 +263,11 @@ def prose_for_surface(text: str, surface: str) -> str:
 
 
 def for_word(text: str) -> str:
-    """Word file text. The strict list and invent guidance are omitted.
+    """Word file text. Builder labels and invent guidance are omitted.
 
-    This does not call say(). Tool ids that contain the word dig are kept
-    in chat and dropped here. Grok Build and Grok Bot are dropped here.
+    Ordinary English such as pack, house, and door stays. This does not
+    call say(). Tool ids that contain the word dig are kept in chat and
+    dropped here. Grok Build and Grok Bot are dropped here.
     """
     if not isinstance(text, str) or not text:
         return text
