@@ -322,8 +322,8 @@ The release also includes `provenance.intoto.jsonl`. Releases 0.9.15 through
 0.9.18 shipped the wheel, the sdist, and `SHA256SUMS`. Those releases have no
 Sigstore bundles and no build-provenance attestations.
 
-Download 0.9.23's files into one folder, then check the checksums. The files
-are `essay_writer-0.9.23-py3-none-any.whl`, `essay_writer-0.9.23.tar.gz`,
+Download 0.9.24's files into one folder, then check the checksums. The files
+are `essay_writer-0.9.24-py3-none-any.whl`, `essay_writer-0.9.24.tar.gz`,
 `SHA256SUMS`, the `.sigstore.json` bundle for each of those three files, and
 `provenance.intoto.jsonl`.
 
@@ -335,16 +335,16 @@ shasum -a 256 -c SHA256SUMS        # macOS; Linux: sha256sum -c SHA256SUMS
 # this repository's Release workflow on main, where the workflow is
 # dispatched from.
 cosign verify-blob \
-  --bundle essay_writer-0.9.23-py3-none-any.whl.sigstore.json \
+  --bundle essay_writer-0.9.24-py3-none-any.whl.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.9.23-py3-none-any.whl
+  essay_writer-0.9.24-py3-none-any.whl
 
 cosign verify-blob \
-  --bundle essay_writer-0.9.23.tar.gz.sigstore.json \
+  --bundle essay_writer-0.9.24.tar.gz.sigstore.json \
   --certificate-identity "https://github.com/4zhmv6zvj2-afk/grokbot-essay-writer/.github/workflows/release.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  essay_writer-0.9.23.tar.gz
+  essay_writer-0.9.24.tar.gz
 
 cosign verify-blob \
   --bundle SHA256SUMS.sigstore.json \
@@ -354,9 +354,9 @@ cosign verify-blob \
 
 # Check the build provenance GitHub recorded for that release workflow run.
 # The attestation covers the wheel and the sdist.
-gh attestation verify essay_writer-0.9.23-py3-none-any.whl \
+gh attestation verify essay_writer-0.9.24-py3-none-any.whl \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
-gh attestation verify essay_writer-0.9.23.tar.gz \
+gh attestation verify essay_writer-0.9.24.tar.gz \
   --repo 4zhmv6zvj2-afk/grokbot-essay-writer
 ```
 
@@ -372,7 +372,7 @@ toolchain, and fails if the SHA-256 set differs. You can rebuild a tag the same
 way:
 
 ```bash
-git checkout v0.9.23
+git checkout v0.9.24
 python -m pip install --require-hashes -r requirements-build.txt
 SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
     python tools/reproducible_build.py --outdir dist-rebuild
