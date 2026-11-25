@@ -52,6 +52,7 @@ essay_writer = [
   "py.typed",
   "FIRST-RUN.txt",
   "_vendor/*.json",
+  "runtime/*.md",
   "prompts/*.toml",
   "prompts/stages/*.md",
   "prompts/genres/*.md",

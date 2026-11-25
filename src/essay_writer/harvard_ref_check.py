@@ -247,15 +247,12 @@ def _reason(misses: list[dict[str, str]]) -> str:
 
 
 def _handbook_problem() -> str | None:
-    from essay_writer.handbook import handbook_path
+    from essay_writer.handbook import handbook_body
 
-    path = handbook_path()
-    if not path.is_file():
+    loaded = handbook_body()
+    if loaded is None:
         return f"The Harvard referencing note {HANDBOOK_NAME} could not be read."
-    try:
-        text = path.read_text(encoding="utf-8").casefold()
-    except OSError:
-        return f"The Harvard referencing note {HANDBOOK_NAME} could not be read."
+    text = loaded[0].casefold()
     if "italic" not in text or "pp." not in text or "doi" not in text:
         return f"The Harvard referencing note {HANDBOOK_NAME} is missing a reference-list rule."
     return None
