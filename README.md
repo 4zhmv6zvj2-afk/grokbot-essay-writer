@@ -17,8 +17,8 @@ this repository is its source.
   bibliography, critical review, first draft, re-read, feedback, edit,
   references, and final Word.
 - **A separate reviewer.** `essay-writer --reviewer` serves one tool,
-  `essay.review`, for the EQR pass. The writer refuses the Word write on stage 6
-  and stage 9 until that pass returns `PASS`.
+  `essay.review`, for the independent review. The writer refuses the Word write
+  on stage 6 and stage 9 until that review returns `PASS`.
 - **Confirm-gated and local.** A save, stage advance, or deliverable write needs
   a matching draft: a stage draft call writes the draft ledger (`.drafts/`), the
   tracking note, and the stage pointer, and the Confirm re-derives the same
