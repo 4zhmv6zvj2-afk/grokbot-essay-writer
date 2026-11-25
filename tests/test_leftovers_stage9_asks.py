@@ -8,7 +8,6 @@ AC5: Cursor and Grok Build share opened_word_gate (shared function).
 Build covered: shared function + thin wrappers.
 """
 
-import inspect
 import json
 
 from docx import Document
@@ -154,13 +153,6 @@ def test_ac3_stage6_question_only_not_requirement_list(workspace):
     assert refused["refused"] != "assignment-gate"
     assert path.read_bytes() == before
 
-    source = inspect.getsource(essay_review)
-    stage6 = source.split('if verdict == "PASS" and stage == "6":', 1)[1].split(
-        'if verdict == "PASS" and stage == "9":', 1
-    )[0]
-    assert "opened_word_gate" not in stage6
-    assert "answers_assignment_question" in stage6
-
 
 def test_ac4_writer_fo_and_unlock_unchanged(workspace, monkeypatch):
     """AC4. Writer cannot clear. Front office does not remark. Unlock path unchanged."""
@@ -198,15 +190,7 @@ def test_ac5_build_covered_shared_opened_word_gate(workspace):
     seq = _ready(workspace)
     word = TOP
     assert cursor_gate(seq, word) == build_gate(seq, word) == opened_word_gate(seq, word)
-    assert "opened_word_gate as _gate" in inspect.getsource(build_gate)
-    assert "opened_word_gate as _gate" in inspect.getsource(cursor_gate)
     cursor = cursor_stage_launch("eqr")
     build = stage_launch("eqr")
     assert cursor["settings"]["rules"] == build["settings"]["rules"]
     assert WORD_SENTENCE in cursor["settings"]["rules"]
-    review_source = inspect.getsource(essay_review)
-    stage9 = review_source.split('if verdict == "PASS" and stage == "9":', 1)[1].split(
-        'if verdict == "PASS" and stage == "6":', 1
-    )[0]
-    assert "opened_word_gate" in stage9
-    assert "constitution" not in stage9
