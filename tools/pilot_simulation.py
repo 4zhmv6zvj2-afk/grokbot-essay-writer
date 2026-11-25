@@ -376,18 +376,22 @@ def _normal_outcome(result: object) -> Stop | None:
 
 
 def _stages_short(shell: Any, seq: str) -> dict[str, Any]:
-    from conversations.fixtures import FINAL_SENTENCE
+    """Non-native short looks through 4b, then a stage-5 draft only.
 
-    from essay_writer.writing_basics import STAGE_ORDER
+    Same shape as ``first_draft``. Stage 5 stores on draft, so a follow-up
+    confirm is refused as ``confirm-card``. Each stage look must be unique.
+    """
+    from conversations.fixtures import SHORT, STAGE_LOOK
 
     last: dict[str, Any] = {}
-    for stage in STAGE_ORDER:
+    for stage in ("1", "2", "3", "4a", "4b"):
+        look = f"{STAGE_LOOK} Stage {stage} I write short."
         draft = shell.call(
             "essay.stage",
             essay_id=seq,
             stage=stage,
             confirmPhase="draft",
-            look=FINAL_SENTENCE,
+            look=look,
         )
         if draft.get("ok") is not True:
             return draft
@@ -396,13 +400,24 @@ def _stages_short(shell: Any, seq: str) -> dict[str, Any]:
             essay_id=seq,
             stage=stage,
             confirmPhase="confirm",
-            look=FINAL_SENTENCE,
+            look=look,
             cardAction="confirm",
             cardDigest=draft.get("digest"),
         )
         if last.get("stored") is not True:
             return last
-    return last
+    # Stage 5 draft stores and advances. Do not confirm again.
+    look5 = (
+        "This essay says ports shape coastal trade when a narrow passage sets the route. "
+        f"I write short. The gathered note supports that claim {SHORT}."
+    )
+    return shell.call(
+        "essay.stage",
+        essay_id=seq,
+        stage="5",
+        confirmPhase="draft",
+        look=look5,
+    )
 
 
 def _current_stage(seq: str) -> str | None:
