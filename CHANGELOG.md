@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.9.23 — 2026-11-26
+
+- `essay.sequence.new` does not record a guidance-only incident. The stage 1 mint is not a student save. A checklist-only stage confirm still records that refusal.
+- A killed stage commit that leaves an orphan temp records one crash-recovered incident. The temp and the previous files stay.
+- A published stage journal beside a commit temp replays, and the temp stays. A second load records that crash once.
+
 ## 0.9.22 — 2026-11-25
 
 - One module writes each opt-in operator event once. `ml-events.jsonl` stores the JSON line and `debug.log` stores the rendered line of that same record. `essay-writer --debug-tail` prints those rendered lines. It does not turn debug on, does not create a file, and does not write an incident. A missing live `ml-events.jsonl` prints nothing and exits 0, including when only the rotated file is present. The rotated file is read only while the live file exists.

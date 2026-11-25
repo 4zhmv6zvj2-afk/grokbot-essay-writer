@@ -38,7 +38,7 @@ A `state.json` that is not a JSON object is the existing damage refusal. The loa
 From the repository root, on the commit you are about to call the release:
 
 ```bash
-uv run python tools/check_release_version.py --tag v0.9.22
+uv run python tools/check_release_version.py --tag v0.9.23
 uv run essay-writer --health
 ```
 
@@ -49,13 +49,14 @@ The published bytes are checked from the GitHub release, not from this checkout.
 ## Release acceptance
 
 After the five-minute check and the README verify steps, prove the published
-assets outside CI. From the repository root, against a published tag:
+assets outside CI. From the repository root, the default follows `pyproject.toml`.
+Pass `--tag` for another published release.
 
 ```bash
 python tools/release_acceptance.py
 ```
 
-Omit `--tag` and the command uses the version in `pyproject.toml` (`project_tag()` in `tools/release_acceptance.py`). Pass `--tag vX.Y.Z` for another published release.
+`project_tag()` in `tools/release_acceptance.py` reads that version when `--tag` is omitted.
 
 The harness is stdlib-only on the outer path. It downloads the wheel, the
 sdist, and `SHA256SUMS` for that tag, checks each named file against
