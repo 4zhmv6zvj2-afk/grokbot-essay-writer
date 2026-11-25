@@ -44,8 +44,6 @@ uv run essay-writer --health
 
 The version check exits 0 when `pyproject.toml`, `uv.lock`, and the newest `CHANGELOG.md` release heading agree with that tag. `## Unreleased` does not count as a release heading. `--health` prints JSON. Read `version` and `build_commit`. They are the version and the commit you have checked out.
 
-Check that the bestpractices.dev entry for project 16338 matches the release: version, test count, Apache-2.0 licence, and the Python 3.12–3.15 CI matrix.
-
 The published bytes are checked from the GitHub release, not from this checkout. Download the wheel, the sdist, `SHA256SUMS`, each `*.sigstore.json`, and `provenance.intoto.jsonl` into one folder, then run the checksum, `cosign verify-blob`, and `gh attestation verify` commands in the README section "Verify a release". Do not publish a release whose checksum or attestation fails.
 
 ## Release acceptance

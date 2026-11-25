@@ -8,7 +8,7 @@
 - The public workflow document says independent review instead of EQR.
 - The setup ask says the host supplies the secret-card values to essay.setup.
 - Code-generated student replies drop pack, shelf, door, and tool names. Builder labels map to plain words. A guard test fails when a new jargon term appears in a refuse() or say() literal.
-- The finished essay keeps ordinary English. house, seat, door, pack, shelf, tip, and smoke are no longer deleted or rewritten. Only builder labels and invent guidance are cleaned, and the body is cleaned once.
+- The finished essay keeps ordinary English: house, seat, door, pack, shelf, tip, and smoke are no longer deleted or rewritten. Only builder labels and invent guidance are cleaned, and the body is cleaned once.
 - The repository ignores local .audit/, plans/, and .cursor/settings.json. Unused helpers and an unreferenced prompt manifest are gone.
 
 ## 0.9.23 — 2026-11-26
