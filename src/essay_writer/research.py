@@ -98,8 +98,8 @@ def _door_options(
     if industry is not None and not isinstance(industry, dict):
         return None, refuse(
             "industry",
-            "industry must be an object when it is sent. It is not evidence.",
-            next="Send industry as an object, or leave it off.",
+            "Industry was not sent in a form I can read. It is not evidence.",
+            next="Send industry in a form I can read, or leave it off.",
         )
     try:
         digest({"industry": industry, "host_voice": host_voice})

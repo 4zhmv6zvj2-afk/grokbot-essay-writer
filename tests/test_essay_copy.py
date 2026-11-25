@@ -153,7 +153,7 @@ def test_essay_copy_a1_chat_keeps_ordinary_english(workspace):
     assert say("Confirm the plan first.") == "Confirm the plan first."
     assert say("invent-forbid") == "invent-forbid"
     assert say("The seat by the door is a pack on the shelf.") == (
-        "The seat by the step is a draft on the saved copy."
+        "The seat by the door is a pack on the shelf."
     )
     assert say("Please dig the archive and tip the scale.") == (
         "Please dig the archive and tip the scale."

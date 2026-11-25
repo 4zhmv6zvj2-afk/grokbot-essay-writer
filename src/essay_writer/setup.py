@@ -436,8 +436,8 @@ def essay_setup(
             "setup",
             "The file-work program stays where it is already installed. "
             "This step does not install it, and it does not install it on the Mac. "
-            "Set up again without install_grokbuild.",
-            next="Set up again without install_grokbuild.",
+            "Set up again without asking me to install it.",
+            next="Set up again without asking me to install it.",
         )
     shell = resolve_setup_shell(mid_office_shell)
     if isinstance(shell, dict):

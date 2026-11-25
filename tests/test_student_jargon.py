@@ -13,6 +13,7 @@ JARGON = re.compile(
     re.IGNORECASE,
 )
 TOOL_NAME = re.compile(r"essay\.[a-z]")
+IDENTIFIER = re.compile(r"\b(?:install_grokbuild|pack_id|confirmPhase|cardDigest)\b")
 
 
 def _callee(node: ast.Call) -> str | None:
@@ -63,6 +64,6 @@ def test_spoken_literals_drop_builder_jargon() -> None:
         relative = path.relative_to(REPO)
         for line, text in _spoken_literals(path):
             cleaned = say(text)
-            if JARGON.search(cleaned) or TOOL_NAME.search(cleaned):
+            if JARGON.search(cleaned) or TOOL_NAME.search(cleaned) or IDENTIFIER.search(cleaned):
                 failures.append(f"{relative}:{line}: {cleaned}")
     assert not failures, "\n".join(failures)

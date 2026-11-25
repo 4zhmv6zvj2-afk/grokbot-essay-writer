@@ -77,7 +77,11 @@ def essay_shelf_put(
     if blocked:
         return blocked
     if not isinstance(pack, dict):
-        return refuse("pack", "The draft must be an object.", next="Send the draft as an object.")
+        return refuse(
+            "pack",
+            "The draft was not sent in a form I can read.",
+            next="Send the draft again.",
+        )
     if pack_id is not None and _clean_id(pack_id) is None:
         return refuse(
             "shelf",
@@ -221,7 +225,7 @@ def essay_shelf_get(
     if confirmPhase == DRAFT:
         body["digest"] = save_draft(essay_id, GET, payload, fingerprint)
         body["next"] = say(
-            "The draft shows the label only. Saying yes with the same pack_id returns it."
+            "The draft shows the label only. Saying yes with the same id returns it."
         )
         return body
     ready = confirm_ready(essay_id, GET, payload, fingerprint)
