@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from essay_writer import known_paths as essay_known_paths
 from essay_writer import paths as essay_paths
@@ -409,40 +410,10 @@ def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def essay_setup(
-    install_grokbuild: bool = False,
-    app_path: str | None = None,
-    kb1_path: str | None = None,
-    confirmPhase: str | None = None,
-    consensus_api_key: str | None = None,
-    unpaywall_email: str | None = None,
-    openalex_api_key: str | None = None,
-    mid_office_shell: str | None = None,
-    acknowledge_skipped_searches: bool = False,
-    consensus_plan: str | None = None,
-) -> dict[str, object]:
-    """Draft shows the door tree and writes nothing. Confirm creates it.
-
-    Omit the paths on the cloud computer. Name both paths to save on this
-    computer. A Consensus key, an Unpaywall email, and an OpenAlex key are
-    collected on the secret card and are not repeated in the reply. A skip
-    writes nothing until acknowledge_skipped_searches is true on a matching
-    draft and confirm.
-    mid_office_shell is the one-time file-work pick: omit or Cursor for the
-    default, or Grok Build when the user asks.
-    """
-    if install_grokbuild:
-        return refuse(
-            "setup",
-            "The file-work program stays where it is already installed. "
-            "This step does not install it, and it does not install it on the Mac. "
-            "Set up again without asking me to install it.",
-            next="Set up again without asking me to install it.",
-        )
-    shell = resolve_setup_shell(mid_office_shell)
-    if isinstance(shell, dict):
-        return shell
-
+def _resolve_save_folders(
+    app_path: str | None, kb1_path: str | None
+) -> tuple[Path, Path, str] | dict[str, Any]:
+    """The two save folders and where they sit, or a refusal when the pair is not usable."""
     if app_path is None and kb1_path is None:
         recommended = recommended_paths()
         if recommended is None:
@@ -480,6 +451,47 @@ def essay_setup(
             "A split between the two is refused.",
             wrote=False,
         )
+    return app, kb1, where
+
+
+def essay_setup(
+    install_grokbuild: bool = False,
+    app_path: str | None = None,
+    kb1_path: str | None = None,
+    confirmPhase: str | None = None,
+    consensus_api_key: str | None = None,
+    unpaywall_email: str | None = None,
+    openalex_api_key: str | None = None,
+    mid_office_shell: str | None = None,
+    acknowledge_skipped_searches: bool = False,
+    consensus_plan: str | None = None,
+) -> dict[str, object]:
+    """Draft shows the door tree and writes nothing. Confirm creates it.
+
+    Omit the paths on the cloud computer. Name both paths to save on this
+    computer. A Consensus key, an Unpaywall email, and an OpenAlex key are
+    collected on the secret card and are not repeated in the reply. A skip
+    writes nothing until acknowledge_skipped_searches is true on a matching
+    draft and confirm.
+    mid_office_shell is the one-time file-work pick: omit or Cursor for the
+    default, or Grok Build when the user asks.
+    """
+    if install_grokbuild:
+        return refuse(
+            "setup",
+            "The file-work program stays where it is already installed. "
+            "This step does not install it, and it does not install it on the Mac. "
+            "Set up again without asking me to install it.",
+            next="Set up again without asking me to install it.",
+        )
+    shell = resolve_setup_shell(mid_office_shell)
+    if isinstance(shell, dict):
+        return shell
+
+    resolved = _resolve_save_folders(app_path, kb1_path)
+    if isinstance(resolved, dict):
+        return resolved
+    app, kb1, where = resolved
 
     key = consensus_api_key.strip() if isinstance(consensus_api_key, str) else ""
     email = unpaywall_email.strip() if isinstance(unpaywall_email, str) else ""
