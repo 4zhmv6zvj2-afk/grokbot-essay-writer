@@ -12,7 +12,7 @@ import json
 import sys
 import threading
 from contextlib import contextmanager
-from typing import Any, TypedDict, cast
+from typing import Any, Literal, Never, TypedDict, cast
 
 # The stage lock is POSIX-only. Importing the package on Windows must succeed;
 # only taking the lock refuses, and the refusal names the platform.
@@ -22,6 +22,7 @@ except ImportError:  # pragma: no cover - exercised by the no-fcntl subprocess t
     fcntl = None  # type: ignore[assignment]
 
 from essay_writer.durable import replace_text
+from essay_writer.incident import note
 from essay_writer.known_paths import refuse_repo_write
 from essay_writer.paths import work_dir
 from essay_writer.stage_llm import POINTER_FILE, STAGE_ORDER, tracking_file
@@ -45,6 +46,10 @@ def _atomic(path, text: str) -> None:
 STAGE_COMMIT = "tracking/.stage.commit"
 _STAGE_NOTE_RELS = frozenset(tracking_file(stage) for stage in STAGE_ORDER)
 _LOCKS = threading.local()
+_CRASH_RECOVERED: set[str] = set()
+_CRASH_RECOVERED_LOCK = threading.Lock()
+_COMMIT_FILE_NAME = STAGE_COMMIT.rpartition("/")[2]
+_COMMIT_TEMP_PREFIXES = (f".{_COMMIT_FILE_NAME}.", f"{_COMMIT_FILE_NAME}.")
 
 
 def _pointer_path(essay_id: str):
@@ -328,9 +333,74 @@ def _read_pointer_data(essay_id: str) -> dict[str, object] | None:
     return data
 
 
+def _is_commit_temp(name: str) -> bool:
+    return name.endswith(".tmp") and name.startswith(_COMMIT_TEMP_PREFIXES)
+
+
+def _has_commit_temp(root) -> bool:
+    tracking = root / "tracking"
+    if not tracking.is_dir():
+        return False
+    return any(entry.is_file() and _is_commit_temp(entry.name) for entry in tracking.iterdir())
+
+
+def _stage_commit_shape(root) -> Literal["absent", "orphan", "published", "both"]:
+    journal = (root / STAGE_COMMIT).is_file()
+    temp = _has_commit_temp(root)
+    if journal and temp:
+        return "both"
+    if journal:
+        return "published"
+    if temp:
+        return "orphan"
+    return "absent"
+
+
+def _stage_lock_path(essay_id: str):
+    return work_dir(essay_id) / "tracking" / ".stage.lock"
+
+
+def _note_crash_recovered(sequence: str) -> None:
+    with _CRASH_RECOVERED_LOCK:
+        if sequence in _CRASH_RECOVERED:
+            return
+        _CRASH_RECOVERED.add(sequence)
+    note(
+        "crash-recovered",
+        severity="warn",
+        disposition="fallback",
+        tool="stage",
+        step="commit",
+        sequence=sequence,
+    )
+
+
+def _settle_stage_commit(essay_id: str) -> None:
+    root = work_dir(essay_id)
+    shape = _stage_commit_shape(root)
+    if shape == "orphan":
+        _note_crash_recovered(essay_id)
+    elif shape == "both":
+        _raise_if_journal_damaged(root)
+        return
+    elif shape != "absent" and shape != "published":
+        unexpected: Never = shape
+        raise AssertionError(unexpected)
+    _raise_if_journal_damaged(root)
+    _replay_commit(root)
+
+
 def load_pointer(essay_id: str) -> dict[str, Any]:
     if not _pointer_path(essay_id).is_file() and not _commit_path(essay_id).is_file():
-        return blank_pointer()
+        root = work_dir(essay_id)
+        lock = _stage_lock_path(essay_id)
+        if not lock.is_file():
+            orphan = _stage_commit_shape(root) == "orphan"
+            if orphan and not lock.is_file():
+                _note_crash_recovered(essay_id)
+                return blank_pointer()
+            if not lock.is_file():
+                return blank_pointer()
     with _pointer_lock(essay_id):
         data = _read_pointer_data(essay_id)
         if data is None:
@@ -339,8 +409,6 @@ def load_pointer(essay_id: str) -> dict[str, Any]:
 
 
 def _note_pointer(code: str, *, disposition: str, severity: str = "info") -> None:
-    from essay_writer.incident import note
-
     note(code, severity=severity, disposition=disposition, tool="stage", step="pointer")
 
 
@@ -500,12 +568,7 @@ def require_fcntl() -> Any:
 
 @contextmanager
 def _pointer_lock(essay_id: str):
-    """One exclusive lock for the note and pointer on this sequence.
-
-    The same thread may re-enter. A journal left by a crashed commit is
-    finished before the body runs, so readers do not see a torn pair. A
-    damaged journal stops the caller. It is not applied.
-    """
+    """One exclusive lock for the note and pointer on this sequence."""
     held = _held_locks()
     if essay_id in held:
         _raise_if_journal_damaged(work_dir(essay_id))
@@ -519,9 +582,7 @@ def _pointer_lock(essay_id: str):
         module.flock(handle.fileno(), module.LOCK_EX)
         held.add(essay_id)
         try:
-            root = work_dir(essay_id)
-            _raise_if_journal_damaged(root)
-            _replay_commit(root)
+            _settle_stage_commit(essay_id)
             yield
         finally:
             held.discard(essay_id)
@@ -531,7 +592,11 @@ def _pointer_lock(essay_id: str):
 
 
 def stage_lock(essay_id: str):
-    """Exclusive lock for this sequence's note and pointer. Replays a torn commit first."""
+    """Exclusive lock for this sequence's note and pointer.
+
+    A published journal with no commit temp is replayed first. A journal
+    beside a commit temp is left in place.
+    """
     return _pointer_lock(essay_id)
 
 

@@ -52,7 +52,7 @@ class _Frame:
         self.tool = tool
         self.sequence = sequence
         self.stage = stage
-        self.seen: set[str] = set()
+        self.seen: set[tuple[str, str]] = set()
 
 
 def incident_path() -> Path:
@@ -95,11 +95,11 @@ def note(
         if not isinstance(code, str) or _CODE.fullmatch(code) is None:
             return
         frame = _FRAME.get()
-        if frame is not None and code in frame.seen:
-            return
         tool = _token(tool) or (frame.tool if frame is not None else "")
         step = _step(step) or (frame.stage if frame is not None else "")
         sequence = _kept_sequence(sequence) or (frame.sequence if frame is not None else "")
+        if frame is not None and (code, sequence) in frame.seen:
+            return
         if message not in ALLOWED_MESSAGES:
             message = ""
         if not isinstance(exc, str) or _CLASS.fullmatch(exc) is None:
@@ -118,9 +118,9 @@ def note(
             "tool": tool,
         }
         line = json.dumps(payload, sort_keys=True) + "\n"
-        wrote = _commit(line, code, tool, dedupe_file=frame is None)
+        wrote = _commit(line, code, tool, sequence, dedupe_file=frame is None)
         if wrote and frame is not None:
-            frame.seen.add(code)
+            frame.seen.add((code, sequence))
     except Exception:
         return
 
@@ -193,12 +193,19 @@ def pack_support_zip(
     return [name for name, _payload in members]
 
 
-def _commit(line: str, code: str, tool: str, *, dedupe_file: bool) -> bool:
+def _commit(
+    line: str,
+    code: str,
+    tool: str,
+    sequence: str,
+    *,
+    dedupe_file: bool,
+) -> bool:
     with _LOCK:
         path = incident_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         existing = path.read_bytes() if path.is_file() else b""
-        if dedupe_file and _last_matches(existing, code, tool):
+        if dedupe_file and _last_matches(existing, code, tool, sequence):
             return False
         if _over_cap(existing):
             rotated = path.with_name(ROTATED_NAME)
@@ -223,7 +230,7 @@ def _over_cap(existing: bytes) -> bool:
     return len(existing.splitlines()) >= MAX_LINES
 
 
-def _last_matches(existing: bytes, code: str, tool: str) -> bool:
+def _last_matches(existing: bytes, code: str, tool: str, sequence: str) -> bool:
     """A damaged last line is not a reason to drop the new one."""
     try:
         lines = existing.decode("utf-8").splitlines()
@@ -232,7 +239,12 @@ def _last_matches(existing: bytes, code: str, tool: str) -> bool:
         last = json.loads(lines[-1])
     except (UnicodeError, json.JSONDecodeError):
         return False
-    return isinstance(last, dict) and last.get("code") == code and last.get("tool") == tool
+    return (
+        isinstance(last, dict)
+        and last.get("code") == code
+        and last.get("tool") == tool
+        and last.get("sequence") == sequence
+    )
 
 
 def _append_bytes(path: Path, data: bytes) -> None:
