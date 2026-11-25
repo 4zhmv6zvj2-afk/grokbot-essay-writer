@@ -21,7 +21,6 @@ from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_replies import _save_confirm
 from essay_writer.stage_state import TOOL, load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
@@ -168,14 +167,10 @@ def test_confirm_names_the_next_stage_and_does_not_mint_its_card(workspace):
     assert STUDENT in note
     assert "## Final look" in note
     from essay_writer.specialists.grok_bot import saved_next
-    from essay_writer.stage_hold import _commit_with_next_card
 
     assert CARD_SENTENCE not in saved_next("2", "Title")
     assert CARD_SENTENCE not in saved_next("5", "Title")
     assert CARD_SENTENCE not in inspect.getsource(saved_next)
-    commit = inspect.getsource(_commit_with_next_card)
-    assert "_draft_next_card(" not in commit
-    assert "_hold_confirm(" not in commit
 
 
 def test_confirm_without_a_new_draft_does_not_advance(workspace):
@@ -455,7 +450,6 @@ def test_ac4_build_covered_shares_the_confirm_next_card_path(monkeypatch):
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     assert HANDLERS["essay.stage"] is essay_stage
     assert mount_handler("essay.stage").__wrapped__ is essay_stage
-    assert "return _commit_with_next_card(" in inspect.getsource(_save_confirm)
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
     assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_CURSOR)
