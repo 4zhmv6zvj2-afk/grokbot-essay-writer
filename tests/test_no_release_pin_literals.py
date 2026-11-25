@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PIN = re.compile(r"v?0\.9\.\d+")
+PIN = re.compile(r"v?\d+\.\d+\.\d+")
 FIXTURE_PREFIX = "tests/fixtures/state/"
 SKIP_PATHS = frozenset(
     {
@@ -20,7 +21,14 @@ VERSIONS = {
 }
 
 
-def forbidden_release_pins(root: Path) -> list[str]:
+def _project_version(root: Path) -> str:
+    text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    version = tomllib.loads(text)["project"]["version"]
+    assert isinstance(version, str)
+    return version
+
+
+def forbidden_release_pins(root: Path, tip: str) -> list[str]:
     found: list[str] = []
     for base in ("tests", "tools"):
         folder = root / base
@@ -44,49 +52,51 @@ def forbidden_release_pins(root: Path) -> list[str]:
                     version = token[1:] if token.startswith("v") else token
                     if allowed is not None and version in allowed:
                         continue
+                    if version != tip:
+                        continue
                     found.append(f"{rel}:{lineno}: {token}")
     return found
 
 
 def test_tests_and_tools_keep_only_allowlisted_release_pins() -> None:
-    assert forbidden_release_pins(ROOT) == []
+    assert forbidden_release_pins(ROOT, tip=_project_version(ROOT)) == []
 
 
 def test_a_seeded_tip_pin_fails_the_scan(tmp_path: Path) -> None:
-    tip = "0.9.21"
+    tip = "1.2.3"
     scanned = tmp_path / "tests"
     scanned.mkdir()
     (scanned / "test_seed.py").write_text(f"TAG = {tip!r}\n", encoding="utf-8")
-    assert forbidden_release_pins(tmp_path) == [f"tests/test_seed.py:1: {tip}"]
+    assert forbidden_release_pins(tmp_path, tip=tip) == [f"tests/test_seed.py:1: {tip}"]
 
 
 def test_release_tools_allow_only_the_fixture_version(tmp_path: Path) -> None:
     fixture = "0.9.19"
-    tip = "0.9.21"
+    tip = "1.2.3"
     for name in ("release_acceptance.py", "tag_release.py"):
         root = tmp_path / name
         path = root / "tools" / name
         path.parent.mkdir(parents=True)
         path.write_text(f"example = {fixture!r}\n", encoding="utf-8")
-        assert forbidden_release_pins(root) == []
+        assert forbidden_release_pins(root, tip=tip) == []
         path.write_text(
             f"example = {fixture!r}\nTAG = {('v' + tip)!r}\n",
             encoding="utf-8",
         )
-        assert forbidden_release_pins(root) == [f"tools/{name}:2: v{tip}"]
+        assert forbidden_release_pins(root, tip=tip) == [f"tools/{name}:2: v{tip}"]
 
 
 def test_state_fixture_loader_rejects_a_tip_pin(tmp_path: Path) -> None:
-    tip = "0.9.21"
+    tip = "1.2.3"
     path = tmp_path / "tests" / "test_state_fixtures.py"
     path.parent.mkdir()
     path.write_text(f"plant = {tip!r}\n", encoding="utf-8")
-    assert forbidden_release_pins(tmp_path) == [f"tests/test_state_fixtures.py:1: {tip}"]
+    assert forbidden_release_pins(tmp_path, tip=tip) == [f"tests/test_state_fixtures.py:1: {tip}"]
 
 
 def test_old_state_fixtures_may_name_their_versions(tmp_path: Path) -> None:
-    tip = "0.9.21"
+    tip = "1.2.3"
     path = tmp_path / "tests" / "fixtures" / "state" / "old" / "state.json"
     path.parent.mkdir(parents=True)
     path.write_text(f'{{"shipped_by": {tip!r}}}\n', encoding="utf-8")
-    assert forbidden_release_pins(tmp_path) == []
+    assert forbidden_release_pins(tmp_path, tip=tip) == []
