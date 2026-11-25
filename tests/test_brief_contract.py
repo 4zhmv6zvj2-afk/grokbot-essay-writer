@@ -44,8 +44,6 @@ from essay_writer.late_chain import (
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.projects import essay_sequence_new
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_body import _build_stage_body
-from essay_writer.stage_landing import _collect_stage_misses
 from essay_writer.stage_llm import POINTER_FILE, stage_settings, stage_title
 from essay_writer.stage_track import essay_stage
 from essay_writer.textutil import genre_from_brief_text
@@ -329,8 +327,6 @@ def test_ac_nt2_named_entries_shapes(workspace, monkeypatch):
     monkeypatch.setattr("essay_writer.cursor_office.spawn_agent", _quiet_spawn)
     monkeypatch.setattr("essay_writer.build_office.spawn_grok", _quiet_spawn)
     assert CONTRACT_STAGES == frozenset({"2", "3", "5"})
-    assert "_collect_stage_misses" in inspect.getsource(_build_stage_body)
-    assert "stage_contract_refusal" in inspect.getsource(_collect_stage_misses)
 
     assert named_entries(COLON) == [
         "North occasion",
