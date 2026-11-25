@@ -738,10 +738,11 @@ def _install_root() -> Path:
 def _land_sha_from_file() -> str:
     """Pinned land SHA written at ship time. Empty when the file is missing."""
     pkg = _package_dir()
+    # Package file first. Then _install_root (checkout in dev, or a test redirect).
     candidates = [pkg / _LAND_SHA_FILE]
-    checkout = _checkout_root()
-    if checkout is not None:
-        candidates.append(checkout / _LAND_SHA_FILE)
+    root = _install_root()
+    if root != pkg:
+        candidates.append(root / _LAND_SHA_FILE)
     for path in candidates:
         if not path.is_file():
             continue
@@ -756,9 +757,7 @@ def _land_sha_from_file() -> str:
 
 
 def _land_sha_from_git() -> str:
-    root = _checkout_root()
-    if root is None:
-        return ""
+    root = _install_root()
     try:
         raw = subprocess.check_output(
             ["git", "-C", str(root), "rev-parse", "HEAD"],
