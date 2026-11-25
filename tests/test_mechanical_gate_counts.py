@@ -415,7 +415,7 @@ def test_docx_log_counts_references_apart_from_sources(monkeypatch):
     monkeypatch.setattr("essay_writer.debug_log.log_word_step", capture)
     report = {"sources": [{}, {}], "references": [{}]}
     pack = {"title": "Corridor", "conclusion": "open"}
-    log_word_manifest("MOD1004AA-1", pack, report, pack_path="pack.json")
+    log_word_manifest("MOD1004AA-1", pack, report)
     log_word_docx_written("MOD1004AA-1", pack, report, [], Path("out.docx"))
     assert seen["word_manifest"]["sources_count"] == 2
     assert seen["word_manifest"]["refs_count"] == 1

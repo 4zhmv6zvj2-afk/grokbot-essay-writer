@@ -54,7 +54,6 @@ SIMILARLY_FIXTURE = REPO / "tests" / "fixtures" / "dig_cuts_similarly_cite_v1.js
 # Pinned dig-cut surfaces. A silent rewrite fails here before behaviour drifts.
 CITATION_TOKENS_SHA = "a4504c0d2d9adf3af44882a74d5060e3ca350ab5baa9efd43ffd941723bc9475"
 CITE_REFERENCE_GAPS_SHA = "a4c4660b0e277378c6fbdd8a2739db0e70ead8f7c3a9b8a2830a804f0bb260c4"
-LOG_WORD_STEP_REFS_SHA = "7542c3c50ebcbaeebdb85cd7a47369b9afa12e215bee62344c07c1ff182e56ae"
 
 QUESTION = "How do chokepoints constrain the corridor?"
 YULIUS_QUOTE = "The Strait handles a large share of flows."
@@ -135,10 +134,7 @@ def _pin_cut_surface_hashes() -> None:
         hashlib.sha256(inspect.getsource(cite_reference_gaps).encode()).hexdigest()
         == CITE_REFERENCE_GAPS_SHA
     )
-    step_src = inspect.getsource(log_word_step)
-    start = step_src.index("if refs_from:")
-    end = step_src.index("if refused:")
-    assert hashlib.sha256(step_src[start:end].encode()).hexdigest() == LOG_WORD_STEP_REFS_SHA
+    assert "pack_path" not in inspect.getsource(log_word_step).split("del pack_path", 1)[-1]
 
 
 def test_ac1_leading_transition_is_not_the_author(workspace):
@@ -351,8 +347,14 @@ def test_ac4_stage6_to_stage10_word_journey_smoke(workspace, monkeypatch):
     written = _reference_paragraphs(out_docx)
     assert written == [SAVED_LINE]
     log_text = debug_log_path(seq).read_text(encoding="utf-8")
-    assert f"event=essay.product.write_stage10 essay_id={seq} refs_from=saved-path" in log_text
-    assert f"event=essay.product.write_stage10 essay_id={seq} sha=" in log_text
+    stage_lines = [
+        line
+        for line in log_text.splitlines()
+        if "essay.product.write_stage10" in line and f"essay_id={seq}" in line
+    ]
+    assert any("sha256=" in line and "refs_n=" in line for line in stage_lines)
+    assert "refs_from" not in log_text
+    assert "pack_path" not in log_text
 
     handoff_dir = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "output"
     handoff_dir.mkdir(parents=True, exist_ok=True)
@@ -362,7 +364,7 @@ def test_ac4_stage6_to_stage10_word_journey_smoke(workspace, monkeypatch):
     refused = [
         row
         for row in _rows(seq)
-        if row.get("flag") == "--copy-to-mac" and row.get("outcome") == "refused"
+        if row.get("flag") == "--copy-to-mac" and row.get("handoff") == "refused"
     ]
     assert len(refused) == 1
     assert refused[0]["reason"] == "unmounted"

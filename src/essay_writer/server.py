@@ -19,6 +19,7 @@ from essay_writer.free_alt import essay_download_leftovers
 from essay_writer.gates import essay_gates
 from essay_writer.health import essay_health
 from essay_writer.intake import essay_intake, essay_unassigned_collect
+from essay_writer.operator_event import debug_tail
 from essay_writer.originals import essay_originals
 from essay_writer.pack_backup import essay_pack_restore
 from essay_writer.projects import (
@@ -327,6 +328,13 @@ def main(argv: list[str] | None = None) -> None:
         if payload.get("ok") is not True:
             raise SystemExit(1)
         return
+    if args[:1] == ["--debug-tail"]:
+        if len(args) > 2:
+            raise SystemExit("usage: essay-writer --debug-tail [SEQUENCE]")
+        code = debug_tail(args[1] if len(args) == 2 else None)
+        if code:
+            raise SystemExit(code)
+        return
     if args == ["--support-bundle"]:
         payload = support_bundle()
         json.dump(payload, sys.stdout, indent=2)
@@ -379,7 +387,8 @@ def main(argv: list[str] | None = None) -> None:
     if args:
         raise SystemExit(
             "usage: essay-writer [--health | --check-update | --update [--force] | "
-            "--debug-export | --support-bundle | --reviewer | --stage-launch STAGE | "
+            "--debug-export | --debug-tail [SEQUENCE] | --support-bundle | "
+            "--reviewer | --stage-launch STAGE | "
             "--cursor-stage-launch STAGE | "
             "--read-photo PATH | --install-upload ZIP [--upload-sha256 SHA256] [--no-reviewer] "
             "[--install-cursor] [--cursor-sha256 SHA256] | "

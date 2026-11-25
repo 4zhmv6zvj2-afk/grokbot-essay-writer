@@ -117,7 +117,7 @@ def test_ac1_export_zip_contains_full_debug_log_and_ml_events(workspace, monkeyp
         {"essay_id": sequence, "stage": "4b", "confirmPhase": "read"},
         result={"ok": True, "essay_id": sequence, "wrote": False, "pack_path": PACK},
     )
-    log_word_step("render", sequence, pack_path=PACK, stage="4b")
+    log_word_step("render", sequence, stage="4b")
     exported = essay_debug_export()
     assert exported["ok"] is True
     assert exported["complete"] is True
@@ -140,8 +140,9 @@ def test_ac1_export_zip_contains_full_debug_log_and_ml_events(workspace, monkeyp
         sequence_log = archive.read(f"Essay-writer/MOD1004AA/sequences/1/{LOG_FILENAME}")
         sequence_events = archive.read(f"Essay-writer/MOD1004AA/sequences/1/{ML_EVENTS_FILENAME}")
     assert sequence.encode() in sequence_log
-    assert PACK.encode() in sequence_log
+    assert PACK.encode() not in sequence_log
     assert sequence.encode() in sequence_events
+    assert PACK.encode() not in sequence_events
     assert b"FERRY-TAIL" not in json.dumps(exported).encode()
 
 
@@ -311,7 +312,7 @@ def test_ac5_mid_office_export_zip_opens_both_logs(workspace, monkeypatch):
         finish_mid_process(sequence)
         assert cursor_on["started"] is True and cursor_on["shell"] == "cursor"
         assert build_on["started"] is True and build_on["shell"] == "grok"
-        log_word_step("render", sequence, pack_path=PACK, stage="4b")
+        log_word_step("render", sequence, stage="4b")
         pack = workspace / PACK
         pack.parent.mkdir(parents=True, exist_ok=True)
         pack.write_text("{}\n", encoding="utf-8")
@@ -342,9 +343,10 @@ def test_ac5_mid_office_export_zip_opens_both_logs(workspace, monkeypatch):
             assert archive.getinfo(sequence_debug).file_size > CHAT_PASTE_CEILING
             assert archive.getinfo(sequence_events).file_size > CHAT_PASTE_CEILING
             manifest = json.loads(archive.read(FERRY_FILENAME))
-        assert b"Mid-office start Cursor." in debug_bytes
-        assert b"Mid-office start Build." in debug_bytes
-        assert PACK.encode() in debug_bytes
+        assert b"shell=Cursor" in debug_bytes
+        assert b"shell=Build" in debug_bytes
+        assert b"shell_event=start" in debug_bytes
+        assert PACK.encode() not in debug_bytes
         assert debug_bytes.endswith(TAIL)
         assert event_bytes.endswith(TAIL)
         assert sequence.encode() in event_bytes

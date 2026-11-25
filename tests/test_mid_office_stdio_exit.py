@@ -74,9 +74,7 @@ def _shells(essay_id: str, event: str, shell_name: str) -> list[dict]:
     return [
         row
         for row in _rows(essay_id)
-        if row.get("kind") == "shell"
-        and row.get("event") == event
-        and row.get("shell") == shell_name
+        if row.get("shell_event") == event and row.get("shell") == shell_name
     ]
 
 

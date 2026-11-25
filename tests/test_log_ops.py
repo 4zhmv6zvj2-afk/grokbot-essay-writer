@@ -117,10 +117,10 @@ def test_ac6_copy_to_mac_writes_one_ml_events_row(workspace, tmp_path, monkeypat
     capsys.readouterr()
     copied = [row for row in _rows(seq) if row.get("flag") == "--copy-to-mac"]
     assert len(copied) == 1
-    assert copied[0]["kind"] == "outcome"
+    assert copied[0]["handoff"] == "copy_only"
     assert copied[0]["tool"] == "essay-writer"
     assert copied[0]["essay_id"] == seq
-    assert copied[0]["outcome"] == "copy_only"
+    assert "outcome" not in copied[0]
     assert (mac_handoff_sequence_dir(mac, seq) / "annotation.docx").read_bytes() == b"ann-bytes"
     assert "--copy-to-mac" not in HANDLERS
 
@@ -129,7 +129,7 @@ def test_ac6_copy_to_mac_writes_one_ml_events_row(workspace, tmp_path, monkeypat
     refused = [
         row
         for row in _rows(seq)
-        if row.get("flag") == "--copy-to-mac" and row.get("outcome") == "refused"
+        if row.get("flag") == "--copy-to-mac" and row.get("handoff") == "refused"
     ]
     assert len(refused) == 1
     assert refused[0]["essay_id"] == seq
@@ -190,23 +190,13 @@ def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
         build_on = start_stage_mid(sequence, "6", launch=_GROK)
         assert cursor_on["started"] is True and cursor_on["shell"] == "cursor"
         assert build_on["started"] is True and build_on["shell"] == "grok"
-        starts = [
-            row
-            for row in _rows(sequence)
-            if row.get("kind") == "shell" and row.get("event") == "start"
-        ]
+        starts = [row for row in _rows(sequence) if row.get("shell_event") == "start"]
         assert [(row["shell"], row["stage"]) for row in starts] == [
             ("Cursor", "4b"),
             ("Build", "6"),
         ]
         _assert_launch_fields(starts[0], "4b", sequence)
         _assert_launch_fields(starts[1], "6", sequence)
-        assert (
-            starts[0]["context_window"]
-            == starts[1]["context_window"]
-            == stage_settings("4b")["context_window"]
-        )
-        assert starts[0]["reasoning"] != starts[1]["reasoning"]
 
         raw = ml_events_path(sequence).read_text(encoding="utf-8")
         log = debug_log_path(sequence).read_text(encoding="utf-8")
@@ -224,11 +214,7 @@ def test_ac9_mid_office_start_logs_stage_settings(workspace, monkeypatch):
             assert "rules" not in row
 
         finish_mid_process(sequence)
-        done = [
-            row
-            for row in _rows(sequence)
-            if row.get("kind") == "shell" and row.get("event") == "done"
-        ]
+        done = [row for row in _rows(sequence) if row.get("shell_event") == "done"]
         assert len(done) == 1
         assert done[0]["shell"] == "Build"
         for key in (
@@ -265,12 +251,9 @@ def _assert_launch_fields(row: dict, stage: str, sequence: str) -> None:
     item = stage_settings(stage)
     assert row["essay_id"] == sequence
     assert row["stage"] == item["stage"] == stage
-    assert row["model"] == item["model"]
-    assert row["reasoning"] == item["reasoning"]
-    assert row["fast"] is item["fast"]
-    assert row["context_window"] == item["context_window"]
-    assert "prompt_overlay" not in row
-    assert "rules" not in row
+    assert row["shell_event"] == "start"
+    for key in ("model", "reasoning", "fast", "context_window", "prompt_overlay", "rules"):
+        assert key not in row
 
 
 def _record_source():

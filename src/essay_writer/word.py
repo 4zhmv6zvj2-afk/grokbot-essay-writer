@@ -149,7 +149,6 @@ def word_manifest(
     essay_id: str,
     pack: dict[str, Any],
     *,
-    pack_path: str | None = None,
     product_log: bool = True,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Shared cover and Reference List door for stages 6, 7, 9, and 10.
@@ -221,7 +220,6 @@ def word_manifest(
         essay_id,
         prepared,
         stamped,
-        pack_path=pack_path or "caller_pack",
         product_log=product_log,
     )
     return prepared, stamped

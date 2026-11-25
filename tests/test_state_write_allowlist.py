@@ -14,8 +14,6 @@ from pathlib import Path
 ROOT = Path(__file__).parents[1] / "src" / "essay_writer"
 
 ALLOWED = {
-    "debug_log.py": "append log header, not a state file",
-    "ml_events.py": "append log header, not a state file",
     "update.py": "downloaded installer body, not sequence state",
     "first_run_install.py": "archive extract into a new tree",
     "_vendor/python_mcp_bootstrap.py": "vendored pin file, not sequence state",
