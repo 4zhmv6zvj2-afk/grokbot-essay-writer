@@ -136,10 +136,20 @@ jobs:
           import pathlib
 
           import essay_writer
+          from essay_writer.build_status import tip_sheet
+          from essay_writer.handbook import read_handbook
 
           package = pathlib.Path(essay_writer.__file__).parent
-          for name in ("FIRST-RUN.txt", "_vendor/VENDOR.json"):
+          for name in (
+              "FIRST-RUN.txt",
+              "_vendor/VENDOR.json",
+              "runtime/mid-status.md",
+              "runtime/referencing-harvard.md",
+          ):
               assert (package / name).is_file(), f"wheel is missing {name}"
+          assert tip_sheet()["any"]["start"]
+          checked = read_handbook()
+          assert checked["checked"] is True, checked
           print("wheel import ok:", essay_writer.__version__, package)
           PY
           mkdir -p "$RUNNER_TEMP/sdist"

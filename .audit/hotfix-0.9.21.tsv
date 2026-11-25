@@ -1,0 +1,5 @@
+ts	phase	decision	why	evidence	result
+2026-11-25T02:00:48Z	start	Hotfix branch from origin/main; package mid-status + handbook under essay_writer.runtime	Acceptance found TIP_SHEET checkout escape on installed 0.9.20	cursor/hotfix-0.9.21	open
+2026-11-25T02:00:48Z	design	Load via importlib.resources; keep docs/ copies with identity tests; handbook falls back to package when checkout path missing	Fixes whole class; land-sha scoped to package/checkout	build_status handbook debug_log	recorded
+2026-11-25T02:05:33Z	interrogate	Clean for tip sheet + handbook packaging; latent placeholders/mcp.config.json out of scope	explore subagent on hotfix tree	agent 9a231fa3	clean
+2026-11-25T02:05:33Z	smoke	Installed hotfix wheel mid-status draft and handbook read OK	/tmp/ew-hotfix-wheel	pass

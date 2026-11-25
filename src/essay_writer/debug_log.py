@@ -715,19 +715,33 @@ def _present(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _package_dir() -> Path:
+    return Path(__file__).resolve().parent
+
+
+def _checkout_root() -> Path | None:
+    """Repo root when this file lives under src/essay_writer in a checkout."""
+    pkg = _package_dir()
+    if pkg.parent.name != "src":
+        return None
+    root = pkg.parents[1]
+    if (root / "pyproject.toml").is_file() and (root / "src" / "essay_writer").is_dir():
+        return root
+    return None
+
+
 def _install_root() -> Path:
-    """Package install root (repo root in dev, site root when installed)."""
-    return Path(__file__).resolve().parents[2]
+    """Checkout root in development. Package dir when installed as a wheel."""
+    return _checkout_root() or _package_dir()
 
 
 def _land_sha_from_file() -> str:
     """Pinned land SHA written at ship time. Empty when the file is missing."""
-    pkg = Path(__file__).resolve().parent
-    candidates = (
-        _install_root() / _LAND_SHA_FILE,
-        pkg / _LAND_SHA_FILE,
-        pkg.parent / _LAND_SHA_FILE,
-    )
+    pkg = _package_dir()
+    candidates = [pkg / _LAND_SHA_FILE]
+    checkout = _checkout_root()
+    if checkout is not None:
+        candidates.append(checkout / _LAND_SHA_FILE)
     for path in candidates:
         if not path.is_file():
             continue
@@ -742,7 +756,9 @@ def _land_sha_from_file() -> str:
 
 
 def _land_sha_from_git() -> str:
-    root = _install_root()
+    root = _checkout_root()
+    if root is None:
+        return ""
     try:
         raw = subprocess.check_output(
             ["git", "-C", str(root), "rev-parse", "HEAD"],

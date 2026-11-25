@@ -26,6 +26,7 @@ from typing import Any
 from essay_writer.durable import replace_text
 from essay_writer.known_paths import RepoSaveRefused
 from essay_writer.prompt_loader import text
+from essay_writer.runtime_data import TIP_SHEET
 from essay_writer.student_voice import say
 
 # About five minutes of silence, once. Not a line on a fixed repeating clock.
@@ -37,7 +38,7 @@ MID_BUILD_STATUS_ID = "mid-build-status"
 _MID_BUILD_BODY = text("status/mid.md", "body")
 MID_BUILD_STATUS = text("status/mid.md", "status")
 MID_BUILD_DOOR = text("status/mid.md", "door")
-TIP_SHEET = Path(__file__).resolve().parents[2] / "docs" / "templates" / "mid-status.md"
+# TIP_SHEET is the packaged mid-status resource (importlib.resources Traversable).
 
 _ACTIVITIES = {
     "4a": "gathering",

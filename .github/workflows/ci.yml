@@ -304,21 +304,64 @@ jobs:
         run: |
           set -euo pipefail
           python -m venv "$RUNNER_TEMP/wheel-venv"
-          "$RUNNER_TEMP/wheel-venv/bin/python" -m pip install --no-deps dist/*.whl
+          # Runtime deps are required: mid-status draft and handbook read exercise
+          # the installed package the way a student install does.
+          "$RUNNER_TEMP/wheel-venv/bin/python" -m pip install dist/*.whl
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/wheel-venv/bin/python" - <<'PY'
+          import json
+          import os
           import pathlib
+          import tempfile
 
           import essay_writer
+          from essay_writer.build_status import reset_status, tip_sheet
+          from essay_writer.handbook import read_handbook
+          from essay_writer.projects import essay_sequence_new
+          from essay_writer.stage_track import essay_stage
 
           package = pathlib.Path(essay_writer.__file__).parent
           for name in (
               "FIRST-RUN.txt",
               "_vendor/VENDOR.json",
               "prompts/front_office/tools.json",
+              "runtime/mid-status.md",
+              "runtime/referencing-harvard.md",
           ):
               assert (package / name).is_file(), f"wheel is missing {name}"
-          print("wheel import ok:", essay_writer.__version__, package)
+          # No checkout docs beside site-packages.
+          assert not (package.parents[1] / "docs" / "templates" / "mid-status.md").is_file()
+
+          assert tip_sheet()["any"]["start"]
+          checked = read_handbook()
+          assert checked["checked"] is True, checked
+          assert checked["endnote"] == "Harvard", checked
+
+          root = pathlib.Path(tempfile.mkdtemp(prefix="ew-wheel-smoke-"))
+          (root / "uploads").mkdir()
+          (root / "Essay-writer").mkdir()
+          os.environ["ESSAY_WRITER_ROOT"] = str(root)
+          os.environ["ESSAY_WRITER_RESOLVERS"] = "off"
+          reset_status()
+          draft = essay_sequence_new("MOD1004AA", "draft")
+          assert draft.get("ok") is True, draft
+          opened = essay_sequence_new("MOD1004AA", "confirm")
+          assert opened.get("ok") is True, opened
+          seq = opened["sequence_id"]
+          body = essay_stage(seq, "1", "draft", "The corridor is the subject of this stage.")
+          assert body.get("ok") is True, body
+          print(
+              "wheel smoke ok:",
+              json.dumps(
+                  {
+                      "version": essay_writer.__version__,
+                      "package": str(package),
+                      "handbook": checked["endnote"],
+                      "draft_ok": True,
+                      "seq": seq,
+                  }
+              ),
+          )
           PY
       - name: Extract the sdist
         run: |
