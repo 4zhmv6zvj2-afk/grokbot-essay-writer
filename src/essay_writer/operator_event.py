@@ -366,8 +366,8 @@ def _json_lines(path: Path) -> list[dict[str, object]]:
 def debug_tail(sequence: str | None = None, limit: int = TAIL_LIMIT) -> int:
     """Print recent rendered lines. Does not enable debug or create a file.
 
-    A missing live file prints nothing and returns 0. An unreadable file
-    returns 1.
+    A missing live file prints nothing and returns 0, including when only
+    the rotated file is present. An unreadable file returns 1.
     """
     found = _essay_id(sequence) if isinstance(sequence, str) else None
     live = debug_log_path(found).parent / ML_EVENTS_FILENAME
