@@ -402,7 +402,7 @@ def test_quotation_house_words_stay_on_every_surface(workspace):
         for word in ("pack", "house", "door", "tip", "smoke"):
             assert word in text
         assert "dig" not in text.casefold()
-    assert "pack" not in prose_for_surface("the pack size", "word")
+    assert prose_for_surface("the pack size", "word") == "the pack size"
     assert prose_for_surface("the pack size", "annotation") == "the pack size"
     assert prose_for_surface("the pack size", "review") == "the pack size"
 
@@ -446,3 +446,50 @@ def test_quotation_house_words_stay_on_every_surface(workspace):
     for word in ("pack", "house", "door", "tip", "smoke"):
         assert word in review
     assert Path(annotation).is_file()
+
+
+def test_finished_essay_keeps_ordinary_english(workspace):
+    """The finished essay keeps House, pack, and a House reference, and still cleans builder labels."""
+    from docx import Document
+
+    seq = open_sequence()
+    quote = f'"The dig {QUOTE}"'
+    report = {
+        "title": "The House of Commons",
+        "cover": ["Assignment title: The House of Commons"],
+        "sections": [
+            {
+                "heading": "The House of Commons",
+                "body": (
+                    "The House of Commons debated the bill.\n"
+                    "The warehouse packs goods for export.\n"
+                    f"The source says {quote}."
+                ),
+            }
+        ],
+        "figures": [
+            {
+                "label": "Figure 1. EQR from the mid office uses essay.dig",
+                "source_line": "Source: House (2020)",
+            }
+        ],
+        "tables": [],
+        "sources": [],
+        "word_count": {},
+    }
+    pack = {"references_markdown": "House, J. (2020). The Commons debate. London: Penguin."}
+    target = workspace / "ordinary.docx"
+    write_docx(seq, pack, report, target)
+    text = "\n".join(paragraph.text for paragraph in Document(str(target)).paragraphs)
+    assert "The House of Commons debated the bill." in text
+    assert "The warehouse packs goods for export." in text
+    assert "Assignment title: The House of Commons" in text
+    assert "House, J. (2020)" in text
+    assert "Source: House (2020)" in text
+    for word in ("pack", "house", "door", "tip", "smoke"):
+        assert word in text
+    assert "look-up" in text
+    assert "dig" not in text.casefold()
+    assert "EQR" not in text
+    assert "mid office" not in text.casefold()
+    assert "essay.dig" not in text

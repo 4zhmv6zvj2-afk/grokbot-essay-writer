@@ -152,7 +152,7 @@ def test_setup_does_not_clone_or_store_open(tmp_path, monkeypatch):
     assert essay_health()["app_path"] != "open"
 
 
-def test_student_chat_and_word_omit_house_jargon(workspace):
+def test_word_keeps_ordinary_english_and_drops_builder_labels(workspace):
     assert "invent-forbid" in INSTRUCTIONS
     assert "look-up" in HONESTY or "source card" in HONESTY
     for banned in (
@@ -195,16 +195,16 @@ def test_student_chat_and_word_omit_house_jargon(workspace):
     assert "look-up" in plain
     assert "invent-forbid" not in plain.casefold()
     assert "do not invent" not in plain.casefold()
+    # builder labels go, ordinary English stays; this is the finished-essay contract.
+    assert "approve" in plain
+    assert "independent review" in plain
+    for kept in ("door", "house", "shelf", "seat", "smoke", "pack", "tip"):
+        assert kept in plain
     for banned in (
-        "door",
-        "house",
         "Confirm",
         "EQR",
-        "shelf",
         "mid office",
         "front office",
-        "seat",
-        "smoke",
         "Grok Build",
         "Grok Bot",
         "SuperGrok",

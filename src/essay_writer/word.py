@@ -355,10 +355,9 @@ def _add_heading(
 def _write_body(
     document: DocumentType, text: str, *, justify: bool, heading_size: int = 14
 ) -> None:
-    cleaned = prose_for_surface(text, "word")
-    if not cleaned:
+    if not text.strip():
         return
-    for line in cleaned.splitlines():
+    for line in text.splitlines():
         if not line.strip():
             continue
         match = _HASH_HEADING.match(line.strip())
