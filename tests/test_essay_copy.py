@@ -153,7 +153,7 @@ def test_essay_copy_a1_chat_keeps_ordinary_english(workspace):
     assert say("Confirm the plan first.") == "Confirm the plan first."
     assert say("invent-forbid") == "invent-forbid"
     assert say("The seat by the door is a pack on the shelf.") == (
-        "The seat by the door is a pack on the shelf."
+        "The seat by the step is a draft on the saved copy."
     )
     assert say("Please dig the archive and tip the scale.") == (
         "Please dig the archive and tip the scale."
@@ -163,7 +163,7 @@ def test_essay_copy_a1_chat_keeps_ordinary_english(workspace):
     seq = open_sequence()
     empty = essay_revise(seq, " ", "draft")
     assert empty["ok"] is False, empty
-    assert "does" in empty["reason"]
+    assert empty["reason"] == "message says what to change. I do not invent the revision."
     assert empty["reason"] != "The does not invent the revision."
     leftovers = essay_download_leftovers(seq, "draft")
     assert leftovers["ok"] is False, leftovers

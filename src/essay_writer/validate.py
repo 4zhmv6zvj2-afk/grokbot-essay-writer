@@ -951,7 +951,7 @@ def essay_pack_validate(
     if blocked:
         return blocked
     if not isinstance(pack, dict):
-        return refuse("pack", "pack must be an object", next="Send the pack as an object.")
+        return refuse("pack", "The draft must be an object.", next="Send the draft as an object.")
     from essay_writer.specialists.writer import accept_draft
 
     blocked_gate = accept_draft(essay_id, _pack_assignment_text(pack))
