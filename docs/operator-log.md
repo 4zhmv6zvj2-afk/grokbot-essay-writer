@@ -1,7 +1,5 @@
 # Operator log
 
-Operators and shells use these files. End users do not.
-
 ## Opt-in record
 
 Operators and shells use these files. End users do not. Essay Bot, Cursor, and Grok Build read them when they diagnose a run. Students do not use them. They are not shown in chat and they are not written into Word.

@@ -18,7 +18,7 @@ are unchanged.
 | **download shortlist** | The works chosen for download after research. Works that do not fit the confirmed question are dropped. From what remains, the works that fit the saved plan are the download set. A missing question or a missing plan leaves that set empty. | `src/essay_writer/download_shortlist.py` |
 | **stage next** | The one writer of the "what happens next" sentence on an `essay.stage` reply. Dig, shelf, setup, intake, review, and projects still write their own next sentence. | `src/essay_writer/stage_next.py` |
 | **canon** | Canonical JSON (sorted keys, no whitespace) plus SHA-256. It makes a Confirm identity: same arguments, same digest. | `src/essay_writer/canon.py` |
-| **confirm / card** | The two-phase write protocol. A write call with `confirmPhase: "draft"` returns a card; the same call with `confirmPhase: "confirm"` writes, and only if the canonical digest and the on-disk file fingerprint still match. | `src/essay_writer/confirm.py` |
+| **confirm / card** | The two-phase write protocol. A write call with `confirmPhase: "draft"` returns a card; the same call with `confirmPhase: "confirm"` writes, and only if the canonical digest and the on-disk file fingerprint still match. The full gate is in [Confirm](workflow.md#confirm). | `src/essay_writer/confirm.py` |
 | **pack** | A validated research pack. A pack's ending is **noted** when it stands on gathered evidence, and **open** when it does not. The door never turns open into noted. | `src/essay_writer/research_packs.py`, `docs/workflow.md` |
 | **mid-office** | The child process that serves the MCP tools over stdio. The "mid-office shell" is whichever host runs it (Cursor by default, or Grok Build). | `src/essay_writer/mid_spawn.py` |
 | **Grok Build** | An alternative agent host to Cursor, selected by the operator. | `FIRST-RUN.txt` |
@@ -48,7 +48,7 @@ plain words. It does not change what the tools do.
 | **final look** | A stage needs one sentence of your own. A draft that is only the checklist or guidance is refused. Confirm saves your sentence in the tracking note. |
 | **lock** | The decision later stages keep. On an essay it is the thesis. On a report it is purpose and scope. On a reflective diary it is the entries. A small edit is allowed. A break is not a small edit: that earlier stage is confirmed again. |
 | **central theme** | On a report, the one-sentence answer the plan holds. A report has no thesis. |
-| **Confirm** | The save for the stage you just reviewed. One Confirm saves that stage only. If the card cannot be used, typing yes, ok, or Confirm saves that same waiting stage. |
+| **Confirm** | The save for the stage you just reviewed. One Confirm saves that stage only. If the card cannot be used, typing yes, ok, or Confirm saves that same waiting stage. The full gate is in [Confirm](workflow.md#confirm). |
 | **card** | The message that shows what will be saved and waits for Confirm. The chat shows the card the tool returned for this stage. It does not invent the next stage's card. |
 | **pack** | The checked set of sources and sections for this essay. Its ending is **noted** when it stands on the gathered evidence, and **open** when it does not. The tool does not turn open into noted. |
 | **shelf** | A saved copy of that pack, kept with this essay after you confirm it. |

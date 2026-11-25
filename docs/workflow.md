@@ -4,7 +4,7 @@ One module id per assignment. A normal semester has about four essays; you can h
 
 **Templates:** `docs/templates/review.md` (person review checklist) and `docs/templates/bot.md` (Essay Bot, switched on). The bot uses the same MCP entry as Cursor. The share file is `docs/templates/essay-bot.share.json`. There is no separate bot door in `essay.health`.
 
-**Workplace:** Essay Bot is the chat. Cursor is the default place for file work on this computer; Grok Build is an alternate chosen at setup. Save on this computer, or on a folder you name on this computer. A path you did not name is not a save target. Documents is not used as a stand-in for this computer.
+**Workplace:** Essay Bot is the chat. Cursor is the default place for file work on this computer; Grok Build is an alternate chosen at setup. Save on this computer, or on a folder you name on this computer. A path you did not name is not a save target. Documents is not the install folder and is not a label for this computer (`src/essay_writer/setup.py`). When a Mac handoff folder is set, the chat names `Documents/Essay Bot/<module>/<essay id>/` (`src/essay_writer/first_run_mac.py`). When Documents is already mounted and no handoff folder is set, the finished file is named `Documents/<module>-10/` (`src/essay_writer/late_chain.py`).
 
 Cursor and Essay Bot share the same doors. The doors live once in the essay-writer package (`essay_writer.shells`). Essay Bot says the replies. A door change is made once in that package.
 

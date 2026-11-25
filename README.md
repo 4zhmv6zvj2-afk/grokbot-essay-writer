@@ -30,6 +30,7 @@ this repository is its source.
   save call must repeat the same values. A typed yes, ok, or Confirm saves the
   waiting stage only when the host cannot send the card fields; a supplied card
   field still has to be the Confirm action; it never saves a later stage.
+  The full gate is in [Confirm](docs/workflow.md#confirm).
 - **Prompt-heavy by design.** The stage instructions, genre rules, and
   validation checks are the product. They are packaged with the code under
   `src/essay_writer/prompts/` and are not fetched at runtime.
@@ -52,8 +53,7 @@ governance process. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - Not a submission service: it never submits. The tool drafts the essay from
   the sources the workflow gathered; the student directs the work, reviews each
-  stage, confirms saves on a card (stage 5 stores its first draft on the draft
-  call, as documented), and owns what is submitted.
+  stage, confirms saves on a card, and owns what is submitted.
 - Not a hosted service: no server, no account, no bundled keys. It is a local
   process the agent talks to.
 - Not a general-purpose Word or referencing library.
@@ -63,8 +63,7 @@ governance process. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The tool researches and gathers sources, then drafts, revises, and formats the
 essay from them. The student directs the work, reviews each stage, confirms
-saves on a card (stage 5 stores its first draft on the draft call, as
-documented), and owns what is submitted. The tool does not decide what is
+saves on a card, and owns what is submitted. The tool does not decide what is
 acceptable at the student's institution, and it never submits anything.
 
 - The student owns what they submit. Using a drafting aid without disclosure, or
@@ -72,8 +71,7 @@ acceptable at the student's institution, and it never submits anything.
   responsibility. The tool does not police it, and the maintainer does not
   endorse it.
 - The workflow keeps the student in control: each stage is shown in chat, saves
-  are confirmed on a card (stage 5 stores its first draft on the draft call, as
-  documented), and the final Word file is theirs.
+  are confirmed on a card, and the final Word file is theirs.
 - If your course forbids generative assistance, do not use this.
 
 ## Using Essay Bot (students)
