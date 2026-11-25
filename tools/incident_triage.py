@@ -14,7 +14,6 @@ from pilot_schema import (
     INCIDENT_FIELDS,
     NONE_KEY,
     SECTION_TITLES,
-    VERSION,
     CountBucket,
     FaultResult,
     IncidentRow,
@@ -33,6 +32,7 @@ from pilot_schema import (
     stage_ok,
     tool_ok,
 )
+from release_acceptance import project_version
 
 
 def _text_field(raw: dict[str, object], key: str) -> str | None:
@@ -98,7 +98,7 @@ def parse_fault(raw: object, persona: PersonaName) -> FaultResult | None:
     }
 
 
-def parse_run(raw: object, persona: PersonaName, version: str = VERSION) -> PersonaRun | None:
+def parse_run(raw: object, persona: PersonaName, version: str) -> PersonaRun | None:
     if not isinstance(raw, dict) or contains_forbidden(raw):
         return None
     if parse_persona(raw.get("persona")) != persona or raw.get("version") != version:
@@ -133,7 +133,7 @@ def parse_run(raw: object, persona: PersonaName, version: str = VERSION) -> Pers
     }
 
 
-def _placeholder(persona: PersonaName, version: str = VERSION) -> PersonaRun:
+def _placeholder(persona: PersonaName, version: str) -> PersonaRun:
     return {
         "persona": persona,
         "version": version,
@@ -179,7 +179,7 @@ def _bucket(keys: list[str], required: tuple[str, ...] = ()) -> list[CountBucket
     return [{"key": key, "count": tally[key]} for key in sorted(tally)]
 
 
-def aggregate(runs_dir: Path, version: str = VERSION) -> PilotReport:
+def aggregate(runs_dir: Path, version: str) -> PilotReport:
     dropped_rows = 0
     dropped_runs = 0
     present: dict[str, Path] = {}
@@ -315,12 +315,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Summarize pilot incident metadata.")
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--out", type=Path)
-    parser.add_argument("--version", default=VERSION)
+    parser.add_argument(
+        "--version",
+        default=None,
+        help="installed version; omit to read pyproject.toml",
+    )
     args = parser.parse_args(argv)
     if not args.runs.is_dir():
         print("FAIL runs", file=sys.stderr)
         return 2
-    text = render(aggregate(args.runs, args.version))
+    version = args.version if args.version is not None else project_version()
+    text = render(aggregate(args.runs, version))
     if not guard(text):
         print("FAIL privacy")
         if args.out is not None and args.out.exists():

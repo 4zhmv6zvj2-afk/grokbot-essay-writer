@@ -12,6 +12,7 @@ ACCEPTANCE = ROOT / "tools" / "release_acceptance.py"
 ESSAY = "The fisheries opening stayed on the page."
 PATH = "/Users/student/essay.txt"
 VOLUME = "/Volumes/ResearchDrive"
+VERSION = "1.2.3"
 
 
 def test_sentinels_match_release_acceptance() -> None:
@@ -21,7 +22,7 @@ def test_sentinels_match_release_acceptance() -> None:
 
 
 def _run(runs: Path, out: Path | None = None) -> subprocess.CompletedProcess[str]:
-    command = [sys.executable, str(TRIAGE), "--runs", str(runs)]
+    command = [sys.executable, str(TRIAGE), "--runs", str(runs), "--version", VERSION]
     if out is not None:
         command.extend(["--out", str(out)])
     return subprocess.run(command, capture_output=True, text=True, check=False)
@@ -30,7 +31,7 @@ def _run(runs: Path, out: Path | None = None) -> subprocess.CompletedProcess[str
 def _run_record() -> dict[str, object]:
     return {
         "persona": "error-prone",
-        "version": "0.9.21",
+        "version": VERSION,
         "steps": ["open", "gather", "walk_4b"],
         "faults": ["malformed_payload", "timeout", "crash", "refused_save"],
         "incident_count": 4,
@@ -143,7 +144,7 @@ def test_empty_runs_print_the_disclaimer(tmp_path: Path) -> None:
     completed = _run(runs)
     assert completed.returncode == 0
     assert completed.stdout.startswith(
-        "These four runs are simulations on installed essay-writer 0.9.21. "
+        f"These four runs are simulations on installed essay-writer {VERSION}. "
         "They are not validation with real students.\n"
     )
     assert "dropped_rows  0" in completed.stdout

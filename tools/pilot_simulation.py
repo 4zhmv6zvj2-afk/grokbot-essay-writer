@@ -20,7 +20,6 @@ import pilot_schema as schema
 from pilot_schema import (
     CODE_RE,
     REPO,
-    TAG,
     UNEXPECTED,
     FaultKind,
     FaultResult,
@@ -30,12 +29,11 @@ from pilot_schema import (
     make_fault,
     make_run,
 )
-from release_acceptance import asset_names, version_of
+from release_acceptance import ReleasePin, project_tag
 
 
-def release_pin(tag: str) -> tuple[str, str]:
-    version = version_of(tag)
-    return version, asset_names(version)[0]
+def release_pin(tag: str) -> ReleasePin:
+    return ReleasePin(tag)
 
 
 API_KEYS = (
@@ -216,7 +214,7 @@ def _run_triage(runs: Path, report: Path, version: str) -> int:
 
 
 def outer_main(args: argparse.Namespace) -> int:
-    version, wheel_name = release_pin(args.tag)
+    pin = release_pin(args.tag)
     repo = Path(__file__).resolve().parents[1]
     created = args.workdir is None
     workdir = (
@@ -224,7 +222,7 @@ def outer_main(args: argparse.Namespace) -> int:
     )
     report = args.out if args.out is not None else Path.cwd() / "pilot-report.txt"
     try:
-        return _outer(args, repo, workdir, report, version, wheel_name)
+        return _outer(args, repo, workdir, report, pin.version, pin.wheel_name)
     finally:
         if created and not args.keep:
             shutil.rmtree(workdir, ignore_errors=True)
@@ -701,7 +699,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Simulate four student personas on an installed essay-writer release."
     )
-    parser.add_argument("--tag", default=TAG)
+    parser.add_argument("--tag", default=None)
     parser.add_argument("--assets-dir", type=Path)
     parser.add_argument("--workdir", type=Path)
     parser.add_argument("--keep", action="store_true")
@@ -710,7 +708,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--version")
     parser.add_argument("--workspace", type=Path)
     parser.add_argument("--tests", type=Path)
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.tag is None:
+        args.tag = project_tag()
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:

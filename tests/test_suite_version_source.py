@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import re
+import tomllib
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parents[1] / "tests"
@@ -104,6 +105,25 @@ def test_the_tests_that_already_read_the_package_version_keep_doing_so():
         assert "__version__" in source, name
         pinned = [text for text in _asserted_strings(tree) if PINNED_VERSION.search(text)]
         assert pinned == [], name
+
+
+def test_the_package_version_string_matches_pyproject() -> None:
+    init_path = TESTS.parent / "src" / "essay_writer" / "__init__.py"
+    project_path = TESTS.parent / "pyproject.toml"
+    literals: list[str] = []
+    for node in ast.parse(init_path.read_text(encoding="utf-8")).body:
+        if not isinstance(node, ast.Assign):
+            continue
+        named = any(
+            isinstance(target, ast.Name) and target.id == "__version__" for target in node.targets
+        )
+        if not named:
+            continue
+        value = node.value
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            literals.append(value.value)
+    project = tomllib.loads(project_path.read_text(encoding="utf-8"))
+    assert literals == [str(project["project"]["version"])]
 
 
 def test_the_changed_tests_keep_public_wording_and_opaque_deny_ids():

@@ -46,7 +46,7 @@ def _function(path: Path, name: str) -> ast.FunctionDef:
     raise AssertionError(name)
 
 
-def _health_payload(version: str = "0.9.14") -> dict[str, object]:
+def _health_payload(version: str = "1.2.14") -> dict[str, object]:
     """An essay.health payload shaped like the official door's report."""
     return {
         "ok": True,
@@ -116,7 +116,7 @@ def test_install_update_and_attach_share_the_short_health_read(
     assert read["ok"] is True
     assert read["tool"] == "essay.health"
     assert read["tool_count"] == 1
-    failed = health_read({"ok": True, "alive": True, "version": "0.9.14", "doors": []})
+    failed = health_read({"ok": True, "alive": True, "version": "1.2.14", "doors": []})
     assert failed["ok"] is False
     assert (
         health_read({"ok": False, "alive": False, "doors": [{"tool": "essay.health"}]})["ok"]
@@ -155,7 +155,7 @@ def _install_tree(root: Path) -> Path:
     folder = root / "tree"
     folder.mkdir()
     (folder / "pyproject.toml").write_text(
-        '[project]\nname = "essay-writer"\nversion = "0.9.14"\n', encoding="utf-8"
+        '[project]\nname = "essay-writer"\nversion = "1.2.14"\n', encoding="utf-8"
     )
     (folder / "FIRST-RUN.txt").write_text("prompt", encoding="utf-8")
     (folder / "requirements-runtime.txt").write_text(
