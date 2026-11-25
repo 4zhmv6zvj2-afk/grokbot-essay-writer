@@ -372,3 +372,49 @@ def test_guidance_only_door_fills_tool_and_stage(workspace) -> None:
     assert len(framed) == 1
     assert framed[0]["tool"] == ""
     assert framed[0]["stage"] == ""
+
+
+def test_new_sequence_confirm_records_no_guidance_only_incident(workspace) -> None:
+    """A stored sequence confirm does not record guidance-only.
+
+    The stage 1 mint is not a student save. A stage confirm whose look is only
+    the checklist still records guidance-only on that stage.
+    """
+    folder = essay_dir(ESSAY)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "brief.md").write_text(
+        "Genre: report\nQuestion: How should the firm manage the corridor?\n",
+        encoding="utf-8",
+    )
+    shell = FakeShell()
+    draft = shell.call("essay.sequence.new", module=ESSAY, confirmPhase="draft")
+    assert draft["ok"] is True, draft
+    assert draft["stored"] is False
+    opened = shell.call("essay.sequence.new", module=ESSAY, confirmPhase="confirm")
+    assert opened["ok"] is True, opened
+    assert opened["stored"] is True
+    assert opened["sequence_id"] == SEQUENCE
+    assert opened["next"] == "Start Stage 1 — Analyse the task in this chat."
+    assert opened.get("card") is None
+    assert opened.get("cardAction") is None
+    assert opened.get("cardDigest") is None
+    minted = _rows(incident_path()) if incident_path().is_file() else []
+    assert minted == []
+
+    look = "\n".join(read_basics_opening(SEQUENCE).lines)
+    reply = shell.call(
+        "essay.stage",
+        essay_id=SEQUENCE,
+        stage="1",
+        confirmPhase="confirm",
+        look=look,
+    )
+    assert reply["refused"] == "guidance-only"
+    matched = [row for row in _rows(incident_path()) if row.get("code") == "guidance-only"]
+    assert len(matched) == 1
+    fresh = matched[0]
+    assert fresh["tool"] == "essay.stage"
+    assert fresh["stage"] == "1"
+    assert fresh["sequence"] == SEQUENCE
+    assert fresh["severity"] == "error"
+    assert fresh["disposition"] == "refuse"
