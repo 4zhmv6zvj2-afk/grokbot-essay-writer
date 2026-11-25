@@ -490,6 +490,7 @@ def test_finished_essay_keeps_ordinary_english(workspace):
         assert word in text
     assert "look-up" in text
     assert "dig" not in text.casefold()
+    assert "essay." not in text
     assert "EQR" not in text
     assert "mid office" not in text.casefold()
     assert "essay.dig" not in text

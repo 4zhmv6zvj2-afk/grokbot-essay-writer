@@ -335,7 +335,12 @@ def _validate_formed_views(
     for index, item in enumerate(raw):
         label = f"formed_views[{index}]"
         if not isinstance(item, dict):
-            blockers.append({"code": "pack", "reason": f"{label} must be an object"})
+            blockers.append(
+                {
+                    "code": "pack",
+                    "reason": "One formed view in the draft was not sent in a form I can read.",
+                }
+            )
             continue
         sentence = item.get("sentence")
         if not isinstance(sentence, str) or not sentence.strip():
@@ -397,7 +402,14 @@ def inspect_pack(essay_id: str, pack: object) -> dict[str, Any]:
     blockers: list[dict[str, str]] = []
     notes: list[dict[str, str]] = []
     if not isinstance(pack, dict):
-        return _empty(blockers=[{"code": "pack", "reason": "pack must be an object"}])
+        return _empty(
+            blockers=[
+                {
+                    "code": "pack",
+                    "reason": "The draft was not sent in a form I can read.",
+                }
+            ]
+        )
     pack_id = pack.get("essay_id")
     module = module_code(essay_id) if isinstance(essay_id, str) else essay_id
     if pack_id not in (None, essay_id, module):
@@ -437,7 +449,12 @@ def inspect_pack(essay_id: str, pack: object) -> dict[str, Any]:
     clean_sections: list[dict[str, str]] = []
     for index, section in enumerate(sections):
         if not isinstance(section, dict):
-            blockers.append({"code": "pack", "reason": f"sections[{index}] must be an object"})
+            blockers.append(
+                {
+                    "code": "pack",
+                    "reason": "One section of the draft was not sent in a form I can read.",
+                }
+            )
             continue
         heading = section.get("heading")
         body = section.get("body")
@@ -876,7 +893,10 @@ def _visuals(
     for index, item in enumerate(items):
         if not isinstance(item, dict):
             blockers.append(
-                {"code": "pack", "reason": f"{kind.lower()}s[{index}] must be an object"}
+                {
+                    "code": "pack",
+                    "reason": f"One {kind} in the draft was not sent in a form I can read.",
+                }
             )
             continue
         title = item.get("title")

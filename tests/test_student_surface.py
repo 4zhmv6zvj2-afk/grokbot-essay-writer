@@ -151,13 +151,61 @@ def test_annotation_house_label_is_refused_before_word(workspace):
     ).exists()
 
 
+_JARGON = re.compile(
+    r"\b(?:doors?|packs?|shelf|seats?|spine|canon|minted?|house|EQR)\b",
+    re.IGNORECASE,
+)
+_TOOL_NAME = re.compile(r"essay\.[a-z]")
+_IDENTIFIER = re.compile(r"\b(?:install_grokbuild|pack_id|confirmPhase|cardDigest)\b")
+
+
+def _person_readable(body: dict) -> list[str]:
+    found: list[str] = []
+    for key in ("reason", "next"):
+        value = body.get(key)
+        if isinstance(value, str):
+            found.append(value)
+    for key in ("blockers", "issues", "notes"):
+        items = body.get(key)
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, dict) and isinstance(item.get("reason"), str):
+                found.append(item["reason"])
+    return found
+
+
+def _builder_words(text: str) -> bool:
+    return bool(_JARGON.search(text) or _TOOL_NAME.search(text) or _IDENTIFIER.search(text))
+
+
 def test_chat_keeps_the_tool_id_and_word_does_not():
     spoken = say("Call essay.dig after you approve the save.")
     assert "essay.dig" in spoken
     worded = for_word("Call essay.dig after you approve the save.")
-    assert "dig" not in worded.casefold()
-    assert "look-up" in worded
+    assert "essay." not in worded
+    assert "look-up" not in worded
+    labeled = strip_word_labels("Call essay.dig after you approve the save.")
+    assert "essay." not in labeled
+    assert "look-up" not in labeled
     kept = strip_word_labels("The authors confirm the limit.")
     assert kept == "The authors confirm the limit."
     assert strip_word_labels("the pack size") == "the pack size"
     assert for_word("the pack size") == "the pack size"
+
+
+def test_malformed_replies_keep_student_words(workspace):
+    """A bad draft and a bad source record speak in plain sentences."""
+    write_upload(workspace)
+    seq = open_sequence()
+    draft = essay_pack_validate(seq, "not-a-draft", "draft")
+    gathered = essay_research_summary(seq, TOPIC, "draft", sources=["not-a-record"])
+    assert draft["reason"] == "The draft was not sent in a form I can read."
+    assert gathered["reason"] == "Part of the gathered source was not sent in a form I can read."
+    leaks = [
+        text
+        for reply in (draft, gathered)
+        for text in _person_readable(reply)
+        if _builder_words(text)
+    ]
+    assert not leaks, leaks

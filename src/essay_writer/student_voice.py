@@ -129,18 +129,41 @@ QUOTATION_HOUSE_POLICY = (
     "are still replaced before those files are saved."
 )
 _QUOTED_SPAN = re.compile(r'"[^"]*"|“[^”]*”')
+_ESSAY_TOOL_ID = re.compile(r"essay\.[A-Za-z0-9_.]+")
+_DIG_CARD_FILE = re.compile(r"[\w./\\-]*dig-card\.(?:json|md)")
+
+
+def _drop_student_identifiers(text: str) -> str:
+    """Remove a tool id or dig-card file name outside a quotation, then close the gap."""
+
+    def outside(part: str) -> str:
+        return _DIG_CARD_FILE.sub("", _ESSAY_TOOL_ID.sub("", part))
+
+    pieces: list[str] = []
+    last = 0
+    for match in _QUOTED_SPAN.finditer(text):
+        pieces.append(outside(text[last : match.start()]))
+        pieces.append(match.group(0))
+        last = match.end()
+    pieces.append(outside(text[last:]))
+    cleaned = "".join(pieces)
+    if cleaned == text:
+        return text
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    return re.sub(r" +([.,;:])", r"\1", cleaned)
 
 
 def strip_word_labels(text: str) -> str:
     """Word and paper-note text. The academic verb confirm stays.
 
-    The word dig does not, including inside a tool id. The invent-forbid
-    token does not. Ordinary words such as pack in a quotation stay, so a
-    gathered sentence is not rewritten.
+    A tool id and a dig-card file name are removed first, outside a quotation.
+    The word dig does not remain. The invent-forbid token does not. Ordinary
+    words such as pack in a quotation stay, so a gathered sentence is not rewritten.
     """
     if not isinstance(text, str) or not text:
         return text
     text = _drop_assistant_voice(text)
+    text = _drop_student_identifiers(text)
     text = _INVENT_TOKEN.sub("do not invent sources", text)
     text = _EQR_WORD.sub("independent review", text)
     text = _GROK_BUILD.sub("", text)
@@ -266,13 +289,14 @@ def for_word(text: str) -> str:
     """Word file text. Builder labels and invent guidance are omitted.
 
     Ordinary English such as pack, house, and door stays. This does not
-    call say(). Tool ids that contain the word dig are kept in chat and
-    dropped here. Grok Build and Grok Bot are dropped here.
+    call say(). Tool ids and dig-card file names are dropped here, outside
+    a quotation. Grok Build and Grok Bot are dropped here.
     """
     if not isinstance(text, str) or not text:
         return text
     cleaned = _drop_assistant_voice(text)
     cleaned = _scrub_paths_in_text(cleaned)
+    cleaned = _drop_student_identifiers(cleaned)
     for pattern, replacement in _WORD_SWAPS:
         cleaned = pattern.sub(replacement, cleaned)
     cleaned = _tidy(_INVENT.sub(" ", cleaned))
