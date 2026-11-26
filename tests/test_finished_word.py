@@ -35,9 +35,8 @@ from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office
 from essay_writer.specialists.eqr import read_submit_word, submit_word_path
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_hold import _commit_pointer
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_track import _commit_pointer, essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.validate import essay_pack_validate
 from essay_writer.word import essay_pack_render_word, word_manifest, write_docx
@@ -180,7 +179,7 @@ def test_one_build_is_checked_then_copied(case_id: str, workspace, monkeypatch, 
             )
         return _commit_pointer(essay_id, base, proposed, note=note, note_text=note_text)
 
-    monkeypatch.setattr("essay_writer.stage_hold._commit_pointer", watching)
+    monkeypatch.setattr("essay_writer.stage_track._commit_pointer", watching)
     look = "\n".join(basics_pass_lines(seq)) + "\nThe final file is ready."
     draft = essay_stage(seq, "10", "draft", look)
     assert draft["ok"] is True, draft

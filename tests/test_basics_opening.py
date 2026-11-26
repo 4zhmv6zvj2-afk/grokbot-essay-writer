@@ -24,9 +24,13 @@ from essay_writer.specialists.grok_bot import (
     read_basics_opening,
     remember_approved_look,
 )
-from essay_writer.stage_hold import _opening_look
 from essay_writer.stage_state import _note_path
-from essay_writer.stage_track import _collect_stage_misses, essay_stage, look_is_confirmable
+from essay_writer.stage_track import (
+    _collect_stage_misses,
+    _opening_look,
+    essay_stage,
+    look_is_confirmable,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE = REPO / "src" / "essay_writer"
@@ -360,7 +364,7 @@ def test_opener_findings_and_status_stay_outside(case_id: str, workspace, monkey
     """AC-ew-basics-4: next-card opener, findings note, and status line stay outside the seed and the refusal as locked."""
     assert case_id == "AC-ew-basics-4"
     del workspace
-    opener = _function(PACKAGE / "stage_hold.py", "_opening_look")
+    opener = _function(PACKAGE / "stage_track.py", "_opening_look")
     findings = _function(PACKAGE / "specialists" / "eqr.py", "build_findings")
     clears = _function(PACKAGE / "specialists" / "eqr.py", "findings_note_clears")
     status = _function(PACKAGE / "build_status.py", "basis_for")

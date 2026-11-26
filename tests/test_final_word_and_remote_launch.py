@@ -10,7 +10,6 @@ from docx import Document
 from helpers import mac_handoff_sequence_dir, open_sequence, picked
 from test_stage10_sequence_write import MODULE, NUMBER, _brief, _kick, _output, _pack, _park
 
-import essay_writer.stage_hold as stage_hold
 from essay_writer.brief_contract import remember_registration
 from essay_writer.build_office import spawn_grok, stage_launch
 from essay_writer.cursor_office import (
@@ -24,7 +23,7 @@ from essay_writer.paths import work_dir
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_track import _commit_pointer, essay_stage
 from essay_writer.state import load_state, save_state
 
 MISSING = "The final Word file is missing."
@@ -75,7 +74,7 @@ def _confirm(monkeypatch, documents, *, mounted: bool) -> tuple[str, dict]:
     save_state(seq, state)
     _park(seq)
     seen = {"before_close": False}
-    real = stage_hold._commit_pointer
+    real = _commit_pointer
 
     def watching(essay_id, base, proposed, *, note=None, note_text=None):
         if proposed.get("closed") is True:
@@ -86,13 +85,13 @@ def _confirm(monkeypatch, documents, *, mounted: bool) -> tuple[str, dict]:
             seen["before_close"] = True
         return real(essay_id, base, proposed, note=note, note_text=note_text)
 
-    monkeypatch.setattr(stage_hold, "_commit_pointer", watching)
+    monkeypatch.setattr("essay_writer.stage_track._commit_pointer", watching)
     look = "\n".join(basics_pass_lines(seq)) + "\nThe final file is ready."
     draft = essay_stage(seq, "10", "draft", look)
     assert draft["ok"] is True, draft
     saved = essay_stage(seq, "10", "confirm", **picked(draft))
     assert seen["before_close"] is True
-    monkeypatch.setattr(stage_hold, "_commit_pointer", real)
+    monkeypatch.setattr("essay_writer.stage_track._commit_pointer", real)
     return seq, saved
 
 

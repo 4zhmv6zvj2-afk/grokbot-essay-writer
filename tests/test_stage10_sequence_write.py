@@ -25,9 +25,9 @@ from essay_writer.projects import essay_sequence_new
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_hold import _commit_pointer as hold_commit
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_state import load_pointer
+from essay_writer.stage_track import _commit_pointer as hold_commit
 from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.word import write_docx
@@ -220,7 +220,7 @@ def test_ac1_ac2_ac3_clone_then_stage10_confirm_writes_the_child_and_documents(
             wrote_before_commit["ok"] = True
         return hold_commit(essay_id, base, proposed, **kwargs)
 
-    monkeypatch.setattr("essay_writer.stage_hold._commit_pointer", _commit_after_word)
+    monkeypatch.setattr("essay_writer.stage_track._commit_pointer", _commit_after_word)
 
     saved = front_office_call(
         "essay.stage",

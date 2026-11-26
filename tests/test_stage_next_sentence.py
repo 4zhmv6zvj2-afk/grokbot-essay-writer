@@ -24,9 +24,8 @@ PACKAGE = REPO / "src" / "essay_writer"
 LAYERS = (
     "stage_state.py",
     "stage_note.py",
-    "stage_hold.py",
 )
-SENTENCE_FILES = ("stage_hold.py",)
+SENTENCE_FILES = ()
 OWN_SENTENCE = {
     "dig.py": "This source card is not on disk yet. Choose Confirm to keep this step.",
     "shelf.py": "Say yes to keep this step. That stores this copy on this computer.",

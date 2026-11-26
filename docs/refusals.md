@@ -165,12 +165,12 @@ The where column is a file name. The test owns the codes.
 | eqr | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
 | draft | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
 | word-band | This first draft is not inside the brief's word band. Change the draft so it fits the brief, then save again. | refuse | The reason sentence names the next step. | stage_track.py |
-| pointer | (built at the door) | refuse | The reason sentence names the next step. | stage_hold.py |
-| stage | (built at the door) | refuse | The reason sentence names the next step. | stage_hold.py |
-| stage | The last stage is already saved. This tool does not submit. | refuse | The reason sentence names the next step. | stage_hold.py |
-| stage | Save the plan note first. The first draft waits until that save. | refuse | The reason sentence names the next step. | stage_hold.py |
-| stage | Save the plan again before the first draft. The earlier lock changed. | refuse | The reason sentence names the next step. | stage_hold.py |
-| word | (built at the door) | refuse | The reason sentence names the next step. | stage_hold.py |
+| pointer | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
+| stage | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
+| stage | The last stage is already saved. This tool does not submit. | refuse | The reason sentence names the next step. | stage_track.py |
+| stage | Save the plan note first. The first draft waits until that save. | refuse | The reason sentence names the next step. | stage_track.py |
+| stage | Save the plan again before the first draft. The earlier lock changed. | refuse | The reason sentence names the next step. | stage_track.py |
+| word | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
 | misses | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
 | lock-choice | The inherited lock is empty. Revise instead. | refuse | The reason sentence names the next step. | stage_track.py |
 | house-jargon | That note uses an internal label. Say it in plain words. | refuse | The reason sentence names the next step. | stage_track.py |

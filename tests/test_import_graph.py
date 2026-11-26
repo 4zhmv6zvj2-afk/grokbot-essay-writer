@@ -116,13 +116,12 @@ MUTUAL_PAIRS: frozenset[tuple[str, str]] = frozenset(
 
 STAGE_LAYERS = frozenset(
     {
-        "stage_hold",
         "stage_note",
         "stage_state",
     }
 )
 STAGE_TRACK_IMPORTS = (
-    ("projects", "function", ("_run_card_only",)),
+    ("projects", "function", ("_run_card_only", "door_card_reply")),
     ("server", "module", ("essay_stage",)),
 )
 
