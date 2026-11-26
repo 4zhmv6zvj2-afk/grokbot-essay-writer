@@ -52,7 +52,7 @@ def _commit_path(essay_id: str):
     return work_dir(essay_id) / STAGE_COMMIT
 
 
-def _pointer_text(body: Mapping[str, object]) -> str:
+def _pointer_text(body: dict[str, object]) -> str:
     # A journal record is a mapping, not a Pointer. The on-disk JSON is unchanged.
     return json.dumps(body, indent=2, ensure_ascii=False) + "\n"
 
@@ -244,7 +244,7 @@ def init_cloned_sequence_pointer(folder) -> None:
     _replay_commit(folder)
     path = folder / POINTER_FILE
     if path.is_file():
-        _atomic(path, _pointer_text(blank_pointer()))
+        _atomic(path, _pointer_text(dict(blank_pointer())))
     _clear_copied_writing(folder)
 
 
@@ -414,10 +414,12 @@ def _keep_unnamed(
     pointer: Pointer, source: Mapping[str, Any], *, named: Mapping[str, Any] | None = None
 ) -> None:
     """Copy fields the named pointer keys do not cover. A later save still writes them."""
-    covered = pointer if named is None else named
-    extra = {
-        key: value for key, value in source.items() if key not in covered and key not in pointer
-    }
+    if named is None:
+        extra = {key: value for key, value in source.items() if key not in pointer}
+    else:
+        extra = {
+            key: value for key, value in source.items() if key not in named and key not in pointer
+        }
     if extra:
         dict.update(pointer, extra)
 
