@@ -11,10 +11,10 @@ validation, and Word output.
   - `doors.py` — tool catalogue and descriptions.
   - `stage_run.py` — the orchestrator. It keeps `essay_stage` and the stage
     decision tree. The folded writers live in this file: the confirm path and
-    the stage-7 skip probe, the body builder, the draft and save replies
-    (`_draft_reply`, `_save_confirm`), the landing and report helpers, and the
-    held and refused replies. A card calls `_run_card_only` directly. The
-    inherited-lock keep calls `_inherited_keep_confirm` directly.
+    the stage-7 skip probe, the body builder, the draft and save replies, the
+    landing and report helpers, and the held and refused replies. The card-only
+    path and the inherited-lock keep are called directly. The run branches are
+    named in [Stage flow](#stage-flow).
   - `stage_state.py` — the pointer, the commit journal, and the stage lock. The
     lock and the journal stay one protocol: the note and the pointer that names
     it are published together. Its import rule is in [Stage flow](#stage-flow).
