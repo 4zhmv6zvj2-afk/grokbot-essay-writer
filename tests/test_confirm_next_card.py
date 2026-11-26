@@ -328,7 +328,7 @@ def test_stage5_still_stores_a_look_the_predicate_would_refuse(workspace):
     There is no second refusal. AUTO_START is unchanged.
     """
     from essay_writer.spine import AUTO_START
-    from essay_writer.stage_body import look_is_confirmable
+    from essay_writer.stage_track import look_is_confirmable
 
     assert AUTO_START == {"5": "6"}
     seq = open_sequence("MOD1004AA")

@@ -23,11 +23,6 @@ TRACK = PACKAGE / "stage_track.py"
 LAYERS = (
     STATE,
     PACKAGE / "stage_note.py",
-    PACKAGE / "stage_hold.py",
-    PACKAGE / "stage_landing.py",
-    PACKAGE / "stage_replies.py",
-    PACKAGE / "stage_confirm.py",
-    PACKAGE / "stage_body.py",
 )
 ARCHITECTURE = REPO / "ARCHITECTURE.md"
 
@@ -37,22 +32,10 @@ MOVED_NAMES = (
     "_MINTING",
     "_apply_commit",
     "_atomic",
-    "_attach_mid_run",
-    "_commit_pointer",
-    "_commit_with_next_card",
-    "_draft_next_card",
-    "_next_card_look",
-    "_note_look",
-    "_opening_look",
-    "_render_stage10_before_close",
-    "_snapshot_stage_save",
-    "_store_stage",
     "blank_pointer",
-    "door_card_reply",
     "in_first_draft",
     "init_cloned_sequence_pointer",
     "rebind_cloned_confirms",
-    "render_tracking",
     "stage_lock",
 )
 
@@ -92,11 +75,6 @@ def test_importing_the_state_layer_does_not_load_the_track():
         "import sys\n"
         "import essay_writer.stage_state\n"
         "import essay_writer.stage_note\n"
-        "import essay_writer.stage_hold\n"
-        "import essay_writer.stage_landing\n"
-        "import essay_writer.stage_replies\n"
-        "import essay_writer.stage_confirm\n"
-        "import essay_writer.stage_body\n"
         "assert 'essay_writer.stage_track' not in sys.modules, "
         "sorted(name for name in sys.modules if name.startswith('essay_writer'))\n"
     )
@@ -123,7 +101,7 @@ def test_stage_track_does_not_reexport_the_moved_names():
 
 def test_the_state_layer_dropped_the_minting_contextvar():
     source = STATE.read_text(encoding="utf-8")
-    source += (PACKAGE / "stage_hold.py").read_text(encoding="utf-8")
+    source += (PACKAGE / "stage_track.py").read_text(encoding="utf-8")
     assert "_MINTING" not in source
 
 

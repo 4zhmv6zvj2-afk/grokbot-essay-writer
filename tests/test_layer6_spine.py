@@ -31,35 +31,14 @@ def test_spine_does_not_keep_a_second_constitution_check(case_id):
         Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
     )
     stage = Path(stage_track.__file__).read_text(encoding="utf-8")
-    # The landing and reply writers moved, so the door check reads all three.
-    landing = (
-        Path(stage_track.__file__)
-        .resolve()
-        .parent.joinpath("stage_landing.py")
-        .read_text(encoding="utf-8")
-    )
-    replies = (
-        Path(stage_track.__file__)
-        .resolve()
-        .parent.joinpath("stage_replies.py")
-        .read_text(encoding="utf-8")
-    )
-    # The final_review import moved with the body builder.
-    body = (
-        Path(stage_track.__file__)
-        .resolve()
-        .parent.joinpath("stage_body.py")
-        .read_text(encoding="utf-8")
-    )
-    trio = stage + landing + replies
     assert "def assignment_gate" not in spine
     assert "def assignment_gate(" not in stage
     # The brief-answer store rides in on its own import; a second check does not.
     assert "from essay_writer.assignment_gate import store_brief_answer" in stage
-    assert trio.count("essay_writer.spine import gate_save") == 1
-    assert (stage + body).count("essay_writer.spine import final_review") == 1
-    assert trio.count("essay_writer.spine import stage_bibliography") == 1
-    assert "quiet_stage5" in trio
+    assert stage.count("essay_writer.spine import gate_save") == 1
+    assert stage.count("essay_writer.spine import final_review") == 1
+    assert stage.count("essay_writer.spine import stage_bibliography") == 1
+    assert "quiet_stage5" in stage
     assert advances_without_confirm("5") == "6"
     assert advances_without_confirm("7") is None
     assert advances_without_confirm("8") is None
