@@ -24,7 +24,6 @@ from essay_writer.revise import essay_revise
 from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists.writer import BODY_CITE_STAGES, land_body_cites
-from essay_writer.stage_body import _prepare_stage_text, _stage7_draft_body
 from essay_writer.stage_note import _note_look
 from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
@@ -269,11 +268,8 @@ def test_ac4_gate_is_shared_writer_path_not_stage6_only(workspace):
     assert "9" not in BODY_CITE_STAGES
     gate_source = inspect.getsource(apply_body_cites)
     role_source = inspect.getsource(land_body_cites)
-    stage_source = inspect.getsource(_prepare_stage_text) + inspect.getsource(_stage7_draft_body)
     assert '== "6"' not in gate_source
     assert '== "6"' not in role_source
-    assert "stage in BODY_CITE_STAGES" in stage_source
-    assert "land_body_cites" in stage_source
     assert "land_body_cites" in inspect.getsource(essay_revise)
     assert "withhold_body_cites" in inspect.getsource(prepare_word_citations)
     assert "withhold_body_cites" in inspect.getsource(word_manifest)

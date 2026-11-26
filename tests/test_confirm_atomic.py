@@ -18,12 +18,11 @@ from essay_writer.build_office import stage_launch
 from essay_writer.confirm import save_draft
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
 from essay_writer.paths import essay_dir, work_dir
+from essay_writer.projects import essay_sequence_new
 from essay_writer.server import HANDLERS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_hold import _draft_next_card
-from essay_writer.stage_replies import _save_confirm
 from essay_writer.stage_state import TOOL, load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
@@ -253,11 +252,6 @@ def test_ac4_cursor_and_grok_build_share_confirm(monkeypatch):
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     assert HANDLERS["essay.stage"] is essay_stage
     assert mount_handler("essay.stage").__wrapped__ is essay_stage
-    source = inspect.getsource(_save_confirm)
-    assert "return _commit_with_next_card(" in source
-    mint_source = inspect.getsource(_draft_next_card)
-    assert "minting=True" in mint_source
-    assert "_MINTING" not in mint_source
     assert "_commit_with_next_card" not in inspect.getsource(stage_launch)
     assert "_commit_with_next_card" not in inspect.getsource(cursor_stage_launch)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_CURSOR)
@@ -268,6 +262,60 @@ def test_ac4_cursor_and_grok_build_share_confirm(monkeypatch):
     assert (
         cursor_shell()["entry"]["command"] == front_office()["entry"]["command"] == "essay-writer"
     )
+
+
+def test_new_sequence_returns_the_minted_stage1_card(workspace, monkeypatch):
+    """door_card_reply's stage 1 fallback returns the card the mint produced.
+
+    The pointer stays on stage 1. A mint that does not pass the flag returns
+    no card, which is the path a fresh sequence already takes.
+    """
+    module = "MOD1004AA"
+    calls: list[dict[str, object]] = []
+
+    def card_run(essay_id, stage, look=None, *, minting=False):
+        calls.append({"essay_id": essay_id, "stage": stage, "minting": minting})
+        if not minting:
+            return {"ok": False, "wrote": False, "stored": False}
+        digest = "ab" * 32
+        return {
+            "ok": True,
+            "stored": False,
+            "card": {
+                "kind": "confirm",
+                "essay_id": essay_id,
+                "stage": stage,
+                "digest": digest,
+            },
+            "cardAction": "confirm",
+            "cardDigest": digest,
+            "next": "Open the Confirm card for Stage 1.",
+        }
+
+    monkeypatch.setattr("essay_writer.stage_track._run_card_only", card_run)
+    drafted = essay_sequence_new(module, "draft")
+    assert drafted["ok"] is True, drafted
+    opened = essay_sequence_new(module, "confirm")
+    assert opened["ok"] is True, opened
+    assert calls == [
+        {
+            "essay_id": opened["sequence_id"],
+            "stage": "1",
+            "minting": True,
+        }
+    ]
+    card = opened["card"]
+    assert card["kind"] == "confirm"
+    assert card["stage"] == "1"
+    assert card["essay_id"] == opened["sequence_id"]
+    assert opened["cardDigest"] == "ab" * 32
+    assert opened["cardAction"] == "confirm"
+    assert opened["next"] == "Open the Confirm card for Stage 1."
+    pointer = load_pointer(opened["sequence_id"])
+    assert pointer["current"] == "1"
+    assert pointer["saved"] == []
+    assert pointer["waiting_stage"] is None
+    assert pointer["waiting_digest"] is None
 
 
 def test_ac5_closed_or_wrong_sequence_does_not_mint_a_card(workspace):

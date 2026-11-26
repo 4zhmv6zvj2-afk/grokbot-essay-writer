@@ -25,7 +25,7 @@ from essay_writer.projects import essay_sequence_new
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.specialists.grok_bot import basics_pass_lines
-from essay_writer.stage_hold import _commit_with_next_card
+from essay_writer.stage_hold import _commit_pointer as hold_commit
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_state import load_pointer
 from essay_writer.stage_track import essay_stage
@@ -211,6 +211,16 @@ def test_ac1_ac2_ac3_clone_then_stage10_confirm_writes_the_child_and_documents(
     assert draft["ok"] is True, draft
     parent_before = parent_path.read_bytes()
     child_before = child_path.read_bytes()
+    wrote_before_commit = {"ok": False}
+
+    def _commit_after_word(essay_id, base, proposed, **kwargs):
+        if essay_id == child and isinstance(proposed, dict) and proposed.get("closed") is True:
+            assert child_path.is_file()
+            assert child_path.read_bytes() != child_before
+            wrote_before_commit["ok"] = True
+        return hold_commit(essay_id, base, proposed, **kwargs)
+
+    monkeypatch.setattr("essay_writer.stage_hold._commit_pointer", _commit_after_word)
 
     saved = front_office_call(
         "essay.stage",
@@ -225,6 +235,7 @@ def test_ac1_ac2_ac3_clone_then_stage10_confirm_writes_the_child_and_documents(
     assert saved["ok"] is True, saved
     assert saved["stored"] is True
     assert saved["closed"] is True
+    assert wrote_before_commit["ok"] is True
     assert saved.get("card") is None
     assert load_pointer(child)["closed"] is True
     assert "10" in load_pointer(child)["saved"]
@@ -357,8 +368,6 @@ def test_build_covered_both_shells_share_the_write_and_the_log(monkeypatch):
     )
     assert "write_docx(" in stage10_source
     assert "copy2" not in stage10_source
-    commit = inspect.getsource(_commit_with_next_card)
-    assert commit.index("_render_stage10_before_close") < commit.index("_commit_pointer")
     assert "note_call" in inspect.getsource(front_office_call)
     monkeypatch.setattr("essay_writer.setup.persisted_shell", lambda: SHELL_CURSOR)
     cursor = cursor_stage_launch("10")
