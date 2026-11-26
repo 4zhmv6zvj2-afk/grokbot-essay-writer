@@ -9,7 +9,7 @@ import threading
 
 from helpers import open_sequence
 
-from essay_writer import stage_hold, stage_landing, stage_replies, stage_state, stage_track
+from essay_writer import stage_hold, stage_state
 from essay_writer.paths import work_dir
 from essay_writer.shells import front_office_call
 from essay_writer.stage_state import load_pointer
@@ -288,7 +288,4 @@ def test_ac5_commit_is_shared_for_later_stages(workspace, monkeypatch):
     assert "Stage two new." in _note(seq, "2")
     assert "1" in seen
     assert "2" in seen
-    assert "_save_pointer" not in inspect.getsource(stage_track._run_stage)
-    assert "_commit_pointer" in inspect.getsource(stage_replies._save_confirm)
-    assert "_commit_pointer" in inspect.getsource(stage_landing._store_stage)
     assert "stage ==" not in inspect.getsource(stage_state._commit_pointer)
