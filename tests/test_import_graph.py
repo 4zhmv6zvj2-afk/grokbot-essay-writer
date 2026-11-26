@@ -121,7 +121,7 @@ STAGE_LAYERS = frozenset(
     }
 )
 STAGE_TRACK_IMPORTS = (
-    ("projects", "function", ("_run_card_only", "door_card_reply")),
+    ("projects", "function", ("door_card_reply",)),
     ("server", "module", ("essay_stage",)),
 )
 

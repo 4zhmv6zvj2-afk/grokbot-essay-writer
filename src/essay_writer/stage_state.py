@@ -1,13 +1,11 @@
 """Pointer, commit journal, and stage lock.
 
-This file owns the pointer, the commit journal, and the stage lock. A note
-or a reply that needs a card calls back through CardRun on the hold module.
+This file owns the pointer, the commit journal, and the stage lock.
 This file still never imports stage_track.
 """
 
 from __future__ import annotations
 
-import contextvars
 import json
 import sys
 import threading
@@ -28,12 +26,6 @@ from essay_writer.paths import work_dir
 from essay_writer.stage_llm import POINTER_FILE, STAGE_ORDER, tracking_file
 
 TOOL = "essay.stage"
-
-
-_INHERITED_KEEP: contextvars.ContextVar[bool] = contextvars.ContextVar(
-    "essay_stage_inherited_keep",
-    default=False,
-)
 
 
 def _atomic(path, text: str) -> None:
