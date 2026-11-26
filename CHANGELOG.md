@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.9.25 — 2026-11-26
+
+- The stage modules are one orchestrator, `stage_run.py`. The three save paths share one pointer commit. A card is a direct call, and an inherited-lock keep passes its flag as an argument. The injected card runner, the inherited-keep contextvar, and the boundary test are gone.
+- Source pins fell from 545 to 509 during that conversion.
+- Dependabot bumped the actions group (`ossf/scorecard-action` to 2.6.0 and `github/codeql-action/upload-sarif` to 4.39.4) and the python group (nine packages, including ruff 0.17.6 and pydantic 2.14.4). `uv.lock` was refreshed for the python group.
+- The docs name the six stage modules that exist: `stage_run.py`, `stage_state.py`, `stage_llm.py`, `stage_context.py`, `stage_note.py`, and `stage_next.py`. `docs/testing.md` no longer freezes a pin count. Run `tools/pin_audit.py` for the current count.
+- A recovery card minted while an inherited-lock keep is in flight no longer carries that keep's draft fingerprint. A later ordinary confirm of that card matches, instead of refusing as changed.
+
 ## 0.9.24 — 2026-11-26
 
 - The student-facing README says the tool writes the first draft and the student decides. It calls the reviewer pass the independent review.

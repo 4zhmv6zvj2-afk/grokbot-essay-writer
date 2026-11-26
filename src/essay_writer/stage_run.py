@@ -177,11 +177,11 @@ def _run_card_only(
     *,
     minting: bool = False,
 ) -> dict[str, Any]:
-    """The card-only stage run the state layer calls through injection.
+    """One card-only stage run. Callers in this module call it directly.
 
     The next-card mint passes ``minting=True`` so the student-answer gates stay
     off that draft. Reopening an already-saved stage's card keeps the normal
-    gates. The state layer never imports this module to reach it.
+    gates.
     """
     return _stage_call(
         StageArgs(
