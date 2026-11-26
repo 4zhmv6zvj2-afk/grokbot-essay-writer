@@ -9,6 +9,7 @@ from pathlib import Path
 
 from helpers import ESSAY, open_sequence, picked, plant_gathered_source
 
+from essay_writer import stage_track
 from essay_writer.assignment_gate import north_star_gate
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
@@ -20,7 +21,7 @@ from essay_writer.shells import cursor_shell, front_office
 from essay_writer.specialists.grok_bot import basics_pass_lines, front_office_call
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_state import load_pointer
+from essay_writer.stage_state import _commit_pointer, load_pointer
 from essay_writer.stage_track import essay_stage
 
 QUESTION = "How should Inditex manage its supply chain?"
@@ -228,6 +229,52 @@ def test_ac4_pass_starts_stage6_with_no_confirm_card(workspace):
     again = essay_stage(seq, "5", "confirm", _ready(seq), cardAction="confirm")
     assert again["ok"] is False
     assert load_pointer(seq)["current"] == "6"
+
+
+def test_stage5_store_keeps_the_room_grant(workspace):
+    _brief()
+    seq = open_sequence()
+    _through(seq)
+    pointer = load_pointer(seq)
+    granted = dict(pointer)
+    granted["room_grant"] = "6"
+    granted["room_lock"] = False
+    assert _commit_pointer(seq, pointer, granted) is not None
+    done = essay_stage(seq, "5", "draft", _ready(seq))
+    assert done["stored"] is True, done
+    assert done["current"] == "6"
+    kept = load_pointer(seq)
+    assert kept["room_grant"] == "6"
+    assert kept["room_lock"] is False
+    assert "5" in kept["saved"]
+
+
+def test_a_lost_pointer_does_not_store_stage5(workspace, monkeypatch):
+    _brief()
+    seq = open_sequence()
+    _through(seq)
+    before = load_pointer(seq)
+    assert before["current"] == "5"
+    assert "5" not in before["saved"]
+
+    def lose_the_save(essay_id, base, proposed, *, note=None, note_text=None):
+        fresh = load_pointer(essay_id)
+        if fresh.get("revision") == base.get("revision"):
+            _commit_pointer(essay_id, fresh, dict(fresh))
+        return _commit_pointer(essay_id, base, proposed, note=note, note_text=note_text)
+
+    monkeypatch.setattr(stage_track, "_commit_pointer", lose_the_save)
+    lost = essay_stage(seq, "5", "draft", _ready(seq))
+    assert lost["ok"] is False, lost
+    assert lost["refused"] == "pointer"
+    assert lost["stored"] is False
+    assert lost["wrote"] is False
+    assert lost["advanced"] is False
+    kept = load_pointer(seq)
+    assert kept["current"] == "5"
+    assert "5" not in kept["saved"]
+    assert kept["revision"] == before["revision"] + 1
+    assert not (work_dir(seq) / "tracking" / "5.md").is_file()
 
 
 def test_ac5_build_covered_shares_handlers_and_stage_path():
