@@ -25,7 +25,6 @@ LAYERS = (
     "stage_state.py",
     "stage_note.py",
 )
-SENTENCE_FILES = ()
 OWN_SENTENCE = {
     "dig.py": "This source card is not on disk yet. Choose Confirm to keep this step.",
     "shelf.py": "Say yes to keep this step. That stores this copy on this computer.",
@@ -143,9 +142,6 @@ def test_one_module_stores_the_stage_sentence(case_id: str, workspace) -> None:
 def test_stage_paths_leave_the_sentence_to_that_module(case_id: str) -> None:
     """AC-ew-stage-next-2: The reply, hold, landing, and finish paths no longer assign that sentence."""
     del case_id
-    for name in SENTENCE_FILES:
-        stores = _next_stores(ast.parse((PACKAGE / name).read_text(encoding="utf-8")))
-        assert stores == [], name
     finish = _function(PACKAGE / "late_chain.py", "finish_stage_reply")
     assert _next_stores(finish) == []
     for name in ("stage_track.py",):

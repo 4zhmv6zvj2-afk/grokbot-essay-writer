@@ -23,20 +23,17 @@ or saved list is left in place.
 
 The pointer, the commit journal, and the stage lock live in
 essay_writer/stage_state.py. The tracking-note renderer and look reader live
-in essay_writer/stage_note.py. The held and refused reply bodies live in
-essay_writer/stage_hold.py. The landing and report helpers live in
-essay_writer/stage_landing.py and the draft and save reply writers in
-essay_writer/stage_replies.py. The confirm path and the shared stage-7 skip
-probe live in essay_writer/stage_confirm.py. The body builder lives in
-essay_writer/stage_body.py. This module is the orchestrator: it imports the
-state, hold, landing, reply, confirm, and body modules at module load and
-keeps the public entry point.
+in essay_writer/stage_note.py. The next sentence lives in
+essay_writer/stage_next.py. Stage settings and prompt assembly live in
+essay_writer/stage_llm.py. This module is the orchestrator. The confirm path,
+the body builder, the draft and save replies, the landing and report helpers,
+and the held and refused replies live here.
 
-Those modules do not import this module, at module load or at call time. The
-note module does not import it either. A save that needs the next stage's card
-or the current stage's card calls ``_run_card_only`` directly. The inherited-lock
-keep re-enters through the private stage entry with ``inherited_keep``. The typed
-stage values (StageArgs and StageContext) live in essay_writer/stage_context.py.
+stage_state.py and stage_note.py do not import this module, at module load or
+at call time. A save that needs the next stage's card or the current stage's
+card calls ``_run_card_only`` directly. The inherited-lock keep calls
+``_inherited_keep_confirm`` directly. The typed stage values (StageArgs and
+StageContext) live in essay_writer/stage_context.py.
 """
 
 from __future__ import annotations

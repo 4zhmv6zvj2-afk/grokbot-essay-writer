@@ -72,11 +72,9 @@ python tools/pin_audit.py
 When a change touches a file that has a pin, replace that pin with an
 assertion on the observable artifact: the tool reply, the student text, the
 docx, the file on disk, or the saved state. Do not add a new
-`inspect.getsource` pin. On this tree, `python tools/pin_audit.py` reports
-545 pins (getsource 170, docstring 6, source-string 276, test-of-test 57,
-filename-pin 36). The three heaviest files are
-`tests/test_suite_version_source.py` (16), `tests/test_harvard_ref_check.py` (14),
-and `tests/test_cite_fit.py` (14).
+`inspect.getsource` pin. Run `python tools/pin_audit.py` for the current
+count. The count must not rise; replacing a pin with an observable assertion
+is how it falls.
 
 ## Runtime and quarantine
 

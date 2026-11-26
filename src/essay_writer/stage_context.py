@@ -8,8 +8,8 @@ as a :class:`ConfirmState`, builds the reply body, then gives a
 that used to carry the resolved state between those steps is gone.
 
 This module depends only on the standard library so the state side
-(``essay_writer.stage_state``, ``essay_writer.stage_note``, and
-``essay_writer.stage_hold``) never imports it and no cycle opens.
+(``essay_writer.stage_state`` and ``essay_writer.stage_note``) never imports
+it and no cycle opens.
 """
 
 from __future__ import annotations

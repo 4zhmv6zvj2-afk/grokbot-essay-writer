@@ -1,3 +1,5 @@
+> **Historical design, superseded by the stage collapse.** The body below is the record of the old split. It is not the current layout.
+
 # Design: import graph and stage-runner split
 
 This is the design record for the completed import-graph and stage-runner
