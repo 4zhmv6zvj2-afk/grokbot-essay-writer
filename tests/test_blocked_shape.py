@@ -25,7 +25,7 @@ from essay_writer.review import essay_review
 from essay_writer.specialists.grok_bot import CHECKLIST_WALK
 from essay_writer.stage7 import claim_delta, note_edits, note_questions
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_voice import say, student_surface_hits
 from essay_writer.user_place import CHAT_PLACE, NAMED_PLACE, chat_place
 from essay_writer.validate import essay_pack_validate

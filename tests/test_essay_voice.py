@@ -30,8 +30,8 @@ from essay_writer.specialists.grok_bot import STAGE5_SAVE_LINE, saved_next
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 from essay_writer.stage7 import _QUESTIONS, ASK_FIRST, answers_mean_no_change, note_edits
 from essay_writer.stage_llm import stage_settings, stage_title
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.student_turns import (
     REDIRECT_ORDER,

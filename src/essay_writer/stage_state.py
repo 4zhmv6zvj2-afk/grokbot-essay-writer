@@ -1,7 +1,7 @@
 """Pointer, commit journal, and stage lock.
 
 This file owns the pointer, the commit journal, and the stage lock.
-This file still never imports stage_track.
+This file still never imports stage_run.
 """
 
 from __future__ import annotations

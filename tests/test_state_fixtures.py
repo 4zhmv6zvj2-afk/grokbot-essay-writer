@@ -18,8 +18,8 @@ from essay_writer.incident import incident_path
 from essay_writer.paths import work_dir
 from essay_writer.stage_llm import STAGE_ORDER
 from essay_writer.stage_note import _note_look
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import blank_pointer, load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, record_damage_refusal
 from essay_writer.word import write_first_draft_word
 

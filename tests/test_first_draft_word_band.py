@@ -16,7 +16,7 @@ from essay_writer.specialists.writer import (
 )
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_note import _note_look
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.textutil import count_words
 
 QUESTION = "How do chokepoints constrain tanker flows through the corridor?"

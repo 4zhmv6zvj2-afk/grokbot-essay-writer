@@ -39,7 +39,7 @@ from essay_writer.research import essay_research_summary
 from essay_writer.shells import cursor_shell
 from essay_writer.specialists import researcher
 from essay_writer.stage_note import _note_look
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.textutil import count_words, word_band_from_brief_text
 
 REPO = Path(__file__).resolve().parents[1]

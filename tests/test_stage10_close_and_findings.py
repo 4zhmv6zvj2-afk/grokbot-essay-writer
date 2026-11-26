@@ -38,8 +38,8 @@ from essay_writer.specialists.eqr import (
 )
 from essay_writer.stage_llm import HOUSE_MODEL
 from essay_writer.stage_note import render_tracking
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import _note_path, load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.word import write_first_draft_word
 from essay_writer.word_references import cite_reference_gaps, token_is_covered
 

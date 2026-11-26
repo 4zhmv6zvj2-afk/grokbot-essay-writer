@@ -23,8 +23,8 @@ from essay_writer.server import HANDLERS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import basics_pass_lines
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import TOOL, load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 DIARY = """
@@ -141,7 +141,7 @@ def test_ac1_confirm_returns_card_or_does_not_advance(workspace, monkeypatch):
             "reason": "The brief names these parts: North occasion.",
         }
 
-    monkeypatch.setattr("essay_writer.stage_track._draft_next_card", _fail)
+    monkeypatch.setattr("essay_writer.stage_run._draft_next_card", _fail)
     kept = _live(
         essay_id=held_seq,
         stage="1",
@@ -292,7 +292,7 @@ def test_new_sequence_returns_the_minted_stage1_card(workspace, monkeypatch):
             "next": "Open the Confirm card for Stage 1.",
         }
 
-    monkeypatch.setattr("essay_writer.stage_track._run_card_only", card_run)
+    monkeypatch.setattr("essay_writer.stage_run._run_card_only", card_run)
     drafted = essay_sequence_new(module, "draft")
     assert drafted["ok"] is True, drafted
     opened = essay_sequence_new(module, "confirm")

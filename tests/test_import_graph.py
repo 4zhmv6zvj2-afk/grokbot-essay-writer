@@ -27,7 +27,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
-import essay_writer.stage_track as stage_track
+import essay_writer.stage_run as stage_run
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE = REPO / "src" / "essay_writer"
@@ -125,7 +125,7 @@ STAGE_LAYERS = frozenset(
         "stage_state",
     }
 )
-STAGE_TRACK_IMPORTS = (
+STAGE_RUN_IMPORTS = (
     ("projects", "function", ("door_card_reply",)),
     ("server", "module", ("essay_stage",)),
 )
@@ -135,7 +135,7 @@ class ImportGraph(NamedTuple):
     modules: frozenset[str]
     load_edges: frozenset[tuple[str, str]]
     deferred_edges: frozenset[tuple[str, str]]
-    stage_track_imports: tuple[tuple[str, str, tuple[str, ...]], ...]
+    stage_run_imports: tuple[tuple[str, str, tuple[str, ...]], ...]
 
 
 def _module_id(path: Path) -> str:
@@ -436,7 +436,7 @@ def import_graph() -> ImportGraph:
                     load.add((module_id, target))
                 elif kind == "function":
                     deferred.add((module_id, target))
-            if "stage_track" in targets:
+            if "stage_run" in targets:
                 stage_hits.append((module_id, kind, _import_names(node)))
     for module_id, mapping in maps.items():
         for target in set(mapping.values()):
@@ -445,7 +445,7 @@ def import_graph() -> ImportGraph:
         modules=frozenset(modules),
         load_edges=frozenset(load),
         deferred_edges=frozenset(deferred),
-        stage_track_imports=tuple(sorted(stage_hits)),
+        stage_run_imports=tuple(sorted(stage_hits)),
     )
 
 
@@ -566,14 +566,14 @@ def test_direct_mutual_pairs_match_the_allowlist() -> None:
     assert measured == MUTUAL_PAIRS, _pair_diff(measured, MUTUAL_PAIRS)
 
 
-def test_stage_track_is_imported_only_by_server_and_projects() -> None:
+def test_stage_run_is_imported_only_by_server_and_projects() -> None:
     graph = import_graph()
-    assert graph.stage_track_imports == STAGE_TRACK_IMPORTS
+    assert graph.stage_run_imports == STAGE_RUN_IMPORTS
 
 
-def test_stage_layers_do_not_import_stage_track() -> None:
+def test_stage_layers_do_not_import_stage_run() -> None:
     graph = import_graph()
-    offenders = [hit for hit in graph.stage_track_imports if hit[0] in STAGE_LAYERS]
+    offenders = [hit for hit in graph.stage_run_imports if hit[0] in STAGE_LAYERS]
     assert offenders == []
 
 
@@ -600,19 +600,19 @@ def _redundant_aliases(path: Path) -> list[str]:
     return found
 
 
-def test_stage_track_does_not_reexport_moved_state_names() -> None:
-    track = PACKAGE / "stage_track.py"
+def test_stage_run_does_not_reexport_moved_state_names() -> None:
+    track = PACKAGE / "stage_run.py"
     assert _redundant_aliases(track) == []
-    leaked = [name for name in _STATE_NAMES if hasattr(stage_track, name)]
+    leaked = [name for name in _STATE_NAMES if hasattr(stage_run, name)]
     assert leaked == []
 
 
-def test_importing_state_and_note_does_not_load_stage_track() -> None:
+def test_importing_state_and_note_does_not_load_stage_run() -> None:
     code = (
         "import sys\n"
         "import essay_writer.stage_state\n"
         "import essay_writer.stage_note\n"
-        "assert 'essay_writer.stage_track' not in sys.modules, "
+        "assert 'essay_writer.stage_run' not in sys.modules, "
         "sorted(name for name in sys.modules if name.startswith('essay_writer'))\n"
     )
     env = dict(os.environ)
@@ -634,6 +634,6 @@ def test_importing_state_and_note_does_not_load_stage_track() -> None:
 def test_the_minting_contextvar_name_stays_absent() -> None:
     state = PACKAGE / "stage_state.py"
     source = state.read_text(encoding="utf-8")
-    track = PACKAGE / "stage_track.py"
+    track = PACKAGE / "stage_run.py"
     source += track.read_text(encoding="utf-8")
     assert "_MINTING" not in source

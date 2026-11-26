@@ -26,7 +26,7 @@ from essay_writer.first_run import (
     module_shared_mac_deliverables_dir,
     sequence_mac_deliverables_dir,
 )
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 
 REPO = Path(__file__).resolve().parents[1]
 

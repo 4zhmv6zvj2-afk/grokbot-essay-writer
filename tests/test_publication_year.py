@@ -15,7 +15,7 @@ from essay_writer.cite_open import cite_look, open_for_citation
 from essay_writer.paths import work_dir
 from essay_writer.pdf_year import apply_citation_year, citation_year, publication_year
 from essay_writer.research_packs import ship_4a, ship_4b
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.textutil import reference_line
 
 REPO = Path(__file__).resolve().parents[1]
@@ -128,7 +128,7 @@ def test_ac1_own_cite_year_beats_a_cited_work(workspace):
     assert "(2022)" in line
     assert "(1901)" not in line
 
-    stage_src = (REPO / "src" / "essay_writer" / "stage_track.py").read_text(encoding="utf-8")
+    stage_src = (REPO / "src" / "essay_writer" / "stage_run.py").read_text(encoding="utf-8")
     cite_at = stage_src.index("text = cite_look(essay_id, text)")
     assert 'if stage == "5"' not in stage_src[cite_at - 500 : cite_at]
 

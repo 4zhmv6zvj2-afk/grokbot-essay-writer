@@ -24,13 +24,13 @@ from essay_writer.specialists.grok_bot import (
     read_basics_opening,
     remember_approved_look,
 )
-from essay_writer.stage_state import _note_path
-from essay_writer.stage_track import (
+from essay_writer.stage_run import (
     _collect_stage_misses,
     _opening_look,
     essay_stage,
     look_is_confirmable,
 )
+from essay_writer.stage_state import _note_path
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE = REPO / "src" / "essay_writer"
@@ -230,7 +230,7 @@ def test_draft_body_reuses_the_one_brief_read(case_id: str, workspace, monkeypat
         return real_look(essay_id, stage, genre, text, lines)
 
     monkeypatch.setattr(grok_bot, "read_basics_opening", spy_open)
-    monkeypatch.setattr("essay_writer.stage_track.look_is_confirmable", spy_look)
+    monkeypatch.setattr("essay_writer.stage_run.look_is_confirmable", spy_look)
 
     quiet = essay_stage(seq, "1", "draft", "\n".join(expected))
     assert quiet["refused"] == "guidance-only"
@@ -364,7 +364,7 @@ def test_opener_findings_and_status_stay_outside(case_id: str, workspace, monkey
     """AC-ew-basics-4: next-card opener, findings note, and status line stay outside the seed and the refusal as locked."""
     assert case_id == "AC-ew-basics-4"
     del workspace
-    opener = _function(PACKAGE / "stage_track.py", "_opening_look")
+    opener = _function(PACKAGE / "stage_run.py", "_opening_look")
     findings = _function(PACKAGE / "specialists" / "eqr.py", "build_findings")
     clears = _function(PACKAGE / "specialists" / "eqr.py", "findings_note_clears")
     status = _function(PACKAGE / "build_status.py", "basis_for")

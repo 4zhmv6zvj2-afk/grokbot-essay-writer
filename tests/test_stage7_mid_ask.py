@@ -27,8 +27,8 @@ from helpers import OTHER, open_sequence, picked, plant_gathered_source
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import front_office_call
 from essay_writer.stage7 import _QUESTIONS
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.student_progress import mid_run_wait_next, shape_student_reply
 from essay_writer.writing_basics import STAGE_ORDER
 

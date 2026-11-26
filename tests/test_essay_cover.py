@@ -35,7 +35,7 @@ from essay_writer.research import essay_research_summary
 from essay_writer.specialists.grok_bot import STAGE5_SAVE_LINE, confirm_line, saved_next
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 from essay_writer.stage_llm import stage_title
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.validate import essay_pack_validate
 from essay_writer.word import cover_lines, essay_pack_render_word, write_docx

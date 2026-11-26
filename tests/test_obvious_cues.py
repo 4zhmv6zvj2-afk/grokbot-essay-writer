@@ -36,7 +36,7 @@ from essay_writer.specialists import grok_bot
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.specialists.writer import document_word_band
 from essay_writer.stage_llm import brief_genre, stage_title
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.textutil import word_band_from_brief_text
 
 EVALUATE = (

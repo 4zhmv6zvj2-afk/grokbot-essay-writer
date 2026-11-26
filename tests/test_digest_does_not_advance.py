@@ -9,7 +9,7 @@ from pathlib import Path
 
 from helpers import ESSAY, open_sequence, picked, plant_gathered_source
 
-from essay_writer import stage_track
+from essay_writer import stage_run
 from essay_writer.assignment_gate import north_star_gate
 from essay_writer.build_office import stage_launch
 from essay_writer.cursor_office import cursor_stage_launch, stage_host_launch
@@ -21,8 +21,8 @@ from essay_writer.shells import cursor_shell, front_office
 from essay_writer.specialists.grok_bot import basics_pass_lines, front_office_call
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 from essay_writer.stage_llm import stage_settings
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import _commit_pointer, load_pointer
-from essay_writer.stage_track import essay_stage
 
 QUESTION = "How should Inditex manage its supply chain?"
 SCHEME = (
@@ -263,7 +263,7 @@ def test_a_lost_pointer_does_not_store_stage5(workspace, monkeypatch):
             _commit_pointer(essay_id, fresh, dict(fresh))
         return _commit_pointer(essay_id, base, proposed, note=note, note_text=note_text)
 
-    monkeypatch.setattr(stage_track, "_commit_pointer", lose_the_save)
+    monkeypatch.setattr(stage_run, "_commit_pointer", lose_the_save)
     lost = essay_stage(seq, "5", "draft", _ready(seq))
     assert lost["ok"] is False, lost
     assert lost["refused"] == "pointer"

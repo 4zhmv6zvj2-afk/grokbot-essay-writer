@@ -38,7 +38,7 @@ from essay_writer.paths import essay_dir
 from essay_writer.specialists import grok_bot
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_llm import brief_genre, stage_title
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 
 EVALUATE = (
     "Evaluate how a named supply chain should integrate sustainability for competitive advantage."

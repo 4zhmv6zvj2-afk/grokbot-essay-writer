@@ -37,8 +37,8 @@ from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_context import StageArgs
 from essay_writer.stage_llm import stage_tool_description
 from essay_writer.stage_next import ANSWER_NEXT, CLEARED_NEXT, IGNORED_NEXT
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.textutil import module_brief_text
 
 REPO = Path(__file__).resolve().parents[1]
@@ -364,12 +364,12 @@ def test_a_confirmable_look_stores_the_answer_and_drafts(case_id, workspace, mon
     seq = _plant("ASK8001AA", SILENT)
     brief = essay_dir("ASK8001AA") / "brief.md"
     before = brief.read_bytes()
-    from essay_writer.stage_track import _draft_reply
+    from essay_writer.stage_run import _draft_reply
 
     def stopped(*_args, **_kwargs):
         raise RuntimeError("draft stopped")
 
-    monkeypatch.setattr("essay_writer.stage_track._draft_reply", stopped)
+    monkeypatch.setattr("essay_writer.stage_run._draft_reply", stopped)
     with pytest.raises(RuntimeError, match="draft stopped"):
         essay_stage(
             seq,
@@ -383,7 +383,7 @@ def test_a_confirmable_look_stores_the_answer_and_drafts(case_id, workspace, mon
     assert brief.read_bytes() == before
     assert load_pointer(seq)["waiting_stage"] is None
 
-    monkeypatch.setattr("essay_writer.stage_track._draft_reply", _draft_reply)
+    monkeypatch.setattr("essay_writer.stage_run._draft_reply", _draft_reply)
     reply = essay_stage(
         seq,
         "1",

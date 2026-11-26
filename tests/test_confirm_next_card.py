@@ -21,8 +21,8 @@ from essay_writer.server import HANDLERS, INSTRUCTIONS
 from essay_writer.setup import SHELL_CURSOR, SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, mount_handler
 from essay_writer.specialists.grok_bot import basics_pass_lines
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import TOOL, load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 STAGE_CONFIRM_EACH = prompt_text("front_office/confirm.md", "stage_confirm_each")
@@ -328,7 +328,7 @@ def test_stage5_still_stores_a_look_the_predicate_would_refuse(workspace):
     There is no second refusal. AUTO_START is unchanged.
     """
     from essay_writer.spine import AUTO_START
-    from essay_writer.stage_track import look_is_confirmable
+    from essay_writer.stage_run import look_is_confirmable
 
     assert AUTO_START == {"5": "6"}
     seq = open_sequence("MOD1004AA")

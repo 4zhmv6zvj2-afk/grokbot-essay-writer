@@ -37,7 +37,7 @@ from test_essay_voice import (
 )
 
 from essay_writer.paths import essay_dir
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 
 REPO = Path(__file__).resolve().parents[1]
 SRC = REPO / "src" / "essay_writer"
@@ -74,7 +74,7 @@ def test_a_partial_leftover_update_leaves_the_product_alone(case_id, workspace):
     """essay-left-d1: A partial leftover update keeps product code, prompts, refusal lines, the stage 7 node, and the brief as they are."""
     assert case_id == "essay-left-d1"
 
-    track = _read(SRC / "stage_track.py")
+    track = _read(SRC / "stage_run.py")
     assert track.count("from essay_writer.assignment_gate import store_brief_answer") == 1
     assert "store_brief_answer(essay_id, args.formatAnswer, args.questionAnswer)" in track
     assert "def assignment_gate" not in _read(SRC / "spine.py")

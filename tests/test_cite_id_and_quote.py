@@ -28,7 +28,7 @@ from essay_writer.cursor_office import cursor_stage_launch
 from essay_writer.paths import uploads_dir, work_dir, workspace_root
 from essay_writer.review import PERSON_BLOCK, eqr_verdict, essay_review, writer_clears_left
 from essay_writer.stage_note import _note_look
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.state import load_state, save_state
 
 REPO = Path(__file__).resolve().parents[1]

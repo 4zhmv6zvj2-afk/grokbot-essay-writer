@@ -141,7 +141,7 @@ def test_stage_5_refuses_a_draft_that_loses_its_subject(workspace):
     from test_citation_list import _plant, _source, _walk, _word_path
 
     from essay_writer.stage_note import _note_look
-    from essay_writer.stage_track import essay_stage
+    from essay_writer.stage_run import essay_stage
 
     seq = open_sequence()
     _plant(

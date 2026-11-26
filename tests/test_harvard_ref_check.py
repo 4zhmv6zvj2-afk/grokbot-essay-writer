@@ -35,8 +35,8 @@ from essay_writer.late_chain import (
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.review import PERSON_BLOCK, eqr_verdict, essay_review, writer_clears_left
 from essay_writer.shells import cursor_shell, front_office
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.textutil import reference_line, reference_parts
 

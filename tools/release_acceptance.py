@@ -273,7 +273,7 @@ def open_sequence() -> str:
 
 
 def advance(seq: str, stage: str, look: str) -> dict:
-    from essay_writer.stage_track import essay_stage
+    from essay_writer.stage_run import essay_stage
 
     draft = essay_stage(seq, stage, "draft", look)
     if draft.get("ok") is not True:

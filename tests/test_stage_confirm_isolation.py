@@ -18,8 +18,8 @@ from essay_writer.setup import SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.spine import AUTO_START, advances_without_confirm
 from essay_writer.stage_llm import stage_settings, stage_tool_description
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 STAGE_CONFIRM_EACH = prompt_text("front_office/confirm.md", "stage_confirm_each")
