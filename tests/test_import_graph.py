@@ -20,9 +20,14 @@ list still fails, even when both directions are deferred.
 from __future__ import annotations
 
 import ast
+import os
+import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
+
+import essay_writer.stage_track as stage_track
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE = REPO / "src" / "essay_writer"
@@ -570,3 +575,65 @@ def test_stage_layers_do_not_import_stage_track() -> None:
     graph = import_graph()
     offenders = [hit for hit in graph.stage_track_imports if hit[0] in STAGE_LAYERS]
     assert offenders == []
+
+
+# Names that stay in stage_state. Their presence on the orchestrator would mean a re-export.
+_STATE_NAMES = (
+    "_MINTING",
+    "_apply_commit",
+    "_atomic",
+    "blank_pointer",
+    "in_first_draft",
+    "init_cloned_sequence_pointer",
+    "rebind_cloned_confirms",
+    "stage_lock",
+)
+
+
+def _redundant_aliases(path: Path) -> list[str]:
+    """Names written as ``X as X``. The old re-export shim used that form."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    found: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            found.extend(alias.name for alias in node.names if alias.asname == alias.name)
+    return found
+
+
+def test_stage_track_does_not_reexport_moved_state_names() -> None:
+    track = PACKAGE / "stage_track.py"
+    assert _redundant_aliases(track) == []
+    leaked = [name for name in _STATE_NAMES if hasattr(stage_track, name)]
+    assert leaked == []
+
+
+def test_importing_state_and_note_does_not_load_stage_track() -> None:
+    code = (
+        "import sys\n"
+        "import essay_writer.stage_state\n"
+        "import essay_writer.stage_note\n"
+        "assert 'essay_writer.stage_track' not in sys.modules, "
+        "sorted(name for name in sys.modules if name.startswith('essay_writer'))\n"
+    )
+    env = dict(os.environ)
+    paths = [str(PACKAGE.parent)]
+    if env.get("PYTHONPATH"):
+        paths.append(env["PYTHONPATH"])
+    env["PYTHONPATH"] = os.pathsep.join(paths)
+    completed = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(REPO),
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_the_minting_contextvar_name_stays_absent() -> None:
+    state = PACKAGE / "stage_state.py"
+    source = state.read_text(encoding="utf-8")
+    track = PACKAGE / "stage_track.py"
+    source += track.read_text(encoding="utf-8")
+    assert "_MINTING" not in source

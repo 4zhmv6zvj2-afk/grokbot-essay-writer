@@ -1,3 +1,5 @@
+> **Historical design, superseded by the stage collapse.** The body below is the record of the old split. It is not the current layout.
+
 # Design: split stage_state
 
 This is the design record for the completed split. It does not change
