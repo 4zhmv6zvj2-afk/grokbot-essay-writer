@@ -42,7 +42,6 @@ stage values (StageArgs and StageContext) live in essay_writer/stage_context.py.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, NamedTuple, cast
@@ -346,7 +345,6 @@ def _run_stage(args: StageArgs, *, minting: bool, inherited_keep: bool) -> dict[
             genre,
             pointer,
             pending_lock,
-            run_confirm=_inherited_keep_confirm,
         )
     if args.lockChoice in {"revise", "relock"} and pending_lock is not None:
         inherited = str(pending_lock.get("look") or "").strip()
@@ -1532,9 +1530,6 @@ def _save_confirm(
     )
 
 
-InheritedConfirm = Callable[[str, str, str, str | None], dict[str, object]]
-
-
 def _late_armed(pointer: dict[str, Any], stage: str, essay_id: str) -> bool:
     from essay_writer.stage7 import stage7_edited
 
@@ -1880,15 +1875,8 @@ def _inherited_lock_keep(
     genre: str | None,
     pointer: dict[str, Any],
     row: dict[str, Any],
-    *,
-    run_confirm: InheritedConfirm,
 ) -> dict[str, Any]:
-    """Keep continues the parent save without showing Confirm again.
-
-    ``run_confirm`` is the public stage runner injected by the orchestrator.
-    This module does not import it, so the landing layer never depends on the
-    orchestrator.
-    """
+    """Keep continues the parent save without showing Confirm again."""
     text = str(row.get("look") or "").strip()
     if not text:
         return refuse("lock-choice", "The inherited lock is empty. Revise instead.")
@@ -1915,7 +1903,7 @@ def _inherited_lock_keep(
     ready = confirm_ready(essay_id, TOOL, payload, fingerprint)
     if ready.get("ok") is False:
         return ready
-    saved = run_confirm(
+    saved = _inherited_keep_confirm(
         essay_id,
         stage,
         text,
