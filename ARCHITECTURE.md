@@ -17,15 +17,15 @@ validation, and Word output.
     inherited-lock keep calls `_inherited_keep_confirm` directly.
   - `stage_state.py` — the pointer, the commit journal, and the stage lock. The
     lock and the journal stay one protocol: the note and the pointer that names
-    it are published together. It never imports the orchestrator.
+    it are published together. Its import rule is in [Stage flow](#stage-flow).
   - `stage_llm.py` — stage settings and prompt assembly.
   - `stage_context.py` — the typed pipeline values: `StageArgs` (the public
     `essay.stage` tool arguments), `StageContext` (one resolved stage call),
     and `ConfirmState`.
   - `stage_note.py` — the tracking-note renderer and look reader. It returns
     the stage markdown and reads the working or final look back out of that
-    markdown. It does not write the pointer or the commit journal. It never
-    imports the orchestrator.
+    markdown. It does not write the pointer or the commit journal. Its import
+    rule is in [Stage flow](#stage-flow).
   - `stage_next.py` — the one writer for the stage runner's next sentence
     on an `essay.stage` reply, including the upload line, the stage 7 ask,
     the mid-run wait, and Confirm wording stripped while a mid-run is going.
@@ -216,9 +216,9 @@ its own floor through `python_bootstrap.py` (`REQUIRED = (3, 12, 0)`).
 2. `essay_stage` reads the stage pointer, checks the request, and either returns a
    draft/Confirm card or saves a confirmed stage.
 3. Drafts and confirms are stored under `Essay-writer/<module>/sequences/<n>/`.
-4. A save needs the matching draft and file fingerprint; stage 5 is the
-   draft-store exception described below (it stores its first draft and advances
-   to stage 6 on the draft call when its gate passes). Review writes the
+4. A save needs the matching draft and file fingerprint. Stage 5 is the
+   draft-store exception: it stores its first draft and advances to stage 6 on
+   the draft call when its gate passes. Review writes the
    first-draft Word file from the intact saved draft, and records the stage 6
    pass after that write. The last stage writes the final Word file when that
    stage is confirmed.
