@@ -2,7 +2,7 @@
 
 stage_note renders the stage markdown and reads the working or final look
 back out of that markdown. It does not write the pointer or the commit
-journal. It never imports the orchestrator.
+journal.
 """
 
 from __future__ import annotations

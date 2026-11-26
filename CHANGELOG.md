@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The superseded stage-split notes are removed. The module map and the import rule stay in `ARCHITECTURE.md`. The readme and the glossary no longer repeat that map.
+
 ## 0.9.25 — 2026-11-26
 
 - The stage modules are one orchestrator, `stage_run.py`. The three save paths share one pointer commit. A card is a direct call, and an inherited-lock keep passes its flag as an argument. The injected card runner, the inherited-keep contextvar, and the boundary test are gone.
