@@ -25,9 +25,8 @@ from essay_writer.specialists.grok_bot import (
     remember_approved_look,
 )
 from essay_writer.stage_hold import _opening_look
-from essay_writer.stage_landing import _collect_stage_misses
 from essay_writer.stage_state import _note_path
-from essay_writer.stage_track import essay_stage, look_is_confirmable
+from essay_writer.stage_track import _collect_stage_misses, essay_stage, look_is_confirmable
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE = REPO / "src" / "essay_writer"

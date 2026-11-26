@@ -171,9 +171,9 @@ The where column is a file name. The test owns the codes.
 | stage | Save the plan note first. The first draft waits until that save. | refuse | The reason sentence names the next step. | stage_hold.py |
 | stage | Save the plan again before the first draft. The earlier lock changed. | refuse | The reason sentence names the next step. | stage_hold.py |
 | word | (built at the door) | refuse | The reason sentence names the next step. | stage_hold.py |
-| misses | (built at the door) | refuse | The reason sentence names the next step. | stage_landing.py |
-| lock-choice | The inherited lock is empty. Revise instead. | refuse | The reason sentence names the next step. | stage_landing.py |
-| house-jargon | That note uses an internal label. Say it in plain words. | refuse | The reason sentence names the next step. | stage_landing.py |
+| misses | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
+| lock-choice | The inherited lock is empty. Revise instead. | refuse | The reason sentence names the next step. | stage_track.py |
+| house-jargon | That note uses an internal label. Say it in plain words. | refuse | The reason sentence names the next step. | stage_track.py |
 | essay-id | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
 | stage | Send a stage from 1 to 10, including 4a and 4b. | refuse | The reason sentence names the next step. | stage_track.py |
 | confirm-card | This step moves on when the draft is stored. There is no save-card between this step and the next. | refuse | The reason sentence names the next step. | stage_track.py |

@@ -159,7 +159,6 @@ They are not product modules. `specialists/` is a package of helpers, already na
 - `stage_confirm.py`
 - `stage_context.py`
 - `stage_hold.py`
-- `stage_landing.py`
 - `stage_llm.py`
 - `stage_next.py`
 - `stage_note.py`
