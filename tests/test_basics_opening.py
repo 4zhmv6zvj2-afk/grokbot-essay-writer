@@ -24,11 +24,10 @@ from essay_writer.specialists.grok_bot import (
     read_basics_opening,
     remember_approved_look,
 )
-from essay_writer.stage_body import look_is_confirmable
 from essay_writer.stage_hold import _opening_look
 from essay_writer.stage_landing import _collect_stage_misses
 from essay_writer.stage_state import _note_path
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_track import essay_stage, look_is_confirmable
 
 REPO = Path(__file__).resolve().parents[1]
 PACKAGE = REPO / "src" / "essay_writer"
@@ -228,7 +227,7 @@ def test_draft_body_reuses_the_one_brief_read(case_id: str, workspace, monkeypat
         return real_look(essay_id, stage, genre, text, lines)
 
     monkeypatch.setattr(grok_bot, "read_basics_opening", spy_open)
-    monkeypatch.setattr("essay_writer.stage_body.look_is_confirmable", spy_look)
+    monkeypatch.setattr("essay_writer.stage_track.look_is_confirmable", spy_look)
 
     quiet = essay_stage(seq, "1", "draft", "\n".join(expected))
     assert quiet["refused"] == "guidance-only"

@@ -28,7 +28,6 @@ LAYERS = (
     "stage_landing.py",
     "stage_replies.py",
     "stage_confirm.py",
-    "stage_body.py",
 )
 SENTENCE_FILES = (
     "stage_replies.py",
@@ -157,7 +156,7 @@ def test_stage_paths_leave_the_sentence_to_that_module(case_id: str) -> None:
         assert stores == [], name
     finish = _function(PACKAGE / "late_chain.py", "finish_stage_reply")
     assert _next_stores(finish) == []
-    for name in ("stage_body.py", "stage_track.py"):
+    for name in ("stage_track.py",):
         assert _next_stores(ast.parse((PACKAGE / name).read_text(encoding="utf-8"))) == [], name
     from essay_writer.stage_next import ANSWER_NEXT, answer_next
 
