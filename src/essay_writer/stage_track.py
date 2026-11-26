@@ -45,7 +45,7 @@ import re
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, NamedTuple, Protocol, cast
 
 from essay_writer.confirm import (
     CONFIRM,
@@ -1455,18 +1455,25 @@ def _save_confirm(
             "waiting_digest": None,
             **room,
         }
-        stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
-        if stored is None:
-            return _pointer_lost(essay_id, stage, genre, card_run=card_run)
-        updated = stored
-        _cache_approved_look(essay_id, stage, text)
-        body["wrote"] = True
-        body["stored"] = True
+        committed = _commit_saved_stage(
+            body,
+            essay_id,
+            stage,
+            genre,
+            pointer,
+            updated,
+            note,
+            note_text,
+            digest=ready["digest"],
+            card_run=card_run,
+            cache_look=text,
+        )
+        if committed.pointer is None:
+            return committed.body
+        updated = committed.pointer
         body["advanced"] = False
         body["closed"] = False
         body["revisit"] = True
-        body["digest"] = ready["digest"]
-        body["tracking_path"] = rel
         body["current"] = "5"
         from essay_writer.stage_next import write_revisit_stage_next
 
@@ -1607,6 +1614,40 @@ def _attach_cite_report(body: dict[str, object], report: dict[str, object] | Non
         body.pop("cite_gap", None)
 
 
+class _SavedStage(NamedTuple):
+    pointer: dict[str, Any] | None
+    body: dict[str, Any]
+
+
+def _commit_saved_stage(
+    body: dict[str, Any],
+    essay_id: str,
+    stage: str,
+    genre: str | None,
+    pointer: dict[str, Any],
+    updated: dict[str, Any],
+    note,
+    note_text: str,
+    *,
+    digest: Any,
+    card_run: CardRun | None,
+    cache_look: str | None = None,
+) -> _SavedStage:
+    """Commit the note and pointer. A lost pointer returns the refusal."""
+    stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
+    if stored is None:
+        lost = _pointer_lost(essay_id, stage, genre, card_run=card_run)
+        return _SavedStage(None, lost)
+    if cache_look is not None:
+        _cache_approved_look(essay_id, stage, cache_look)
+    body["wrote"] = True
+    body["stored"] = True
+    body["digest"] = digest
+    body["tracking_path"] = relative(note)
+    body["current"] = stored["current"]
+    return _SavedStage(stored, body)
+
+
 def _store_stage(
     body: dict[str, object],
     essay_id: str,
@@ -1640,17 +1681,23 @@ def _store_stage(
         "waiting_digest": None,
         **_room_state(pointer),
     }
-    stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
-    if stored is None:
-        return _pointer_lost(essay_id, stage, genre, card_run=card_run)
-    updated = stored
-    body["wrote"] = True
-    body["stored"] = True
+    committed = _commit_saved_stage(
+        body,
+        essay_id,
+        stage,
+        genre,
+        pointer,
+        updated,
+        note,
+        note_text,
+        digest=digest,
+        card_run=card_run,
+    )
+    if committed.pointer is None:
+        return committed.body
+    updated = committed.pointer
     body["advanced"] = following is not None
     body["closed"] = following is None
-    body["digest"] = digest
-    body["tracking_path"] = rel
-    body["current"] = updated["current"]
     body.pop("card", None)
     from essay_writer.stage_next import write_following_stage_next
 
@@ -2536,19 +2583,25 @@ def _commit_with_next_card(
     # A copied stage 2 or 3 names the parent save. Confirm waits for revise or re-lock.
     updated["waiting_stage"] = None
     updated["waiting_digest"] = None
-    stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
-    if stored is None:
-        return _pointer_lost(essay_id, stage, genre, card_run=card_run)
-    updated = stored
-    if isinstance(approved_look, str) and approved_look.strip():
-        _cache_approved_look(essay_id, stage, approved_look)
-    body["wrote"] = True
-    body["stored"] = True
+    cache_look = approved_look if isinstance(approved_look, str) and approved_look.strip() else None
+    committed = _commit_saved_stage(
+        body,
+        essay_id,
+        stage,
+        genre,
+        pointer,
+        updated,
+        note,
+        note_text,
+        digest=card_digest,
+        card_run=card_run,
+        cache_look=cache_look,
+    )
+    if committed.pointer is None:
+        return committed.body
+    updated = committed.pointer
     body["advanced"] = following is not None
     body["closed"] = following is None
-    body["digest"] = card_digest
-    body["tracking_path"] = relative(note)
-    body["current"] = updated["current"]
     from essay_writer.stage_next import write_critical_reviews_next, write_following_stage_next
 
     following_title = stage_title(following, genre) if following else ""
