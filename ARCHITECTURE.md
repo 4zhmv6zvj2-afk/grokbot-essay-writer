@@ -253,10 +253,11 @@ at module load and keeps `essay_stage` and the public entry points. It does not
 re-export the moved names. In the other direction, `stage_state.py`,
 `stage_note.py`, `stage_hold.py`, `stage_landing.py`, `stage_replies.py`,
 `stage_confirm.py`, and `stage_body.py` do not import `stage_track`, either at
-module load or inside a function. Where a note or a reply needs a stage card,
-the orchestrator threads an injected `CardRun` through the commit path: the
-next-card mint and the reopening of an already-saved stage's card both call it.
-The inherited-lock keep receives the public confirm runner the same way. `spine.py` does not forward `essay_stage`. Other package imports
+module load or inside a function. Where a note or a reply needs a stage card, the orchestrator calls
+`_run_card_only` directly: the next-card mint passes `minting=True`, and
+reopening an already-saved stage's card passes `minting=False`. The
+inherited-lock keep re-enters through the private stage entry with
+`inherited_keep`. `spine.py` does not forward `essay_stage`. Other package imports
 still happen inside function bodies; that is a package-wide import-graph
 question, not evidence for the stage layers.
 

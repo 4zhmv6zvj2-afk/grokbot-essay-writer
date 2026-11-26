@@ -34,9 +34,9 @@ keeps the public entry point.
 
 Those modules do not import this module, at module load or at call time. The
 note module does not import it either. A save that needs the next stage's card
-or the current stage's card gets an injected card runner (``_run_card_only``);
-the state side never sets a contextvar to re-enter the door. The typed stage
-values (StageArgs and StageContext) live in essay_writer/stage_context.py.
+or the current stage's card calls ``_run_card_only`` directly. The inherited-lock
+keep re-enters through the private stage entry with ``inherited_keep``. The typed
+stage values (StageArgs and StageContext) live in essay_writer/stage_context.py.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ import re
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, NamedTuple, Protocol, cast
+from typing import Any, NamedTuple, cast
 
 from essay_writer.confirm import (
     CONFIRM,
@@ -71,7 +71,6 @@ from essay_writer.stage_llm import (
 )
 from essay_writer.stage_note import _note_look, render_tracking
 from essay_writer.stage_state import (
-    _INHERITED_KEEP,
     TOOL,
     Pointer,
     StageResult,
@@ -116,6 +115,17 @@ def _continues_inherited_lock(
     return bool(text.strip()) and inherited.casefold() in text.casefold()
 
 
+def _stage_entry(args: StageArgs, *, minting: bool, inherited_keep: bool) -> dict[str, Any]:
+    """One brief-ask around a stage call. The public door and the keep re-entry share it."""
+    from essay_writer.textutil import begin_brief_ask, end_brief_ask
+
+    token = begin_brief_ask()
+    try:
+        return _stage_call(args, minting=minting, inherited_keep=inherited_keep)
+    finally:
+        end_brief_ask(token)
+
+
 def essay_stage(
     essay_id: str,
     stage: str,
@@ -138,35 +148,30 @@ def essay_stage(
     questionAnswer: str | None = None,
 ) -> dict[str, Any]:
     """A card saves the final look. Stage 5 starts stage 6."""
-    from essay_writer.textutil import begin_brief_ask, end_brief_ask
-
-    token = begin_brief_ask()
-    try:
-        return _stage_call(
-            StageArgs(
-                essay_id=essay_id,
-                stage=stage,
-                confirmPhase=confirmPhase,
-                look=look,
-                master=master,
-                namedFolder=namedFolder,
-                answers=answers,
-                edited=edited,
-                webCheck=webCheck,
-                heldFile=heldFile,
-                cardAction=cardAction,
-                cardDigest=cardDigest,
-                card_only=card_only,
-                encourageChoice=encourageChoice,
-                paperChoice=paperChoice,
-                lockChoice=lockChoice,
-                formatAnswer=formatAnswer,
-                questionAnswer=questionAnswer,
-            ),
-            minting=False,
-        )
-    finally:
-        end_brief_ask(token)
+    return _stage_entry(
+        StageArgs(
+            essay_id=essay_id,
+            stage=stage,
+            confirmPhase=confirmPhase,
+            look=look,
+            master=master,
+            namedFolder=namedFolder,
+            answers=answers,
+            edited=edited,
+            webCheck=webCheck,
+            heldFile=heldFile,
+            cardAction=cardAction,
+            cardDigest=cardDigest,
+            card_only=card_only,
+            encourageChoice=encourageChoice,
+            paperChoice=paperChoice,
+            lockChoice=lockChoice,
+            formatAnswer=formatAnswer,
+            questionAnswer=questionAnswer,
+        ),
+        minting=False,
+        inherited_keep=False,
+    )
 
 
 def _run_card_only(
@@ -191,6 +196,7 @@ def _run_card_only(
             card_only=True,
         ),
         minting=minting,
+        inherited_keep=False,
     )
 
 
@@ -200,30 +206,30 @@ def _inherited_keep_confirm(
     look: str,
     digest: str | None,
 ) -> dict[str, Any]:
-    """Save a kept inherited lock through the public door.
-
-    The landing layer sets the keep flag around this call; it never imports
-    this module to re-enter the door.
-    """
+    """Save a kept inherited lock through the same entry as the public door."""
     from essay_writer.specialists.grok_bot import CARD_CONFIRM
 
-    return essay_stage(
-        essay_id,
-        stage,
-        CONFIRM,
-        look,
-        cardAction=CARD_CONFIRM,
-        cardDigest=digest,
+    return _stage_entry(
+        StageArgs(
+            essay_id=essay_id,
+            stage=stage,
+            confirmPhase=CONFIRM,
+            look=look,
+            cardAction=CARD_CONFIRM,
+            cardDigest=digest,
+        ),
+        minting=False,
+        inherited_keep=True,
     )
 
 
-def _stage_call(args: StageArgs, *, minting: bool) -> dict[str, Any]:
+def _stage_call(args: StageArgs, *, minting: bool, inherited_keep: bool) -> dict[str, Any]:
     """Run one stage call. A damaged confirm record or state file stops it."""
     from essay_writer.stage_state import DAMAGED_COMMIT, DamagedStageCommit
     from essay_writer.state import DamagedState, state_file_refusal
 
     try:
-        result = _run_stage(args, minting=minting)
+        result = _run_stage(args, minting=minting, inherited_keep=inherited_keep)
     except DamagedStageCommit as exc:
         reason = str(exc).strip() or DAMAGED_COMMIT
         result = refuse(
@@ -259,17 +265,17 @@ def _turn_redirect(
     return None
 
 
-def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
+def _run_stage(args: StageArgs, *, minting: bool, inherited_keep: bool) -> dict[str, Any]:
     """Resolve one stage call, then draft it or save it.
 
     The tool call arrives as StageArgs. The runner validates it, resolves the
     waiting card, and builds a StageContext for the reply writers. A refusal
     stops at the step that raised it and is returned unchanged.
 
-    ``minting`` is true only inside the injected card runner. The state and
-    reply layers receive the same runner and never import this module.
+    ``minting`` is true only for a card minted by ``_run_card_only``. A mint
+    does not open another card.
     """
-    card_run = None if minting else _run_card_only
+    open_card = not minting
     essay_id = args.essay_id
     stage = args.stage
     confirmPhase = args.confirmPhase
@@ -329,7 +335,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
     blocked = _stage_refusal(cast(Pointer, pointer), stage, genre, essay_id)
     if blocked and not (minting and _mint_stage_allowed(pointer, stage)):
         if confirmPhase == CONFIRM:
-            return _confirm_blocked(essay_id, pointer, stage, genre, blocked, card_run=card_run)
+            return _confirm_blocked(essay_id, pointer, stage, genre, blocked, open_card=open_card)
         return blocked
     cardAction = args.cardAction
     cardDigest = args.cardDigest
@@ -369,7 +375,7 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         and not minting
         and args.lockChoice is None
         and not args.card_only
-        and not _INHERITED_KEEP.get()
+        and not inherited_keep
         and not _continues_inherited_lock(
             essay_id,
             stage,
@@ -475,7 +481,9 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         cardAction=cardAction,
         cardDigest=cardDigest,
     )
-    state = _confirm_path(resolved, pointer, genre, card_run=card_run)
+    state = _confirm_path(
+        resolved, pointer, genre, open_card=open_card, inherited_keep=inherited_keep
+    )
     if not isinstance(state, ConfirmState):
         return state
     confirmPhase = state.confirmPhase
@@ -510,14 +518,16 @@ def _run_stage(args: StageArgs, *, minting: bool) -> dict[str, Any]:
         webCheck=webCheck,
         heldFile=heldFile,
     )
-    body = _build_stage_body(filled, pointer, genre, minting, auto_next)
+    body = _build_stage_body(
+        filled, pointer, genre, minting, auto_next, inherited_keep=inherited_keep
+    )
     if not isinstance(body, StageContext):
         return body
     if body.confirmPhase == DRAFT:
-        result = _draft_reply(body, card_run=card_run)
+        result = _draft_reply(body)
     else:
-        # A minted call is always a draft, so a save always has the runner.
-        result = _save_confirm(body, cardDigest, card_run=cast(CardRun, card_run))
+        # A minted call is always a draft, so a save always opens a card.
+        result = _save_confirm(body, cardDigest, inherited_keep=inherited_keep)
     if (
         isinstance(result, dict)
         and result.get("stored") is True
@@ -724,6 +734,7 @@ def _stage_body_fields(
     *,
     revisit: bool,
     basics_seeded: bool,
+    inherited_keep: bool,
 ) -> tuple[dict[str, Any], dict[str, object], dict[str, object], Path]:
     """Build the payload, fingerprint, note path, and base reply body."""
     essay_id = args.essay_id
@@ -740,9 +751,9 @@ def _stage_body_fields(
     ):
         if value is not None:
             payload[key] = value
-    fingerprint: dict[str, object] = (
-        {"stage": stage, "inherited_keep": True} if _INHERITED_KEEP.get() else {"stage": stage}
-    )
+    fingerprint: dict[str, object] = {"stage": stage}
+    if inherited_keep:
+        fingerprint["inherited_keep"] = True
     note = _note_path(essay_id, stage)
     body: dict[str, Any] = {
         "ok": True,
@@ -939,6 +950,8 @@ def _build_stage_body(
     genre: str | None,
     minting: bool,
     auto_next: str | None,
+    *,
+    inherited_keep: bool,
 ) -> StageContext | dict[str, Any]:
     """Apply the gates and build the reply body for one resolved stage call.
 
@@ -1071,6 +1084,7 @@ def _build_stage_body(
         genre,
         revisit=revisit,
         basics_seeded=basics_seeded,
+        inherited_keep=inherited_keep,
     )
     _attach_stage_reports(
         args,
@@ -1180,7 +1194,7 @@ def _noop_result(
     return dict(body)
 
 
-def _draft_reply(context: StageContext, *, card_run: CardRun | None = None) -> dict[str, Any]:
+def _draft_reply(context: StageContext) -> dict[str, Any]:
     from essay_writer.spine import stage_confirm_card
 
     essay_id = context.essay_id
@@ -1244,7 +1258,7 @@ def _draft_reply(context: StageContext, *, card_run: CardRun | None = None) -> d
                 note_text=note_text,
             )
             if stored is None:
-                return _pointer_lost(essay_id, stage, genre, card_run=card_run)
+                return _pointer_lost(essay_id, stage, genre, open_card=not context.minting)
             pointer = stored
         body["wrote"] = not minting
         if not minting:
@@ -1276,7 +1290,7 @@ def _draft_reply(context: StageContext, *, card_run: CardRun | None = None) -> d
                 digest=body["digest"],
                 master=master,
                 named_folder=namedFolder,
-                card_run=card_run,
+                open_card=not context.minting,
             )
         from essay_writer.specialists.grok_bot import confirm_reply_fields
         from essay_writer.stage_next import write_draft_stage_next
@@ -1309,7 +1323,7 @@ def _save_confirm(
     context: StageContext,
     cardDigest: str | None,
     *,
-    card_run: CardRun,
+    inherited_keep: bool,
 ) -> dict[str, Any]:
     essay_id = context.essay_id
     stage = context.stage
@@ -1342,7 +1356,7 @@ def _save_confirm(
             None,
             reason="That card does not match this draft. Show the draft card again.",
         )
-    if not _INHERITED_KEEP.get() and _stale_confirm_body(
+    if not inherited_keep and _stale_confirm_body(
         essay_id, stage, pointer, ready.get("digest"), text
     ):
         return _older_card(essay_id, stage, genre, pointer)
@@ -1465,7 +1479,7 @@ def _save_confirm(
             note,
             note_text,
             digest=ready["digest"],
-            card_run=card_run,
+            open_card=True,
             cache_look=text,
         )
         if committed.pointer is None:
@@ -1514,7 +1528,7 @@ def _save_confirm(
         ready.get("digest") if isinstance(ready.get("digest"), str) else None,
         text if stage == "3" else None,
         approved_look=text,
-        card_run=card_run,
+        open_card=True,
     )
 
 
@@ -1630,13 +1644,13 @@ def _commit_saved_stage(
     note_text: str,
     *,
     digest: Any,
-    card_run: CardRun | None,
+    open_card: bool,
     cache_look: str | None = None,
 ) -> _SavedStage:
     """Commit the note and pointer. A lost pointer returns the refusal."""
     stored = _commit_pointer(essay_id, pointer, updated, note=note, note_text=note_text)
     if stored is None:
-        lost = _pointer_lost(essay_id, stage, genre, card_run=card_run)
+        lost = _pointer_lost(essay_id, stage, genre, open_card=open_card)
         return _SavedStage(None, lost)
     if cache_look is not None:
         _cache_approved_look(essay_id, stage, cache_look)
@@ -1660,7 +1674,7 @@ def _store_stage(
     digest: str,
     master: str | None,
     named_folder: str | None,
-    card_run: CardRun | None = None,
+    open_card: bool,
 ) -> dict[str, object]:
     """Store one stage that has no card between it and the next."""
     note_text = render_tracking(stage, status="final", look=text, genre=genre, essay_id=essay_id)
@@ -1691,7 +1705,7 @@ def _store_stage(
         note,
         note_text,
         digest=digest,
-        card_run=card_run,
+        open_card=open_card,
     )
     if committed.pointer is None:
         return committed.body
@@ -1901,16 +1915,12 @@ def _inherited_lock_keep(
     ready = confirm_ready(essay_id, TOOL, payload, fingerprint)
     if ready.get("ok") is False:
         return ready
-    token = _INHERITED_KEEP.set(True)
-    try:
-        saved = run_confirm(
-            essay_id,
-            stage,
-            text,
-            digest if isinstance(digest, str) else ready.get("digest"),
-        )
-    finally:
-        _INHERITED_KEEP.reset(token)
+    saved = run_confirm(
+        essay_id,
+        stage,
+        text,
+        digest if isinstance(digest, str) else ready.get("digest"),
+    )
     if isinstance(saved, dict):
         saved["inherited_keep"] = True
         saved["prior_saved_lock"] = {
@@ -1931,7 +1941,8 @@ def _confirm_path(
     pointer: dict[str, Any],
     genre: str | None,
     *,
-    card_run: CardRun | None,
+    open_card: bool,
+    inherited_keep: bool,
 ) -> ConfirmState | dict[str, Any]:
     """Resolve the confirm phase against the waiting card.
 
@@ -2009,7 +2020,7 @@ def _confirm_path(
                 text = saved_look.strip()
                 look = text
         else:
-            if not _INHERITED_KEEP.get() and _superseded_card(essay_id, stage, pointer, cardDigest):
+            if not inherited_keep and _superseded_card(essay_id, stage, pointer, cardDigest):
                 return _older_card(essay_id, stage, genre, pointer)
             if press_target is not None and press_target != stage:
                 return _reoffer_confirm(
@@ -2029,7 +2040,7 @@ def _confirm_path(
                 # One press plus the waiting card saves this stage only.
                 stored_room = _grant_room(essay_id, pointer, stage)
                 if stored_room is None:
-                    return _pointer_lost(essay_id, stage, genre, card_run=card_run)
+                    return _pointer_lost(essay_id, stage, genre, open_card=open_card)
                 pointer = stored_room
                 look = None
                 text = ""
@@ -2037,7 +2048,7 @@ def _confirm_path(
             elif press_target == stage:
                 stored_room = _grant_room(essay_id, pointer, stage)
                 if stored_room is None:
-                    return _pointer_lost(essay_id, stage, genre, card_run=card_run)
+                    return _pointer_lost(essay_id, stage, genre, open_card=open_card)
                 pointer = stored_room
                 return _reoffer_confirm(
                     essay_id,
@@ -2149,23 +2160,6 @@ def _stage7_skip_request(
     return _stage7_skip_reply(essay_id, stage, genre, pointer, confirm_phase)
 
 
-class CardRun(Protocol):
-    """Run one card-only stage. The orchestrator injects this into the state layer.
-
-    ``minting=True`` is the next-card mint; the student-answer gates stay off
-    that draft. Reopening an already-saved stage's card keeps the normal gates.
-    """
-
-    def __call__(
-        self,
-        essay_id: str,
-        stage: str,
-        look: str | None = None,
-        *,
-        minting: bool = False,
-    ) -> dict[str, object]: ...
-
-
 def _own_door_card(
     opened: dict[str, object] | None, essay_id: str, stage: str
 ) -> dict[str, object] | None:
@@ -2185,11 +2179,7 @@ def _own_door_card(
     return opened
 
 
-def door_card_reply(
-    essay_id: str,
-    *,
-    card_run: CardRun | None = None,
-) -> dict[str, object] | None:
+def door_card_reply(essay_id: str) -> dict[str, object] | None:
     """Confirm card for this sequence's open stage.
 
     A fresh stage 1, with nothing saved, gets that stage's door card.
@@ -2211,8 +2201,8 @@ def door_card_reply(
     own = _own_door_card(replay, essay_id, current)
     if own is not None:
         return own
-    if current == "1" and not saved and card_run is not None:
-        return _own_door_card(_draft_next_card(essay_id, "1", card_run), essay_id, "1")
+    if current == "1" and not saved:
+        return _own_door_card(_draft_next_card(essay_id, "1"), essay_id, "1")
     return None
 
 
@@ -2221,13 +2211,13 @@ def _pointer_lost(
     stage: str,
     genre: str | None,
     *,
-    card_run: CardRun | None = None,
+    open_card: bool,
 ) -> dict[str, object]:
     """The pointer moved after this call read it. The newer pointer stays."""
     fresh = load_pointer(essay_id)
     blocked = _stage_refusal(cast(Pointer, fresh), stage, genre, essay_id)
     if blocked is not None:
-        return _confirm_blocked(essay_id, fresh, stage, genre, blocked, card_run=card_run)
+        return _confirm_blocked(essay_id, fresh, stage, genre, blocked, open_card=open_card)
     return refuse(
         "pointer",
         f"This step was saved in another chat. The current stage is {fresh['current']}.",
@@ -2247,7 +2237,7 @@ def _confirm_blocked(
     genre: str | None,
     blocked: dict[str, object],
     *,
-    card_run: CardRun | None = None,
+    open_card: bool,
 ) -> dict[str, object]:
     """An already-saved stage does not replay its card. The draft card is for current."""
     from essay_writer.spine import stage_uses_confirm_card
@@ -2268,8 +2258,8 @@ def _confirm_blocked(
     opened = None
     if stage_uses_confirm_card(current) and current != stage:
         opened = _replay_confirm_card(essay_id, current, genre, pointer, None)
-        if opened is None and card_run is not None:
-            opened = card_run(essay_id, current, None, minting=False)
+        if opened is None and open_card:
+            opened = _run_card_only(essay_id, current, None, minting=False)
     opened_reply = opened if isinstance(opened, dict) else None
     card = opened_reply.get("card") if isinstance(opened_reply, dict) else None
     digest = opened_reply.get("cardDigest") if isinstance(opened_reply, dict) else None
@@ -2334,18 +2324,13 @@ def _next_card_look(essay_id: str, stage: str) -> str:
     return "\n".join(lines)
 
 
-def _draft_next_card(
-    essay_id: str,
-    following: str,
-    card_run: CardRun,
-) -> dict[str, object]:
+def _draft_next_card(essay_id: str, following: str) -> dict[str, object]:
     """One card-only draft of the next stage. It does not move the pointer.
 
     Student-answer rules (part names, Entry N, house words) stay off this mint.
-    They run when the student later writes that stage. The injected runner
-    carries the mint flag; this module never imports the orchestrator.
+    They run when the student later writes that stage.
     """
-    return card_run(
+    return _run_card_only(
         essay_id,
         following,
         _next_card_look(essay_id, following),
@@ -2565,7 +2550,7 @@ def _commit_with_next_card(
     plan_text: str | None = None,
     *,
     approved_look: str | None = None,
-    card_run: CardRun,
+    open_card: bool,
 ) -> dict[str, object]:
     """One write advances the pointer and stores the tracking note.
 
@@ -2594,7 +2579,7 @@ def _commit_with_next_card(
         note,
         note_text,
         digest=card_digest,
-        card_run=card_run,
+        open_card=open_card,
         cache_look=cache_look,
     )
     if committed.pointer is None:
