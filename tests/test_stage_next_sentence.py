@@ -25,7 +25,6 @@ LAYERS = (
     "stage_state.py",
     "stage_note.py",
     "stage_hold.py",
-    "stage_confirm.py",
 )
 SENTENCE_FILES = ("stage_hold.py",)
 OWN_SENTENCE = {

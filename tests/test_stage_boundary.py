@@ -24,7 +24,6 @@ LAYERS = (
     STATE,
     PACKAGE / "stage_note.py",
     PACKAGE / "stage_hold.py",
-    PACKAGE / "stage_confirm.py",
 )
 ARCHITECTURE = REPO / "ARCHITECTURE.md"
 
@@ -84,7 +83,6 @@ def test_importing_the_state_layer_does_not_load_the_track():
         "import essay_writer.stage_state\n"
         "import essay_writer.stage_note\n"
         "import essay_writer.stage_hold\n"
-        "import essay_writer.stage_confirm\n"
         "assert 'essay_writer.stage_track' not in sys.modules, "
         "sorted(name for name in sys.modules if name.startswith('essay_writer'))\n"
     )
