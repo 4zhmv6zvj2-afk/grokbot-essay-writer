@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The superseded stage-split notes are removed. The module map and the import rule stay in `ARCHITECTURE.md`. The readme and the glossary no longer repeat that map.
+- The superseded stage-split notes are removed. The module map and the import rule stay in `ARCHITECTURE.md`. The README and the glossary no longer repeat that map.
 
 ## 0.9.25 — 2026-11-26
 

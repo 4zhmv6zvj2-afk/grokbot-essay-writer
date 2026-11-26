@@ -21,11 +21,8 @@ mint the next stage's card, and a missing card does not roll the save back.
 Stage 5 and the last stage name an advance with no card. A newer current
 or saved list is left in place.
 
-This module is the orchestrator. The confirm path, the body builder, the
-draft and save replies, the landing and report helpers, and the held and
-refused replies live here. A save that needs the next stage's card or the
-current stage's card calls ``_run_card_only`` directly. The inherited-lock
-keep calls ``_inherited_keep_confirm`` directly.
+This module is the stage orchestrator. The helpers it keeps are named in
+`ARCHITECTURE.md`, not here.
 """
 
 from __future__ import annotations
