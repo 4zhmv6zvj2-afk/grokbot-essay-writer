@@ -24,7 +24,7 @@ from essay_writer.projects import essay_project_delete
 from essay_writer.research import essay_research_full, essay_research_summary
 from essay_writer.revise import essay_revise
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.validate import essay_pack_validate
 from essay_writer.word import essay_pack_render_word
 from essay_writer.writing_basics import CHECKLISTS

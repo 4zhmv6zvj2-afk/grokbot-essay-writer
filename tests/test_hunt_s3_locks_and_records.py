@@ -24,8 +24,8 @@ from essay_writer.fo_chat_locks import inherited_lock_pending, inherited_locks
 from essay_writer.health import essay_health
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.revise import essay_revise
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import STAGE_COMMIT
-from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 
 DAMAGED_COMMIT = "last confirm record was damaged"

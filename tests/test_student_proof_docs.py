@@ -23,7 +23,7 @@ from essay_writer.paths import work_dir
 from essay_writer.review import essay_review
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.eqr import CLAIM_CHECKS, NORTH_STAR, write_findings_note
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_voice import speak
 
 REPO = Path(__file__).resolve().parents[1]

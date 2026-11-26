@@ -10,7 +10,7 @@ from essay_writer.cursor_office import RESIDUALS, cursor_stage_launch, stage_hos
 from essay_writer.server import main as server_main
 from essay_writer.setup import SHELL_GROK_BUILD
 from essay_writer.stage_llm import STAGE_KEYS, stage_settings
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 
 
 def test_cursor_launch_puts_model_and_effort_on_the_model_flag():

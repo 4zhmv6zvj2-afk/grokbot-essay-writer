@@ -21,7 +21,7 @@ from essay_writer.server import INSTRUCTIONS
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.grok_bot import stage7_lead
 from essay_writer.stage_llm import stage_settings
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_turns import (
     FIRST_TURN_CARD,
     OPENING_CONTINUE,

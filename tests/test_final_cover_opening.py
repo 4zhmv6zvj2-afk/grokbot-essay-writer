@@ -49,8 +49,8 @@ from essay_writer.research_packs import ship_4b, write_annotation_docx
 from essay_writer.specialists.eqr import NORTH_STAR, write_findings_note
 from essay_writer.stage_llm import HOUSE_MODEL
 from essay_writer.stage_note import render_tracking
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import _note_path, blank_pointer, load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.word import (
     cover_lines,

@@ -22,7 +22,7 @@ from essay_writer.diary import section_plan_for, title_page_spec
 from essay_writer.paths import essay_dir, work_dir
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_llm import brief_genre
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.textutil import (
     BRIEF_GENRE,
     BRIEF_WORD_RULES,

@@ -21,7 +21,7 @@ from essay_writer.projects import essay_sequence_new
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.specialists.writer import body_is_justified, document_word_band
 from essay_writer.stage_llm import brief_genre, stage_settings, stage_title
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.textutil import genre_from_brief_text, word_band_from_brief_text
 from essay_writer.word import cover_lines, write_docx

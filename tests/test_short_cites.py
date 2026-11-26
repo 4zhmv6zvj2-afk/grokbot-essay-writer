@@ -22,7 +22,7 @@ from essay_writer.short_cites import (
     shorten,
 )
 from essay_writer.stage_note import _note_look
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.writing_basics import STAGE_ORDER
 

@@ -44,8 +44,8 @@ from essay_writer.source_floor import rate_for_words
 from essay_writer.specialists.eqr import REVIEW_PROMPT
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_note import render_tracking
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import _note_path, load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.textutil import count_words

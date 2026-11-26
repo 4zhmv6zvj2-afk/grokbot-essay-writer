@@ -13,7 +13,7 @@ from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.grok_bot import card_next
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_progress import (
     may_speak_confirm,
     shape_student_reply,

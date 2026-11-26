@@ -29,7 +29,7 @@ from essay_writer.server import INSTRUCTIONS
 from essay_writer.specialists.grok_bot import STAGE5_SAVE_LINE, confirm_line, saved_next
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 from essay_writer.stage_llm import STAGE_TITLES, brief_genre, stage_settings, stage_title
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_turns import (
     FIRST_TURN_CARD,
     OPENING_CONTINUE,

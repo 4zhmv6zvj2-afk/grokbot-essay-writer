@@ -7,7 +7,7 @@ from essay_writer.originals import essay_originals
 from essay_writer.seats import seat_reading
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.stage_llm import UNTRUSTED_FENCE, stage_settings
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import STAGE_ORDER
 

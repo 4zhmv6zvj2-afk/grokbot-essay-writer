@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from essay_writer import build_office, late_chain, stage_track, word
+from essay_writer import build_office, late_chain, stage_run, word
 from essay_writer.dig import essay_dig
 from essay_writer.first_run import package_root
 from essay_writer.known_paths import allow_research_path
@@ -27,13 +27,13 @@ from essay_writer.specialists.researcher import essay_dig as researcher_dig
 from essay_writer.specialists.researcher import ship_4a as researcher_ship
 from essay_writer.specialists.writer import FIRST_DRAFT_NOTE, essay_pack_render_word
 from essay_writer.stage_llm import first_draft_note
-from essay_writer.stage_track import essay_stage as stage_track_stage
+from essay_writer.stage_run import essay_stage as stage_run_stage
 from essay_writer.word import essay_pack_render_word as word_render
 
 
 def test_four_roles_and_the_spine():
     assert ROLES == ("grok_bot", "writer", "researcher", "eqr")
-    assert stage_track_stage is HANDLERS["essay.stage"]
+    assert stage_run_stage is HANDLERS["essay.stage"]
 
 
 def test_handlers_are_the_specialist_entries_and_the_original_functions():
@@ -68,7 +68,7 @@ def test_personality_has_one_source():
 
 def test_spine_and_build_call_the_specialists():
     spine = (
-        Path(stage_track.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
+        Path(stage_run.__file__).resolve().parent.joinpath("spine.py").read_text(encoding="utf-8")
     )
     assert "essay_writer.specialists.researcher" in spine
     assert "essay_writer.specialists.eqr" in spine

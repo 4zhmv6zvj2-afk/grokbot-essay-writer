@@ -14,7 +14,7 @@ from helpers import (
     plant_renderable_pack,
 )
 
-from essay_writer import stage_track
+from essay_writer import stage_run
 from essay_writer.build_office import stage_launch
 from essay_writer.doors import DOORS
 from essay_writer.prompt_loader import text as prompt_text
@@ -22,8 +22,8 @@ from essay_writer.server import INSTRUCTIONS, build_review_server, build_server
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.grok_bot import CHECKLIST_WALK, cached_approved_look
 from essay_writer.stage_llm import STAGE_ORDER, brief_genre, stage_settings, stage_title
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import _commit_pointer, load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import CHECKLISTS, basics_lines
 
@@ -514,7 +514,7 @@ def test_a_lost_pointer_does_not_save_the_revisit(workspace, monkeypatch):
             _commit_pointer(essay_id, fresh, dict(fresh))
         return _commit_pointer(essay_id, base, proposed, note=note, note_text=note_text)
 
-    monkeypatch.setattr(stage_track, "_commit_pointer", lose_the_save)
+    monkeypatch.setattr(stage_run, "_commit_pointer", lose_the_save)
     lost = essay_stage(seq, "3", "confirm", delta, **picked(opened))
     assert lost["ok"] is False, lost
     assert lost["refused"] == "pointer"
@@ -530,7 +530,7 @@ def test_a_lost_pointer_does_not_save_the_revisit(workspace, monkeypatch):
     ).read_text(encoding="utf-8")
 
 
-def test_workflow_records_stage_tracking_for_both_shells():
+def test_workflow_records_tracking_notes_for_both_shells():
     workflow = (REPO_DOCS / "docs" / "workflow.md").read_text(encoding="utf-8")
     assert "Essay-writer/<module>/sequences/<n>/tracking/<stage>.md" in workflow
     bot = (REPO_DOCS / "docs" / "templates" / "bot.md").read_text(encoding="utf-8")
@@ -552,6 +552,6 @@ def test_workflow_records_stage_tracking_for_both_shells():
                 found.setdefault(node.name, []).append(path.name)
     assert found["stage_settings"] == ["stage_llm.py"]
     assert found["stage_rules"] == ["stage_llm.py"]
-    assert found["essay_stage"] == ["stage_track.py"]
+    assert found["essay_stage"] == ["stage_run.py"]
     names = {tool.name for tool in asyncio.run(build_server().list_tools())}
     assert "essay.stage" in names

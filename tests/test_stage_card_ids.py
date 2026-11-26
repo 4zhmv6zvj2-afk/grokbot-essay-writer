@@ -7,7 +7,7 @@ from essay_writer.projects import essay_projects
 from essay_writer.server import HANDLERS
 from essay_writer.stage_llm import stage_settings
 from essay_writer.stage_note import render_tracking
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 
 MODULE = ESSAY
 

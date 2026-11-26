@@ -158,28 +158,28 @@ The where column is a file name. The test owns the codes.
 | word-band | (built at the door) | refuse | The reason sentence names the next step. | specialists/writer.py |
 | assignment-gate | (built at the door) | refuse | The reason sentence names the next step. | specialists/writer.py |
 | draft | (built at the door) | refuse | The reason sentence names the next step. | specialists/writer.py |
-| guidance-only | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | Write what changed, or that the plan still holds, and which gathered source shows it. | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| master | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| eqr | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| draft | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| word-band | This first draft is not inside the brief's word band. Change the draft so it fits the brief, then save again. | refuse | The reason sentence names the next step. | stage_track.py |
-| pointer | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | The last stage is already saved. This tool does not submit. | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | Save the plan note first. The first draft waits until that save. | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | Save the plan again before the first draft. The earlier lock changed. | refuse | The reason sentence names the next step. | stage_track.py |
-| word | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| misses | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| lock-choice | The inherited lock is empty. Revise instead. | refuse | The reason sentence names the next step. | stage_track.py |
-| house-jargon | That note uses an internal label. Say it in plain words. | refuse | The reason sentence names the next step. | stage_track.py |
-| essay-id | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | Send a stage from 1 to 10, including 4a and 4b. | refuse | The reason sentence names the next step. | stage_track.py |
-| confirm-card | This step moves on when the draft is stored. There is no save-card between this step and the next. | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| turn | (built at the door) | refuse | The reason sentence names the next step. | stage_track.py |
-| stage | Send the look as plain text. | refuse | The reason sentence names the next step. | stage_track.py |
+| guidance-only | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | Write what changed, or that the plan still holds, and which gathered source shows it. | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| master | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| eqr | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| draft | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| word-band | This first draft is not inside the brief's word band. Change the draft so it fits the brief, then save again. | refuse | The reason sentence names the next step. | stage_run.py |
+| pointer | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | The last stage is already saved. This tool does not submit. | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | Save the plan note first. The first draft waits until that save. | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | Save the plan again before the first draft. The earlier lock changed. | refuse | The reason sentence names the next step. | stage_run.py |
+| word | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| misses | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| lock-choice | The inherited lock is empty. Revise instead. | refuse | The reason sentence names the next step. | stage_run.py |
+| house-jargon | That note uses an internal label. Say it in plain words. | refuse | The reason sentence names the next step. | stage_run.py |
+| essay-id | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | Send a stage from 1 to 10, including 4a and 4b. | refuse | The reason sentence names the next step. | stage_run.py |
+| confirm-card | This step moves on when the draft is stored. There is no save-card between this step and the next. | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| turn | (built at the door) | refuse | The reason sentence names the next step. | stage_run.py |
+| stage | Send the look as plain text. | refuse | The reason sentence names the next step. | stage_run.py |
 | state | (built at the door) | refuse | The reason sentence names the next step. | state.py |
 | stage | (built at the door) | refuse | The reason sentence names the next step. | state.py |
 | essay-id | (built at the door) | refuse | The reason sentence names the next step. | validate.py |

@@ -20,8 +20,8 @@ from essay_writer.setup import SHELL_GROK_BUILD
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.stage7 import NEED_EDIT
 from essay_writer.stage_llm import stage_settings, stage_tool_description
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER
 
 ROOM_CONFIRM_PATH = prompt_text("front_office/confirm.md", "room_confirm_path")

@@ -13,8 +13,8 @@ from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import HANDLERS
 from essay_writer.shells import cursor_shell, front_office, front_office_call
 from essay_writer.stage_llm import stage_settings
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.writing_basics import STAGE_ORDER, basics_lines
 
 BASICS_FIRST_LINES = prompt_text("front_office/chat.md", "basics_first_lines")
@@ -208,7 +208,7 @@ def test_ac2_rest_of_basics_walk_before_confirm(workspace):
 
 def test_ac3_build_covered_shared_confirm_handlers(workspace):
     """Cursor and Grok Build share essay.stage. No second Confirm path."""
-    from essay_writer.stage_track import essay_stage as stage_door
+    from essay_writer.stage_run import essay_stage as stage_door
 
     assert HANDLERS["essay.stage"] is stage_door
     assert cursor_shell()["handlers"]["essay.stage"] is HANDLERS["essay.stage"]

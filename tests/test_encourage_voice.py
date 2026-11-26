@@ -26,8 +26,8 @@ from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.shells import front_office_call
 from essay_writer.specialists.eqr import REVIEW_PROMPT
 from essay_writer.stage_llm import stage_settings
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
 
 _CRAFT = prompt_sections("craft/voice.md")

@@ -22,8 +22,8 @@ from essay_writer.late_chain import finish_stage_reply
 from essay_writer.paths import work_dir
 from essay_writer.specialists.grok_bot import basics_pass_lines
 from essay_writer.stage_llm import stage_settings
+from essay_writer.stage_run import _commit_pointer, essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import _commit_pointer, essay_stage
 from essay_writer.state import load_state, save_state
 
 MISSING = "The final Word file is missing."
@@ -85,13 +85,13 @@ def _confirm(monkeypatch, documents, *, mounted: bool) -> tuple[str, dict]:
             seen["before_close"] = True
         return real(essay_id, base, proposed, note=note, note_text=note_text)
 
-    monkeypatch.setattr("essay_writer.stage_track._commit_pointer", watching)
+    monkeypatch.setattr("essay_writer.stage_run._commit_pointer", watching)
     look = "\n".join(basics_pass_lines(seq)) + "\nThe final file is ready."
     draft = essay_stage(seq, "10", "draft", look)
     assert draft["ok"] is True, draft
     saved = essay_stage(seq, "10", "confirm", **picked(draft))
     assert seen["before_close"] is True
-    monkeypatch.setattr("essay_writer.stage_track._commit_pointer", real)
+    monkeypatch.setattr("essay_writer.stage_run._commit_pointer", real)
     return seq, saved
 
 

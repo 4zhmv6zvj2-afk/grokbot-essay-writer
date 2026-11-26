@@ -16,7 +16,7 @@ from essay_writer.stage_next import (
     rewrite_essay_stage_next,
     write_draft_stage_next,
 )
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_voice import speak
 
 REPO = Path(__file__).resolve().parents[1]
@@ -75,14 +75,12 @@ def _next_stores(tree: ast.AST) -> list[ast.AST]:
     return [node for node in ast.walk(tree) if _stores_next(node)]
 
 
-def _imports_stage_track(source: str) -> bool:
+def _imports_stage_run(source: str) -> bool:
     tree = ast.parse(source)
     for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.module and "stage_track" in node.module:
+        if isinstance(node, ast.ImportFrom) and node.module and "stage_run" in node.module:
             return True
-        if isinstance(node, ast.Import) and any(
-            "stage_track" in alias.name for alias in node.names
-        ):
+        if isinstance(node, ast.Import) and any("stage_run" in alias.name for alias in node.names):
             return True
     return False
 
@@ -144,7 +142,7 @@ def test_stage_paths_leave_the_sentence_to_that_module(case_id: str) -> None:
     del case_id
     finish = _function(PACKAGE / "late_chain.py", "finish_stage_reply")
     assert _next_stores(finish) == []
-    for name in ("stage_track.py",):
+    for name in ("stage_run.py",):
         assert _next_stores(ast.parse((PACKAGE / name).read_text(encoding="utf-8"))) == [], name
     from essay_writer.stage_next import ANSWER_NEXT, answer_next
 
@@ -262,7 +260,7 @@ def test_stage_split_and_stored_final_stay(case_id: str, workspace, monkeypatch)
     del case_id
     for name in LAYERS:
         source = (PACKAGE / name).read_text(encoding="utf-8")
-        assert not _imports_stage_track(source), name
+        assert not _imports_stage_run(source), name
     assert advances_without_confirm("5") == "6"
     finish = _function(PACKAGE / "late_chain.py", "finish_stage_reply")
     called = {node.id for node in ast.walk(finish) if isinstance(node, ast.Name)}

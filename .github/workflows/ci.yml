@@ -318,7 +318,7 @@ jobs:
           from essay_writer.build_status import reset_status, tip_sheet
           from essay_writer.handbook import read_handbook
           from essay_writer.projects import essay_sequence_new
-          from essay_writer.stage_track import essay_stage
+          from essay_writer.stage_run import essay_stage
 
           package = pathlib.Path(essay_writer.__file__).parent
           for name in (

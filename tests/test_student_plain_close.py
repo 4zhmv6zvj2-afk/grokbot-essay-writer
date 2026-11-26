@@ -45,7 +45,7 @@ from essay_writer.server import INSTRUCTIONS
 from essay_writer.shells import cursor_shell
 from essay_writer.specialists.writer import UNREADABLE_DRAFT, first_draft_unreadable
 from essay_writer.stage_note import _note_look
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.word_references import stage10_reference_block
 

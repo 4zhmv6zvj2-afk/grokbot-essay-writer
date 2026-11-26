@@ -9,7 +9,7 @@ validation, and Word output.
 - `src/essay_writer/` — the package.
   - `server.py` — MCP entry and tool registration.
   - `doors.py` — tool catalogue and descriptions.
-  - `stage_track.py` — the orchestrator. It keeps `essay_stage` and the stage
+  - `stage_run.py` — the orchestrator. It keeps `essay_stage` and the stage
     decision tree. The folded writers live in this file: the confirm path and
     the stage-7 skip probe, the body builder, the draft and save replies
     (`_draft_reply`, `_save_confirm`), the landing and report helpers, and the
@@ -148,7 +148,7 @@ They are not product modules. `specialists/` is a package of helpers, already na
 - `stage_next.py`
 - `stage_note.py`
 - `stage_state.py`
-- `stage_track.py`
+- `stage_run.py`
 - `state.py`
 - `student_progress.py`
 - `student_turns.py`
@@ -224,7 +224,7 @@ its own floor through `python_bootstrap.py` (`REQUIRED = (3, 12, 0)`).
 5. `essay.health` reports the doors, packs, and build marker.
 
 The stage runner keeps the public entry points and the stage decision tree in
-`stage_track.py`. The run branches are named helpers in that file:
+`stage_run.py`. The run branches are named helpers in that file:
 `_confirm_path` (card confirm), `_build_stage_body` (shared stage body),
 `_draft_reply` (draft card), and `_save_confirm` (saved stage); together with
 `_run_stage` they are several hundred lines of decision tree, not a thin
@@ -233,7 +233,7 @@ pointer and result shapes; most helpers still take a plain `pointer: dict`, so
 treat those two types as documentation of intent rather than an enforced schema.
 
 `stage_state.py` and `stage_note.py` do not import the orchestrator
-(`stage_track.py`), either at module load or inside a function. The
+(`stage_run.py`), either at module load or inside a function. The
 orchestrator does not re-export the names that stay in `stage_state.py`.
 A card calls `_run_card_only` directly: the next-card mint passes
 `minting=True`, and reopening an already-saved stage's card passes

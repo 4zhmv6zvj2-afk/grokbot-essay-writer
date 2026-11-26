@@ -30,7 +30,7 @@ from essay_writer.specialists.grok_bot import (
 )
 from essay_writer.spine import AUTO_START
 from essay_writer.stage7 import _QUESTIONS
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 from essay_writer.student_turns import STAGE7_LINE
 from essay_writer.student_voice import say
 

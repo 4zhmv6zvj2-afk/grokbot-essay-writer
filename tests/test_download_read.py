@@ -22,7 +22,7 @@ from essay_writer.research_packs import (
 )
 from essay_writer.server import INSTRUCTIONS
 from essay_writer.stage_llm import HOUSE_MODEL, stage_settings
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 
 REPO = Path(__file__).resolve().parents[1]
 PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"

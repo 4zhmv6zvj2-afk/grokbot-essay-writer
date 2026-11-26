@@ -2,7 +2,7 @@
 
 from helpers import open_sequence, picked, write_upload
 
-from essay_writer.stage_track import essay_stage
+from essay_writer.stage_run import essay_stage
 
 
 def test_bad_id_refuses_before_a_branch(workspace):

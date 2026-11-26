@@ -12,8 +12,8 @@ from helpers import open_sequence
 
 from essay_writer.incident import incident_path
 from essay_writer.paths import essay_dir, work_dir
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import DamagedStageCommit, load_pointer, stage_lock
-from essay_writer.stage_track import essay_stage
 
 KILLED_BYTES = b"killed-during-stage-commit\n"
 ORPHAN_BYTES = b"orphan-commit-temp\n"

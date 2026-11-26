@@ -39,8 +39,8 @@ from essay_writer.specialists.grok_bot import (
 from essay_writer.spine import advances_without_confirm, stage_uses_confirm_card
 from essay_writer.stage7 import _QUESTIONS, answers_mean_no_change
 from essay_writer.stage_llm import stage_title
+from essay_writer.stage_run import essay_stage
 from essay_writer.stage_state import load_pointer
-from essay_writer.stage_track import essay_stage
 from essay_writer.state import load_state, save_state
 from essay_writer.student_turns import _LIMIT as REDIRECT_LIMIT
 from essay_writer.student_turns import (

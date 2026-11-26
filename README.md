@@ -276,7 +276,7 @@ uv run pytest --cov=essay_writer --cov-report=term   # CI floor 85%
 
 - `src/essay_writer/server.py` — MCP entry and tool registration.
 - `src/essay_writer/doors.py` — the tool catalogue (one "door" per tool).
-- `src/essay_writer/stage_track.py` — the stage runner. The confirm path, the
+- `src/essay_writer/stage_run.py` — the stage runner. The confirm path, the
   body builder, the draft and save replies, the landing and report helpers,
   and the held and refused replies live in this file. A card calls
   `_run_card_only` directly.
