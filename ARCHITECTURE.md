@@ -229,9 +229,10 @@ The stage runner keeps the public entry points and the stage decision tree in
 `_confirm_path` (card confirm), `_build_stage_body` (shared stage body),
 `_draft_reply` (draft card), and `_save_confirm` (saved stage); together with
 `_run_stage` they are several hundred lines of decision tree, not a thin
-pass-through. `Pointer` and `StageResult` in `stage_state.py` name the intended
-pointer and result shapes; most helpers still take a plain `pointer: dict`, so
-treat those two types as documentation of intent rather than an enforced schema.
+pass-through. `Pointer` in `stage_state.py` is the in-memory stage pointer.
+`blank_pointer` and `load_pointer` return it, and the room and waiting helpers
+take it. The stage journal on disk is the commit record. That record is not a
+`Pointer`.
 
 `stage_state.py` and `stage_note.py` do not import the orchestrator
 (`stage_run.py`), either at module load or inside a function. The
@@ -256,10 +257,9 @@ Intent tests assert observable outcomes (refusals, stored state, and Word
 output); a thin set of contract tests pins the exact rule strings the chat
 contract depends on. The stage runner and its branch helpers keep that
 prompt-heavy path in one place, at the cost of a large decision tree.
-`Pointer` and `StageResult` name the intended state shapes rather than enforced
-schemas: many helpers still take a plain `pointer: dict`. `StageArgs` and
-`StageContext` type the pipeline between the tool signature and the reply
-writers; no stage body travels as a string-keyed dict with a sentinel any more.
+`StageArgs` and `StageContext` type the pipeline between the tool signature
+and the reply writers; no stage body travels as a string-keyed dict with a
+sentinel any more.
 
 ## Where to start
 

@@ -8,8 +8,9 @@ from __future__ import annotations
 import json
 import sys
 import threading
+from collections.abc import Mapping
 from contextlib import contextmanager
-from typing import Any, Literal, Never, TypedDict, cast
+from typing import Any, Literal, Never, TypedDict
 
 # The stage lock is POSIX-only. Importing the package on Windows must succeed;
 # only taking the lock refuses, and the refusal names the platform.
@@ -51,8 +52,9 @@ def _commit_path(essay_id: str):
     return work_dir(essay_id) / STAGE_COMMIT
 
 
-def _pointer_text(pointer: Pointer) -> str:
-    return json.dumps(pointer, indent=2, ensure_ascii=False) + "\n"
+def _pointer_text(body: Mapping[str, object]) -> str:
+    # A journal record is a mapping, not a Pointer. The on-disk JSON is unchanged.
+    return json.dumps(body, indent=2, ensure_ascii=False) + "\n"
 
 
 def _note_rel(note) -> str:
@@ -77,7 +79,7 @@ def _apply_commit(root, record: dict[str, object]) -> None:
     pointer = record.get("pointer")
     if not isinstance(pointer, dict):
         raise ValueError("stage commit is missing the pointer")
-    _atomic(root / POINTER_FILE, _pointer_text(cast(Pointer, pointer)))
+    _atomic(root / POINTER_FILE, _pointer_text(pointer))
     journal = root / STAGE_COMMIT
     if journal.is_file():
         journal.unlink()
@@ -174,6 +176,11 @@ class Pointer(TypedDict, total=False):
     revision: int
 
 
+class _RoomFields(TypedDict):
+    room_grant: str | None
+    room_lock: bool
+
+
 class StageResult(TypedDict, total=False):
     ok: bool
     essay_id: str
@@ -192,7 +199,7 @@ class StageResult(TypedDict, total=False):
     next: str
 
 
-def blank_pointer() -> dict[str, object]:
+def blank_pointer() -> Pointer:
     """A new sequence is open on stage 1. Nothing is saved yet."""
     return {
         "current": "1",
@@ -237,7 +244,7 @@ def init_cloned_sequence_pointer(folder) -> None:
     _replay_commit(folder)
     path = folder / POINTER_FILE
     if path.is_file():
-        _atomic(path, _pointer_text(cast(Pointer, blank_pointer())))
+        _atomic(path, _pointer_text(blank_pointer()))
     _clear_copied_writing(folder)
 
 
@@ -306,7 +313,7 @@ def rebind_cloned_confirms(folder, essay_id: str) -> None:
     else:
         data["waiting_stage"] = None
         data["waiting_digest"] = None
-    _atomic(pointer_path, _pointer_text(cast(Pointer, data)))
+    _atomic(pointer_path, _pointer_text(data))
 
 
 def _read_pointer_data(essay_id: str) -> dict[str, object] | None:
@@ -381,7 +388,7 @@ def _settle_stage_commit(essay_id: str) -> None:
     _replay_commit(root)
 
 
-def load_pointer(essay_id: str) -> dict[str, Any]:
+def load_pointer(essay_id: str) -> Pointer:
     if not _pointer_path(essay_id).is_file() and not _commit_path(essay_id).is_file():
         root = work_dir(essay_id)
         lock = _stage_lock_path(essay_id)
@@ -403,7 +410,31 @@ def _note_pointer(code: str, *, disposition: str, severity: str = "info") -> Non
     note(code, severity=severity, disposition=disposition, tool="stage", step="pointer")
 
 
-def _normalize_pointer(data: dict[str, Any]) -> dict[str, Any]:
+def _keep_unnamed(
+    pointer: Pointer, source: Mapping[str, Any], *, named: Mapping[str, Any] | None = None
+) -> None:
+    """Copy fields the named pointer keys do not cover. A later save still writes them."""
+    covered = pointer if named is None else named
+    extra = {
+        key: value for key, value in source.items() if key not in covered and key not in pointer
+    }
+    if extra:
+        dict.update(pointer, extra)
+
+
+def _waiting_input(data: dict[str, Any]) -> Pointer:
+    """The waiting fields from a raw pointer file, before the pointer is normalized."""
+    view: Pointer = {}
+    stage = data.get("waiting_stage")
+    digest = data.get("waiting_digest")
+    if isinstance(stage, str):
+        view["waiting_stage"] = stage
+    if isinstance(digest, str):
+        view["waiting_digest"] = digest
+    return view
+
+
+def _normalize_pointer(data: dict[str, Any]) -> Pointer:
     """Load a pointer without writing it.
 
     A missing known field is filled in memory. An unknown field, including an
@@ -448,8 +479,8 @@ def _normalize_pointer(data: dict[str, Any]) -> dict[str, Any]:
     grant = data.get("room_grant")
     if grant not in STAGE_ORDER:
         grant = None
-    waiting_stage, waiting_digest = _waiting_pair(data)
-    result = {
+    waiting_stage, waiting_digest = _waiting_pair(_waiting_input(data))
+    result: Pointer = {
         "current": current,
         "saved": saved,
         "files": files,
@@ -473,13 +504,11 @@ def _normalize_pointer(data: dict[str, Any]) -> dict[str, Any]:
             dropped = True
     if dropped:
         _note_pointer("pointer-field-dropped", disposition="fallback")
-    for key, value in data.items():
-        if key not in result:
-            result[key] = value
+    _keep_unnamed(result, data)
     return result
 
 
-def _room_state(pointer: dict[str, Any]) -> dict[str, object]:
+def _room_state(pointer: Pointer) -> _RoomFields:
     """The room press still on the pointer. A card tap leaves both empty."""
     grant = pointer.get("room_grant")
     if grant not in STAGE_ORDER:
@@ -487,7 +516,7 @@ def _room_state(pointer: dict[str, Any]) -> dict[str, object]:
     return {"room_grant": grant, "room_lock": pointer.get("room_lock") is True}
 
 
-def _room_after_card_save(pointer: dict[str, Any], stage: str) -> dict[str, object]:
+def _room_after_card_save(pointer: Pointer, stage: str) -> _RoomFields:
     """A room press saves only the stage it named. The next stage needs its own press."""
     state = _room_state(pointer)
     if state["room_grant"] == stage:
@@ -495,7 +524,7 @@ def _room_after_card_save(pointer: dict[str, Any], stage: str) -> dict[str, obje
     return {"room_grant": None, "room_lock": False}
 
 
-def _saved_after_confirm(pointer: dict[str, Any], stage: str) -> list[str]:
+def _saved_after_confirm(pointer: Pointer, stage: str) -> list[str]:
     """One confirm stores this stage only. The next stage is not appended."""
     saved = list(pointer["saved"])
     if stage not in saved:
@@ -503,7 +532,7 @@ def _saved_after_confirm(pointer: dict[str, Any], stage: str) -> list[str]:
     return saved
 
 
-def _room_blocks(pointer: dict[str, Any], stage: str) -> bool:
+def _room_blocks(pointer: Pointer, stage: str) -> bool:
     """True when a room press for another stage, or a used press, is not this stage's Confirm."""
     state = _room_state(pointer)
     if state["room_lock"] and state["room_grant"] != stage:
@@ -511,7 +540,7 @@ def _room_blocks(pointer: dict[str, Any], stage: str) -> bool:
     return state["room_grant"] is not None and state["room_grant"] != stage
 
 
-def _waiting_pair(pointer: dict[str, Any]) -> tuple[str | None, str | None]:
+def _waiting_pair(pointer: Pointer) -> tuple[str | None, str | None]:
     stage = pointer.get("waiting_stage")
     digest = pointer.get("waiting_digest")
     if stage not in STAGE_ORDER or not isinstance(digest, str) or len(digest) != 64:
@@ -519,7 +548,7 @@ def _waiting_pair(pointer: dict[str, Any]) -> tuple[str | None, str | None]:
     return stage, digest
 
 
-def _waiting_digest(pointer: dict[str, Any], stage: str) -> str | None:
+def _waiting_digest(pointer: Pointer, stage: str) -> str | None:
     """Digest of the draft that wrote the current note for this stage."""
     waiting_stage, digest = _waiting_pair(pointer)
     if waiting_stage != stage:
@@ -527,7 +556,7 @@ def _waiting_digest(pointer: dict[str, Any], stage: str) -> str | None:
     return digest
 
 
-def _revision(pointer: dict[str, Any]) -> int:
+def _revision(pointer: Mapping[str, Any]) -> int:
     value = pointer.get("revision")
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         return 0
@@ -587,7 +616,7 @@ def stage_lock(essay_id: str):
     return _pointer_lock(essay_id)
 
 
-def _rolls_backward(fresh: dict[str, Any], proposed: dict[str, Any]) -> bool:
+def _rolls_backward(fresh: Pointer, proposed: Pointer) -> bool:
     """True when proposed drops a saved stage or moves current to an earlier stage."""
     fresh_saved = [item for item in fresh.get("saved") or [] if item in STAGE_ORDER]
     proposed_saved = [item for item in proposed.get("saved") or [] if item in STAGE_ORDER]
@@ -604,12 +633,12 @@ def _rolls_backward(fresh: dict[str, Any], proposed: dict[str, Any]) -> bool:
 
 def _commit_pointer(
     essay_id: str,
-    base: dict[str, Any],
-    proposed: dict[str, Any],
+    base: Pointer,
+    proposed: Pointer,
     *,
     note=None,
     note_text: str | None = None,
-) -> dict[str, object] | None:
+) -> Pointer | None:
     """Commit the note and pointer only while base is still the pointer on disk.
 
     The revision loaded with base must still be the revision on disk. A newer
@@ -624,17 +653,15 @@ def _commit_pointer(
             return None
         if _rolls_backward(fresh, proposed):
             return None
-        stored = dict(proposed)
+        stored: Pointer = {**proposed}
         known = blank_pointer()
-        for key, value in base.items():
-            if key not in known and key not in stored:
-                stored[key] = value
+        _keep_unnamed(stored, base, named=known)
         stored["revision"] = _revision(fresh) + 1
         record: dict[str, object] = {"pointer": stored}
         if note is not None and note_text is not None:
             record["note"] = _note_rel(note)
             record["note_text"] = note_text
-        _atomic(_commit_path(essay_id), _pointer_text(cast(Pointer, record)))
+        _atomic(_commit_path(essay_id), _pointer_text(record))
         _apply_commit(work_dir(essay_id), record)
         return stored
 
@@ -643,15 +670,15 @@ def _payload(essay_id: str, stage: str, look: str) -> dict[str, object]:
     return {"essay_id": essay_id, "stage": stage, "look": look}
 
 
-def _grant_room(essay_id: str, pointer: dict[str, Any], stage: str) -> dict[str, object] | None:
+def _grant_room(essay_id: str, pointer: Pointer, stage: str) -> Pointer | None:
     """Record this stage's press without rewriting current or saved from a stale read."""
-    proposed = dict(pointer)
+    proposed: Pointer = {**pointer}
     proposed["room_grant"] = stage
     proposed["room_lock"] = False
     return _commit_pointer(essay_id, pointer, proposed)
 
 
-def _revisit_window(pointer: dict[str, Any]) -> bool:
+def _revisit_window(pointer: Pointer) -> bool:
     """After 4b is saved and before stage 5 is saved, the plan may be opened again."""
     return (
         pointer.get("closed") is not True

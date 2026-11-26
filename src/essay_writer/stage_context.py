@@ -7,14 +7,18 @@ as a :class:`ConfirmState`, builds the reply body, then gives a
 :class:`StageContext` to the draft and save writers. The old sentinel dict
 that used to carry the resolved state between those steps is gone.
 
-This module depends only on the standard library.
+This module depends only on the standard library at runtime. The pointer
+field is the journal ``Pointer``, imported for the type checker.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from essay_writer.stage_state import Pointer
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,7 +56,7 @@ class ConfirmState:
 
     confirmPhase: str | None
     text: str
-    pointer: dict[str, Any]
+    pointer: Pointer
     master: str | None
     namedFolder: str | None
     answers: str | None
@@ -75,7 +79,7 @@ class StageContext:
     essay_id: str
     stage: str
     genre: str | None
-    pointer: dict[str, Any]
+    pointer: Pointer
     confirmPhase: str | None
     text: str
     look: str | None
