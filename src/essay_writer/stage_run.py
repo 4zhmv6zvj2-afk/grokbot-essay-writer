@@ -21,19 +21,11 @@ mint the next stage's card, and a missing card does not roll the save back.
 Stage 5 and the last stage name an advance with no card. A newer current
 or saved list is left in place.
 
-The pointer, the commit journal, and the stage lock live in
-essay_writer/stage_state.py. The tracking-note renderer and look reader live
-in essay_writer/stage_note.py. The next sentence lives in
-essay_writer/stage_next.py. Stage settings and prompt assembly live in
-essay_writer/stage_llm.py. This module is the orchestrator. The confirm path,
-the body builder, the draft and save replies, the landing and report helpers,
-and the held and refused replies live here.
-
-stage_state.py and stage_note.py do not import this module, at module load or
-at call time. A save that needs the next stage's card or the current stage's
-card calls ``_run_card_only`` directly. The inherited-lock keep calls
-``_inherited_keep_confirm`` directly. The typed stage values (StageArgs and
-StageContext) live in essay_writer/stage_context.py.
+This module is the orchestrator. The confirm path, the body builder, the
+draft and save replies, the landing and report helpers, and the held and
+refused replies live here. A save that needs the next stage's card or the
+current stage's card calls ``_run_card_only`` directly. The inherited-lock
+keep calls ``_inherited_keep_confirm`` directly.
 """
 
 from __future__ import annotations
@@ -2542,8 +2534,7 @@ def _commit_with_next_card(
     The next stage's Confirm card is not minted on this path. A missing card
     does not roll the save back. Both waiting fields are cleared. Stage 10
     still writes the sequence file before the pointer can close. Stage 5 and
-    the last stage name an advance with no card. This module never imports
-    the orchestrator.
+    the last stage name an advance with no card.
     """
     if stage == "10":
         held = _render_stage10_before_close(body, essay_id, stage, genre, pointer, card_digest)

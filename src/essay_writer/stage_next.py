@@ -1,9 +1,8 @@
 """The one writer for the stage "what happens next" sentence.
 
 Every essay.stage reply stores that sentence here. The stage reply, hold,
-landing, and finish paths do not assign it. Dig, shelf, setup, intake,
-review, and projects still write their own next sentence. Cleaning the
-words a person reads does not choose which stage sentence wins.
+landing, and finish paths do not assign it. Cleaning the words a person
+reads does not choose which stage sentence wins.
 """
 
 from __future__ import annotations

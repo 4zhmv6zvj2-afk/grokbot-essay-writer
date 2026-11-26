@@ -15,8 +15,9 @@ validation, and Word output.
     (`_draft_reply`, `_save_confirm`), the landing and report helpers, and the
     held and refused replies. A card calls `_run_card_only` directly. The
     inherited-lock keep calls `_inherited_keep_confirm` directly.
-  - `stage_state.py` — the pointer, the commit journal, and the stage lock. It
-    never imports the orchestrator.
+  - `stage_state.py` — the pointer, the commit journal, and the stage lock. The
+    lock and the journal stay one protocol: the note and the pointer that names
+    it are published together. It never imports the orchestrator.
   - `stage_llm.py` — stage settings and prompt assembly.
   - `stage_context.py` — the typed pipeline values: `StageArgs` (the public
     `essay.stage` tool arguments), `StageContext` (one resolved stage call),
@@ -256,10 +257,9 @@ output); a thin set of contract tests pins the exact rule strings the chat
 contract depends on. The stage runner and its branch helpers keep that
 prompt-heavy path in one place, at the cost of a large decision tree.
 `Pointer` and `StageResult` name the intended state shapes rather than enforced
-schemas: many helpers still take a plain `pointer: dict`. `stage_state.py` and
-`stage_note.py` do not import the orchestrator. `StageArgs` and `StageContext`
-type the pipeline between the tool signature and the reply writers; no stage
-body travels as a string-keyed dict with a sentinel any more.
+schemas: many helpers still take a plain `pointer: dict`. `StageArgs` and
+`StageContext` type the pipeline between the tool signature and the reply
+writers; no stage body travels as a string-keyed dict with a sentinel any more.
 
 ## Where to start
 
@@ -268,5 +268,7 @@ body travels as a string-keyed dict with a sentinel any more.
 - Tool contracts: `doors.py` and `docs/workflow.md`.
 - Vocabulary: `docs/GLOSSARY.md`.
 - How the public history came to be: `HISTORY.md`.
-- Historical design for the old stage split, superseded by the stage collapse:
-  `docs/design-stage-state-split.md`.
+
+The stage runner and the pointer file were split into further modules, then
+folded back. That split was tried and reverted. The layout above is the one
+that ships.
