@@ -120,7 +120,6 @@ STAGE_LAYERS = frozenset(
         "stage_hold",
         "stage_landing",
         "stage_note",
-        "stage_replies",
         "stage_state",
     }
 )

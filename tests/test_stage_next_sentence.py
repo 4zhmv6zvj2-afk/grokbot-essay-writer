@@ -26,11 +26,9 @@ LAYERS = (
     "stage_note.py",
     "stage_hold.py",
     "stage_landing.py",
-    "stage_replies.py",
     "stage_confirm.py",
 )
 SENTENCE_FILES = (
-    "stage_replies.py",
     "stage_hold.py",
     "stage_landing.py",
 )

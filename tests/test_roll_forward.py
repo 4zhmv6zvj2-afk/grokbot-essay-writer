@@ -498,7 +498,7 @@ def test_ac9_build_covered_cursor_and_grok_build_share_roll_forward():
     assert cursor_shell()["handlers"]["essay.stage"] is front_office()["handlers"]["essay.stage"]
     from essay_writer.projects import clone_sequence as clone
     from essay_writer.stage_landing import _attach_mid_run
-    from essay_writer.stage_replies import _draft_reply
+    from essay_writer.stage_track import _draft_reply
     from essay_writer.stage_track import essay_stage as stage
 
     assert "shape_cloned_child" in inspect.getsource(clone)

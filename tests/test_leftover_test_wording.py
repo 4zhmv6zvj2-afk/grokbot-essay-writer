@@ -79,9 +79,8 @@ def test_a_partial_leftover_update_leaves_the_product_alone(case_id, workspace):
     assert "store_brief_answer(essay_id, args.formatAnswer, args.questionAnswer)" in track
     assert "def assignment_gate" not in _read(SRC / "spine.py")
 
-    replies = _read(SRC / "stage_replies.py")
-    assert f'_MISSING_SOURCE_NEXT = "{SOURCE_NEXT}"' in replies
-    assert f'_MISSING_BIBLIOGRAPHY_NEXT = "{BIBLIOGRAPHY_NEXT}"' in replies
+    assert f'_MISSING_SOURCE_NEXT = "{SOURCE_NEXT}"' in track
+    assert f'_MISSING_BIBLIOGRAPHY_NEXT = "{BIBLIOGRAPHY_NEXT}"' in track
 
     node = _function_source(TESTS / "test_confirm_card_save.py", AC4_NODE)
     for locked in (

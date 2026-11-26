@@ -382,7 +382,7 @@ def test_a_confirmable_look_stores_the_answer_and_drafts(case_id, workspace, mon
     assert brief.read_bytes() == before
     assert load_pointer(seq)["waiting_stage"] is None
 
-    from essay_writer.stage_replies import _draft_reply
+    from essay_writer.stage_track import _draft_reply
 
     monkeypatch.setattr("essay_writer.stage_track._draft_reply", _draft_reply)
     reply = essay_stage(

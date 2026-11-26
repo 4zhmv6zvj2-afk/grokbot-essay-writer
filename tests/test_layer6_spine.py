@@ -38,13 +38,7 @@ def test_spine_does_not_keep_a_second_constitution_check(case_id):
         .parent.joinpath("stage_landing.py")
         .read_text(encoding="utf-8")
     )
-    replies = (
-        Path(stage_track.__file__)
-        .resolve()
-        .parent.joinpath("stage_replies.py")
-        .read_text(encoding="utf-8")
-    )
-    trio = stage + landing + replies
+    trio = stage + landing
     assert "def assignment_gate" not in spine
     assert "def assignment_gate(" not in stage
     # The brief-answer store rides in on its own import; a second check does not.
