@@ -1,6 +1,10 @@
 version: 2
 
 updates:
+  # Dependabot-only heads do not produce the required CodeQL Analyze checks.
+  # After a Dependabot PR opens, push a normal commit to its branch so those
+  # checks appear. The bot may ignore rebase/recreate comments, so merge main
+  # and push a regular commit as the reliable update path.
   # Keep the pinned Actions (checkout, setup-python) on supported releases.
   - package-ecosystem: "github-actions"
     directory: "/"

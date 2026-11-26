@@ -42,7 +42,7 @@ uv run python tools/check_release_version.py --tag v0.9.25
 uv run essay-writer --health
 ```
 
-The version check exits 0 when `pyproject.toml`, `uv.lock`, and the newest `CHANGELOG.md` release heading agree with that tag. `## Unreleased` does not count as a release heading. `--health` prints JSON. Read `version` and `build_commit`. They are the version and the commit you have checked out.
+The version check exits 0 when `pyproject.toml`, `uv.lock`, and the newest `CHANGELOG.md` release heading agree with that tag. `## Unreleased` does not count as a release heading. `--health` prints JSON. Read `version` and require the version being released. `build_commit` is empty in a source checkout, so compare it only when the copy carries a marker or the environment supplies one.
 
 The published bytes are checked from the GitHub release, not from this checkout. Download the wheel, the sdist, `SHA256SUMS`, each `*.sigstore.json`, and `provenance.intoto.jsonl` into one folder, then run the checksum, `cosign verify-blob`, and `gh attestation verify` commands in the README section "Verify a release". Do not publish a release whose checksum or attestation fails.
 
