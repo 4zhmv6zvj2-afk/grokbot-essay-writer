@@ -14,13 +14,15 @@ from helpers import (
     plant_renderable_pack,
 )
 
+from essay_writer import stage_track
 from essay_writer.build_office import stage_launch
 from essay_writer.doors import DOORS
 from essay_writer.prompt_loader import text as prompt_text
 from essay_writer.server import INSTRUCTIONS, build_review_server, build_server
 from essay_writer.shells import front_office_call
-from essay_writer.specialists.grok_bot import CHECKLIST_WALK
+from essay_writer.specialists.grok_bot import CHECKLIST_WALK, cached_approved_look
 from essay_writer.stage_llm import STAGE_ORDER, brief_genre, stage_settings, stage_title
+from essay_writer.stage_state import _commit_pointer, load_pointer
 from essay_writer.stage_track import essay_stage
 from essay_writer.student_voice import student_surface_hits
 from essay_writer.writing_basics import CHECKLISTS, basics_lines
@@ -434,8 +436,11 @@ def test_plan_revisit_updates_tracking_and_blocks_a_silent_draft(workspace):
     saved = essay_stage(seq, "3", "confirm", delta, **picked(opened))
     assert saved["stored"] is True
     assert saved["advanced"] is False
+    assert saved["closed"] is False
+    assert saved["revisit"] is True
     assert saved["current"] == "5"
     assert saved["next_stage"] == "5"
+    assert cached_approved_look(seq) == delta
     note = (folder / "3.md").read_text(encoding="utf-8")
     assert delta in note
     assert "Status: final" in note
@@ -466,13 +471,19 @@ def test_a_broken_lock_confirms_stage_2_before_the_plan(workspace):
     saved_lock = essay_stage(seq, "2", "confirm", lock, **picked(opened))
     assert saved_lock["current"] == "5"
     assert saved_lock["advanced"] is False
+    assert saved_lock["closed"] is False
+    assert saved_lock["revisit"] is True
     assert saved_lock["next_stage"] == "3"
+    assert cached_approved_look(seq) == lock
     still = essay_stage(seq, "5", "draft", "Still too soon.")
     assert still["ok"] is False
     assert "plan again" in still["reason"]
     plan = "The plan names that chain because Smith 2020 shows it."
     planned = essay_stage(seq, "3", "draft", plan)
     saved_plan = essay_stage(seq, "3", "confirm", plan, **picked(planned))
+    assert saved_plan["closed"] is False
+    assert saved_plan["revisit"] is True
+    assert cached_approved_look(seq) == plan
     assert saved_plan["current"] == "5"
     assert saved_plan["next"] == (
         "Start Stage 5 — Write your first draft in this chat. "
@@ -483,6 +494,40 @@ def test_a_broken_lock_confirms_stage_2_before_the_plan(workspace):
     folder = workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "tracking"
     assert lock in (folder / "2.md").read_text(encoding="utf-8")
     assert plan in (folder / "3.md").read_text(encoding="utf-8")
+
+
+def test_a_lost_pointer_does_not_save_the_revisit(workspace, monkeypatch):
+    seq = open_sequence()
+    _save_through(seq, "4b")
+    delta = "The analysis now follows Smith 2020. The central theme still holds."
+    opened = essay_stage(seq, "3", "draft", delta)
+    assert opened["revisit"] is True
+    before = load_pointer(seq)
+    note = (workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "tracking" / "3.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Status: draft" in note
+
+    def lose_the_save(essay_id, base, proposed, *, note=None, note_text=None):
+        fresh = load_pointer(essay_id)
+        if fresh.get("revision") == base.get("revision"):
+            _commit_pointer(essay_id, fresh, dict(fresh))
+        return _commit_pointer(essay_id, base, proposed, note=note, note_text=note_text)
+
+    monkeypatch.setattr(stage_track, "_commit_pointer", lose_the_save)
+    lost = essay_stage(seq, "3", "confirm", delta, **picked(opened))
+    assert lost["ok"] is False, lost
+    assert lost["refused"] == "pointer"
+    assert lost["stored"] is False
+    assert lost["wrote"] is False
+    assert lost["advanced"] is False
+    kept = load_pointer(seq)
+    assert kept["current"] == "5"
+    assert kept["revision"] == before["revision"] + 1
+    assert kept.get("revisit_open") == "3"
+    assert "Status: draft" in (
+        workspace / "Essay-writer" / ESSAY / "sequences" / "1" / "tracking" / "3.md"
+    ).read_text(encoding="utf-8")
 
 
 def test_workflow_records_stage_tracking_for_both_shells():
