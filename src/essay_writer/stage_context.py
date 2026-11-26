@@ -8,7 +8,10 @@ as a :class:`ConfirmState`, builds the reply body, then gives a
 that used to carry the resolved state between those steps is gone.
 
 This module depends only on the standard library at runtime. The pointer
-field is the journal ``Pointer``, imported for the type checker.
+field on :class:`ConfirmState` and :class:`StageContext` is the in-memory
+``Pointer``, imported for the type checker. The journal record on disk is the
+commit, with ``pointer``, ``note``, and ``note_text``, and that record is not a
+``Pointer``.
 """
 
 from __future__ import annotations
